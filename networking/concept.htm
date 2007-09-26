@@ -1,0 +1,190 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+
+</head>
+
+
+<body>
+
+<p>Предполагаемый
+синтаксис
+использования.</p>
+
+<p><code>rsp &lt;bs_array &lt;
+bs_cube &gt;
+&gt;&nbsp; =&nbsp;
+get_resource("http://somehost/somepath/cube/0");<br>
+
+rsp &lt; bs_cube &gt; cube = get_resource
+("http://somehost/somepath/cube/0");<br>
+
+rsp &lt; bs_cube &gt; cube2 = get_resource("local:///cube/0");<br>
+</code>
+<br>
+
+//Внесение
+изменений<br>
+<code>
+{<br>
+
+&nbsp;&nbsp;&nbsp; rsp_lock &lt; bs_cube &gt;
+lock ( cube );<br>
+
+&nbsp;&nbsp;&nbsp; lock -&gt; SetSomeProperty ();<br>
+
+}<br>
+</code>
+<br>
+
+//Низкоуровневое
+обращение</p>
+
+<p><code>bsn_conn conn bsn_connect
+(&ldquo;http://somehost/somepath/cube/0&rdquo;);<br>
+
+bsn_conn conn2 bsn_connect (
+&ldquo;http://somehost/somepath/cube/1&rdquo;);<br>
+
+smart_ptr &lt; bs_cube &gt;
+cube = conn.get ();<br>
+
+conn2.put( cube);<br>
+
+conn.post (
+cube);<br>
+
+conn.delete (
+);<br>
+
+conn2.lock( );<br>
+
+conn2.unlock( );
+</code></p>
+
+<p> Список операций :</p>
+
+<p>GET,
+PUT,
+POST, DELETE, LOCK, UNLOCK. </p>
+
+
+<p>Семантика
+по умолчанию</p>
+
+<p><o:p> </o:p></p>
+
+<p>GET
+&ndash; получить объект</p>
+
+<p>POST
+&ndash; заменить объект
+/ выполнить
+команду</p>
+
+<p>PUT
+&ndash; отправить
+объект</p>
+
+<p>DELETE
+&ndash; удалить объект </p>
+
+<p>LOCK
+/UNLOCK &ndash;
+заблокировать/разблокировать
+объект.</p>
+
+
+<p> Сериализация .</p>
+
+<code>
+</code>
+
+<p><code>class ISerializable {<br>
+&nbsp;&nbsp;&nbsp; void Serialize(std::ostream
+&amp; stream)const;<br>
+&nbsp;&nbsp;&nbsp; void Deserialize (std::istream
+&amp;
+stream);<br>
+}</code></p>
+<p>
+    Серверная часть.</p>
+<p>NameService -&gt; Поиск менджеров ресурсов по пути.</p>
+<p>class NameService</p>
+<p>{</p>
+<p>&nbsp;&nbsp;&nbsp; ResourceManager * lookup(std::string const&amp; path);</p>
+<p>}</p>
+    <p>
+        &nbsp;</p>
+    <p>
+        Отправка запросов.</p>
+    <p>
+        Клиент -&gt; GetProtoAndHost &nbsp;-&gt; &nbsp;ProtocolService</p>
+    <p>
+        Клиент -&gt; Connect -&gt; Protocol</p>
+    <p>
+        Kлиент -&gt; SendRequestToHostAndPath -&gt; Connection</p>
+    <p>
+        Connection &nbsp;-&gt; Сериализованый реквест -&gt; Server</p>
+    <p>
+        Server -&gt; LookupResourceManager -&gt; NameService</p>
+    <p>
+        Server -&gt; ProcessRequest -&gt; ResourceManager</p>
+    <p>
+        Server -&gt; Сериализованый ответ -&gt; Connection</p>
+    <p>
+        Connection -&gt; Объект/исключение -&gt; Client</p>
+    <p>
+        Client -&gt; Close -&gt; Connection</p>
+    <p>
+        &nbsp; &nbsp;&nbsp;</p>
+    <p>
+        &nbsp;&nbsp; Server &nbsp; &nbsp;&nbsp; NameService &nbsp; &nbsp; ResourceManager</p>
+    <p>
+        </p>
+        <h3> ProtocolService</h3>
+        <code>
+    <p>
+        class ProtocolService</p>
+    <p>
+        {<br />
+        &nbsp; &nbsp;
+        &nbsp; &nbsp; Protocol * lookup(std::string const&amp; name);<br />
+        }</p>
+    <p>
+        class Protocol<br />
+        {<br />
+        &nbsp; &nbsp; string const&amp; name();<br />
+        &nbsp; &nbsp; Response send(Request &amp; request);<br />
+        }</p>
+            <p>
+                class Request<br />
+                {<br />
+                &nbsp; &nbsp; enum Type {RQ_GET, RQ_PUT, RQ_POST, RQ_DELETE, RQ_LOCK, RQ_UNLOCK}
+                type;<br />
+                &nbsp; &nbsp; std::string path;<br />
+                &nbsp; &nbsp; sp_obj obj;<br />
+                &nbsp; &nbsp; sp_com com; &nbsp;&nbsp;
+                <br />
+                }</p>
+            <p>
+                &nbsp;</p>
+            <p>
+                class Response<br />
+                {<br />
+                &nbsp; &nbsp; enum Type {RSP_OK, RSP_ERROR} type;<br />
+                &nbsp; &nbsp; std::string message;<br />
+                &nbsp; &nbsp; sp_obj obj;<br />
+                }</p>
+            <p>
+                class Server<br />
+                {<br />
+                <br />
+                }</p>
+            <p>
+                &nbsp;</p>
+        </code>
+</body>
+</html>

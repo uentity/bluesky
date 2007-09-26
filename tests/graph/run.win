@@ -1,0 +1,14 @@
+from bs_config import configure
+import os
+import traceback
+
+if __name__ == "__main__":
+    configure()
+
+    env = os.getenv('PYTHONPATH')
+    print env
+
+    try:
+        os.execv('C:\\Python25\\python.exe',('C:\\Python25\\python.exe','./main.py'))
+    except:
+        traceback.print_exc ()

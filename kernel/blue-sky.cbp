@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="blue-sky" />
+		<Option pch_mode="2" />
+		<Option compiler="msvc8" />
+		<Option virtualFolders="Python_wrappers/;" />
+		<Build>
+			<Target title="Debug Win32">
+				<Option output="../exe/debug/blue-sky_d" prefix_auto="1" extension_auto="1" />
+				<Option object_output="build/Debug" />
+				<Option type="3" />
+				<Option compiler="msvc8" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="/MDd" />
+					<Add option="/Od" />
+					<Add option="/W3" />
+					<Add option="/ZI" />
+					<Add option="/D_DEBUG" />
+					<Add option="/DBS_EXPORTING" />
+					<Add option="/DBS_EXPORTING_PLUGIN" />
+					<Add option="/DOUTPUT_DATETIME_MESSAGE" />
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="$(LIBCONFIG_PATH)" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="$(LIBCONFIG_PATH)" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="/pdb:build\Debug\blue-sky.pdb" />
+					<Add library="loki_D" />
+					<Add library="libconfig++" />
+					<Add directory="$(BOOST_PATH)/lib" />
+					<Add directory="$(LOKI_PATH)/lib" />
+					<Add directory="$(LIBCONFIG_PATH)/debug" />
+				</Linker>
+			</Target>
+			<Target title="Release Win32">
+				<Option output="../exe/release/blue-sky" prefix_auto="1" extension_auto="1" />
+				<Option object_output="build/Release" />
+				<Option type="3" />
+				<Option compiler="msvc8" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="/MD" />
+					<Add option="/Ox" />
+					<Add option="/W3" />
+					<Add option="/DBS_EXPORTING" />
+					<Add option="/DBS_EXPORTING_PLUGIN" />
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="$(LIBCONFIG_PATH)" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="$(LIBCONFIG_PATH)" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="/INCREMENTAL:NO" />
+					<Add option="/pdb:build\Release\blue-sky.pdb" />
+					<Add library="loki" />
+					<Add library="libconfig++" />
+					<Add directory="$(BOOST_PATH)/lib" />
+					<Add directory="$(LOKI_PATH)/lib" />
+					<Add directory="$(LIBCONFIG_PATH)/release" />
+				</Linker>
+			</Target>
+			<Target title="release_with_debug Win32">
+				<Option output="../exe/release/blue-sky" prefix_auto="1" extension_auto="1" />
+				<Option object_output="release_with_debug Win32" />
+				<Option type="3" />
+				<Option compiler="msvc8" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="/MD" />
+					<Add option="/O2" />
+					<Add option="/W3" />
+					<Add option="/ZI" />
+					<Add option="/DBS_EXPORTING" />
+					<Add option="/DBS_EXPORTING_PLUGIN" />
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="$(LIBCONFIG_PATH)" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="$(LIBCONFIG_PATH)" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="/INCREMENTAL:NO" />
+					<Add option="/pdb:release_with_debug Win32\blue-sky.pdb" />
+					<Add library="loki" />
+					<Add library="libconfig++" />
+					<Add directory="$(BOOST_PATH)/lib" />
+					<Add directory="$(LOKI_PATH)/lib" />
+					<Add directory="$(LIBCONFIG_PATH)/release" />
+				</Linker>
+			</Target>
+			<Target title="debug_lin">
+				<Option platforms="Unix;" />
+				<Option output="../exe/debug/libblue_sky_d" prefix_auto="1" extension_auto="1" />
+				<Option object_output="build/Debug" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-ggdb3" />
+					<Add option="-O0" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-pthread" />
+					<Add option="-fPIC" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DUNIX" />
+					<Add option="-DBS_EXPORTING" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+				</Compiler>
+				<Linker>
+					<Add library="dl" />
+					<Add library="libconfig++" />
+					<Add library="loki" />
+					<Add library="boost_filesystem-mt-d" />
+					<Add library="boost_regex-mt-d" />
+					<Add library="boost_thread-mt-d" />
+					<Add library="boost_signals-mt-d" />
+					<Add library="boost_python-mt-d" />
+					<Add library="python2.5" />
+				</Linker>
+			</Target>
+			<Target title="release_lin">
+				<Option platforms="Unix;" />
+				<Option output="../exe/release/libblue_sky" prefix_auto="1" extension_auto="1" />
+				<Option object_output="build/Release" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-pthread" />
+					<Add option="-fPIC" />
+					<Add option="-DUNIX" />
+					<Add option="-DBS_EXPORTING" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+				</Compiler>
+				<Linker>
+					<Add library="dl" />
+					<Add library="libconfig++" />
+					<Add library="loki" />
+					<Add library="boost_filesystem-mt" />
+					<Add library="boost_regex-mt" />
+					<Add library="boost_thread-mt" />
+					<Add library="boost_signals-mt" />
+					<Add library="boost_python-mt" />
+					<Add library="python2.5" />
+				</Linker>
+			</Target>
+			<Target title="debug_lin_py">
+				<Option platforms="Unix;" />
+				<Option output="../exe/debug/libblue_sky_d" prefix_auto="1" extension_auto="1" />
+				<Option object_output="build/Debug" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-ggdb3" />
+					<Add option="-O0" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-pthread" />
+					<Add option="-fPIC" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DUNIX" />
+					<Add option="-DBS_EXPORTING" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+					<Add directory="./src" />
+				</Compiler>
+				<Linker>
+					<Add library="dl" />
+					<Add library="loki" />
+					<Add library="libconfig++" />
+					<Add library="boost_filesystem-mt-d" />
+					<Add library="boost_regex-mt-d" />
+					<Add library="boost_thread-mt-d" />
+					<Add library="boost_signals-mt-d" />
+					<Add library="boost_python-mt-d" />
+					<Add library="python2.5" />
+				</Linker>
+			</Target>
+			<Target title="release_lin_py">
+				<Option platforms="Unix;" />
+				<Option output="../exe/release/libblue_sky" prefix_auto="1" extension_auto="1" />
+				<Option object_output="build/Release" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-pthread" />
+					<Add option="-fPIC" />
+					<Add option="-DUNIX" />
+					<Add option="-DBS_EXPORTING" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+					<Add directory="./src" />
+				</Compiler>
+				<Linker>
+					<Add library="dl" />
+					<Add library="loki" />
+					<Add library="libconfig++" />
+					<Add library="boost_filesystem-mt" />
+					<Add library="boost_regex-mt" />
+					<Add library="boost_thread-mt" />
+					<Add library="boost_signals-mt" />
+					<Add library="boost_python-mt" />
+					<Add library="python2.5" />
+				</Linker>
+			</Target>
+		</Build>
+		<Unit filename="src/bs_abstract_storage.cpp" />
+		<Unit filename="src/bs_abstract_storage.h" />
+		<Unit filename="src/bs_command.cpp" />
+		<Unit filename="src/bs_command.h" />
+		<Unit filename="src/bs_common.cpp" />
+		<Unit filename="src/bs_common.h" />
+		<Unit filename="src/bs_conversion.h" />
+		<Unit filename="src/bs_exception.cpp" />
+		<Unit filename="src/bs_exception.h" />
+		<Unit filename="src/bs_fwd.h" />
+		<Unit filename="src/bs_imessaging.h" />
+		<Unit filename="src/bs_kernel.cpp" />
+		<Unit filename="src/bs_kernel.h" />
+		<Unit filename="src/bs_kernel_ston.cpp" />
+		<Unit filename="src/bs_link.cpp" />
+		<Unit filename="src/bs_link.h" />
+		<Unit filename="src/bs_macro_private.h" />
+		<Unit filename="src/bs_messaging.cpp" />
+		<Unit filename="src/bs_messaging.h" />
+		<Unit filename="src/bs_misc.cpp" />
+		<Unit filename="src/bs_misc.h" />
+		<Unit filename="src/bs_object_base.cpp" />
+		<Unit filename="src/bs_object_base.h" />
+		<Unit filename="src/bs_obsolete.h" />
+		<Unit filename="src/bs_prop_base.cpp" />
+		<Unit filename="src/bs_prop_base.h" />
+		<Unit filename="src/bs_refcounter.h" />
+		<Unit filename="src/bs_report.cpp" />
+		<Unit filename="src/bs_report.h" />
+		<Unit filename="src/bs_shell.cpp" />
+		<Unit filename="src/bs_shell.h" />
+		<Unit filename="src/bs_tree.cpp" />
+		<Unit filename="src/bs_tree.h" />
+		<Unit filename="src/bs_type_info.cpp" />
+		<Unit filename="src/bs_type_info.h" />
+		<Unit filename="src/force_plugin_import.h" />
+		<Unit filename="src/main.cpp" />
+		<Unit filename="src/python/bs_import_common.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/bs_import_common.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/bs_python_import.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_abstract_storage.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_abstract_storage.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_command.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_command.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_exports.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_iterator.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_kernel.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_kernel.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_link.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_link.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_log.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_log.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_messaging.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_messaging.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_object_base.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_object_base.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_shell.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_shell.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_tree.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_tree.h">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/python/py_bs_typed.cpp">
+			<Option virtualFolder="Python_wrappers/" />
+			<Option target="debug_lin_py" />
+			<Option target="release_lin_py" />
+		</Unit>
+		<Unit filename="src/setup_common_api.h" />
+		<Unit filename="src/setup_plugin_api.h" />
+		<Unit filename="src/smart_ptr.cpp" />
+		<Unit filename="src/smart_ptr.h" />
+		<Unit filename="src/stop_plugin_import.h" />
+		<Unit filename="src/thread_pool.cpp" />
+		<Unit filename="src/thread_pool.h" />
+		<Unit filename="src/type_descriptor.h" />
+		<Extensions>
+			<code_completion />
+			<envvars set="default" />
+			<debugger />
+			<wxsmith version="1">
+				<gui name="wxWidgets" src="" main="" init_handlers="necessary" language="CPP" />
+			</wxsmith>
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

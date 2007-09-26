@@ -1,0 +1,16 @@
+#!/usr/bin/python
+
+from bs_config import configure
+import os
+import traceback
+
+if __name__ == "__main__":
+    configure()
+
+    env = os.getenv('PYTHONPATH')
+    print env
+
+    try:
+        os.execv('/usr/bin/python',('/usr/bin/python','./main.py'))
+    except:
+        traceback.print_exc ()

@@ -1,0 +1,52 @@
+<HTML>
+<HEAD>
+<META NAME="GENERATOR" Content="Microsoft Visual Studio 8.0">
+<TITLE></TITLE>
+</HEAD>
+<BODY>
+    Классы:<br />
+    <br />
+    Uri, Path - классы для удобной работу с URI/путями<br />
+    <br />
+    Context - класс содержит общие настройки/объекты. Создан главным образом для того
+    чтобы не плодить синглтонов<br />
+    <br />
+    ResourceManager - умеет обрабатывать сообщения. В ответ на Request выдает Response.<br />
+    NameService - знает какому каталогу какой ResourceManager соответствует.
+    Т.е. даете ей Path и получаете ResourceManager и путь относительно того каталога
+    за который ResourceManager отвечает.<br />
+    <br />
+    Connection/LocalConnection/HttpConnection.
+    <br />
+    Connection отправляет Request по указанному URI и возвращает Response.
+    <br />
+    Если URI имеет вид "local:///path/", то создается LocalConnection.
+    LocalConnection
+    узнает у NameService ResourceManager и отправляет ему Request напрямую.
+    <br />
+    HttpConnection создается если URI имеет вид "http://server/path". HttpConnection
+    соединяется с сервером указанном в URI. На серверной стороне соединение принимает
+    HttpServer.
+    HttpServer передает Request ResourceManager'у.<br />
+    <br />
+    Tree - древовидный контайнер объектов. Само Tree объектов не содержит, а содержит
+    только точки монтирования. Точка монтирования - это пара (путь, URI). По указанному
+    URI должен находиться TreeResourceManager или другой ResourceManager предоставляющий
+    аналогичную семантику.<br />
+    <br />
+    TreeNode/TreeObjectPtr - смарт-поинтеры на объект которые возвращаемые Tree.<br />
+    TreeNodeLocker - объект для RAIIной блокировки.<br />
+    <br />
+    TreeResourceManager - реализация ResourceManager'а рассчитанная на работу с Tree.
+    TreeResourceManager содержит
+    TreeContainer который непосредственно содержит объекты
+    дерева.<br />
+    <br />
+    SessionContext - содержит данные относящиеся к одному сетевому соединению. На данные
+    момент содержит в себе только блокировки. SessionContext - уничтожается вместе с
+    закрытием соединения, обеспечивая тем самым снятие неснятых блокировок.
+
+
+
+</BODY>
+</HTML>

@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="bs_client" />
+		<Option pch_mode="2" />
+		<Option default_target="debug_lin_py" />
+		<Option compiler="msvc8" />
+		<Build>
+			<Target title="Debug Win32">
+				<Option platforms="Windows;" />
+				<Option output="../exe/debug/bs_client_d" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="./" />
+				<Option object_output="build/Debug" />
+				<Option type="1" />
+				<Option compiler="msvc8" />
+				<Compiler>
+					<Add option="/D_DEBUG" />
+					<Add option="/DBS_EXPORTING_PLUGIN" />
+					<Add option="/W3" />
+					<Add option="/ZI" />
+					<Add option="/Od" />
+					<Add option="/MDd" />
+					<Add directory="$(TBB20_INSTALL_DIR)/include" />
+					<Add directory="$(PYTHON_PATH)/include" />
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+					<Add directory="../plugins/bs_prop_storage/src" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(TBB20_INSTALL_DIR)/include" />
+					<Add directory="$(PYTHON_PATH)/include" />
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+					<Add directory="../plugins/bs_prop_storage/src" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="/NODEFAULTLIB:python25_d.lib" />
+					<Add option="/pdb:build\Debug\bs_client.pdb" />
+					<Add library="blue-sky_d" />
+					<Add library="bs_cube_d" />
+					<Add library="python25" />
+					<Add library="tbb_debug" />
+					<Add directory="$(TBB20_INSTALL_DIR)/ia32/vc8/lib" />
+					<Add directory="$(BOOST_PATH)/lib" />
+					<Add directory="$(LOKI_PATH)/lib" />
+					<Add directory="$(PYTHON_PATH)/libs" />
+					<Add directory="../exe/debug" />
+					<Add directory="../exe/debug/plugins/" />
+				</Linker>
+			</Target>
+			<Target title="Release Win32">
+				<Option platforms="Windows;" />
+				<Option output="../exe/release/bs_client" prefix_auto="1" extension_auto="1" />
+				<Option object_output="build/Release" />
+				<Option type="1" />
+				<Option compiler="msvc8" />
+				<Compiler>
+					<Add option="/DBS_EXPORTING_PLUGIN" />
+					<Add option="/W3" />
+					<Add option="/MD" />
+					<Add directory="$(TBB20_INSTALL_DIR)/include" />
+					<Add directory="$(PYTHON_PATH)/include" />
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+					<Add directory="../plugins/bs_prop_storage/src" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(TBB20_INSTALL_DIR)/include" />
+					<Add directory="$(PYTHON_PATH)/include" />
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+					<Add directory="../plugins/bs_prop_storage/src" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="/INCREMENTAL:NO" />
+					<Add library="blue-sky" />
+					<Add library="bs_cube" />
+					<Add library="python25" />
+					<Add library="tbb" />
+					<Add directory="$(TBB20_INSTALL_DIR)/ia32/vc8/lib" />
+					<Add directory="$(BOOST_PATH)/lib" />
+					<Add directory="$(LOKI_PATH)/lib" />
+					<Add directory="$(PYTHON_PATH)/libs" />
+					<Add directory="../exe/release" />
+					<Add directory="../exe/release/plugins/" />
+				</Linker>
+			</Target>
+			<Target title="release_with_debug Win32">
+				<Option platforms="Windows;" />
+				<Option output="../exe/release/bs_client" prefix_auto="1" extension_auto="1" />
+				<Option object_output="release_with_debug Win32" />
+				<Option type="1" />
+				<Option compiler="msvc8" />
+				<Compiler>
+					<Add option="/DBS_EXPORTING_PLUGIN" />
+					<Add option="/W3" />
+					<Add option="/Zi" />
+					<Add option="/MD" />
+					<Add directory="$(TBB20_INSTALL_DIR)/include" />
+					<Add directory="$(PYTHON_PATH)/include" />
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+					<Add directory="../plugins/bs_prop_storage/src" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(TBB20_INSTALL_DIR)/include" />
+					<Add directory="$(PYTHON_PATH)/include" />
+					<Add directory="$(LOKI_PATH)/include" />
+					<Add directory="$(BOOST_PATH)" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+					<Add directory="../plugins/bs_prop_storage/src" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="/INCREMENTAL:NO" />
+					<Add library="blue-sky" />
+					<Add library="bs_cube" />
+					<Add library="tbb" />
+					<Add directory="$(TBB20_INSTALL_DIR)/ia32/vc8/lib" />
+					<Add directory="$(BOOST_PATH)/lib" />
+					<Add directory="$(LOKI_PATH)/lib" />
+					<Add directory="$(PYTHON_PATH)/libs" />
+					<Add directory="../exe/release" />
+					<Add directory="../exe/release/plugins/" />
+				</Linker>
+			</Target>
+			<Target title="debug_lin">
+				<Option platforms="Unix;" />
+				<Option output="../exe/debug/bs_client_d" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../exe/debug" />
+				<Option object_output="build/Debug" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-O0" />
+					<Add option="-ggdb3" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-pthread" />
+					<Add option="-fPIC" />
+					<Add option="-DUNIX" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+				</ResourceCompiler>
+				<Linker>
+					<Add library="blue_sky_d" />
+					<Add library="bs_cube_d" />
+					<Add directory="../exe/debug" />
+					<Add directory="../exe/debug/plugins/" />
+				</Linker>
+			</Target>
+			<Target title="release_lin">
+				<Option platforms="Unix;" />
+				<Option output="../exe/release/bs_client" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../exe/release" />
+				<Option object_output="build/Release" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-pthread" />
+					<Add option="-fPIC" />
+					<Add option="-DUNIX" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+				</ResourceCompiler>
+				<Linker>
+					<Add library="blue_sky" />
+					<Add library="bs_cube" />
+					<Add directory="../exe/release" />
+					<Add directory="../exe/release/plugins/" />
+				</Linker>
+			</Target>
+			<Target title="debug_lin_py">
+				<Option platforms="Unix;" />
+				<Option output="../exe/debug/bs_client_d" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../exe/debug" />
+				<Option object_output="build/Debug" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-O0" />
+					<Add option="-ggdb3" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-pthread" />
+					<Add option="-fPIC" />
+					<Add option="-DUNIX" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+				</ResourceCompiler>
+				<Linker>
+					<Add library="blue_sky_d" />
+					<Add library="bs_cube_d" />
+					<Add directory="../exe/debug" />
+					<Add directory="../exe/debug/plugins/" />
+				</Linker>
+			</Target>
+			<Target title="release_lin_py">
+				<Option platforms="Unix;" />
+				<Option output="../exe/release/bs_client" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../exe/release" />
+				<Option object_output="build/Release" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-pthread" />
+					<Add option="-fPIC" />
+					<Add option="-DUNIX" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="../kernel/src" />
+					<Add directory="../plugins/bs_cube/src" />
+				</ResourceCompiler>
+				<Linker>
+					<Add library="blue_sky" />
+					<Add library="bs_cube" />
+					<Add directory="../exe/release" />
+					<Add directory="../exe/release/plugins/" />
+				</Linker>
+			</Target>
+		</Build>
+		<Unit filename="src/main_client.cpp" />
+		<Extensions>
+			<code_completion />
+			<envvars set="default" />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

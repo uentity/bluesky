@@ -1,0 +1,103 @@
+import os, os.path;
+
+# fiilelist
+cpp_list = Split("""
+	bs_cube.cpp
+	bs_cube_t.cpp
+	main.cpp
+""");
+
+# directories
+build_dir = 'build';
+dbg_dir = 'debug';
+rel_dir = 'release';
+exe_dir = '../../exe';
+plug_dir = 'plugins';
+lib_name = 'bs_cube';
+tar_name = lib_name;
+
+# import custom settings
+Import('*');
+
+# construct base environ
+base_env = custom_env.Clone();
+base_env.AppendUnique(
+	CPPDEFINES = ['BS_EXPORTING_PLUGIN', 'UNIX'],
+	CPPPATH = ['src', '#kernel/src']
+#	CPPPATH = ['src', '../../kernel/src']
+);
+
+# check if we are building with python support
+if base_env['py'] == '1' :
+	base_env.Append(
+			CPPDEFINES = ['BSPY_EXPORTING_PLUGIN'],
+			CPPPATH = ['#kernel/src/python']
+#			CPPPATH = ['../../kernel/src/python']
+	);
+
+# construct debug and release env
+debug_env = base_env.Clone();
+debug_env.AppendUnique(
+		CPPDEFINES = ['_DEBUG'],
+		CCFLAGS = ['-O0', '-ggdb3'], 
+		LIBPATH = [os.path.join(exe_dir, dbg_dir)],
+		LIBS = ['blue_sky_d']);
+
+release_env = base_env.Clone();
+release_env.AppendUnique(
+		CCFLAGS = ['-O2'],
+		LIBPATH = [os.path.join(exe_dir, rel_dir)],
+		LIBS = ['blue_sky']);
+
+# make targets
+# debug
+def build_debug() :
+	build_dir_dbg = os.path.join(build_dir, dbg_dir);
+	exe_dir_dbg = os.path.join(exe_dir, dbg_dir, plug_dir);
+
+	VariantDir(build_dir_dbg, 'src', duplicate = 0);
+	bs_cube_debug = debug_env.SharedLibrary(target = os.path.join(exe_dir_dbg, lib_name + '_d'), source = [os.path.join(build_dir_dbg, x) for x in cpp_list]);
+
+	# specify dependencies or ignore them
+	if base_env['nodeps'] == '1' :
+		Ignore(bs_cube_debug, bs_kernel_debug);
+	else :
+		Depends(bs_cube_debug, bs_kernel_debug);
+
+	#	bs_cube_debug = debug_env.Install(exe_dir_dbg, debug);
+	debug_env.Alias(tar_name, bs_cube_debug);
+	Export('bs_cube_debug');
+
+# 	Install step
+	if base_env['install'] == '1':
+		inst_dbg = debug_env.Install('$plugins_prefix', bs_cube_debug);
+		Alias(tar_name, inst_dbg);
+
+# release
+def build_release() :
+	build_dir_rel = os.path.join(build_dir, rel_dir);
+	exe_dir_rel = os.path.join(exe_dir, rel_dir, plug_dir);
+
+	VariantDir(build_dir_rel, 'src', duplicate = 0);
+	bs_cube_release = release_env.SharedLibrary(target = os.path.join(exe_dir_rel, lib_name), source = [os.path.join(build_dir_rel, x) for x in cpp_list]);
+
+	# specify dependencies or ignore them
+	if base_env['nodeps'] == '1' :
+		Ignore(bs_cube_release, bs_kernel_release);
+	else :
+		Depends(bs_cube_release, bs_kernel_release);
+#	bs_cube_release = release_env.Install(exe_dir_rel, release);
+	release_env.Alias(tar_name, bs_cube_release);
+	Export('bs_cube_release');
+
+# 	Install step
+	if base_env['install'] == '1':
+		inst_rel = release_env.Install('$plugins_prefix', bs_cube_release);
+		Alias(tar_name, inst_rel);
+
+# actaully build targets
+if base_env['debug'] == '1' :
+	build_debug();
+if base_env['release'] == '1' :
+	build_release();
+

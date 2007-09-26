@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="bspy_loader" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="debug_lin_py">
+				<Option platforms="Unix;" />
+				<Option output="../../exe/debug/bs" prefix_auto="1" extension_auto="1" />
+				<Option object_output="build/Debug/" />
+				<Option external_deps="../../exe/debug/libblue_sky_d.so;" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O0" />
+					<Add option="-ggdb3" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DUNIX" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+					<Add option="-DTARGET_NAME=bs" />
+					<Add directory="../../kernel/src" />
+					<Add directory="../../kernel/src/python" />
+				</Compiler>
+				<Linker>
+					<Add library="blue_sky_d" />
+					<Add library="boost_python-mt-d" />
+					<Add directory="../../exe/debug" />
+				</Linker>
+			</Target>
+			<Target title="release_lin_py">
+				<Option platforms="Unix;" />
+				<Option output="../../exe/release/bs" prefix_auto="1" extension_auto="1" />
+				<Option object_output="build/Release/" />
+				<Option external_deps="../../exe/release/libblue_sky.so;" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-fvisibility=hidden" />
+					<Add option="-fvisibility-inlines-hidden" />
+					<Add option="-DUNIX" />
+					<Add option="-DBS_EXPORTING_PLUGIN" />
+					<Add option="-DTARGET_NAME=bs" />
+					<Add directory="../../kernel/src" />
+					<Add directory="../../kernel/src/python" />
+				</Compiler>
+				<Linker>
+					<Add library="blue_sky" />
+					<Add library="boost_python-mt" />
+					<Add directory="../../exe/release" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fPIC" />
+		</Compiler>
+		<Unit filename="src/main.cpp" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

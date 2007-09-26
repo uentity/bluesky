@@ -1,0 +1,18 @@
+########################
+# Blue-Sky config file #
+########################
+
+# Path to blue-sky plugin's configuration files
+BS_LOAD_CFGS="C:\\work\\blue-sky\\plugins\\conf"
+
+# Path to blue-sky's plugins
+BS_PLUGIN_LIBS = "C:\\work\\blue-sky\\exe\\debug\\plugins"
+
+# Path to blue-sky's objects GUIs
+BS_GUI_OBJ_PATH = C:\\work\\blue-sky\\plugins\\guis
+
+# Path to blue-sky GUI's plugins
+BS_GUI_PLUGIN_PATH = C:\\work\\blue-sky\\plugins\\gui_plugins
+
+# Python modules are in this path
+PYTHONPATH = [C:\\work\\blue-sky\\exe\\debug, C:\\work\\blue-sky\\exe\\debug\\plugins, BS_GUI_OBJ_PATH, BS_GUI_PLUGIN_PATH]

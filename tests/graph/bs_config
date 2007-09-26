@@ -1,0 +1,18 @@
+########################
+# Blue-Sky config file #
+########################
+
+# Path to blue-sky plugin's configuration files
+BS_LOAD_CFGS="/home/wolf/work/prog/blue-sky/plugins/conf/"
+
+# Path to blue-sky's plugins
+BS_PLUGIN_LIBS = "/home/wolf/work/prog/bs_lib/"
+
+# Path to blue-sky's objects GUIs
+BS_GUI_OBJ_PATH = /home/wolf/work/prog/bs_gui/plugins/obj/qt/
+
+# Path to blue-sky GUI's plugins
+BS_GUI_PLUGIN_PATH = /home/wolf/work/prog/bs_gui/plugins/gui/qt/
+
+# Python modules are in this path
+PYTHONPATH = [/home/wolf/work/prog/bs_lib, BS_GUI_OBJ_PATH, BS_GUI_PLUGIN_PATH]

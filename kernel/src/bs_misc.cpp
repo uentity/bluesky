@@ -1,0 +1,680 @@
+// This file is part of BlueSky
+// 
+// BlueSky is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation; either version 3
+// of the License, or (at your option) any later version.
+// 
+// BlueSky is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
+
+/*!
+	\file bs_misc.cpp
+  \brief Contains implimentations of some operations with loading graph and other
+  \author NikonovMA a ka no_NaMe <__no_name__@rambler.ru>
+ */
+
+//this comment line explicitly added to force svn commit
+
+#include "bs_misc.h"
+#include "bs_report.h"
+#include "bs_exception.h"
+#include "bs_link.h"
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <stdarg.h>
+#include <map>
+
+#ifdef UNIX
+#include <errno.h>
+#endif
+
+#include "boost/graph/depth_first_search.hpp"
+#include "boost/filesystem/operations.hpp"
+#include "boost/filesystem/exception.hpp"
+#include "boost/filesystem/path.hpp"
+#include "boost/regex.hpp"
+
+#ifdef _WIN32
+#include <windows.h>
+#include <time.h>
+#endif
+
+#ifdef UNIX
+#include <errno.h>
+#endif
+
+#include "libconfig.h++"
+
+using namespace std;
+//using namespace blue_sky;
+using namespace libconfig;
+using namespace boost;
+
+#define XPN_LOG_INST log::Instance()[XPN_LOG] //!< blue-sky log for error output
+
+namespace blue_sky {
+
+//!	\brief compares src with string = before + doubt + after.
+bool compare(const char* src , const char* dbt, const char* before, const char* after);
+//const char *find_cfg_file(std::string&, std::vector<const char*>&);
+//!	\brief Get leaf of src.
+void get_leaf(std::string &, std::string &);
+//!	\brief get name of file in format name.expansion
+void get_name(std::string &, std::string &);
+//int version_comparator(const char *, const char *);
+//! \brief separator of version-strings
+void version_separator(std::vector<std::string> &, const char *);
+//!	\brief Makes graph with list cntr_.
+blue_sky::error_code make_graph(load_graph &,v_lload &); // throw();
+//!	\brief Depth search.
+void graph_to_list(std::vector<int> &, const load_graph &);
+
+//! type of graph's vertex
+typedef graph_traits<load_graph>::vertex_descriptor load_vertex;
+//! type of graph's index
+typedef graph_traits < load_graph >::vertices_size_type size_type;
+//typedef pair<lload,lload> load_arc;
+//typedef pair<int,int> load_arc;
+//typedef vector<load_arc> aload_arc;
+
+/*!
+	\brief verify filename by mask
+
+	For example:\n
+	mask_verify("../file.dll",".dll");
+	\param filename - name of file
+	\param mask - mask
+	\return true if contains, false - otherwise
+*/
+bool mask_verify (const char * filename, const char * mask)
+{
+  return compare(filename,mask,"^(.*)","$");
+}
+
+/*!
+	\brief Search name of file doubt in vector vec
+	\param doubt - path to some dynamic library
+	\param vec - vector of some files (using *.cfg files)
+	\return If \a doubt \a = \a "blah/libbs_somefile.dll" and
+	vec contain \a some \a string \a = \a "blah-blah/somefile.cfg"
+	then will be return "blah-blah/somefile.cfg", NULL - otherwise.
+
+ */
+const char *find_cfg_file(string& doubt, std::vector<string> &vec)
+{
+	for(unsigned int i = 0, size_ = (unsigned int)vec.size(); i < size_; ++i)
+	{
+		string tmp,tmp_vec,vec_name;
+		get_leaf(tmp_vec,vec[i]);
+		get_name(vec_name,tmp_vec);
+		get_leaf(tmp,doubt);
+		if(compare(tmp.c_str(),vec_name.c_str(),"^(libbs_|bs_|lib)","(.|_d.)(dll|so)$"))
+			return vec[i].c_str();
+	}
+	return (const char*)(NULL);
+}
+
+/*!
+	\param src - some string
+	\param dbt - which this str may contain
+	\param before - mask before dbt
+	\param after - mask after dbt
+	\return true - if contains, false - otherwise
+ */
+bool compare(const char* src , const char* dbt, const char* before, const char* after)
+{
+	regex expression(string(before) + string(dbt) + string(after));
+	return ((regex_search(string(src),expression)) ? true : false);
+}
+
+//! \return string of chars, contains current time
+const char * gettime()
+{
+	time_t cur_time;
+	char * cur_time_str = NULL;
+	if(time(&cur_time))
+	{
+		cur_time_str = ctime(&cur_time);
+		if(cur_time_str)
+			cur_time_str[strlen(cur_time_str)-1] = '\0';
+	}
+	return cur_time_str;
+}
+/*
+void my_sprintf(std::string& buf, const char* fmt, ...)
+{
+	//prepare string stream
+	ostringstream ss;
+	//start main loop
+	va_list arg_list;
+	va_start(arg_list, fmt);
+	const char* term = fmt + strlen(fmt);
+	char* beg = const_cast<char*>(fmt);
+	char* pos;
+	while((pos = strchr(beg, '%')) != NULL && ss) {
+		ss.write(beg, static_cast<streamsize>(pos - beg));
+		if(++pos >= term) break;
+		switch(*pos) {
+			case 'c':	//char
+				if(*(pos + 1) == 'c')		//const char
+					ss << va_arg(arg_list, const char*);
+				else
+					ss << va_arg(arg_list, char);
+				break;
+			case 's':	//c++ string
+				ss << va_arg(arg_list, const char*);
+				break;
+			case 'i':	//integer
+				ss << va_arg(arg_list, int);
+				break;
+			case 'l':	//long
+				ss << va_arg(arg_list, long);
+				break;
+			case 'u':	//unsigned
+				if(++pos >= term) break;
+				switch(*pos) {
+					case 'i':
+						ss << va_arg(arg_list, uint);
+						break;
+					case 'l':
+						ss << va_arg(arg_list, ulong);
+						break;
+					default:		//no type symbol found - step back
+						--pos;
+						break;
+				}
+				break;
+			case 'f':	//double
+				ss << va_arg(arg_list, double);
+				break;
+			case '%':	//%% - just type %
+				ss << '%';
+				break;
+			default:		//no type symbol found - step back
+				--pos;
+				break;
+		}
+		if((beg = ++pos) >= term) break;
+	}
+	va_end(arg_list);
+	//write latter end of format string
+	ss << beg;
+	ss.flush();
+	buf = ss.str();
+}
+*/
+void DumpV(const ul_vec& v, const char* pFname)
+{
+	if(pFname) {
+		ofstream fd(pFname, ios::out | ios::trunc);
+		for(ul_vec::const_iterator pos(v.begin()); pos != v.end(); ++pos)
+			fd << *pos << " ";
+		fd << endl;
+	}
+	else {
+		for(ul_vec::const_iterator pos(v.begin()); pos != v.end(); ++pos)
+			cout << *pos << " ";
+		cout << endl;
+	}
+}
+
+typedef graph_traits<load_graph>::vertex_descriptor vertex_t;
+typedef graph_traits<load_graph>::edge_descriptor edge_t;
+
+void topo_sort_dfs(const load_graph& g, vertex_t u, vertex_t*& topo_order, int* mark)
+{
+  mark[u] = 1; // 1 - посещённая вершина
+  *--topo_order = u;
+}
+
+void topo_sort(const load_graph& g, vertex_t* topo_order)
+{
+  std::vector<int> mark(num_vertices(g), 0);
+  graph_traits<load_graph>::vertex_iterator vi, vi_end;
+
+  for (tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
+		if (mark[*vi] == 0)
+      topo_sort_dfs(g, *vi, topo_order, &mark[0]);
+}
+
+/*!
+	\brief get the ordered list of blue-sky libraries pathes
+
+	To lib_list will be saved ordered sequence of loading libraries.\n
+	If some dependencies will fail - list creation will be failed.
+	\param lib_list - list of pairs - path & version
+*/
+void get_lib_list(list<lload> &lib_list)
+{
+	v_lload cntr_;
+	vector<int> vl;
+	load_graph g(0);
+	try {
+		if (make_graph(g,cntr_) == blue_sky::no_library)
+			BSERROR << "Libraries will not load" << bs_end;
+		else
+		{
+			graph_to_list(vl,g);
+			//v	l.resize (num_vertices(g));
+			//topo	_sort(g, &vl[0] + num_vertices(g));
+
+			lib_list.clear();
+			//for(int i 	= 0; i < (int)cntr_.size(); ++i)
+			//	BSOUT << cnt	r_[i].first << " ___ " << cntr_[i].second << bs_end;
+
+			for(int i = 0; i < (int)vl.size(); ++i) {
+				lib_list.push_back(lload(cntr_[vl[i]]));
+				BSOUT << cntr_[vl[i]].first << " ::: " << cntr_[vl[i]].second << bs_end;
+			}
+		}
+	} catch (const bs_exception &e) {
+		BSERROR << "Graph creation failed with exception! " << e.what() << bs_end;
+	}
+}
+
+/*!
+	This is recoursive searching of files. in the lib_dir directory.
+	\param res - vector of strings for filenames
+	\param what - expansion
+	\param lib_dir - where to search.
+	\return blue_sky::wrong_path if path lib_dir or what is wrong, or
+	blue_sky::no_error - if all is ok.
+ */
+blue_sky::error_code search_files(vector<string> &res, const char * what, const char * lib_dir)
+{
+   if(lib_dir == NULL) lib_dir = "./";
+
+#ifndef UNIX
+	filesystem::path plib_dir(lib_dir,filesystem::native);
+#else
+	filesystem::path plib_dir(lib_dir);
+#endif
+
+	try
+	{
+		// first file of directory as iterator
+		for (filesystem::directory_iterator dll_dir_itr(plib_dir), end_itr; dll_dir_itr != end_itr; ++dll_dir_itr)
+		{
+			if (is_directory(*dll_dir_itr))
+			{
+				if (!filesystem::is_empty(filesystem::path(dll_dir_itr->string(),filesystem::native)))
+					search_files(res, what, dll_dir_itr->string().c_str());
+				continue;
+			}
+			if (mask_verify(dll_dir_itr->string().c_str(),what))
+				res.push_back(string(dll_dir_itr->string()));
+		}
+	}
+	catch(const filesystem::filesystem_error& e)
+	{
+		BSERROR << e.what() << bs_end;
+		return blue_sky::wrong_path;
+	}
+	return blue_sky::no_error;
+}
+
+/*!
+	\brief separator of version-strings
+	\param res - separated by subversions version
+	\param src - version string
+ */
+void version_separator(vector<string> &res, const char *src)
+{
+	if (!src) return;
+	if(!strcmp(src,"")) return;
+	vector<string> tmp;
+	string c;
+
+	regex expression("(.*)[.](.*)");
+	c = src;
+	for(;;)
+	{
+		regex_split(back_inserter(tmp),c,expression);
+		if(!tmp.size())
+		{
+			regex_split(back_inserter(tmp),c,regex("(.*)"));
+			res.push_back(tmp.back());
+			break;
+		}
+		res.push_back(string(tmp.back().c_str()));
+		if(!regex_search(tmp.front().c_str(),expression))
+		{
+			res.push_back(tmp.front());
+			break;
+		}
+		c = tmp.front();
+		tmp.clear();
+	}
+}
+
+/*!
+	\return -1 if left ver < right ver,\n
+	0 if they are equal or \n
+	1 if left ver > then right ver.
+*/
+int version_comparator(const char *lc, const char *rc)
+{
+	vector<string> lres,rres;
+	char *tmp;
+	version_separator(lres,lc);
+	version_separator(rres,rc);
+	int i,j;
+	long l,r;
+
+	//unsigned int s = (unsigned int)((lres.size() < rres.size()) ? lres.size() : rres.size());
+
+	i = (int)lres.size() - 1;
+	j = (int)rres.size() - 1;
+	for(; i > -1 && j > -1; --i, --j)
+	{
+		l = strtol(lres[i].c_str(),&tmp,10);
+		r = strtol(rres[j].c_str(),&tmp,10);
+		if(l == r)
+			continue;
+		else if(l < r)
+			return (-1);
+		else if(l > r)
+			return 1;
+	}
+
+	if(lres.size() < rres.size())
+		return (-1);
+	else if(lres.size() > rres.size())
+		return 1;
+
+	return 0;
+}
+
+/*!
+	\brief Search for the 'name' vertex
+
+	Search for the full path, contains leaf == *name.* and returns index
+	\param lp - vector of filenames
+	\param name - name of vertex
+	\return index of name or -1 - otherwise
+ */
+int find_vertex(vector<string> &lp, const char *name)
+{
+	for(unsigned int i = 0; i < lp.size(); ++i)
+	{
+		string tmp;
+		get_leaf(tmp,lp[i]);
+		if(compare(tmp.c_str(),name,"^(.*)","(_d.|.)(dll|so)$"))
+			return i;
+	}
+	return (-1);
+}
+
+/*!
+	\brief Get leaf of src.
+	\param container_ - here will be leaf
+	\param src - all path
+ */
+void get_leaf(string &container_, string &src)
+{
+	vector<string> res;
+	string tmp = string(src);
+	regex expression("(/\?(\?:[^\?#/]*/)*)\?([^\?#]*)");
+	regex_split(back_inserter(res),tmp,expression,match_default);
+	if(res.size() > 0)
+		container_ = res.back();
+}
+
+/*!
+	\brief get name of file in format name.expansion
+	\param container_ - here will be name
+	\param src - all path
+ */
+void get_name(string &container_, string &src)
+{
+	vector<string> res;
+	string tmp = string(src);
+	regex expression("^([^\?#]*)[.](.*)$");
+	regex_split(back_inserter(res),tmp,expression,match_default);
+	if(res.size() > 0)
+		container_ = res.front();
+}
+
+/*!
+	\param g - here will be graph
+	\param cntr_ - here will be list of pathes
+	\return blue_sky::no_library - if some library in dependencies missing,
+	blue_sky::no_error - otherwise.
+ */
+blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
+{
+	typedef pair<int,int> edge_t;
+	typedef std::vector < edge_t > edge_array_t;
+
+	cntr_.clear();
+
+	int i,j;
+	int k;
+	Config cfg;
+	vector<string> sp, lp;
+	edge_array_t edges;
+	char *c_lib_dir = NULL;
+	if (!(c_lib_dir = getenv("BS_LOAD_CFGS")))
+	  c_lib_dir = (char *)"./";
+
+	search_files(sp,".cfg",c_lib_dir);
+
+	if (!(c_lib_dir = getenv("BS_PLUGIN_LIBS")))
+	  c_lib_dir = (char *)"./";
+#ifdef UNIX
+	search_files(lp,".so",c_lib_dir);
+#else
+	search_files(lp,".dll",c_lib_dir);
+	search_files(lp,".pyd",c_lib_dir);
+#endif
+	size_t lp_size = lp.size();//, sp_size = sp.size();
+	for(i = 0; i < (int)lp_size; ++i)
+	{
+		cntr_.push_back(lload());
+		cntr_[i].first = string(lp[i]);
+	}
+
+	//#if defined(BOOST_MSVC)
+	//g = load_graph(lp_size);
+	//aload_arc arcs;
+
+	try {
+
+	for(i = 0; i < (int)lp_size; ++i)
+	{
+		char *cfg_file;
+		if(!(cfg_file = (char *)find_cfg_file(lp[i],sp))) continue;
+
+		BSOUT << "Try to read " << cfg_file << bs_end;
+		cfg.readFile(cfg_file);
+
+		Setting &st = cfg.lookup("libs.load");
+		int len = st.getLength();
+		for (int b = 0; b < len; ++b)
+		{
+			std::string name, ver;
+			st[b].lookupValue("name",name);
+			st[b].lookupValue("version",ver);
+			if(-1 != (j = find_vertex(lp,name.c_str())))
+			{
+				//#if defined(BOOST_MSVC)
+  			//add_edge(i,j,g);
+					//#endif // if defined(BOOST_MSVC)
+				edges.push_back(edge_t(i,j));
+				k = version_comparator(cntr_[j].second.c_str(),ver.c_str());
+				if(k == -1)
+					cntr_[j].second = string(ver.c_str());
+			}
+			else
+			{
+			   //throw bs_exception("graph",blue_sky::no_library,name);
+				if (name != "")
+					BSERROR << "No library named \"" << name << "\";" << "graph creation failed!" << bs_end;
+				else
+					BSERROR << "You have been wrote something like \"libs: { load = ( {} ); };\"."
+									<< " This is the wrong structure of config. Write \"libs: { load = ( ); };\"."
+									<< "Graph creation failed!" << bs_end;
+				return blue_sky::no_library;
+
+			}
+		}
+	}
+
+	} catch (libconfig::ParseException &e) {
+		throw bs_exception(std::string("graph builder"),std::string(e.getError()));
+	} catch (const std::exception &e) {
+		throw bs_exception(std::string("graph builder"),std::string(e.what()));
+	} catch (...) {
+		throw bs_exception(std::string("graph builder"),std::string("Graph building error"));
+	}
+#if defined(BOOST_MSVC)
+	g = load_graph(lp_size);
+	for (std::size_t i = 0; i < edges.size (); ++i)
+    add_edge(edges[i].first, edges[i].second, g);
+#else // if defined(BOOST_MSVC)
+	g = load_graph (edges.begin (), edges.end (), lp_size);
+	//for (std::size_t i = 0; i < edges.size (); ++i)
+	//	printf("%d->%d ",edges[i].first,edges[i].second);
+	//printf("\n");
+#endif // if defined(BOOST_MSVC)
+
+	//for (int i = 0; i < ((((*(boost::vec_adj_list_impl<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config,boost::directed_graph_helper<boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config> >*)(&g))).m_vertices)).size(); ++i)
+	//	for (int j = 0; j < ((((*(boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config::rand_stored_vertex*)(&((((*(boost::vec_adj_list_impl<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config,boost::directed_graph_helper<boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config> >*)(&g))).m_vertices))[i]))).m_out_edges)).size(); ++j)
+	//		printf ("%d -> %d, ",i,((*(boost::detail::se_<unsigned int>*)(&((((*(boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config::rand_stored_vertex*)(&((((*(boost::vec_adj_list_impl<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config,boost::directed_graph_helper<boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config> >*)(&g))).m_vertices))[i]))).m_out_edges))[j]))).m_target);
+
+
+	return blue_sky::no_error;
+}
+
+/*!
+	\class bs_dfs_visitor
+	\ingroup loading_plugins
+	\brief boost::dfs_visitor<>-legatied class for graph.
+ */
+class bs_dfs_visitor : public dfs_visitor<>
+{
+	public:
+	 /*!
+		 \struct bs_dfs_vs
+		 \ingroup loading_plugins
+		 \brief Enumerated vertex of graph.
+		*/
+		struct bs_dfs_vs
+		{
+			/*!
+				\brief Constructor.
+				\param nt - number in depth-search
+				\param g_nt - vertex
+			*/
+			bs_dfs_vs(size_t nt, size_t g_nt) : n(nt), g_n(g_nt) {}
+			size_t n; //!< number in depth search
+			size_t g_n; //!< vertex
+
+			bool operator<(const bs_dfs_vs &vs2) const {
+				return ((n < vs2.n) ? true : false);
+			}
+		};
+
+	 /*!
+		 \brief Constructor.
+		 \param src - list of visitor vertexes.
+		*/
+		bs_dfs_visitor(vector<bs_dfs_vs> &src) : lc(src)
+		{
+			lc.clear();
+		}
+
+	 /*!
+		 \brief depth-search one step to pushing vertex to ds-list
+		 \param u - vertex, which must to push
+		*/
+		template <typename Vertex, typename Graph>
+		void discover_vertex(Vertex /*u*/, const Graph &/*g*/) const
+		{
+			//printf("%d:%d, ",(int)lc.size(),u);
+			//lc.push_back(bs_dfs_vs((int)lc.size(),u));
+		}
+
+	  //! End of depth search
+		template <typename Vertex, typename Graph>
+		void finish_vertex(Vertex u, const Graph &/*g*/) const {
+			//printf(" %d-f, ",u);
+			//printf("%d:%d, ",(int)lc.size(),u);
+			lc.push_back(bs_dfs_vs((int)lc.size(),u));
+		}
+
+	  vector<bs_dfs_vs> &lc; //!< list of visits (depth-search-list)
+};
+
+/*!
+	\brief Depth search.
+	\param ll - list of depth search
+	\param g - graph
+ */
+void graph_to_list(vector<int> &ll, const load_graph &g)
+{
+	vector<bs_dfs_visitor::bs_dfs_vs> dfs;
+	bs_dfs_visitor v(dfs);
+
+	//for (int i = 0; i < 1; ++i)
+	//printf("%d ",(int)g[(load_graph::vertex_descriptor)i]);
+
+	depth_first_search(g,visitor(v));
+
+	std::sort (dfs.begin(),dfs.end());
+
+	//for (int i = 0; i < dfs.size (); ++i)
+	//	BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") ";
+	//BSOUT << bs_end;
+
+	ll.clear();
+	for(int i = 0; i < (int)dfs.size(); ++i)
+		ll.push_back((int)dfs[i].g_n);
+}
+
+//the part from boos/filesystem/src/exception.cpp
+//system error-messages
+std::string system_message(int err_code) {
+	string str;
+#ifdef _WIN32
+	LPSTR lpMsgBuf;
+	::FormatMessageA(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		err_code,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+		(LPSTR)&lpMsgBuf,
+		0,
+		NULL
+	);
+	str = static_cast< const char* >(lpMsgBuf);
+	::LocalFree( lpMsgBuf ); // free the buffer
+	str = str.substr(0, str.find('\n'));
+	str = str.substr(0, str.find('\r'));
+#else
+	str = ::strerror(err_code);
+#endif
+	return str;
+}
+
+string last_system_message() {
+	int err_code;
+#ifdef _WIN32
+	err_code = GetLastError();
+#else
+	err_code = errno;
+#endif
+	return system_message(err_code);
+}
+
+}	//end of namespace blue_sky

@@ -1,0 +1,72 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bs_cube", "..\plugins\bs_cube\bs_cube.vcproj", "{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89} = {7C235C2A-609A-49B4-A89B-AC23530F0F89}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "blue-sky", "blue-sky.vcproj", "{7C235C2A-609A-49B4-A89B-AC23530F0F89}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bs_client", "..\client\bs_client.vcproj", "{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89} = {7C235C2A-609A-49B4-A89B-AC23530F0F89}
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706} = {FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bspy_loader", "..\python\bspy_loader\bspy_loader.vcproj", "{5FC52CB5-D666-4608-A354-81E3B5DE6035}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug_py|Win32 = Debug_py|Win32
+		Debug|Win32 = Debug|Win32
+		Release_py|Win32 = Release_py|Win32
+		release_with_debug|Win32 = release_with_debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.Debug_py|Win32.ActiveCfg = Debug_py|Win32
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.Debug_py|Win32.Build.0 = Debug_py|Win32
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.Debug|Win32.ActiveCfg = Debug|Win32
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.Debug|Win32.Build.0 = Debug|Win32
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.Release_py|Win32.ActiveCfg = Release_py|Win32
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.Release_py|Win32.Build.0 = Release_py|Win32
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.release_with_debug|Win32.ActiveCfg = Release_py|Win32
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.release_with_debug|Win32.Build.0 = Release_py|Win32
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.Release|Win32.ActiveCfg = Release|Win32
+		{FCEFA42B-6CAE-492C-8C2F-E22BDEB7E706}.Release|Win32.Build.0 = Release|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.Debug_py|Win32.ActiveCfg = Debug|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.Debug_py|Win32.Build.0 = Debug|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.Debug|Win32.Build.0 = Debug|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.Release_py|Win32.ActiveCfg = release_with_debug|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.Release_py|Win32.Build.0 = release_with_debug|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.release_with_debug|Win32.ActiveCfg = release_with_debug|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.release_with_debug|Win32.Build.0 = release_with_debug|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.Release|Win32.ActiveCfg = Release|Win32
+		{7C235C2A-609A-49B4-A89B-AC23530F0F89}.Release|Win32.Build.0 = Release|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.Debug_py|Win32.ActiveCfg = Debug|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.Debug_py|Win32.Build.0 = Debug|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.Debug|Win32.Build.0 = Debug|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.Release_py|Win32.ActiveCfg = Release|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.Release_py|Win32.Build.0 = Release|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.release_with_debug|Win32.ActiveCfg = Release|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.release_with_debug|Win32.Build.0 = Release|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.Release|Win32.ActiveCfg = Release|Win32
+		{0E5F515C-B1BC-465A-B6AE-3FDA643DAAE8}.Release|Win32.Build.0 = Release|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.Debug_py|Win32.ActiveCfg = Debug|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.Debug_py|Win32.Build.0 = Debug|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.Debug|Win32.ActiveCfg = Debug|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.Debug|Win32.Build.0 = Debug|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.Release_py|Win32.ActiveCfg = Release|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.Release_py|Win32.Build.0 = Release|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.release_with_debug|Win32.ActiveCfg = Release|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.release_with_debug|Win32.Build.0 = Release|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.Release|Win32.ActiveCfg = Release|Win32
+		{5FC52CB5-D666-4608-A354-81E3B5DE6035}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

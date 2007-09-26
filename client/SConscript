@@ -1,0 +1,95 @@
+import os, os.path;
+
+def list_prefix(in_list, what) :
+	return [what + x for x in in_list];
+
+def list_suffix(in_list, what) :
+	return [x + what for x in in_list];
+
+# directories
+build_dir = 'build';
+dbg_dir = 'debug';
+rel_dir = 'release';
+exe_dir = '../exe';
+exe_name = 'bs_client';
+tar_name = 'client';
+
+# import custom settings
+Import('*');
+
+# construct base environ
+base_env = custom_env.Clone();
+base_env.Append(
+	CPPDEFINES = ['BS_EXPORTING_PLUGIN', 'UNIX'],
+	CPPPATH = ['src', '#kernel/src', '#plugins/bs_cube/src']
+#	CPPPATH = ['src', '../kernel/src', '../plugins/bs_cube/src']
+);
+boost_libs = list_suffix(list_prefix(['system', 'filesystem', 'regex', 'thread', 'signals', 'python'], 'boost_'), '-mt');
+boost_libs_dbg = list_suffix(boost_libs, '-d');
+
+# construct debug and release env
+debug_env = base_env.Clone();
+debug_env.Append(
+		CPPDEFINES = ['_DEBUG'],
+		CCFLAGS = ['-O0', '-ggdb3'], 
+		LIBPATH = [os.path.join(exe_dir, dbg_dir), os.path.join(exe_dir, dbg_dir, 'plugins')],
+		LIBS = ['blue_sky_d', 'bs_cube_d']);
+
+release_env = base_env.Clone();
+release_env.Append(
+		CCFLAGS = ['-O2'],
+		LIBPATH = [os.path.join(exe_dir, rel_dir), os.path.join(exe_dir, rel_dir, 'plugins')],
+		LIBS = ['blue_sky', 'bs_cube']);
+
+# make targets
+# debug
+def build_debug() :
+	build_dir_dbg = os.path.join(build_dir, dbg_dir);
+	exe_dir_dbg = os.path.join(exe_dir, dbg_dir);
+
+	VariantDir(build_dir_dbg, 'src', duplicate = 0);
+	client_debug = debug_env.Program(target = os.path.join(exe_dir_dbg, exe_name + '_d'), source = Glob(os.path.join(build_dir_dbg, '*.cpp'), True, True));
+	# enable or disable dependencies
+	if base_env['nodeps'] == '1' :
+		Ignore(client_debug, bs_kernel_debug);
+		Ignore(client_debug, bs_cube_debug);
+	else :
+		Depends(client_debug, bs_kernel_debug);
+		Depends(client_debug, bs_cube_debug);
+#	debug_env.Install(exe_dir_dbg, client_debug);
+	debug_env.Alias(tar_name, client_debug);
+
+# 	Install step
+	if base_env['install'] == '1':
+		inst_dbg = debug_env.Install('$prefix', client_debug);
+		Alias(tar_name, inst_dbg);
+
+
+# release
+def build_release() :
+	build_dir_rel = os.path.join(build_dir, rel_dir);
+	exe_dir_rel = os.path.join(exe_dir, rel_dir);
+
+	VariantDir(build_dir_rel, 'src', duplicate = 0);
+	client_release = release_env.Program(target = os.path.join(exe_dir_rel, exe_name), source = Glob(os.path.join(build_dir_rel, '*.cpp'), True, True));
+	# enable or disable dependencies
+	if base_env['nodeps'] == '1' :
+		Ignore(client_release, bs_kernel_release);
+		Ignore(client_release, bs_cube_release);
+	else :
+		Depends(client_release, bs_kernel_release);
+		Depends(client_release, bs_cube_release);
+#	release_env.Install(exe_dir_rel, release);
+	release_env.Alias(tar_name, client_release);
+
+# 	Install step
+	if base_env['install'] == '1':
+		inst_rel = debug_env.Install('$prefix', client_release);
+		Alias(tar_name, inst_rel);
+
+# actaully build targets
+if base_env['debug'] == '1' :
+	build_debug();
+if base_env['release'] == '1' :
+	build_release();
+

@@ -1,0 +1,102 @@
+<HTML>
+<HEAD>
+<META NAME="GENERATOR" Content="Microsoft Visual Studio 8.0">
+<TITLE></TITLE>
+</HEAD>
+<BODY>
+    tree.mount("local:///tree/", "/");<br />
+    tree.mount("http://some_server/tree/1/", "/x/some_server/")<br />
+    <br />
+    obj = tree["/x/y/z"]<br />
+    <br />
+    obj.lock();<br />
+    // make changes<br />
+    obj.unlock();<br />
+    <br />
+    obj = tree["x"]["y"]["z"]<br />
+    <br />
+    tree.add(obj, "/x/y/z2")<br />
+    tree.delete("/x/y/z2")<br />
+    <br />
+    <br />
+    tree.unmount("/x/some_server")<br />
+    tree.get_mounts();<br />
+    <br />
+    result = obj.invoke(command);<br />
+    <br />
+    items = tree.list("/");
+    <br />
+    <br />
+    void tree_change_handler(node, change_type); //change_type = CREATED | REMOVED |
+    CHANGED | BRANCH_CHANGED<br />
+    <br />
+    tree.changed.connect(<br />
+    tree.item_added.connect(...)<br />
+    tree.item_removed.connect(...)<br />
+    tree.item_changed.connect(...)<br />
+    tree.branch_updated.connect(...)<br />
+    <br />
+    <br />
+    <hr />
+    <br />
+    <br />
+    TreeNode::lock<br />
+    {<br />
+    &nbsp;&nbsp; _res-&gt;lock();<br />
+    &nbsp;&nbsp; _obj = _cnn-&gt;get();<br />
+    &nbsp;&nbsp; return locker(this, _obj);<br />
+    }<br />
+    <br />
+    TreeNode::unlock<br />
+    {<br />
+    &nbsp;&nbsp; _res-&gt;put(_obj);<br />
+    &nbsp;&nbsp; _cnn-&gt;unlock();<br />
+    }<br />
+    <br />
+    TreeNode::invoke(command)<br />
+    {<br />
+    &nbsp; _res-&gt;post(command)<br />
+    }<br />
+    <br />
+    TreeNode::operator[path]<br />
+    {<br />
+    &nbsp;&nbsp; return _tree[_full_path + path];<br />
+    }<br />
+    <br />
+    TreeNode::list()<br />
+    {<br />
+    &nbsp; return _tree.list(_path)<br />
+    }<br />
+    <br />
+    Tree::operator[path]<br />
+    {<br />
+    &nbsp; uri = get_uri(path);<br />
+    &nbsp; res(uri);<br />
+    &nbsp; return TreeNode(this, path, res);<br />
+    }<br />
+    <br />
+    
+    <hr />
+    resource manager<br />
+    <br />
+    rm<br />
+    {<br />
+    &nbsp; void accept(cnn)<br />
+    &nbsp; {<br />
+    &nbsp; &nbsp;&nbsp; emergency_unlocker;<br />
+    &nbsp; &nbsp;&nbsp; while (cnn-&gt;valid())<br />
+    &nbsp; &nbsp; {<br />
+    &nbsp; &nbsp; &nbsp; &nbsp; req = cnn-&gt;get_request();<br />
+    &nbsp; &nbsp; &nbsp;&nbsp; if (req.method == LOCK)<br />
+    &nbsp; &nbsp; &nbsp;&nbsp; {<br />
+    &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; emergency_unlocker.push(lock(req.path));<br />
+    &nbsp; &nbsp; &nbsp;&nbsp; }<br />
+    &nbsp; &nbsp; }<br />
+    &nbsp; }<br />
+    }
+    <br />
+
+
+
+</BODY>
+</HTML>
