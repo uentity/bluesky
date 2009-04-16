@@ -32,8 +32,30 @@ class vector_traits {
 	typedef typename container::reference reference;
 	typedef typename container::const_reference const_reference;
 	typedef typename container::size_type size_type;
-}
+};
 
+
+template< class T >
+class str_map_traits{
+	typedef std::map< std::string, T > container;
+	typedef T value_type;
+	//! type of key - index
+	typedef typename std::string key_type;
+	//! type of iterator
+	typedef typename container::iterator iterator;
+	//! type of const iterator
+	typedef typename container::const_iterator const_iterator;
+	//references
+	typedef typename container::mapped_type& reference;
+	typedef const typename container::mapped_type& const_reference;
+	typedef typename container::size_type size_type;
+};
+
+/// @brief BlueSky array base class
+///
+/// template params:
+///           T -- type of array elements
+/// cont_traits -- specifies underlying container
 template< class T, template< class > cont_traits >
 class bs_array : public objbase, public typename cont_traits< T >::container
 {
@@ -43,7 +65,7 @@ public:
 	typedef typename cont_traits::value_type value_type;
 	//! type of vector of values
 	typedef typename cont_traits::container container;
-	//! type of key - index
+	//! type of key
 	typedef typename cont_traits::size_type key_type;
 	//! type of iterator
 	typedef typename cont_traits::iterator iterator;
@@ -76,6 +98,21 @@ public:
 		return container::insert(key, value);
 	}
 
+	virtual typename cont_traits::iterator begin() {
+		return container::begin();
+	}
+
+	virtual typename cont_traits::const_iterator begin() const {
+		return container::begin();
+	}
+
+	virtual typename cont_traits::iterator end() {
+		return container::end();
+	}
+
+	virtual typename cont_traits::const_iterator end() const {
+		return container::end();
+	}
 	//virtual bool insert(const value_type& value) {
 	//	return container::push_back(value);
 	//}
