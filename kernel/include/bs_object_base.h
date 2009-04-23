@@ -102,19 +102,20 @@ static bool bs_register_instance(const smart_ptr< T, true >& sp_inst); \
 virtual void bs_free_this() const; \
 virtual bool bs_register_this() const; */
 
-#define BS_COMMON_DECL_MEM(T)																			\
-public: static bs_objinst_holder::const_iterator bs_inst_begin()	\
-	{																																\
-		return BS_KERNEL.objinst_begin (bs_type ());									\
-	}																																\
-	static bs_objinst_holder::const_iterator bs_inst_end()					\
-	{																																\
-		return BS_KERNEL.objinst_end (bs_type ());										\
-	}																																\
-	static ulong bs_inst_cnt()																			\
-	{																																\
-		return BS_KERNEL.objinst_cnt(bs_type());											\
-	}
+/* #define BS_COMMON_DECL_MEM(T)																			\
+ * public: static bs_objinst_holder::const_iterator bs_inst_begin()	\
+ * 	{																																\
+ * 		return BS_KERNEL.objinst_begin (bs_type ());									\
+ * 	}																																\
+ * 	static bs_objinst_holder::const_iterator bs_inst_end()					\
+ * 	{																																\
+ * 		return BS_KERNEL.objinst_end (bs_type ());										\
+ * 	}																																\
+ * 	static ulong bs_inst_cnt()																			\
+ * 	{																																\
+ * 		return BS_KERNEL.objinst_cnt(bs_type());											\
+ * 	}
+ */
 
 
 /*!
@@ -142,6 +143,9 @@ static blue_sky::bs_objinst_holder::const_iterator bs_inst_end() \
 	{ return BS_KERNEL.objinst_end(bs_type()); } \
 static ulong bs_inst_cnt() { return BS_KERNEL.objinst_cnt(bs_type()); } \
 */
+
+// member declarations are the same for templated and non-templated types
+#define BS_COMMON_DECL_MEM(T) BS_COMMON_DECL_T_MEM(T)
 
 /*!
 \brief Very common implementations of functions for working with static list of instances.

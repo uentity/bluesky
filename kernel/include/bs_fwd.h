@@ -70,6 +70,8 @@ namespace blue_sky {
 	class bs_exception;
 
 	//data_table
+	template< class> class bs_arrbase;
+	template< class, template< class > class > class bs_array_t;
 	template< class > class str_val_table;
 	template< class > class bs_array;
 	template< template< class > class > class data_table;
