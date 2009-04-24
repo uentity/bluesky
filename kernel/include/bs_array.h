@@ -79,11 +79,11 @@ public:
 	typedef typename arrbase_t::key_type key_type;
 	//! type of iterator
 	typedef typename arrbase_t::iterator iterator;
-	typedef typename arrbase_t::template iterator_wrapper< value_type, typename cont_traits_t::iterator > iterator_w;
+	typedef typename arrbase_t::template iterator_backender< value_type, typename cont_traits_t::iterator > iter_backend;
 	//typedef typename cont_traits_t::iterator iterator;
 	//! type of const iterator
 	typedef typename arrbase_t::const_iterator const_iterator;
-	typedef typename arrbase_t::template iterator_wrapper< const value_type, typename cont_traits_t::const_iterator > const_iterator_w;
+	typedef typename arrbase_t::template iterator_backender< const value_type, typename cont_traits_t::const_iterator > const_iter_backend;
 
 	// inherited from cont_traits
 	//! type of vector of values
@@ -155,19 +155,19 @@ public:
 
 	// begin-end support for iteration through container
 	iterator begin() {
-		return iterator(new iterator_w(container::begin()));
+		return iterator(new iter_backend(container::begin()));
 	}
 
 	const_iterator begin() const {
-		return const_iterator(new const_iterator_w(container::begin()));
+		return const_iterator(new const_iter_backend(container::begin()));
 	}
 
 	iterator end() {
-		return iterator(new iterator_w(container::end()));
+		return iterator(new iter_backend(container::end()));
 	}
 
 	const_iterator end() const {
-		return const_iterator(new const_iterator_w(container::end()));
+		return const_iterator(new const_iter_backend(container::end()));
 	}
 
 	//creation and copy functions definitions

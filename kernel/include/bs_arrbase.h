@@ -24,7 +24,7 @@
 namespace blue_sky {
 
 /*-----------------------------------------------------------------------------
- *  bs_arrbase class - base class of BlueSky arrays
+ *  bs_arrbase -- base class of BlueSky arrays
  *-----------------------------------------------------------------------------*/
 template< class T >
 class bs_arrbase : public objbase {
@@ -199,14 +199,14 @@ public:
 		}
 	};
 
-	// CRTP wrapper for converting any particular iterator into iterator_t
+	// CRTP wrapper for creating iterator_backend from any existing container iterator
 	// just forwards calls to base ra_iterator class
 	template< class val_t, class ra_iterator >
-	class iterator_wrapper : public iterator_backend< val_t >, public ra_iterator {
+	class iterator_backender : public iterator_backend< val_t >, public ra_iterator {
 	public:
 		
 		// nessesary typedefs
-		typedef iterator_wrapper< val_t, ra_iterator > this_t;
+		typedef iterator_backender< val_t, ra_iterator > this_t;
 		typedef iterator_backend< val_t > base_t;
 		typedef typename base_t::this_ptr base_ptr;
 
@@ -216,14 +216,14 @@ public:
 		typedef typename base_t::diff_t diff_t;
 
 		// default ctor
-		iterator_wrapper() {}
+		iterator_backender() {}
 		// construct from ra_iterator
-		iterator_wrapper(const ra_iterator& i)
+		iterator_backender(const ra_iterator& i)
 			: ra_iterator(i)
 		{}
 
 		// copy ctors
-		iterator_wrapper(const this_t& i)
+		iterator_backender(const this_t& i)
 			: ra_iterator(i)
 		{}
 
@@ -262,13 +262,13 @@ public:
 		// comparison operators
 		// NOTE that comparison will only work if right-hand operand is of type ra_iterator or this_t
 		bool operator==(const base_t& i) const {
-			return (*this == cast_base(i));
+			return (*(ra_iterator*)this == cast_base(i));
 		}
 		bool operator<(const base_t& i) const {
-			return (*this < cast_base(i));
+			return (*(ra_iterator*)this < cast_base(i));
 		}
 		bool operator>(const base_t& i) const {
-			return (*this > cast_base(i));
+			return (*(ra_iterator*)this > cast_base(i));
 		}
 
 	private:
