@@ -178,10 +178,10 @@ public:
 		}
 
 		bool operator<(const this_t& i) const {
-			return *ibe_ < i.ibe_;
+			return *ibe_ < *i.ibe_;
 		}
 		bool operator>(const this_t& i) const {
-			return *ibe_ > i.ibe_;
+			return *ibe_ > *i.ibe_;
 		}
 		bool operator<=(const this_t& i) const {
 			return !(*this > i);
