@@ -7,10 +7,10 @@ def list_suffix(in_list, what) :
 	return [x + what for x in in_list];
 
 # directories
-build_dir = 'build';
+build_dir = '#build';
 dbg_dir = 'debug';
 rel_dir = 'release';
-exe_dir = '../exe';
+exe_dir = '#exe';
 exe_name = 'bs_client';
 tar_name = 'client';
 
@@ -21,7 +21,7 @@ Import('*');
 base_env = custom_env.Clone();
 base_env.Append(
 	CPPDEFINES = ['BS_EXPORTING_PLUGIN', 'UNIX'],
-	CPPPATH = ['src', '#kernel/src', '#plugins/bs_cube/src']
+	CPPPATH = ['src', '#kernel/include', '#plugins/bs_cube/src']
 #	CPPPATH = ['src', '../kernel/src', '../plugins/bs_cube/src']
 );
 boost_libs = list_suffix(list_prefix(['system', 'filesystem', 'regex', 'thread', 'signals', 'python'], 'boost_'), '-mt');
@@ -31,7 +31,7 @@ boost_libs_dbg = list_suffix(boost_libs, '-d');
 debug_env = base_env.Clone();
 debug_env.Append(
 		CPPDEFINES = ['_DEBUG'],
-		CCFLAGS = ['-O0', '-ggdb3'], 
+		CCFLAGS = ['-O0', '-ggdb3'],
 		LIBPATH = [os.path.join(exe_dir, dbg_dir), os.path.join(exe_dir, dbg_dir, 'plugins')],
 		LIBS = ['blue_sky_d', 'bs_cube_d']);
 
@@ -44,7 +44,7 @@ release_env.Append(
 # make targets
 # debug
 def build_debug() :
-	build_dir_dbg = os.path.join(build_dir, dbg_dir);
+	build_dir_dbg = os.path.join(build_dir, dbg_dir, tar_name);
 	exe_dir_dbg = os.path.join(exe_dir, dbg_dir);
 
 	VariantDir(build_dir_dbg, 'src', duplicate = 0);
@@ -67,7 +67,7 @@ def build_debug() :
 
 # release
 def build_release() :
-	build_dir_rel = os.path.join(build_dir, rel_dir);
+	build_dir_rel = os.path.join(build_dir, rel_dir, tar_name);
 	exe_dir_rel = os.path.join(exe_dir, rel_dir);
 
 	VariantDir(build_dir_rel, 'src', duplicate = 0);

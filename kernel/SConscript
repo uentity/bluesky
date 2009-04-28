@@ -49,8 +49,8 @@ py_kernel_cpp_list = [os.path.join('python', x) for x in Split("""
 # setup different names
 dbg_dir = 'debug';
 rel_dir = 'release';
-build_dir = 'build';
-inst_dir = '../exe';
+build_dir = '#build';
+inst_dir = '#exe';
 lib_name = 'blue_sky';
 tar_name = 'kernel';
 
@@ -71,7 +71,7 @@ base_env = custom_env.Clone();
 base_env.Append(
 	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN', 'UNIX'],
 #	CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-pthread', '-fvisibility=hidden', '-fvisibility-inlines-hidden'],
-	CPPPATH = ['src'],
+	CPPPATH = ['include', 'src'],
 	LIBS = ['dl', 'libconfig++', 'loki', 'python2.5']
 );
 # define boost lib names to include
@@ -82,14 +82,16 @@ ccflags = ['-O2'];
 ccflags_dbg = ['-O0', '-ggdb3'];
 
 # prepare src lists for different variant builds
-src_dbg = [os.path.join(build_dir, dbg_dir, x) for x in kernel_cpp_list];
-src_rel = [os.path.join(build_dir, rel_dir, x) for x in kernel_cpp_list];
+build_dir_dbg = os.path.join(build_dir, dbg_dir, tar_name);
+build_dir_rel = os.path.join(build_dir, rel_dir, tar_name);
+src_dbg = [os.path.join(build_dir_dbg, x) for x in kernel_cpp_list];
+src_rel = [os.path.join(build_dir_rel, x) for x in kernel_cpp_list];
 
 # are we building with python support?
 if base_env['py'] == '1' :
-	base_env.Append(CPPDEFINES = ['BSPY_EXPORTING']);
-	src_dbg = src_dbg + [os.path.join(build_dir, dbg_dir, x) for x in py_kernel_cpp_list];
-	src_rel = src_rel + [os.path.join(build_dir, rel_dir, x) for x in py_kernel_cpp_list];
+	base_env.Append(CPPDEFINES = ['BSPY_EXPORTING'], CPPPATH = ['include/python']);
+	src_dbg = src_dbg + [os.path.join(build_dir_dbg, x) for x in py_kernel_cpp_list];
+	src_rel = src_rel + [os.path.join(build_dir_rel, x) for x in py_kernel_cpp_list];
 
 # make debug env
 env_dbg = base_env.Clone();
@@ -106,7 +108,7 @@ env_rel.Append(
 # setup targets
 # default debug target
 def build_debug() :
-	VariantDir(os.path.join(build_dir, dbg_dir), 'src',  duplicate = 0);
+	VariantDir(build_dir_dbg, 'src',  duplicate = 0);
 	bs_kernel_debug = env_dbg.SharedLibrary(target = os.path.join(inst_dir, dbg_dir, lib_name + '_d'), source = src_dbg);
 	#bs_kernel_debug = env_dbg.Install(os.path.join(inst_dir, dbg_dir), debug);
 	Alias(tar_name, bs_kernel_debug);
@@ -119,7 +121,7 @@ def build_debug() :
 		Alias(tar_name, inst_dbg);
 
 def build_release() :
-	VariantDir(os.path.join(build_dir, rel_dir), 'src',  duplicate = 0);
+	VariantDir(build_dir_rel, 'src',  duplicate = 0);
 	bs_kernel_release = env_rel.SharedLibrary(target = os.path.join(inst_dir, rel_dir, lib_name), source = src_rel);
 #	bs_kernel_release = env_rel.Install(os.path.join(inst_dir, rel_dir), release);
 	env_rel.Alias(tar_name, bs_kernel_release);

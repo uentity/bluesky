@@ -8,10 +8,10 @@ cpp_list = Split("""
 """);
 
 # directories
-build_dir = 'build';
+build_dir = '#build';
 dbg_dir = 'debug';
 rel_dir = 'release';
-exe_dir = '../../exe';
+exe_dir = '#exe';
 plug_dir = 'plugins';
 lib_name = 'bs_cube';
 tar_name = lib_name;
@@ -23,7 +23,7 @@ Import('*');
 base_env = custom_env.Clone();
 base_env.AppendUnique(
 	CPPDEFINES = ['BS_EXPORTING_PLUGIN', 'UNIX'],
-	CPPPATH = ['src', '#kernel/src']
+	CPPPATH = ['src', '#kernel/include']
 #	CPPPATH = ['src', '../../kernel/src']
 );
 
@@ -31,7 +31,7 @@ base_env.AppendUnique(
 if base_env['py'] == '1' :
 	base_env.Append(
 			CPPDEFINES = ['BSPY_EXPORTING_PLUGIN'],
-			CPPPATH = ['#kernel/src/python']
+			CPPPATH = ['#kernel/include/python']
 #			CPPPATH = ['../../kernel/src/python']
 	);
 
@@ -52,7 +52,7 @@ release_env.AppendUnique(
 # make targets
 # debug
 def build_debug() :
-	build_dir_dbg = os.path.join(build_dir, dbg_dir);
+	build_dir_dbg = os.path.join(build_dir, dbg_dir, tar_name);
 	exe_dir_dbg = os.path.join(exe_dir, dbg_dir, plug_dir);
 
 	VariantDir(build_dir_dbg, 'src', duplicate = 0);
@@ -75,7 +75,7 @@ def build_debug() :
 
 # release
 def build_release() :
-	build_dir_rel = os.path.join(build_dir, rel_dir);
+	build_dir_rel = os.path.join(build_dir, rel_dir, tar_name);
 	exe_dir_rel = os.path.join(exe_dir, rel_dir, plug_dir);
 
 	VariantDir(build_dir_rel, 'src', duplicate = 0);
