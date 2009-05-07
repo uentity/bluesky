@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)/../../kernel/src&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;;&quot;$(LOKI_PATH)/include&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)/../../kernel/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;;&quot;$(LOKI_PATH)/include&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;BS_EXPORTING_PLUGIN;TARGET_NAME=$(TargetName)"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
