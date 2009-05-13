@@ -72,14 +72,14 @@ base_env.Append(
 	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN', 'UNIX'],
 #	CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-pthread', '-fvisibility=hidden', '-fvisibility-inlines-hidden'],
 	CPPPATH = ['include', 'src'],
-	LIBS = ['dl', 'libconfig++', 'loki', 'python2.5']
+	LIBS = ['dl', 'libconfig++', 'loki', '${python_name}']
 );
 # define boost lib names to include
 boost_libs = list_suffix(list_prefix(['filesystem', 'regex', 'thread', 'signals', 'python'], 'boost_'), '-mt');
 boost_libs_dbg = list_suffix(boost_libs, '-d');
 # specify flags for various builds
-ccflags = ['-O2'];
-ccflags_dbg = ['-O0', '-ggdb3'];
+#ccflags = ['-O2'];
+#ccflags_dbg = ['-O0', '-ggdb3'];
 
 # prepare src lists for different variant builds
 build_dir_dbg = os.path.join(build_dir, dbg_dir, tar_name);
@@ -95,15 +95,15 @@ if base_env['py'] == '1' :
 
 # make debug env
 env_dbg = base_env.Clone();
-env_dbg.Append(
-	LIBS = boost_libs_dbg, 
-	CCFLAGS = ccflags_dbg);
+env_dbg.Append(LIBS = boost_libs_dbg);
+env_dbg.MergeFlags({'CCFLAGS': '${ccflags_dbg}'});
+#	CCFLAGS = ccflags_dbg);
 
 # make release env
 env_rel = base_env.Clone();
-env_rel.Append(
-	LIBS = boost_libs,
-	CCFLAGS = ccflags);
+env_rel.Append(LIBS = boost_libs);
+env_rel.MergeFlags({'CCFLAGS': '${ccflags_rel}'});
+#	CCFLAGS = ccflags);
 
 # setup targets
 # default debug target

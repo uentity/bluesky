@@ -141,6 +141,13 @@ custom_vars.Add(PathVariable('plugins_prefix', 'Point where to install BlueSky k
 #	if not os.path.exists(plugins_prefix) :
 #		os.mkdir(plugins_prefix);
 
+# variable that specifies python version installed in the system
+custom_vars.Add('python_name', 'Put full Python interpreter name with version here, ex. python2.5', 'python2.5');
+# debug compile flags
+custom_vars.Add('ccflags_dbg', 'Specify compiler flags for debug build', '-O0 -ggdb3');
+# release compile flags
+custom_vars.Add('ccflags_rel', 'Specify compiler flags for release build', '-O3');
+
 # create custom environment
 custom_env = Environment(variables = custom_vars);
 

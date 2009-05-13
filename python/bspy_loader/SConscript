@@ -21,7 +21,6 @@ base_env = custom_env.Clone();
 base_env.AppendUnique(
 	CPPDEFINES = ['BS_EXPORTING_PLUGIN', 'UNIX', 'TARGET_NAME=bs'],
 	CPPPATH = ['src', '#kernel/include', '#kernel/include/python'],
-#	CPPPATH = ['src', '../../kernel/src', '../../kernel/src/python'],
 );
 # remove any lib prefix
 base_env['SHLIBPREFIX'] = '';
@@ -30,15 +29,17 @@ base_env['SHLIBPREFIX'] = '';
 debug_env = base_env.Clone();
 debug_env.AppendUnique(
 		CPPDEFINES = ['_DEBUG'],
-		CCFLAGS = ['-O0', '-ggdb3'], 
+#		CCFLAGS = ['-O0', '-ggdb3'], 
 		LIBPATH = [os.path.join(exe_dir, dbg_dir)],
 		LIBS = ['blue_sky_d', 'boost_python-mt-d']);
+debug_env.MergeFlags({'CCFLAGS': '${ccflags_dbg}'});
 
 release_env = base_env.Clone();
 release_env.AppendUnique(
-		CCFLAGS = ['-O2'],
+#		CCFLAGS = ['-O2'],
 		LIBPATH = [os.path.join(exe_dir, rel_dir)],
 		LIBS = ['blue_sky', 'boost_python-mt']);
+release_env.MergeFlags({'CCFLAGS': '${ccflags_rel}'});
 
 # make targets
 # debug
