@@ -1321,7 +1321,7 @@ public:
 	{
 		//init(lp, Loki::Int2Type< cast_helper< R, BS_DEF_CAST_POLICY >::result >());
 		//if(this->p_) this->p_->add_ref();
-    bs_refcounter_add_ref (this->p_);
+		bs_refcounter_add_ref (this->p_);
 	}
 
 	/*!
@@ -1333,7 +1333,7 @@ public:
 	{
 		//init(lp, Loki::Int2Type< cast_helper< R, cast_t >::result >());
 		//if(this->p_) this->p_->add_ref();
-    bs_refcounter_add_ref (this->p_);
+		bs_refcounter_add_ref (this->p_);
 	}
 
 	/*!
@@ -1348,7 +1348,7 @@ public:
 			//			std::cout << "ref_cnt = " << refs() << std::endl;
 
 			//this->p_->del_ref();
-      bs_refcounter_del_ref (static_cast <const bs_refcounter*> (this->p_));
+			bs_refcounter_del_ref (static_cast <const bs_refcounter*> (this->p_));
 		}
 	}
 

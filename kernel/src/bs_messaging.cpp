@@ -1,15 +1,15 @@
 // This file is part of BlueSky
-// 
+//
 // BlueSky is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
 // as published by the Free Software Foundation; either version 3
 // of the License, or (at your option) any later version.
-// 
+//
 // BlueSky is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
@@ -70,7 +70,9 @@ void bs_slot::dispose() const {
 //new implementation
 class slot_holder {
 public:
-	slot_holder(const sp_slot& slot, const sp_mobj& sender = NULL)
+	typedef const bs_imessaging* sender_ptr;
+
+	slot_holder(const sp_slot& slot, const sender_ptr& sender = NULL)
 		: slot_(slot), sender_(sender)
 	{}
 
@@ -86,18 +88,22 @@ public:
 		return (slot_ < rhs.slot_);
 	}
 
-	void operator()(sp_mobj sender, int signal_code, sp_obj param) const {
+	void operator()(const sp_mobj& sender, int signal_code, sp_obj param) const {
 		if((!sender_) || (sender == sender_))
 			fire_slot(sender, signal_code, param);
 	}
 
-	// childs should overrride this function
+	// children should override this function
 	virtual void fire_slot(const sp_mobj& sender, int signal_code, const sp_obj& param) const = 0;
 
 protected:
 	sp_slot slot_;
 	// if sender != NULL then only signals from this sender will be triggered
-	sp_mobj sender_;
+	// if we store sp_mobj then object will live forever, because every slot holds smart pointer to sender
+	// thats why only pure pointer to object is stored
+	// when sender is deleted, all slot_holders will be destroyed and there will be no dead references
+	const bs_imessaging* sender_;
+	//sp_mobj sender_;
 };
 
 class async_layer : public slot_holder {
@@ -129,7 +135,9 @@ class async_layer : public slot_holder {
 	};
 
 public:
-	async_layer(const sp_slot& slot, const sp_mobj& sender = NULL)
+	typedef slot_holder::sender_ptr sender_ptr;
+
+	async_layer(const sp_slot& slot, const sender_ptr& sender = NULL)
 		: slot_holder(slot, sender)
 	{}
 
@@ -141,7 +149,9 @@ public:
 
 class sync_layer : public slot_holder {
 public:
-	sync_layer(const sp_slot& slot, const sp_mobj& sender = NULL)
+	typedef slot_holder::sender_ptr sender_ptr;
+
+	sync_layer(const sp_slot& slot, const sender_ptr& sender = NULL)
 		: slot_holder(slot, sender)
 	{}
 
@@ -175,7 +185,7 @@ public:
 //		: signal_code_(sig_code), sender_(sender),
 //	{}
 
-	//non-const function because boost::signals dosen't support mt
+	//non-const function because boost::signals doesn't support mt
 	void execute(const sp_mobj& sender) {
 		if(sender)
 			my_signal_(sender, signal_code_, param_);
