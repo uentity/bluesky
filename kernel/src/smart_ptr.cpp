@@ -24,6 +24,7 @@
 #include "setup_common_api.h"
 //#include "bs_refcounter.h"
 #include "bs_object_base.h"
+#include "bs_link.h"
 
 namespace blue_sky {
 void BS_API bs_refcounter_add_ref (const bs_refcounter *p) {
