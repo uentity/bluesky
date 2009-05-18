@@ -308,6 +308,7 @@ namespace blue_sky {
 		//signals list
 		BLUE_SKY_SIGNALS_DECL_BEGIN(bs_messaging)
 			on_unlock,
+			on_delete,
 		BLUE_SKY_SIGNALS_DECL_END
 
 		//! type_descriptor of objbase class

@@ -81,6 +81,9 @@ public:
 		//cout << "cnt_ = " << cnt_ << endl;
 	}
 	long current() const { return cnt_; }
+	void set_cnt(long value) {
+		cnt_ = value;
+	}
 
 	void test() const {};
 
@@ -825,6 +828,21 @@ void mt_op(long param = how_many, bool silent = false)
 //    pk.bs_root().node()->insert1(c,"asd",false);
 //}
 
+void test_ondelete() {
+	struct dummy_ondelete : public bs_slot {
+		 void execute(const sp_mobj& src, int signal, const sp_obj& param) const {
+			 sp_dummy d(src, bs_dynamic_cast());
+			 if(d)
+			 	cout << "on_delete signal fired for bs_dummy object with cnt = " << d->current() << endl;
+		 }
+	};
+
+	sp_dummy d = k.create_object(dummy::bs_type(), true);
+	d.lock()->set_cnt(120327);
+	d->subscribe(objbase::on_delete, new dummy_ondelete());
+	// after exit fromthis block on_delete signal should fire
+}
+
 /*!
  * \brief main function
  *
@@ -851,21 +869,23 @@ try {
 		k.register_type(plugin_info, dummy::bs_type());
 
 		print_loaded_types();
-		fill_dummy_node(100);
-		print_tree();
+		//fill_dummy_node(100);
+		//print_tree();
 
-		mt_op< dummy_changer >(50, true);
-		mt_op< dummy_renamer >(50, true);
+		//mt_op< dummy_changer >(50, true);
+		//mt_op< dummy_renamer >(50, true);
+		
 		//dummy_changer(50)();
-		mt_op< dummy_changer >(50, true);
-		mt_op< dummy_renamer >(50, true);
+		
+		//mt_op< dummy_changer >(50, true);
+		//mt_op< dummy_renamer >(50, true);
 		//dummy_renamer(50)();
 
 		//block until all tasks are done
-		cout << "Waiting until all changes are made..." << endl;
-		k.wait_tq_empty();
-		cout << "Ok, node fully updated" << endl;
-		print_dummy_node(bs_node::custom_idx);
+		//cout << "Waiting until all changes are made..." << endl;
+		//k.wait_tq_empty();
+		//cout << "Ok, node fully updated" << endl;
+		//print_dummy_node(bs_node::custom_idx);
 
 		k.tree_gc();
 
@@ -879,8 +899,10 @@ try {
 
 		//test_props();
 
-		test_mt();
-		print_dummy_node(bs_node::custom_idx);
+		//test_mt();
+		//print_dummy_node(bs_node::custom_idx);
+
+		test_ondelete();
 
 #ifdef USE_TBB_LIB
 		//tbb_test_mt();

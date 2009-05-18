@@ -375,7 +375,8 @@ namespace blue_sky {
 			std::vector::at().
 			\return reference to value-object
 		*/
-		template< class T >
+template< class T >
+#ifndef BS_DISABLE_MT_LOCKS
 		bs_locker< T > at(const DT_KEY_T& key) {
 			DT_SP_TBL p_vt = find_table< T >();
 			if(!p_vt) throw std::out_of_range("str_val_table: Table of values of requested type doesn't exist");
@@ -385,7 +386,13 @@ namespace blue_sky {
 				*p_vt.mutex()
 				);
 		};
-
+#else
+		DT_REF_T at(const DT_KEY_T& key) {
+			DT_SP_TBL p_vt = find_table< T >();
+			if(!p_vt) throw std::out_of_range("str_val_table: Table of values of requested type doesn't exist");
+			return p_vt->at(key);
+		};
+#endif
 		template< class T >
 		DT_CONST_REF_T at(const DT_KEY_T& key) const {
 			DT_SP_TBL p_vt = find_table< T >();
@@ -423,15 +430,23 @@ namespace blue_sky {
 		//DT_CONST_REF_T ss(const DT_KEY_T& key) {
 		//	return table< T >()->operator[](key);
 		//}
-
 		template< class T >
-		bs_locker< T > ss(const DT_KEY_T& key) {
+#ifndef BS_DISABLE_MT_LOCKS
+		bs_locker< T >
+#else
+		DT_REF_T
+#endif
+		ss(const DT_KEY_T& key) {
 			DT_SP_TBL p_vt = table< T >();
+#ifndef BS_DISABLE_MT_LOCKS
 			//NOTE: manual const_cast - I know what am I doing, but never do it by yourself unless you also know The Thing
 			return bs_locker< T >(
 				&const_cast< table_traits< T >* >(p_vt.get())->operator[](key),
 				*p_vt.mutex()
 			);
+#else
+			return p_vt->operator[](key);
+#endif
 		}
 
 		//! This is functional version of subscripting operator. Does assignment inside.

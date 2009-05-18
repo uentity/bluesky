@@ -35,6 +35,10 @@
 #include "loki/TypeManip.h"
 //#include <iostream>
 
+// if you SURELY don't need locks in mt environment
+// then define the following key
+//#define BS_DISABLE_MT_LOCKS
+
 /*!
 * \brief
 * Casting behavior used by smart pointers to blue-sky types
@@ -444,13 +448,19 @@ public:
 	\param lp - pointer to const object
 	*/
 	bs_locker(pointer_t lp)
-		: p_(const_cast< pure_pointer_t >(lp)), lobj_(lp->mutex())
+		: p_(const_cast< pure_pointer_t >(lp))
+#ifndef BS_DISABLE_MT_LOCKS
+		  , lobj_(lp->mutex())
+#endif
 	{}
 	/*!
 	\brief Constructor from simple pointer with disjoint mutex.
 	*/
 	bs_locker(pointer_t lp, bs_mutex& m)
-		: p_(const_cast< pure_pointer_t >(lp)), lobj_(m)
+		: p_(const_cast< pure_pointer_t >(lp))
+#ifndef BS_DISABLE_MT_LOCKS
+		  , lobj_(m)
+#endif
 	{}
 
 	pure_pointer_t operator->() const {
@@ -488,23 +498,26 @@ public:
 
 	//dtor
 	~bs_locker() {
+#ifndef BS_DISABLE_MT_LOCKS
 		//fire unlock signal
 		bs_private::signal_unlock< pure_pointed_t >::fire(p_);
+#endif
 	}
 
 	/*!
-	\brief Dummy copy constructor
+	\brief Dumb copy construction
 
-	Just declare in order to let objbase::locked_this compile
-	This really never used.
+	Just to let some code compile. This is really never used.
 	*/
 	bs_locker(const bs_locker&);
 
 private:
 	pure_pointer_t p_; //!< inner pointer
 	//holder_t p_;
+#ifndef BS_DISABLE_MT_LOCKS
 	//! type of locker object used in mutex
 	typename bs_mutex::scoped_lock lobj_;
+#endif
 
 	/*!
 	\brief Empty constructor prevents from creating empty object.
@@ -546,7 +559,10 @@ public:
 	Locks pointed object.
 	\param lp - multithreaded smart pointer
 	*/
-	explicit lsmart_ptr(const SP& lp) : base_t(lp), guard_(lp.mutex()), lobj_(*lp.mutex())
+	explicit lsmart_ptr(const SP& lp) : base_t(lp), guard_(lp.mutex())
+#ifndef BS_DISABLE_MT_LOCKS
+										, lobj_(*lp.mutex())
+#endif
 	{}
 
 	/*!
@@ -554,11 +570,17 @@ public:
 	Use supplied external mutex to lock on. This ctor can be used with signlethreaded smart pointers.
 	\param lp - smart pointer
 	*/
-	explicit lsmart_ptr(const SP& lp, const bs_mutex& m) : base_t(lp), guard_(&m), lobj_(m)
+	explicit lsmart_ptr(const SP& lp, const bs_mutex& m) : base_t(lp), guard_(&m)
+#ifndef BS_DISABLE_MT_LOCKS
+														   , lobj_(m)
+#endif
 	{}
 
 	//! copy ctor accuires another lock
-	lsmart_ptr(const this_t& lp) : base_t(lp), guard_(lp.guard_), lobj_(*lp.guard_)
+	lsmart_ptr(const this_t& lp) : base_t(lp), guard_(lp.guard_)
+#ifndef BS_DISABLE_MT_LOCKS
+								   , lobj_(*lp.guard_)
+#endif
 	{}
 
 	// destructor will automatically release the lock
@@ -608,16 +630,20 @@ public:
 	\brief Locks pointed object
 	*/
 	void lock() {
+#ifndef BS_DISABLE_MT_LOCKS
 		lobj_.lock();
+#endif
 	}
 
 	/*!
 	\brief Unlocks pointed object
 	*/
 	void unlock() {
+#ifndef BS_DISABLE_MT_LOCKS
 		lobj_.unlock();
 		//fire unlock signal
 		bs_private::signal_unlock< pointed_t >::fire(this->p_);
+#endif
 	}
 
 	/*!
@@ -626,19 +652,22 @@ public:
 	Also releases the lock.
 	*/
 	void release() {
+#ifndef BS_DISABLE_MT_LOCKS
 		//release the lock
 		lobj_.~lock_obj_t();
 		//fire unlock signal
 		bs_private::signal_unlock< pointed_t >::fire(this->p_);
-
+#endif
 		//! release pointer
 		base_t::release();
 	}
 
 	//dtor
 	~lsmart_ptr() {
+#ifndef BS_DISABLE_MT_LOCKS
 		//fire unlock signal
 		bs_private::signal_unlock< pointed_t >::fire(this->p_);
+#endif
 	}
 
 private:
@@ -650,9 +679,10 @@ private:
 
 	bs_mutex* guard_;
 	typedef bs_mutex::scoped_lock lock_obj_t;
+#ifndef BS_DISABLE_MT_LOCKS
 	lock_obj_t lobj_;
+#endif
 };
-
 
 /*!
 \brief Function that performs the assignment using specified casting policy
@@ -793,10 +823,20 @@ public:
 //	const bs_locker< T > lock() const {
 //		return bs_locker< T >(this->p_, *mut_);
 //	}
+#ifndef BS_DISABLE_MT_LOCKS
 	const lsmart_ptr< this_t > lock() const {
 		return lsmart_ptr< this_t >(*this);
 	}
+#else
+	pure_pointer_t lock() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
 
+	// override member-access function
+	pure_pointer_t operator->() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
+#endif
 	//! \brief mutex accessor
 	bs_mutex* mutex() const { return mut_; }
 
@@ -962,7 +1002,7 @@ private:
 };
 
 /*!
-\class mt_smart_ptr
+\class smart_ptr< T, false >
 \ingroup smart_pointers
 \brief multithreaded smart pointer for generic types
 */
@@ -1194,9 +1234,20 @@ public:
 //	const bs_locker< T > lock() const {
 //		return bs_locker< T >(this->p_, *mut_);
 //	}
+#ifndef BS_DISABLE_MT_LOCKS
 	const lsmart_ptr< this_t > lock() const {
 		return lsmart_ptr< this_t >(*this);
 	}
+#else
+	pure_pointer_t lock() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
+
+	// override member-access function
+	pure_pointer_t operator->() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
+#endif
 
 	/*!
 	\brief mutex accessor
@@ -1277,7 +1328,7 @@ public:
 	*/
 	/*explicit */smart_ptr(pointer_t lp = NULL) : base_t(lp) {
 		//if(this->p_) this->p_->add_ref();
-    bs_refcounter_add_ref (this->p_);
+		bs_refcounter_add_ref (this->p_);
 	};
 
 	/*!
@@ -1285,7 +1336,7 @@ public:
 	*/
 	smart_ptr(const this_t& lp) : base_t(lp) {
 		//if(this->p_) this->p_->add_ref();
-    bs_refcounter_add_ref (this->p_);
+		bs_refcounter_add_ref (this->p_);
 	}
 
 	/*!
@@ -1297,7 +1348,7 @@ public:
 	{
 		//init(lp, Loki::Int2Type< cast_helper< R, BS_DEF_CAST_POLICY >::result >());
 		//if(this->p_) this->p_->add_ref();
-    bs_refcounter_add_ref (this->p_);
+		bs_refcounter_add_ref (this->p_);
 	}
 
 	/*!
@@ -1309,7 +1360,7 @@ public:
 	{
 		//init(lp, Loki::Int2Type< cast_helper< R, cast_t >::result >());
 		//if(this->p_) this->p_->add_ref();
-    bs_refcounter_add_ref (this->p_);
+		bs_refcounter_add_ref (this->p_);
 	}
 
 	/*!
@@ -1321,7 +1372,7 @@ public:
 	{
 		//init(lp, Loki::Int2Type< cast_helper< R, BS_DEF_CAST_POLICY >::result >());
 		//if(this->p_) this->p_->add_ref();
-    bs_refcounter_add_ref (this->p_);
+		bs_refcounter_add_ref (this->p_);
 	}
 
 	/*!
@@ -1333,7 +1384,7 @@ public:
 	{
 		//init(lp, Loki::Int2Type< cast_helper< R, cast_t >::result >());
 		//if(this->p_) this->p_->add_ref();
-    bs_refcounter_add_ref (this->p_);
+		bs_refcounter_add_ref (this->p_);
 	}
 
 	/*!
@@ -1348,7 +1399,7 @@ public:
 			//			std::cout << "ref_cnt = " << refs() << std::endl;
 
 			//this->p_->del_ref();
-      bs_refcounter_del_ref (static_cast <const bs_refcounter*> (this->p_));
+			bs_refcounter_del_ref (static_cast <const bs_refcounter*> (this->p_));
 		}
 	}
 
@@ -1426,9 +1477,20 @@ public:
 //	const bs_locker< T > lock() const {
 //		return bs_locker< T >(this->p_);
 //	}
+#ifndef BS_DISABLE_MT_LOCKS
 	const lsmart_ptr< this_t > lock() const {
 		return lsmart_ptr< this_t >(*this);
 	}
+#else
+	pure_pointer_t lock() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
+
+	// override member-access function
+	pure_pointer_t operator->() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
+#endif
 
 	/*!
 	\brief Makes this smart pointer empty (=NULL).

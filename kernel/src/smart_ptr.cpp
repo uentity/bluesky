@@ -21,25 +21,30 @@
  * */
 
 #include <cassert>
-#include "bs_refcounter.h"
 #include "setup_common_api.h"
+//#include "bs_refcounter.h"
+#include "bs_object_base.h"
 
 namespace blue_sky {
+void BS_API bs_refcounter_add_ref (const bs_refcounter *p) {
+	//assert (p);
+	if (p)
+		p->add_ref ();
+}
 
-  void BS_API
-  bs_refcounter_add_ref (const bs_refcounter *p)
-  {
-    //assert (p);
-    if (p)
-      p->add_ref ();
-  }
-
-  void BS_API
-  bs_refcounter_del_ref (const bs_refcounter *p)
-  {
-    //assert (p);
-    if (p)
-      p->del_ref ();
-  }
+void BS_API bs_refcounter_del_ref (const bs_refcounter *p) {
+	//assert (p);
+	if (p) {
+		if(p->refs() == 1) {
+			// call on_delete signal for objbase instances
+			// if p is to be disposed
+			sp_obj o(p, bs_dynamic_cast());
+			if(o)
+				o->fire_signal(objbase::on_delete, sp_obj(NULL));
+		}
+		// decrement reference counter
+		p->del_ref ();
+	}
+}
 
 } // namespace blue_sky

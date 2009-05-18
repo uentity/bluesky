@@ -22,7 +22,6 @@ base_env = custom_env.Clone();
 base_env.Append(
 	CPPDEFINES = ['BS_EXPORTING_PLUGIN', 'UNIX'],
 	CPPPATH = ['src', '#kernel/include', '#plugins/bs_cube/src']
-#	CPPPATH = ['src', '../kernel/src', '../plugins/bs_cube/src']
 );
 boost_libs = list_suffix(list_prefix(['system', 'filesystem', 'regex', 'thread', 'signals', 'python'], 'boost_'), '-mt');
 boost_libs_dbg = list_suffix(boost_libs, '-d');
@@ -31,15 +30,17 @@ boost_libs_dbg = list_suffix(boost_libs, '-d');
 debug_env = base_env.Clone();
 debug_env.Append(
 		CPPDEFINES = ['_DEBUG'],
-		CCFLAGS = ['-O0', '-ggdb3'],
+#		CCFLAGS = ['-O0', '-ggdb3'],
 		LIBPATH = [os.path.join(exe_dir, dbg_dir), os.path.join(exe_dir, dbg_dir, 'plugins')],
 		LIBS = ['blue_sky_d', 'bs_cube_d']);
+debug_env.MergeFlags({'CCFLAGS': '${ccflags_dbg}'});
 
 release_env = base_env.Clone();
 release_env.Append(
-		CCFLAGS = ['-O2'],
+#		CCFLAGS = ['-O2'],
 		LIBPATH = [os.path.join(exe_dir, rel_dir), os.path.join(exe_dir, rel_dir, 'plugins')],
 		LIBS = ['blue_sky', 'bs_cube']);
+release_env.MergeFlags({'CCFLAGS': '${ccflags_rel}'});
 
 # make targets
 # debug
