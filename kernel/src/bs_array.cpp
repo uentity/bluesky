@@ -13,17 +13,23 @@
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
-#include "bs_arrbase.h"
 #include "bs_array.h"
+#include "bs_map.h"
 
 using namespace std;
 
 namespace blue_sky {
 
-BS_TYPE_IMPL_T_EXT_MEM(bs_array_t, 2, (int, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array_t, 2, (float, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array_t, 2, (double, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array_t, 2, (std::string, vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, vector_traits));
+
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (int, str_val_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (float, str_val_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (double, str_val_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (std::string, str_val_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (sp_obj, str_val_traits));
 
 }	// end of blue_sky namespace
 

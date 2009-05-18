@@ -29,6 +29,7 @@
 #include "bs_report.h"
 #include "bs_tree.h"
 #include "bs_shell.h"
+#include "bs_array.h"
 
 #ifdef BSPY_EXPORTING_PLUGIN
 #include "py_bs_kernel.h"
@@ -151,11 +152,12 @@ BLUE_SKY_TYPE_IMPL_NOCOPY(dummy_node, objbase, "bs_dummy_node", "", "")
 
 namespace blue_sky {
 BLUE_SKY_PLUGIN_DESCRIPTOR("bs_client", "1.0.0", "", "");
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (int, str_val_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (bool, str_val_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, vector_traits));
 BS_TYPE_IMPL_T_MEM(str_val_table, int);
-BS_TYPE_IMPL_T_MEM(str_val_table, bool);
-BS_TYPE_IMPL_T_MEM(bs_array, double);
-BS_TYPE_IMPL_T_MEM(bs_array, int);
-BS_TYPE_IMPL_T_MEM(bs_array, std::string);
 }
 
 struct dummy_restricter : public bs_node::restrict_types {
@@ -511,10 +513,10 @@ void test_props()
 	//smart_ptr< str_val_table<int> > p_b(&b);
 
 	smart_ptr< data_table<> > ps = k.create_object(data_table<>::bs_type());
-	ps.lock()->add_item<int>("test", 10);
-	ps.lock()->add_item<bool>("bool_test", true);
-	ps.lock()->add_item<bool>("test", false);
-	ps.lock()->add_item<int>("test", 12);
+	ps.lock()->insert<int>("test", 10);
+	ps.lock()->insert<bool>("bool_test", true);
+	ps.lock()->insert<bool>("test", false);
+	ps.lock()->insert<int>("test", 12);
 
 	//assignment
 	cout << ps->at< int >("test") << endl;
@@ -528,8 +530,8 @@ void test_props()
 	//b = ps.lock()->get_val_table< int >();
 
 	smart_ptr< idx_data_table > psi = k.create_object(idx_data_table::bs_type());
-	psi.lock()->add_item<double>(12);
-	psi.lock()->add_item<int>(10, 2);
+	psi.lock()->insert<double>(12);
+	psi.lock()->insert<int>(10, 2);
 
 	//str_val_table< objbase > ot;
 	//ot.add_item("test_object", k.create_object(dummy::type()));
@@ -538,10 +540,10 @@ void test_props()
 	//bs_guardian< int > c_guard(c);
 	//k.global_dt().lock()->add_item<int>("test", 10);
 
-	k.pert_idx_dt(dummy::bs_type()).lock()->add_item< string >("hello");
-	k.pert_idx_dt(dummy::bs_type()).lock()->add_item< string >("test");
-	smart_ptr< bs_array< string > > my_tbl = k.pert_idx_dt(dummy::bs_type()).lock()->table< string >();
-	my_tbl.lock()->add_item("test1");
+	k.pert_idx_dt(dummy::bs_type()).lock()->insert< string >("hello");
+	k.pert_idx_dt(dummy::bs_type()).lock()->insert< string >("test");
+	smart_ptr< bs_array< string, vector_traits > > my_tbl = k.pert_idx_dt(dummy::bs_type()).lock()->table< string >();
+	my_tbl.lock()->insert("test1");
 	string s = (*my_tbl)[1];
 	s = my_tbl->at(0);
 	cout << "------------------------------------------------------------------------" << endl;
@@ -843,6 +845,29 @@ void test_ondelete() {
 	// after exit fromthis block on_delete signal should fire
 }
 
+void test_array() {
+	cout << "-----------------------------bs_array test------------------------------" << endl;
+	typedef bs_array< double, vector_traits > real_array_t;
+	typedef bs_array< int, vector_traits > int_array_t;
+	typedef bs_array< string, vector_traits > str_array_t;
+	// create arrays
+	smart_ptr< real_array_t > sp_areal = k.create_object(real_array_t::bs_type());
+	smart_ptr< real_array_t > sp_aint = k.create_object(int_array_t::bs_type());
+	smart_ptr< real_array_t > sp_astr = k.create_object(str_array_t::bs_type());
+
+	// fill arrays with random values
+	insert_iterator< real_array_t > ii(*sp_areal.lock(), sp_areal.lock()->begin());
+	for(ulong i = 0; i < 100; ++i) {
+		*ii = double(rand()) / RAND_MAX;
+		++ii;
+	}
+	// print array contents
+	cout << "Real array contents:" << endl;
+	for(real_array_t::const_iterator p = sp_areal->begin(), end = sp_areal->end(); p != end; ++p)
+		cout << *p << ' ';
+	cout << endl << "------------------------------------------------------------------------" << endl;
+}
+
 /*!
  * \brief main function
  *
@@ -860,7 +885,7 @@ main (int argc, char *argv[])
 	for(int i = 0; i < 100; ++i) rand();
 	srand(rand());*/
 
-try {
+//try {
 		//cout << "LoadPlugins is to be called..." << endl;
 		k.LoadPlugins();
 
@@ -875,13 +900,18 @@ try {
 		//mt_op< dummy_changer >(50, true);
 		//mt_op< dummy_renamer >(50, true);
 		
-		//dummy_changer(50)();
-		
+		//fill_dummy_node(100);
+		//print_tree();
+		//mt_op< dummy_renamer >(50, true);
+
 		//mt_op< dummy_changer >(50, true);
 		//mt_op< dummy_renamer >(50, true);
-		//dummy_renamer(50)();
+		////dummy_changer(50)();
+		//mt_op< dummy_changer >(50, true);
+		//mt_op< dummy_renamer >(50, true);
+		////dummy_renamer(50)();
 
-		//block until all tasks are done
+		////block until all tasks are done
 		//cout << "Waiting until all changes are made..." << endl;
 		//k.wait_tq_empty();
 		//cout << "Ok, node fully updated" << endl;
@@ -902,7 +932,8 @@ try {
 		//test_mt();
 		//print_dummy_node(bs_node::custom_idx);
 
-		test_ondelete();
+		test_array();
+		//test_ondelete();
 
 #ifdef USE_TBB_LIB
 		//tbb_test_mt();
@@ -910,16 +941,16 @@ try {
 		//test_python();
 		//print_loaded_types();
 		//print_dummy_node(bs_node::custom_idx);
-	}
-	catch(bs_exception ex) {
-		cout << "BlueSky exception: " << ex.what() << endl;
-	}
-	catch(std::exception ex) {
-		cout << "std exception: " << ex.what() << endl;
-	}
-	catch(...) {
-		cout << "unknown error!" << endl;
-	}
-
+//	}
+//	catch(bs_exception ex) {
+//		cout << "BlueSky exception: " << ex.what() << endl;
+//	}
+//	catch(std::exception ex) {
+//		cout << "std exception: " << ex.what() << endl;
+//	}
+//	catch(...) {
+//		cout << "unknown error!" << endl;
+//	}
+//
   return 0;
 }

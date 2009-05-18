@@ -72,9 +72,9 @@ namespace blue_sky {
 		typedef std::vector< type_descriptor > types_enum;
 
 		//! data table with string key
-		typedef mt_ptr< data_table< str_val_table > > str_dt_ptr;
+		typedef mt_ptr< data_table< bs_map, str_val_traits > > str_dt_ptr;
 		//! indexed data table
-		typedef mt_ptr< data_table< bs_array > > idx_dt_ptr;
+		typedef mt_ptr< data_table< bs_array, vector_traits > > idx_dt_ptr;
 
 		//access to plugins & types from them
 		//! \brief loaded plugins

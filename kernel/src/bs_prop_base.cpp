@@ -27,29 +27,28 @@ using namespace std;
 
 namespace blue_sky {
 	//default ctor
-	template< template< class > class table_traits >
-	data_table< table_traits >::data_table(bs_type_ctor_param /*param*/)
+	template< template< class, template< class > class > class table_t, template< class > class cont_traits >
+	data_table< table_t, cont_traits >::data_table(bs_type_ctor_param param)
+		: bs_refcounter(), objbase(param)
 	{}
 
 	//copy ctor
-	template< template< class > class table_traits >
-	data_table< table_traits >::data_table(const data_table< table_traits >& src) : bs_refcounter (src), objbase ()
+	template< template< class, template< class > class > class table_t, template< class > class cont_traits >
+	data_table< table_t, cont_traits >::data_table(const data_table< table_t, cont_traits >& src) 
+		: bs_refcounter(), objbase(src)
 	{
 		*this = src;
 	}
 
-	BLUE_SKY_TYPE_STD_CREATE_T(data_table< str_val_table >);
-	BLUE_SKY_TYPE_STD_CREATE_T(data_table< bs_array >);
-	BLUE_SKY_TYPE_STD_COPY_T(data_table< str_val_table >);
-	BLUE_SKY_TYPE_STD_COPY_T(data_table< bs_array >);
+	BLUE_SKY_TYPE_STD_CREATE_T(str_data_table);
+	BLUE_SKY_TYPE_STD_CREATE_T(idx_data_table);
+	BLUE_SKY_TYPE_STD_COPY_T(str_data_table);
+	BLUE_SKY_TYPE_STD_COPY_T(idx_data_table);
 
-	BLUE_SKY_TYPE_IMPL_T(data_table< str_val_table >, objbase, "str_data_table",
-		"Table of values of mixed types addressed by string key", "");
-	BLUE_SKY_TYPE_IMPL_T(data_table< bs_array >, objbase, "idx_data_table",
-		"Table of values of mixed types addressed by index", "");
-
-	BS_TYPE_IMPL_T_MEM(str_val_table, std::string)
-	BS_TYPE_IMPL_T_MEM(str_val_table, sp_obj)
+	BLUE_SKY_TYPE_IMPL_T_EXT(2, (data_table< bs_map, str_val_traits >), 1, (objbase), "str_data_table",
+		"Table of values of mixed types addressed by string key", "", false);
+	BLUE_SKY_TYPE_IMPL_T_EXT(2, (data_table< bs_array, vector_traits >), 1, (objbase), "idx_data_table",
+		"Table of values of mixed types addressed by index", "", false);
 }
 
 //using namespace blue_sky;

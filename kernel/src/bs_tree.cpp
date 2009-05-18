@@ -37,7 +37,7 @@ using namespace std;
 using namespace Loki;
 
 namespace blue_sky {
-BS_TYPE_IMPL_T_MEM(str_val_table, bs_node::s_traits_ptr)
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (bs_node::s_traits_ptr, str_val_traits));
 
 namespace {
 //hide implementation

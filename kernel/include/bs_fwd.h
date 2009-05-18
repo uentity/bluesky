@@ -71,10 +71,14 @@ namespace blue_sky {
 
 	//data_table
 	template< class> class bs_arrbase;
-	template< class, template< class > class > class bs_array_t;
-	template< class > class str_val_table;
-	template< class > class bs_array;
-	template< template< class > class > class data_table;
+	template< class, template< class > class > class bs_array;
+	template< class, template< class > class > class bs_map;
+	// traits
+	template< class > class vector_traits;
+	template< class > class str_val_traits;
+	//template< class > class str_val_table;
+	//template< class > class bs_array;
+	template< template< class, template< class > class > class, template< class > class > class data_table;
 
 	//data storage
 	class bs_inode;

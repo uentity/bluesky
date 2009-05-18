@@ -28,9 +28,11 @@
 #define EXP_RES_NOBR BOOST_PP_TUPLE_REM_CTOR(2, EXPAND_RES)
 
 namespace blue_sky {
-BS_TYPE_IMPL_T_MEM(blue_sky::bs_array, int)
-BS_TYPE_IMPL_T_MEM(str_val_table, smart_ptr< bs_cube_t< float > >)
-BS_TYPE_IMPL_T_MEM(str_val_table, smart_ptr< bs_cube_t< int > >)
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (smart_ptr< bs_cube_t< float > >, str_val_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (smart_ptr< bs_cube_t< int > >, str_val_traits));
+BS_TYPE_IMPL_T_MEM(str_val_table, smart_ptr< bs_cube_t< float > >);
+BS_TYPE_IMPL_T_MEM(str_val_table, smart_ptr< bs_cube_t< int > >);
 }
 
 using namespace blue_sky;
@@ -60,7 +62,7 @@ void bs_cube_t< T >::test()
 	//EXPAND_RES
 	//EXP_RES_NOBR
 	//cout << BOOST_PP_STRINGIZE(STAGE1) << BOOST_PP_STRINGIZE(TLIST) << BOOST_PP_STRINGIZE(CLIST) << endl;
-	smart_ptr< bs_array< int > > p_ivt = give_kernel::Instance().create_object(blue_sky::bs_array< int >::bs_type());
+	smart_ptr< bs_array< int, vector_traits > > p_ivt = give_kernel::Instance().create_object(blue_sky::bs_array< int, vector_traits >::bs_type());
 	var_ = 0;
 }
 
@@ -78,7 +80,7 @@ bs_cube_tt< T, U >::bs_cube_tt(bs_type_ctor_param param)
 template< class T, template< class > class U >
 typename bs_cube_tt< T, U >::sp_cube_tt bs_cube_tt< T, U >::create(const u_type& u) {
 	lsmart_ptr< smart_ptr< str_data_table > > sp_dt(BS_KERNEL.create_object(str_data_table::bs_type(), true));
-	sp_dt->add_item< smart_ptr< u_type > >("U", smart_ptr< u_type >(&u));
+	sp_dt->insert< smart_ptr< u_type > >("U", smart_ptr< u_type >(&u));
 	return sp_cube_tt(BS_KERNEL.create_object(bs_type(), false, sp_dt));
 }
 
