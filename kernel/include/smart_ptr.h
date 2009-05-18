@@ -35,8 +35,13 @@
 #include "loki/TypeManip.h"
 //#include <iostream>
 
+#ifdef BSPY_EXPORTING
+#include <boost/python/pointee.hpp>
+#endif
+
 // if you SURELY don't need locks in mt environment
 // then define the following key
+// TODO: replace this with better solution
 //#define BS_DISABLE_MT_LOCKS
 
 /*!
@@ -1565,6 +1570,34 @@ bool inline operator <(const T* lp, const bs_private::smart_ptr_base< R >& rp) {
 	return (lp < rp.get());
 }
 
+#ifdef BSPY_EXPORTING
+// HACK! allow boost::python to obtain pure pointer via forced const_cast
+// NOTE! this will break all locking rules in Python
+// TODO: replace this with better solution
+template <typename T>
+inline T*
+get_pointer(smart_ptr< T, true > const & p) {
+	return const_cast< T* > (p.get());
+}
+#endif
 } //end of namespace blue_sky
+
+#ifdef BSPY_EXPORTING
+// make pointee specializations to allow boost::python deduce type pointed to by smart_ptr
+// TODO: replace this with better solution
+namespace boost { namespace python {
+
+template < class T >
+struct pointee< blue_sky::smart_ptr< T, false > > {
+	typedef T type;
+};
+
+template < class T >
+struct pointee< blue_sky::smart_ptr< T, true > > {
+	typedef T type;
+};
+
+}}
+#endif
 
 #endif /*_SMART_PTR_H*/

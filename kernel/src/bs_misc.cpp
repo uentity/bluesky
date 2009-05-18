@@ -116,7 +116,7 @@ const char *find_cfg_file(string& doubt, std::vector<string> &vec)
 		get_leaf(tmp_vec,vec[i]);
 		get_name(vec_name,tmp_vec);
 		get_leaf(tmp,doubt);
-		if(compare(tmp.c_str(),vec_name.c_str(),"^(libbs_|bs_|lib)","(.|_d.)(dll|so)$"))
+		if(compare(tmp.c_str(),vec_name.c_str(),"^(libbs_|bs_|lib)*","(.|_d.)(dll|so)$"))
 			return vec[i].c_str();
 	}
 	return (const char*)(NULL);
@@ -500,18 +500,18 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 		int len = st.getLength();
 		for (int b = 0; b < len; ++b)
 		{
-			std::string name, ver;
+			const char *name, *ver;
 			st[b].lookupValue("name",name);
 			st[b].lookupValue("version",ver);
-			if(-1 != (j = find_vertex(lp,name.c_str())))
+			if(-1 != (j = find_vertex(lp,name)))
 			{
 				//#if defined(BOOST_MSVC)
   			//add_edge(i,j,g);
 					//#endif // if defined(BOOST_MSVC)
 				edges.push_back(edge_t(i,j));
-				k = version_comparator(cntr_[j].second.c_str(),ver.c_str());
+				k = version_comparator(cntr_[j].second.c_str(),ver);
 				if(k == -1)
-					cntr_[j].second = string(ver.c_str());
+					cntr_[j].second = string(ver);
 			}
 			else
 			{
