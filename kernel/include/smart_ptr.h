@@ -1255,6 +1255,11 @@ public:
 	pure_pointer_t operator->() const {
 		return const_cast< pure_pointer_t >(this->p_);
 	}
+
+	// add implicit conversion to pure_pointer_t
+	operator pure_pointer_t() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
 #endif
 
 	/*!
@@ -1499,6 +1504,11 @@ public:
 
 	// override member-access function
 	pure_pointer_t operator->() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
+
+	// add implicit conversion to pure_pointer_t
+	operator pure_pointer_t() const {
 		return const_cast< pure_pointer_t >(this->p_);
 	}
 #endif
