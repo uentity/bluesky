@@ -106,7 +106,7 @@ public:
 	}
 
 	template < class T >
-#ifndef BSPY_EXPORTING
+#ifndef BS_DISABLE_MT_LOCKS
 	lsmart_ptr< smart_ptr< T, true > > get_lspx() const {
 		return get_spx< T >().lock();
 #else
