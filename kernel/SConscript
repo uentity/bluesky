@@ -72,7 +72,7 @@ base_env.Append(
 	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN', 'UNIX'],
 #	CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-pthread', '-fvisibility=hidden', '-fvisibility-inlines-hidden'],
 	CPPPATH = ['include', 'src'],
-	LIBS = ['dl', 'libconfig++', 'loki', '${python_name}']
+	LIBS = ['dl', 'loki', '${python_name}']
 );
 # define boost lib names to include
 boost_libs = list_suffix(list_prefix(['filesystem', 'regex', 'thread', 'signals', 'python'], 'boost_'), '-mt');
