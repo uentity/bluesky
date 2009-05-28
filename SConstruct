@@ -102,6 +102,11 @@
 
 import os, os.path;
 
+def custom_proc_call() :
+	# process custom settings
+	if os.path.exists('scons_env.custom') :
+		SConscript('scons_env.custom');
+
 # list of all sconscript files
 # ORDER-SENSITIVE!
 # add your sconscript only AFTER all dependent
@@ -129,7 +134,7 @@ custom_vars.Add('install', 'Set to 1 to install after build', '0');
 custom_vars.Add(PathVariable('prefix', 'Point where to install BlueSky kernel', Dir('#lib').get_abspath(),
 	PathVariable.PathAccept));
 #	custom_vars.Add('plugins_prefix', 'Point where to install BlueSky plugins', '$prefix/plugins');
-custom_vars.Add(PathVariable('plugins_prefix', 'Point where to install BlueSky kernel', '$prefix/plugins',
+custom_vars.Add(PathVariable('plugins_prefix', 'Point where to install BlueSky plugins', '$prefix/plugins',
 	PathVariable.PathAccept));
 #	# add new vars to custom_env
 #	custom_vars.Update(custom_env);
@@ -144,9 +149,9 @@ custom_vars.Add(PathVariable('plugins_prefix', 'Point where to install BlueSky k
 # variable that specifies python version installed in the system
 custom_vars.Add('python_name', 'Put full Python interpreter name with version here, ex. python2.5', 'python2.5');
 # debug compile flags
-custom_vars.Add('ccflags_dbg', 'Specify compiler flags for debug build', '-O0 -ggdb3');
+#custom_vars.Add('ccflags_dbg', 'Specify compiler flags for debug build', '-O0 -ggdb3');
 # release compile flags
-custom_vars.Add('ccflags_rel', 'Specify compiler flags for release build', '-O3');
+#custom_vars.Add('ccflags_rel', 'Specify compiler flags for release build', '-O3');
 
 # create custom environment
 custom_env = Environment(variables = custom_vars);
@@ -154,12 +159,58 @@ custom_env = Environment(variables = custom_vars);
 # export created variables
 Export('ss_tree', 'custom_vars', 'custom_env');
 
-# process custom settings
-if os.path.exists('scons_env.custom') :
-	SConscript('scons_env.custom');
+# setup commonly used names
+dbg_dir = 'debug';
+rel_dir = 'release';
+build_dir = '#build';
+exe_dir = '#exe';
+Export('dbg_dir', 'rel_dir', 'build_dir', 'exe_dir');
 
-# import changes made
-Import('ss_tree'); #, 'custom_vars', 'custom_env');
+# determine what should we build
+build_kinds = [];
+if custom_env['debug'] == '1' :
+	build_kinds += ['debug'];
+if custom_env['release'] == '1' :
+	build_kinds += ['release'];
+Export('build_kinds');
+
+# initialization stage is for correcting invariants, such as ss_list, etc
+build_kind = 'init';
+Export('build_kind');
+# custom script call
+custom_proc_call();
+# import full sconscripts list
+Import('ss_tree');
+# just parse all scripts to let them make initialization
+#[SConscript(x) for x in ss_tree];
+
+# start global build cycle for every build kind
+for i in range(len(build_kinds)) :
+	build_kind = build_kinds[i];
+	# inform everyone what are we building now
+	Export('build_kind');
+	# format build path
+	tar_build_dir = os.path.join(build_dir, build_kind);
+	# format exe path
+	tar_exe_dir = os.path.join(exe_dir, build_kind);
+	Export('tar_build_dir', 'tar_exe_dir');
+	# obtain custom environment
+	custom_proc_call();
+	# add exe path to libraries search paths
+	custom_env.AppendUnique(LIBPATH = [tar_exe_dir]);
+	if build_kind == 'debug' :
+		custom_env.AppendUnique(CPPDEFINES = ['_DEBUG']);
+	build_root = tar_build_dir;
+
+	# parse scons files
+	for j in range(len(ss_tree)) :
+		# build in separate dir
+		tar_build_dir = os.path.join(build_root, os.path.dirname(ss_tree[j]));
+		inst_path = SConscript(ss_tree[j], variant_dir = tar_build_dir, duplicate = 0);
+		# install to specified location
+		#if not inst_path is None :
+		#Install(tar_build_dir, os.path.join(tar_exe_dir, inst_path));
+		#if scons_env['install'] == '1' :
 
 # debug
 #print 'sconscripts to build';
@@ -169,9 +220,6 @@ Import('ss_tree'); #, 'custom_vars', 'custom_env');
 
 #print ss_tree;
 #Help(custom_vars.GenerateHelpText(custom_env));
-
-# parse scons files
-[SConscript(x) for x in ss_tree];
 
 # generate help text
 Help(custom_vars.GenerateHelpText(custom_env));

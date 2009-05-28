@@ -6,10 +6,6 @@ cpp_list = Split("""
 """);
 
 # directories
-build_dir = '#build';
-dbg_dir = 'debug';
-rel_dir = 'release';
-exe_dir = '#exe';
 lib_name = 'bs';
 tar_name = 'bspy_loader';
 
@@ -19,74 +15,35 @@ Import('*');
 # construct base environ
 base_env = custom_env.Clone();
 base_env.AppendUnique(
-	CPPDEFINES = ['BS_EXPORTING_PLUGIN', 'UNIX', 'TARGET_NAME=bs'],
+	CPPDEFINES = ['BS_EXPORTING_PLUGIN', 'TARGET_NAME=bs'],
 	CPPPATH = ['src', '#kernel/include', '#kernel/include/python'],
 );
 # remove any lib prefix
 base_env['SHLIBPREFIX'] = '';
 
-# construct debug and release env
-debug_env = base_env.Clone();
-debug_env.AppendUnique(
-		CPPDEFINES = ['_DEBUG'],
-#		CCFLAGS = ['-O0', '-ggdb3'], 
-		LIBPATH = [os.path.join(exe_dir, dbg_dir)],
-		LIBS = ['blue_sky_d', 'boost_python-mt-d']);
-debug_env.MergeFlags({'CCFLAGS': '${ccflags_dbg}'});
+if build_kind == 'debug' :
+	base_env.AppendUnique(
+			CPPDEFINES = ['_DEBUG'],
+			#LIBPATH = [os.path.join(exe_dir, dbg_dir)],
+			LIBS = ['blue_sky_d', 'boost_python-mt-d']);
+else :
+	base_env.AppendUnique(
+			#LIBPATH = [os.path.join(exe_dir, rel_dir)],
+			LIBS = ['blue_sky', 'boost_python-mt']);
 
-release_env = base_env.Clone();
-release_env.AppendUnique(
-#		CCFLAGS = ['-O2'],
-		LIBPATH = [os.path.join(exe_dir, rel_dir)],
-		LIBS = ['blue_sky', 'boost_python-mt']);
-release_env.MergeFlags({'CCFLAGS': '${ccflags_rel}'});
-
-# make targets
-# debug
-def build_debug() :
-	build_dir_dbg = os.path.join(build_dir, dbg_dir, tar_name);
-	exe_dir_dbg = os.path.join(exe_dir, dbg_dir);
-
-	VariantDir(build_dir_dbg, 'src', duplicate = 0);
-	bspy_loader_debug = debug_env.SharedLibrary(target = os.path.join(exe_dir_dbg, lib_name), source = [os.path.join(build_dir_dbg, x) for x in cpp_list]);
-	# do we ignore dependencies?
-	if base_env['nodeps'] == '1' :
-		Ignore(bspy_loader_debug, bs_kernel_debug);
-	else :
-		Depends(bspy_loader_debug, bs_kernel_debug);
+# actually build target
+bspy_loader = base_env.SharedLibrary(target = os.path.join(tar_exe_dir, lib_name), source = [os.path.join('src', x) for x in cpp_list]);
+# do we ignore dependencies?
+if base_env['nodeps'] == '1' :
+	Ignore(bspy_loader, bs_kernel);
+else :
+	Depends(bspy_loader, bs_kernel);
 #	bspy_loader_debug = debug_env.Install(exe_dir_dbg, debug);
-	debug_env.Alias(tar_name, bspy_loader_debug);
-	Export('bspy_loader_debug');
+base_env.Alias(tar_name, bspy_loader);
+Export('bspy_loader');
 
 # 	Install step
-	if base_env['install'] == '1':
-		inst_dbg = debug_env.Install('$prefix', bspy_loader_debug);
-		Alias(tar_name, inst_dbg);
-
-# release
-def build_release() :
-	build_dir_rel = os.path.join(build_dir, rel_dir, tar_name);
-	exe_dir_rel = os.path.join(exe_dir, rel_dir);
-
-	VariantDir(build_dir_rel, 'src', duplicate = 0);
-	bspy_loader_release = release_env.SharedLibrary(target = os.path.join(exe_dir_rel, lib_name), source = [os.path.join(build_dir_rel, x) for x in cpp_list]);
-	# do we ignore dependencies?
-	if base_env['nodeps'] == '1' :
-		Ignore(bspy_loader_release, bs_kernel_release);
-	else :
-		Depends(bspy_loader_release, bs_kernel_release);
-#	bspy_loader_release = release_env.Install(exe_dir_rel, release);
-	release_env.Alias(tar_name, bspy_loader_release);
-	Export('bspy_loader_release');
-
-# 	Install step
-	if base_env['install'] == '1':
-		inst_rel = debug_env.Install('$prefix', bspy_loader_release);
-		Alias(tar_name, inst_rel);
-
-# actaully build targets
-if base_env['debug'] == '1' :
-	build_debug();
-if base_env['release'] == '1' :
-	build_release();
+if base_env['install'] == '1':
+	inst_tar = base_env.Install('$prefix', bspy_loader);
+	Alias(tar_name, inst_tar);
 

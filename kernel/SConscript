@@ -47,96 +47,51 @@ py_kernel_cpp_list = [os.path.join('python', x) for x in Split("""
 
 #full_kernel_cpp_list = kernel_cpp_list + py_kernel_cpp_list;
 
-# setup different names
-dbg_dir = 'debug';
-rel_dir = 'release';
-build_dir = '#build';
-inst_dir = '#exe';
-lib_name = 'blue_sky';
-tar_name = 'kernel';
-
-# add option to decide whether to build with python support?
-#AddOption('--bs_py', dest = 'bs_py', help = 'Set to 1 to enable python exports', type = 'int', default = 0);
-
 # import custom settings & custom variables
 Import('*');
 
-# add variable to decide whether to build with python support?
-custom_vars.Add('py', 'Set to 1 to build with Python support', '0');
-custom_vars.Update(custom_env);
-# export changes -- seems that this step isn't needed (?)
-Export('custom_vars', 'custom_env');
+lib_name = 'blue_sky';
+tar_name = 'kernel';
+
+# add variable to decide whether to build with python support
+if 'py' not in custom_vars.keys() :
+	custom_vars.Add('py', 'Set to 1 to build with Python support', '0');
+	custom_vars.Update(custom_env);
+	# export changes -- seems that this step isn't needed (?)
+	#Export('custom_vars', 'custom_env');
 
 # setup default build environment
 base_env = custom_env.Clone();
 base_env.Append(
-	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN', 'UNIX'],
-#	CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-pthread', '-fvisibility=hidden', '-fvisibility-inlines-hidden'],
+	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN'],
 	CPPPATH = ['include', 'src'],
 	LIBS = ['dl', 'loki', '${python_name}']
 );
 # define boost lib names to include
 boost_libs = list_suffix(list_prefix(['filesystem', 'regex', 'thread', 'signals', 'python'], 'boost_'), '-mt');
 boost_libs_dbg = list_suffix(boost_libs, '-d');
-# specify flags for various builds
-#ccflags = ['-O2'];
-#ccflags_dbg = ['-O0', '-ggdb3'];
-
-# prepare src lists for different variant builds
-build_dir_dbg = os.path.join(build_dir, dbg_dir, tar_name);
-build_dir_rel = os.path.join(build_dir, rel_dir, tar_name);
-src_dbg = [os.path.join(build_dir_dbg, x) for x in kernel_cpp_list];
-src_rel = [os.path.join(build_dir_rel, x) for x in kernel_cpp_list];
 
 # are we building with python support?
 if base_env['py'] == '1' :
 	base_env.Append(CPPDEFINES = ['BSPY_EXPORTING'], CPPPATH = ['include/python']);
-	src_dbg = src_dbg + [os.path.join(build_dir_dbg, x) for x in py_kernel_cpp_list];
-	src_rel = src_rel + [os.path.join(build_dir_rel, x) for x in py_kernel_cpp_list];
-
-# make debug env
-env_dbg = base_env.Clone();
-env_dbg.Append(LIBS = boost_libs_dbg);
-env_dbg.MergeFlags({'CCFLAGS': '${ccflags_dbg}'});
-#	CCFLAGS = ccflags_dbg);
-
-# make release env
-env_rel = base_env.Clone();
-env_rel.Append(LIBS = boost_libs);
-env_rel.MergeFlags({'CCFLAGS': '${ccflags_rel}'});
-#	CCFLAGS = ccflags);
-
-# setup targets
-# default debug target
-def build_debug() :
-	VariantDir(build_dir_dbg, 'src',  duplicate = 0);
-	bs_kernel_debug = env_dbg.SharedLibrary(target = os.path.join(inst_dir, dbg_dir, lib_name + '_d'), source = src_dbg);
-	#bs_kernel_debug = env_dbg.Install(os.path.join(inst_dir, dbg_dir), debug);
-	Alias(tar_name, bs_kernel_debug);
-	#env_dbg.Alias('kernel.debug', bs_kernel_debug);
-	Export('bs_kernel_debug');
-
-# 	Install step
-	if base_env['install'] == '1':
-		inst_dbg = env_dbg.Install('$prefix', bs_kernel_debug);
-		Alias(tar_name, inst_dbg);
-
-def build_release() :
-	VariantDir(build_dir_rel, 'src',  duplicate = 0);
-	bs_kernel_release = env_rel.SharedLibrary(target = os.path.join(inst_dir, rel_dir, lib_name), source = src_rel);
-#	bs_kernel_release = env_rel.Install(os.path.join(inst_dir, rel_dir), release);
-	env_rel.Alias(tar_name, bs_kernel_release);
-	#env_rel.Alias('kernel.release', bs_kernel_release);
-	Export('bs_kernel_release');
-
-# 	Define install target
-	if base_env['install'] == '1':
-		inst_rel = env_rel.Install('$prefix', bs_kernel_release);
-		Alias(tar_name, inst_rel);
+	kernel_cpp_list += py_kernel_cpp_list;
 
 # actaully build targets
-if base_env['debug'] == '1' :
-	build_debug();
-if base_env['release'] == '1' :
-	build_release();
+if build_kind == 'debug' :
+	base_env.Append(LIBS = boost_libs_dbg);
+	lib_name = os.path.join(exe_dir, dbg_dir, lib_name + '_d');
+elif build_kind == 'release' :
+	base_env.Append(LIBS = boost_libs);
+	lib_name = os.path.join(exe_dir, rel_dir, lib_name);
+
+bs_kernel = base_env.SharedLibrary(lib_name, source = [os.path.join('src', x) for x in kernel_cpp_list]);
+#bs_kernel_debug = env_dbg.SharedLibrary(target = os.path.join(inst_dir, dbg_dir, lib_name + '_d'), source = src_dbg);
+#bs_kernel_debug = env_dbg.Install(os.path.join(inst_dir, dbg_dir), debug);
+Alias(tar_name, bs_kernel);
+Export('bs_kernel');
+
+# Install step
+if base_env['install'] == '1':
+	inst_tar = base_env.Install('$prefix', bs_kernel);
+	Alias(tar_name, inst_tar);
 
