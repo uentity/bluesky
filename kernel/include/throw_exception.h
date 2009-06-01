@@ -4,8 +4,8 @@
  * \author Sergey Miryanov
  * \date 27.04.2009
  * */
-#ifndef BS_METHOD_EXCEPTION_H_
-#define BS_METHOD_EXCEPTION_H_
+#ifndef BS_THROW_EXCEPTION_62b5cf89_6093_4fd3_91ae_e674a9b9ae6c_H_
+#define BS_THROW_EXCEPTION_62b5cf89_6093_4fd3_91ae_e674a9b9ae6c_H_
 
 #include <boost/current_function.hpp>
 #include "bs_exception.h"
@@ -25,4 +25,4 @@ namespace blue_sky {
 
 
 
-#endif // #ifndef BS_METHOD_EXCEPTION_H_
+#endif // #ifndef BS_THROW_EXCEPTION_62b5cf89_6093_4fd3_91ae_e674a9b9ae6c_H_

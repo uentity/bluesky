@@ -4,8 +4,8 @@
  * \author Sergey Miryanov
  * \date 26.05.2009
  * */
-#ifndef BS_BOS_CORE_BASE_PY_OBJECT_HANDLER_H_
-#define BS_BOS_CORE_BASE_PY_OBJECT_HANDLER_H_
+#ifndef BS_PY_OBJECT_HANDLER_9811dc51_fdc5_4a8b_b5b7_a05f45a2f51c_H_
+#define BS_PY_OBJECT_HANDLER_9811dc51_fdc5_4a8b_b5b7_a05f45a2f51c_H_
 
 #include "throw_exception.h"
 
@@ -37,5 +37,5 @@ namespace tools {
 } // namespace blue_sky
 
 
-#endif // #ifndef BS_BOS_CORE_BASE_PY_OBJECT_HANDLER_H_
+#endif // #ifndef BS_PY_OBJECT_HANDLER_9811dc51_fdc5_4a8b_b5b7_a05f45a2f51c_H_
 
