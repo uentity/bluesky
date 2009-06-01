@@ -24,11 +24,9 @@ base_env['SHLIBPREFIX'] = '';
 if build_kind == 'debug' :
 	base_env.AppendUnique(
 			CPPDEFINES = ['_DEBUG'],
-			#LIBPATH = [os.path.join(exe_dir, dbg_dir)],
 			LIBS = ['blue_sky_d', 'boost_python-mt-d']);
 else :
 	base_env.AppendUnique(
-			#LIBPATH = [os.path.join(exe_dir, rel_dir)],
 			LIBS = ['blue_sky', 'boost_python-mt']);
 
 # actually build target

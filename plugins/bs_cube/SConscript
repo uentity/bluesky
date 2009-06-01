@@ -30,15 +30,15 @@ if base_env['py'] == '1' :
 
 # construct debug and release env
 if build_kind == 'debug' :
-	base_env.AppendUnique(
-			LIBS = ['blue_sky_d']);
+#	base_env.AppendUnique(
+#			LIBS = ['blue_sky_d']);
 	lib_name += '_d';
-else :
-	base_env.AppendUnique(
-			LIBS = ['blue_sky']);
+#else :
+#	base_env.AppendUnique(
+#			LIBS = ['blue_sky']);
 
 # actually build target
-bs_cube = base_env.SharedLibrary(target = os.path.join(tar_exe_dir, 'plugins', lib_name), source = [os.path.join('src', x) for x in cpp_list]);
+bs_cube = base_env.SharedLibrary(target = os.path.join(tar_exe_plugin_dir, lib_name), source = [os.path.join('src', x) for x in cpp_list]);
 # specify dependencies or ignore them
 if base_env['nodeps'] == '1' :
 	Ignore(bs_cube, bs_kernel);

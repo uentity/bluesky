@@ -79,12 +79,11 @@ if base_env['py'] == '1' :
 # actaully build targets
 if build_kind == 'debug' :
 	base_env.Append(LIBS = boost_libs_dbg);
-	lib_name = os.path.join(exe_dir, dbg_dir, lib_name + '_d');
+	lib_name += '_d';
 elif build_kind == 'release' :
 	base_env.Append(LIBS = boost_libs);
-	lib_name = os.path.join(exe_dir, rel_dir, lib_name);
 
-bs_kernel = base_env.SharedLibrary(lib_name, source = [os.path.join('src', x) for x in kernel_cpp_list]);
+bs_kernel = base_env.SharedLibrary(target = os.path.join(tar_exe_dir, lib_name), source = [os.path.join('src', x) for x in kernel_cpp_list]);
 #bs_kernel_debug = env_dbg.SharedLibrary(target = os.path.join(inst_dir, dbg_dir, lib_name + '_d'), source = src_dbg);
 #bs_kernel_debug = env_dbg.Install(os.path.join(inst_dir, dbg_dir), debug);
 Alias(tar_name, bs_kernel);
