@@ -166,7 +166,7 @@ Export('ss_tree', 'custom_vars', 'custom_env');
 # setup commonly used names
 dbg_dir = 'debug';
 rel_dir = 'release';
-plugin_dir = 'plugin';
+plugin_dir = 'plugins';
 build_dir = '#build';
 exe_dir = '#exe';
 Export('dbg_dir', 'rel_dir', 'build_dir', 'exe_dir');
