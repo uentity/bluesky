@@ -3,36 +3,27 @@ import os;
 # import created custom_env & custom_vars
 Import('*');
 
-# set my custon environment 
-custom_env.AppendUnique(
-# don't include all external environment unless you can't build without it
-#	ENV = os.environ,
-	CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-pthread', '-fvisibility=hidden', '-fvisibility-inlines-hidden', '-mtune=core2'],
-	CPPPATH = ['/home/uentity/lib/boost', '/usr/include/python2.5'],
-	LIBPATH = ['/home/uentity/lib/boost/lib'],
-	RPATH = ['/home/uentity/lib/boost/lib']
-);
-
-# Append sconscripts for custom build
-ss_tree = ss_tree + [
-		'plugins/bs_cube/SConscript',
-		'client/SConscript'
-		];
-
-Export('custom_env', 'ss_tree');
-
-# update environment with new variables if needed
-#custom_vars.Add('py', 'Set to 1 to build with Python support', '0');
-#custom_vars.Update(custom_env);
-
-# export my environment
-#Export('custom_env');
-# export default target to build
-#default_target = 'debug';
-#Export('default_target');
-
-#SetOption('bs_py', 1);
-
-# execute main build script
-#SConscript('SConstruct.kernel');
+if build_kind == 'init' :
+	# Append sconscripts for custom build
+	ss_tree = ss_tree + [
+			'plugins/bs_cube/SConscript',
+			'client/SConscript'
+			];
+	Export('ss_tree');
+else :
+	# set my custon environment 
+	custom_env.Replace(
+	# don't include all external environment unless you can't build without it
+	#	ENV = os.environ,
+		CPPDEFINES = ['UNIX'],
+		CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-fvisibility=hidden', '-fvisibility-inlines-hidden', '-pipe'],
+		CPPPATH = ['/home/uentity/lib/boost', '/usr/include/python2.6'],
+		LIBPATH = ['/home/uentity/lib/boost/lib'],
+		RPATH = ['/home/uentity/lib/boost/lib']
+	);
+	if build_kind == 'debug' :
+		custom_env.Append(CCFLAGS = ['-O0', '-ggdb']);
+	elif build_kind == 'release' :
+		custom_env.Append(CCFLAGS = ['-O3', '-mtune=core2', '-mmmx', '-mssse3', '-ftree-vectorize']);
+	Export('custom_env');
 
