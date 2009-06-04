@@ -34,6 +34,7 @@ public:
 		//: spslot(this)		// author: Sergey Miryanov
 		{
 			spslot = this;
+			spslot.lock()->add_ref();
 		}
 
 	void execute(const sp_mobj& sender = sp_mobj (NULL), int signal_code = 0, const sp_obj& param = sp_obj (NULL)) const;

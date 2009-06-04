@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)/src&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(LIBCONFIG_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
-				PreprocessorDefinitions="_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(LIBCONFIG_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
+				PreprocessorDefinitions="_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING;BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				SmallerTypeCheck="true"
@@ -69,7 +69,7 @@
 				AdditionalDependencies="loki_D.lib libconfig++.lib python25.lib psapi.lib"
 				OutputFile="$(ProjectDir)/../exe/debug/$(ProjectName)_d.dll"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(LIBCONFIG_PATH)/debug&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
+				AdditionalLibraryDirectories="&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(LIBCONFIG_PATH)/debug&quot;;&quot;D:\_zerg\Temp\Python-2.5.2\Python-2.5.2\PCbuild8\win32debug&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
 				GenerateManifest="true"
 				IgnoreDefaultLibraryNames="python25_d.lib"
 				GenerateDebugInformation="true"
@@ -127,8 +127,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(STLPORT_PATH)/stlport&quot;;&quot;$(ProjectDir)/src&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(LIBCONFIG_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
-				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB_"
+				AdditionalIncludeDirectories="&quot;$(STLPORT_PATH_)/stlport&quot;;&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(LIBCONFIG_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
+				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="true"
 				FloatingPointExceptions="true"
@@ -154,8 +154,9 @@
 				AdditionalDependencies="loki.lib libconfig++.lib python25.lib psapi.lib"
 				OutputFile="$(ProjectDir)/../exe/release/$(ProjectName).dll"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(STLPORT_PATH)/lib&quot;;&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(LIBCONFIG_PATH)/release&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
+				AdditionalLibraryDirectories="&quot;$(STLPORT_PATH_)/lib&quot;;&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(LIBCONFIG_PATH)/release&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
 				GenerateManifest="true"
+				IgnoreDefaultLibraryNames="python25_d.lib"
 				GenerateDebugInformation="false"
 				ProgramDatabaseFile="$(OutDir)/$(ProjectName).pdb"
 				SubSystem="0"
@@ -296,6 +297,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\bs_conf_reader.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\bs_conf_reader.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\bs_exception.cpp"
 				>
 			</File>
@@ -362,127 +371,135 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\src\bs_abstract_storage.h"
+				RelativePath=".\include\bs_abstract_storage.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_command.h"
+				RelativePath=".\include\bs_command.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_common.h"
+				RelativePath=".\include\bs_common.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_conversion.h"
+				RelativePath=".\include\bs_conversion.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_exception.h"
+				RelativePath=".\include\bs_exception.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_fwd.h"
+				RelativePath=".\include\bs_fwd.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_imessaging.h"
+				RelativePath=".\include\bs_imessaging.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_kernel.h"
+				RelativePath=".\include\bs_kernel.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_link.h"
+				RelativePath=".\include\bs_link.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_macro_private.h"
+				RelativePath=".\include\bs_macro_private.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_messaging.h"
+				RelativePath=".\include\bs_messaging.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_misc.h"
+				RelativePath=".\include\bs_misc.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_module_name_win.h"
+				RelativePath=".\include\bs_module_name_win.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_named_type.h"
+				RelativePath=".\include\bs_named_type.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_object_base.h"
+				RelativePath=".\include\bs_object_base.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_obsolete.h"
+				RelativePath=".\include\bs_obsolete.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_plugin_common.h"
+				RelativePath=".\include\bs_plugin_common.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_prop_base.h"
+				RelativePath=".\include\bs_prop_base.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_refcounter.h"
+				RelativePath=".\include\bs_refcounter.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_report.h"
+				RelativePath=".\include\bs_report.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_shell.h"
+				RelativePath=".\include\bs_shell.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_tree.h"
+				RelativePath=".\include\bs_tree.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_type_info.h"
+				RelativePath=".\include\bs_type_info.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\force_plugin_import.h"
+				RelativePath=".\include\force_plugin_import.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\heap_manage_win.h"
+				RelativePath=".\include\heap_manage_win.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\setup_common_api.h"
+				RelativePath=".\include\python\py_object_handler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\setup_plugin_api.h"
+				RelativePath=".\include\setup_common_api.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\smart_ptr.h"
+				RelativePath=".\include\setup_plugin_api.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\stop_plugin_import.h"
+				RelativePath=".\include\smart_ptr.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\thread_pool.h"
+				RelativePath=".\include\stop_plugin_import.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\type_descriptor.h"
+				RelativePath=".\include\thread_pool.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\throw_exception.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\type_descriptor.h"
 				>
 			</File>
 		</Filter>
@@ -494,7 +511,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\bs_import_common.h"
+				RelativePath=".\include\python\bs_import_common.h"
 				>
 			</File>
 			<File
@@ -506,7 +523,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_abstract_storage.h"
+				RelativePath=".\include\python\py_bs_abstract_storage.h"
 				>
 			</File>
 			<File
@@ -514,11 +531,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_command.h"
+				RelativePath=".\include\python\py_bs_command.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_iterator.h"
+				RelativePath=".\include\python\py_bs_iterator.h"
 				>
 			</File>
 			<File
@@ -526,7 +543,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_kernel.h"
+				RelativePath=".\include\python\py_bs_kernel.h"
 				>
 			</File>
 			<File
@@ -534,7 +551,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_link.h"
+				RelativePath=".\include\python\py_bs_link.h"
 				>
 			</File>
 			<File

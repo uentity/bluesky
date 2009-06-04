@@ -1023,6 +1023,9 @@ public:
 	typedef typename boost::remove_const< T >::type pure_pointed_t;
 	typedef pure_pointed_t* pure_pointer_t;
 	typedef pure_pointed_t& pure_ref_t;
+	// special typedef for boost::python
+	// NOTE! breaks const+locks convention
+	typedef T element_type;
 
 	/*!
 	\brief Constructor from simple pointer
@@ -1252,6 +1255,16 @@ public:
 	pure_pointer_t operator->() const {
 		return const_cast< pure_pointer_t >(this->p_);
 	}
+
+	// override dereferencing
+	pure_ref_t operator*() const {
+		return *const_cast< pure_pointer_t >(this->p_);
+	}
+
+	// add implicit conversion to pure_pointer_t
+	operator pure_pointer_t() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
 #endif
 
 	/*!
@@ -1326,6 +1339,9 @@ public:
 	typedef pure_pointed_t* pure_pointer_t;
 	//! type of reference to T object
 	typedef pure_pointed_t& pure_ref_t;
+	// special typedef for boost::python
+	// NOTE! breaks const+locks convention
+	typedef T element_type;
 
 	/*!
 	\brief Constructor.
@@ -1495,6 +1511,16 @@ public:
 	pure_pointer_t operator->() const {
 		return const_cast< pure_pointer_t >(this->p_);
 	}
+
+	// override dereferencing
+	pure_ref_t operator*() const {
+		return *const_cast< pure_pointer_t >(this->p_);
+	}
+
+	// add implicit conversion to pure_pointer_t
+	operator pure_pointer_t() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
 #endif
 
 	/*!
@@ -1582,22 +1608,22 @@ get_pointer(smart_ptr< T, true > const & p) {
 #endif
 } //end of namespace blue_sky
 
-#ifdef BSPY_EXPORTING
-// make pointee specializations to allow boost::python deduce type pointed to by smart_ptr
-// TODO: replace this with better solution
-namespace boost { namespace python {
-
-template < class T >
-struct pointee< blue_sky::smart_ptr< T, false > > {
-	typedef T type;
-};
-
-template < class T >
-struct pointee< blue_sky::smart_ptr< T, true > > {
-	typedef T type;
-};
-
-}}
-#endif
+//#ifdef BSPY_EXPORTING
+//// make pointee specializations to allow boost::python deduce type pointed to by smart_ptr
+//// TODO: replace this with better solution
+//namespace boost { namespace python {
+//
+//template < class T >
+//struct pointee< blue_sky::smart_ptr< T, false > > {
+//	typedef T type;
+//};
+//
+//template < class T >
+//struct pointee< blue_sky::smart_ptr< T, true > > {
+//	typedef T type;
+//};
+//
+//}}
+//#endif
 
 #endif /*_SMART_PTR_H*/

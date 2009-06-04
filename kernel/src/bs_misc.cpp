@@ -51,11 +51,12 @@
 #include <errno.h>
 #endif
 
-#include "libconfig.h++"
+#include "bs_conf_reader.h"
+#include "bs_kernel.h"
 
 using namespace std;
 //using namespace blue_sky;
-using namespace libconfig;
+//using namespace libconfig;
 using namespace boost;
 
 #define XPN_LOG_INST log::Instance()[XPN_LOG] //!< blue-sky log for error output
@@ -116,7 +117,7 @@ const char *find_cfg_file(string& doubt, std::vector<string> &vec)
 		get_leaf(tmp_vec,vec[i]);
 		get_name(vec_name,tmp_vec);
 		get_leaf(tmp,doubt);
-		if(compare(tmp.c_str(),vec_name.c_str(),"^(libbs_|bs_|lib)*","(.|_d.)(dll|so)$"))
+		if(compare(tmp.c_str(),vec_name.c_str(),"^(libbs_|bs_|lib)","(.|_d.)(dll|so)$"))
 			return vec[i].c_str();
 	}
 	return (const char*)(NULL);
@@ -229,7 +230,7 @@ void DumpV(const ul_vec& v, const char* pFname)
 typedef graph_traits<load_graph>::vertex_descriptor vertex_t;
 typedef graph_traits<load_graph>::edge_descriptor edge_t;
 
-void topo_sort_dfs(const load_graph& g, vertex_t u, vertex_t*& topo_order, int* mark)
+void topo_sort_dfs(const load_graph& /*g*/, vertex_t u, vertex_t*& topo_order, int* mark)
 {
   mark[u] = 1; // 1 - посещённая вершина
   *--topo_order = u;
@@ -305,6 +306,8 @@ blue_sky::error_code search_files(vector<string> &res, const char * what, const 
 		{
 			if (is_directory(*dll_dir_itr))
 			{
+				if (!strcmp(lib_dir,"./"))
+					continue;
 				if (!filesystem::is_empty(filesystem::path(dll_dir_itr->string(),filesystem::native)))
 					search_files(res, what, dll_dir_itr->string().c_str());
 				continue;
@@ -313,7 +316,7 @@ blue_sky::error_code search_files(vector<string> &res, const char * what, const 
 				res.push_back(string(dll_dir_itr->string()));
 		}
 	}
-	catch(const filesystem::filesystem_error& e)
+	catch(const filesystem::filesystem_error &e)
 	{
 		BSERROR << e.what() << bs_end;
 		return blue_sky::wrong_path;
@@ -439,8 +442,16 @@ void get_name(string &container_, string &src)
 	string tmp = string(src);
 	regex expression("^([^\?#]*)[.](.*)$");
 	regex_split(back_inserter(res),tmp,expression,match_default);
-	if(res.size() > 0)
-		container_ = res.front();
+	if(res.size() > 0) {
+		tmp = string(res.front());
+		res.clear();
+		expression = regex("^(libbs_|bs_|lib)(.*)$");
+		regex_split(back_inserter(res),tmp,expression,match_default);
+		if(res.size() > 0)
+			container_ = res.back();
+		else
+			container_ = tmp;
+	}
 }
 
 /*!
@@ -458,60 +469,82 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 
 	int i,j;
 	int k;
-	Config cfg;
+	sp_conf_reader cr = give_kernel::Instance().create_object(bs_conf_reader::bs_type());
 	vector<string> sp, lp;
 	edge_array_t edges;
 	char *c_lib_dir = NULL;
 	if (!(c_lib_dir = getenv("BS_LOAD_CFGS")))
 	  c_lib_dir = (char *)"./";
 
-	search_files(sp,".cfg",c_lib_dir);
+	const char *ic_lib_dir = c_lib_dir;
+	for (int i = 0; c_lib_dir[i] != 0; ++i)
+#ifdef UNIX
+		if (c_lib_dir[i] == ':') {
+#else
+		if (c_lib_dir[i] == ';') {
+#endif // UNIX
+			c_lib_dir[i] = 0;
+			search_files(sp,".cfg",ic_lib_dir);
+			ic_lib_dir = &c_lib_dir[i+1];
+		}
+	search_files(sp,".cfg",ic_lib_dir);
 
 	if (!(c_lib_dir = getenv("BS_PLUGIN_LIBS")))
 	  c_lib_dir = (char *)"./";
+
+	ic_lib_dir = c_lib_dir;
+	for (int i = 0; c_lib_dir[i] != 0; ++i)
 #ifdef UNIX
-	search_files(lp,".so",c_lib_dir);
+		if (c_lib_dir[i] == ':') {
 #else
-	search_files(lp,".dll",c_lib_dir);
-	search_files(lp,".pyd",c_lib_dir);
+		if (c_lib_dir[i] == ';') {
+#endif // UNIX
+			c_lib_dir[i] = 0;
+#ifdef UNIX
+			search_files(lp,".so",ic_lib_dir);
+#else
+			search_files(lp,".dll",ic_lib_dir);
+			search_files(lp,".pyd",ic_lib_dir);
 #endif
-	size_t lp_size = lp.size();//, sp_size = sp.size();
+			ic_lib_dir = &c_lib_dir[i+1];
+		}
+
+#ifdef UNIX
+	search_files(lp,".so",ic_lib_dir);
+#else
+	search_files(lp,".dll",ic_lib_dir);
+	search_files(lp,".pyd",ic_lib_dir);
+#endif
+
+	size_t lp_size = lp.size();
 	for(i = 0; i < (int)lp_size; ++i)
 	{
 		cntr_.push_back(lload());
 		cntr_[i].first = string(lp[i]);
 	}
 
-	//#if defined(BOOST_MSVC)
-	//g = load_graph(lp_size);
-	//aload_arc arcs;
-
-	try {
-
 	for(i = 0; i < (int)lp_size; ++i)
 	{
 		char *cfg_file;
 		if(!(cfg_file = (char *)find_cfg_file(lp[i],sp))) continue;
 
-		BSOUT << "Try to read " << cfg_file << bs_end;
-		cfg.readFile(cfg_file);
-
-		Setting &st = cfg.lookup("libs.load");
-		int len = st.getLength();
+		cr.lock()->read_file(cfg_file);
+		std::string msg = lp[i] + " (";
+		int len = cr.lock()->get_length();
 		for (int b = 0; b < len; ++b)
 		{
-			const char *name, *ver;
-			st[b].lookupValue("name",name);
-			st[b].lookupValue("version",ver);
-			if(-1 != (j = find_vertex(lp,name)))
+			if (b != 0)
+				msg += ", ";
+			std::string name, ver;
+			name = cr->get(b).lookup_value("name");
+			ver = cr->get(b).lookup_value("version");
+			msg += name;
+			if(-1 != (j = find_vertex(lp,name.c_str())))
 			{
-				//#if defined(BOOST_MSVC)
-  			//add_edge(i,j,g);
-					//#endif // if defined(BOOST_MSVC)
 				edges.push_back(edge_t(i,j));
-				k = version_comparator(cntr_[j].second.c_str(),ver);
+				k = version_comparator(cntr_[j].second.c_str(),ver.c_str());
 				if(k == -1)
-					cntr_[j].second = string(ver);
+					cntr_[j].second = string(ver.c_str());
 			}
 			else
 			{
@@ -526,30 +559,23 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 
 			}
 		}
+		BSOUT << msg << ")" << bs_end;
 	}
 
-	} catch (libconfig::ParseException &e) {
-		throw bs_exception(std::string("graph builder"),std::string(e.getError()));
+	try {
+#if defined(BOOST_MSVC)
+		g = load_graph(lp_size);
+		for (std::size_t i = 0; i < edges.size (); ++i)
+			add_edge(edges[i].first, edges[i].second, g);
+#else // if defined(BOOST_MSVC)
+		g = load_graph (edges.begin (), edges.end (), lp_size);
+#endif // if defined(BOOST_MSVC)
+
 	} catch (const std::exception &e) {
 		throw bs_exception(std::string("graph builder"),std::string(e.what()));
 	} catch (...) {
 		throw bs_exception(std::string("graph builder"),std::string("Graph building error"));
 	}
-#if defined(BOOST_MSVC)
-	g = load_graph(lp_size);
-	for (std::size_t i = 0; i < edges.size (); ++i)
-    add_edge(edges[i].first, edges[i].second, g);
-#else // if defined(BOOST_MSVC)
-	g = load_graph (edges.begin (), edges.end (), lp_size);
-	//for (std::size_t i = 0; i < edges.size (); ++i)
-	//	printf("%d->%d ",edges[i].first,edges[i].second);
-	//printf("\n");
-#endif // if defined(BOOST_MSVC)
-
-	//for (int i = 0; i < ((((*(boost::vec_adj_list_impl<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config,boost::directed_graph_helper<boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config> >*)(&g))).m_vertices)).size(); ++i)
-	//	for (int j = 0; j < ((((*(boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config::rand_stored_vertex*)(&((((*(boost::vec_adj_list_impl<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config,boost::directed_graph_helper<boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config> >*)(&g))).m_vertices))[i]))).m_out_edges)).size(); ++j)
-	//		printf ("%d -> %d, ",i,((*(boost::detail::se_<unsigned int>*)(&((((*(boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config::rand_stored_vertex*)(&((((*(boost::vec_adj_list_impl<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config,boost::directed_graph_helper<boost::detail::adj_list_gen<boost::adjacency_list<boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>,boost::vecS,boost::vecS,boost::directedS,boost::no_property,boost::no_property,boost::no_property,boost::listS>::config> >*)(&g))).m_vertices))[i]))).m_out_edges))[j]))).m_target);
-
 
 	return blue_sky::no_error;
 }
@@ -599,15 +625,11 @@ class bs_dfs_visitor : public dfs_visitor<>
 		template <typename Vertex, typename Graph>
 		void discover_vertex(Vertex /*u*/, const Graph &/*g*/) const
 		{
-			//printf("%d:%d, ",(int)lc.size(),u);
-			//lc.push_back(bs_dfs_vs((int)lc.size(),u));
 		}
 
 	  //! End of depth search
 		template <typename Vertex, typename Graph>
 		void finish_vertex(Vertex u, const Graph &/*g*/) const {
-			//printf(" %d-f, ",u);
-			//printf("%d:%d, ",(int)lc.size(),u);
 			lc.push_back(bs_dfs_vs((int)lc.size(),u));
 		}
 
@@ -624,16 +646,13 @@ void graph_to_list(vector<int> &ll, const load_graph &g)
 	vector<bs_dfs_visitor::bs_dfs_vs> dfs;
 	bs_dfs_visitor v(dfs);
 
-	//for (int i = 0; i < 1; ++i)
-	//printf("%d ",(int)g[(load_graph::vertex_descriptor)i]);
-
 	depth_first_search(g,visitor(v));
 
 	std::sort (dfs.begin(),dfs.end());
 
-	//for (int i = 0; i < dfs.size (); ++i)
-	//	BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") ";
-	//BSOUT << bs_end;
+	for (int i = 0; i < dfs.size (); ++i)
+		BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") ";
+	BSOUT << bs_end;
 
 	ll.clear();
 	for(int i = 0; i < (int)dfs.size(); ++i)

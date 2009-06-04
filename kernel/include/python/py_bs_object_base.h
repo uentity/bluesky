@@ -106,8 +106,13 @@ public:
 	}
 
 	template < class T >
+#ifndef BS_DISABLE_MT_LOCKS
 	lsmart_ptr< smart_ptr< T, true > > get_lspx() const {
 		return get_spx< T >().lock();
+#else
+	smart_ptr< smart_ptr< T, true > > get_lspx() const {
+		return get_spx< T >();
+#endif
 	}
 
 	//if you've made a wrapped_t typedef then you can use the following

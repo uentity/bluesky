@@ -17,12 +17,14 @@
 #include "py_bs_object_base.h"
 #include "bs_report.h"
 #include "py_bs_exports.h"
+#include "py_object_handler.h"
 
 #include <iostream>
 #include <boost/python/call_method.hpp>
 #include <string>
 
 using namespace boost::python;
+namespace bp = boost::python;
 
 namespace blue_sky {
 namespace python {
@@ -52,6 +54,7 @@ py_bs_messaging::py_bs_messaging(const py_bs_messaging &msgng)
 bool py_bs_messaging::subscribe(int signal_code, const python_slot& slot) const {
 	//std::cout << "spslot is " << slot.spslot.get() << std::endl;
 	bool result = spmsg->subscribe(signal_code,slot.spslot);//sp_slot(&slot));//slot.spslot);
+  result &= spmsg->subscribe (objbase::on_delete, new tools::py_object_handler (bp::detail::wrapper_base_::get_owner (slot)));
 	//BSOUT << "Subscribe: " << result << bs_end;
 	return result;
 }
