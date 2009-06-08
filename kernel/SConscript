@@ -13,6 +13,7 @@ kernel_cpp_list = Split("""
 	bs_command.cpp
 	bs_common.cpp
 	bs_conf_reader.cpp
+	bs_config_parser.cpp
 	bs_exception.cpp
 	bs_kernel.cpp
 	bs_kernel_ston.cpp

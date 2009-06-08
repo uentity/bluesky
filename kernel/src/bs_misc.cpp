@@ -25,6 +25,7 @@
 #include "bs_report.h"
 #include "bs_exception.h"
 #include "bs_link.h"
+#include "bs_config_parser.h"
 
 #include <iostream>
 #include <fstream>
@@ -293,24 +294,28 @@ blue_sky::error_code search_files(vector<string> &res, const char * what, const 
 {
    if(lib_dir == NULL) lib_dir = "./";
 
+	 try
+	 {
+
 #ifndef UNIX
-	filesystem::path plib_dir(lib_dir,filesystem::native);
+		 filesystem::path plib_dir(lib_dir,filesystem::native);
 #else
-	filesystem::path plib_dir(lib_dir);
+		 filesystem::path plib_dir(lib_dir);
 #endif
 
-	try
-	{
 		// first file of directory as iterator
 		for (filesystem::directory_iterator dll_dir_itr(plib_dir), end_itr; dll_dir_itr != end_itr; ++dll_dir_itr)
 		{
 			if (is_directory(*dll_dir_itr))
 			{
+				continue;
+#if 0
 				if (!strcmp(lib_dir,"./"))
 					continue;
 				if (!filesystem::is_empty(filesystem::path(dll_dir_itr->string(),filesystem::native)))
 					search_files(res, what, dll_dir_itr->string().c_str());
 				continue;
+#endif
 			}
 			if (mask_verify(dll_dir_itr->string().c_str(),what))
 				res.push_back(string(dll_dir_itr->string()));
@@ -472,49 +477,18 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 	sp_conf_reader cr = give_kernel::Instance().create_object(bs_conf_reader::bs_type());
 	vector<string> sp, lp;
 	edge_array_t edges;
-	char *c_lib_dir = NULL;
-	if (!(c_lib_dir = getenv("BS_LOAD_CFGS")))
-	  c_lib_dir = (char *)"./";
+	vector<string> c_lib_dir = cfg::Instance().getenv("BLUE_SKY_PLUGINS_PATH");
 
-	const char *ic_lib_dir = c_lib_dir;
-	for (int i = 0; c_lib_dir[i] != 0; ++i)
-#ifdef UNIX
-		if (c_lib_dir[i] == ':') {
-#else
-		if (c_lib_dir[i] == ';') {
-#endif // UNIX
-			c_lib_dir[i] = 0;
-			search_files(sp,".cfg",ic_lib_dir);
-			ic_lib_dir = &c_lib_dir[i+1];
-		}
-	search_files(sp,".cfg",ic_lib_dir);
+	for (size_t i = 0; i < c_lib_dir.size (); ++i) {
+		search_files(sp,".cfg",c_lib_dir[i].c_str ());
 
-	if (!(c_lib_dir = getenv("BS_PLUGIN_LIBS")))
-	  c_lib_dir = (char *)"./";
-
-	ic_lib_dir = c_lib_dir;
-	for (int i = 0; c_lib_dir[i] != 0; ++i)
 #ifdef UNIX
-		if (c_lib_dir[i] == ':') {
+		search_files(lp,".so",c_lib_dir[i].c_str ());
 #else
-		if (c_lib_dir[i] == ';') {
-#endif // UNIX
-			c_lib_dir[i] = 0;
-#ifdef UNIX
-			search_files(lp,".so",ic_lib_dir);
-#else
-			search_files(lp,".dll",ic_lib_dir);
-			search_files(lp,".pyd",ic_lib_dir);
+		search_files(lp,".dll",c_lib_dir[i].c_str ());
+		search_files(lp,".pyd",c_lib_dir[i].c_str ());
 #endif
-			ic_lib_dir = &c_lib_dir[i+1];
-		}
-
-#ifdef UNIX
-	search_files(lp,".so",ic_lib_dir);
-#else
-	search_files(lp,".dll",ic_lib_dir);
-	search_files(lp,".pyd",ic_lib_dir);
-#endif
+	}
 
 	size_t lp_size = lp.size();
 	for(i = 0; i < (int)lp_size; ++i)
