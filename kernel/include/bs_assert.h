@@ -7,6 +7,8 @@
 #ifndef BS_ASSERT_H_
 #define BS_ASSERT_H_
 
+#include "bs_common.h"
+
 namespace blue_sky {
 namespace bs_assert {
 
