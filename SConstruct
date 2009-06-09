@@ -125,33 +125,23 @@ if os.path.exists('scons_vars.custom') :
 	custom_vars = Variables(File('#scons_vars.custom').get_abspath());
 else :
 	custom_vars = Variables();
-custom_vars.Add('debug', 'Set to 1 to build debug', '1');
-custom_vars.Add('release', 'Set to 1 to build release', '0');
-# decide whether we consider dependencies or not - needed to rebuild given target ONLY
+
+# what build kinds do we support?
+def_build_kinds = ['debug', 'release'];
+custom_vars.Add(ListVariable('build_kinds', 'List of supported build kinds', def_build_kinds[0], def_build_kinds));
+
+# append some useful variables by default
+#custom_vars.Add('debug', 'Set to 1 to build debug', '1');
+#custom_vars.Add('release', 'Set to 1 to build release', '0');
 custom_vars.Add('nodeps', 'Set to 1 to build ignoring dependencies', '0');
-# option that controls whether to perform install step after build
 custom_vars.Add('install', 'Set to 1 to install after build', '0');
 # if user pointed to make install --- add path prefix variables describing where to install kernel and plugins
-#if custom_env['install'] == '1' :
-	# accept any path setting because Install builder will create them automatically
-#	custom_vars.Add('prefix', 'Point where to install BlueSky kernel', 'lib');
 custom_vars.Add(PathVariable('prefix', 'Point where to install BlueSky kernel', Dir('#lib').get_abspath(),
 	PathVariable.PathAccept));
-#	custom_vars.Add('plugins_prefix', 'Point where to install BlueSky plugins', '$prefix/plugins');
 custom_vars.Add(PathVariable('plugins_prefix', 'Point where to install BlueSky plugins', '$prefix/plugins',
 	PathVariable.PathAccept));
-#	# add new vars to custom_env
-#	custom_vars.Update(custom_env);
-#	# if paths doesn't exists - create them
-#	prefix = custom_env.subst('$prefix');
-#	plugins_prefix = custom_env.subst('$plugins_prefix');
-#	if not os.path.exists(prefix) :
-#		os.mkdir(prefix);
-#	if not os.path.exists(plugins_prefix) :
-#		os.mkdir(plugins_prefix);
-
-# variable that specifies python version installed in the system
 custom_vars.Add('python_name', 'Put full Python interpreter name with version here, ex. python2.5', 'python2.5');
+
 # debug compile flags
 #custom_vars.Add('ccflags_dbg', 'Specify compiler flags for debug build', '-O0 -ggdb3');
 # release compile flags
@@ -159,9 +149,12 @@ custom_vars.Add('python_name', 'Put full Python interpreter name with version he
 
 # create custom environment
 custom_env = Environment(variables = custom_vars);
-
 # export created variables
 Export('ss_tree', 'custom_vars', 'custom_env');
+
+# extract build kinds specified by user
+build_kinds = custom_env['build_kinds'];
+Export('build_kinds');
 
 # setup commonly used names
 dbg_dir = 'debug';
@@ -171,32 +164,20 @@ build_dir = '#build';
 exe_dir = '#exe';
 Export('dbg_dir', 'rel_dir', 'build_dir', 'exe_dir');
 
-# determine what should we build
-build_kinds = [];
-if custom_env['debug'] == '1' :
-	build_kinds += ['debug'];
-if custom_env['release'] == '1' :
-	build_kinds += ['release'];
-Export('build_kinds');
-
 # initialization stage is for correcting invariants, such as ss_list, etc
 build_kind = 'init';
 Export('build_kind');
 # custom script call
 custom_proc_call();
-# import changes made
 Import('*');
-# just parse all scripts to let them make initialization
-#[SConscript(x) for x in ss_tree];
 
 # start global build cycle for every build kind
 for i in range(len(build_kinds)) :
-	build_kind = build_kinds[i];
 	# inform everyone what are we building now
+	build_kind = build_kinds[i];
 	Export('build_kind');
-	# format build path
+	# format root build and exe paths
 	tar_build_dir = os.path.join(build_dir, build_kind);
-	# format exe path
 	tar_exe_dir = os.path.join(exe_dir, build_kind);
 	# where plugin libs are expected to be after build?
 	tar_exe_plugin_dir = os.path.join(tar_exe_dir, plugin_dir);
@@ -225,9 +206,6 @@ for i in range(len(build_kinds)) :
 #print(ss.items());
 #print 'build types:';
 #print(build_targets);
-
-#print ss_tree;
-#Help(custom_vars.GenerateHelpText(custom_env));
 
 # generate help text
 Help(custom_vars.GenerateHelpText(custom_env));
