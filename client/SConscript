@@ -24,14 +24,10 @@ boost_libs_dbg = list_suffix(boost_libs, '-d');
 
 # construct debug and release env
 if build_kind == 'debug' :
-	base_env.AppendUnique(
-#			LIBPATH = [os.path.join(tar_exe_dir, 'plugins')],
-			LIBS = ['blue_sky_d', 'bs_cube_d']);
+	base_env.AppendUnique(LIBS = ['blue_sky_d', 'bs_cube_d']);
 	exe_name += '_d';
 else :
-	base_env.AppendUnique(
-#			LIBPATH = [os.path.join(tar_exe_dir, 'plugins')],
-			LIBS = ['blue_sky', 'bs_cube']);
+	base_env.AppendUnique(LIBS = ['blue_sky', 'bs_cube']);
 
 # build target
 client = base_env.Program(target = os.path.join(tar_exe_dir, exe_name), source = Glob(os.path.join('src', '*.cpp'), True, True));

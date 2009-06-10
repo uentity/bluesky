@@ -1,0 +1,15 @@
+import os;
+Import('*');
+
+custom_env.Append(
+	CPPDEFINES = ["_MT", "_DLL", "_WINDLL", "_MSC_EXTENSIONS", "_INTEGRAL_MAX_BITS=64", "_MSC_VER=1400", "_MBCS", "_CPPUNWIND", "_CPPRTTI", "_M_IX86=600", "_M_IX86_FP=0"],
+	CCFLAGS = ["-Zp8", "-Gs", "-GS", "-GR", "-Gm", "-EHs", "-EHc", "-W3", "-Wp64", "-FC", "-GF", "-Zi", "-FD", "-nologo", "-Zc:forScope", "-Zc:wchar_t"],
+	LIBS = ['${python_name}.lib', "psapi.lib"],
+);
+
+if build_kind == 'debug' :
+	custom_env.Append(CCFLAGS = ["-MDd", "-Od", "-RTCs", "-RTCc", "-RTCu"]);
+elif build_kind == 'release' :
+	custom_env.Append(CCFLAGS = ["-MD", "-Ox"]);
+Export('custom_env');
+

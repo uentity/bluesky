@@ -4,7 +4,7 @@ import os;
 Import('*');
 
 if build_kind == 'init' :
-	# Append sconscripts for custom build
+	# Extend sconscripts list
 	ss_tree = ss_tree + [
 			'plugins/bs_cube/SConscript',
 			'client/SConscript'
@@ -12,18 +12,15 @@ if build_kind == 'init' :
 	Export('ss_tree');
 else :
 	# set my custon environment 
-	custom_env.Replace(
-	# don't include all external environment unless you can't build without it
-	#	ENV = os.environ,
-		CPPDEFINES = ['UNIX'],
-		CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-fvisibility=hidden', '-fvisibility-inlines-hidden', '-pipe'],
-		CPPPATH = ['/home/uentity/lib/boost', '/usr/include/python2.6'],
+	custom_env.AppendUnique(
+		CPPPATH = ['/home/uentity/lib/boost'],
 		LIBPATH = ['/home/uentity/lib/boost/lib'],
 		RPATH = ['/home/uentity/lib/boost/lib']
+	#	,CPPDEFINES = ['BS_DISABLE_MT_LOCKS']
 	);
-	if build_kind == 'debug' :
-		custom_env.Append(CCFLAGS = ['-O0', '-ggdb']);
-	elif build_kind == 'release' :
-		custom_env.Append(CCFLAGS = ['-O3', '-mtune=core2', '-mmmx', '-mssse3', '-ftree-vectorize']);
+#	if build_kind == 'debug' :
+#		custom_env.AppendUnique(CCFLAGS = ['-O0', '-ggdb']);
+	if build_kind == 'release' :
+		custom_env.AppendUnique(CCFLAGS = ['-mtune=core2', '-mmmx', '-mssse3']);
 	Export('custom_env');
 

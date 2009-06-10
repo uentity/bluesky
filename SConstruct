@@ -106,11 +106,6 @@
 
 import os, os.path, glob;
 
-def custom_proc_call() :
-	# process custom settings
-	if os.path.exists('scons_env.custom') :
-		SConscript('scons_env.custom');
-
 # list of all sconscript files
 # ORDER-SENSITIVE!
 # add your sconscript only AFTER all dependent
@@ -131,8 +126,6 @@ def_build_kinds = ['debug', 'release'];
 custom_vars.Add(ListVariable('build_kinds', 'List of supported build kinds', def_build_kinds[0], def_build_kinds));
 
 # append some useful variables by default
-#custom_vars.Add('debug', 'Set to 1 to build debug', '1');
-#custom_vars.Add('release', 'Set to 1 to build release', '0');
 custom_vars.Add('nodeps', 'Set to 1 to build ignoring dependencies', '0');
 custom_vars.Add('install', 'Set to 1 to install after build', '0');
 
@@ -145,15 +138,25 @@ custom_vars.Add(PathVariable('plugins_prefix', 'Point where to install BlueSky p
 custom_vars.Add('python_name', 'Put full Python interpreter name with version here, ex. python2.5', 'python2.5');
 custom_vars.Add(BoolVariable('auto_find_ss', 'Turn on automatic SConscripts search?', 0));
 
-# debug compile flags
-#custom_vars.Add('ccflags_dbg', 'Specify compiler flags for debug build', '-O0 -ggdb3');
-# release compile flags
-#custom_vars.Add('ccflags_rel', 'Specify compiler flags for release build', '-O3');
+# search for platform-oriented scripts
+platform_ss = glob.glob('scons_platform.*');
+pnames = [''];
+for p in platform_ss :
+	ext = os.path.splitext(p)[1][1:];
+	if len(ext) > 0 : pnames.append(ext);
+custom_vars.Add(EnumVariable('platform', 'Specify the platform to build for', '', allowed_values = pnames));
+
+custom_vars.Add(PathVariable('custom_script', 'Specify filename of custom build environment processing script',
+	'scons_env.custom', PathVariable.PathAccept));
 
 # create custom environment
 custom_env = Environment(variables = custom_vars);
-# export created variables
-Export('ss_tree', 'custom_vars', 'custom_env');
+Export('custom_vars', 'custom_env');
+
+def custom_proc_call() :
+	# process custom settings
+	if os.path.exists(custom_env['custom_script']) :
+		SConscript(custom_env['custom_script']);
 
 # extract build kinds specified by user
 build_kinds = custom_env['build_kinds'];
@@ -181,12 +184,13 @@ if custom_env['auto_find_ss'] :
 	ss_list = [];
 	ss_search(root_dir, '', ss_tree);
 #	print ss_tree;
+Export('ss_tree');
 
 # setup commonly used names
 plugin_dir = 'plugins';
 build_dir = '#build';
 exe_dir = '#exe';
-Export('build_dir', 'exe_dir');
+Export('build_dir', 'exe_dir', 'plugin_dir');
 
 # initialization stage is for correcting invariants, such as ss_list, etc
 build_kind = 'init';
@@ -194,8 +198,25 @@ Export('build_kind');
 # custom script call
 custom_proc_call();
 Import('*');
+# save default custom_env
+custom_env_def = custom_env.Clone();
+
+#debug
+def compare_env(env1, env2) :
+	print 'env1: ', env1;
+	print 'env2: ', env2;
+	d1 = env1.Dictionary(); d2 = env2.Dictionary();
+	i = 0;
+	for k in d1.keys() :
+		if d1[k] != d2[k] :
+			print 'env1[', k, '] = ', d1[k];
+			print 'env2[', k, '] = ', d2[k];
+			++i;
+	if i == 0 : print 'Dictionary match!';
+	print '';
 
 # start global build cycle for every build kind
+platform = custom_env['platform'];
 for i in range(len(build_kinds)) :
 	# inform everyone what are we building now
 	build_kind = build_kinds[i];
@@ -206,16 +227,24 @@ for i in range(len(build_kinds)) :
 	# where plugin libs are expected to be after build?
 	tar_exe_plugin_dir = os.path.join(tar_exe_dir, plugin_dir);
 	Export('tar_build_dir', 'tar_exe_dir', 'tar_exe_plugin_dir');
-	# invoke custom script
+
+	# reset custom_env to default values
+	custom_env = custom_env_def.Clone();
+	Export('custom_env');
+	# invoke tuning scripts
+	if len(platform) > 0 :
+		SConscript('scons_platform.' + platform);
 	custom_proc_call();
 	Import('*');
+
 	# add exe path to libraries search paths
 	custom_env.AppendUnique(LIBPATH = [tar_exe_dir, tar_exe_plugin_dir]);
 	if build_kind == 'debug' :
 		custom_env.AppendUnique(CPPDEFINES = ['_DEBUG']);
-	build_root = tar_build_dir;
-
+	Export('custom_env');
+	
 	# parse scons files
+	build_root = tar_build_dir;
 	for j in range(len(ss_tree)) :
 		# build in separate dir
 		tar_build_dir = os.path.join(build_root, os.path.dirname(ss_tree[j]));
@@ -224,12 +253,9 @@ for i in range(len(build_kinds)) :
 		#if not inst_path is None :
 		#Install(tar_build_dir, os.path.join(tar_exe_dir, inst_path));
 		#if scons_env['install'] == '1' :
-
-# debug
-#print 'sconscripts to build';
-#print(ss.items());
-#print 'build types:';
-#print(build_targets);
+	
+	# Update template env with possibly cahnged build variables
+	custom_vars.Update(custom_env_def);
 
 # generate help text
 Help(custom_vars.GenerateHelpText(custom_env));
