@@ -35,9 +35,9 @@ if build_kind == 'debug' :
 # actually build target
 bs_cube = base_env.SharedLibrary(target = os.path.join(tar_exe_plugin_dir, lib_name), source = [os.path.join('src', x) for x in cpp_list]);
 # specify dependencies or ignore them
-if base_env['nodeps'] == '1' :
+if base_env['deps'] == 'off' :
 	Ignore(bs_cube, bs_kernel);
-else :
+elif base_env['deps'] == 'explicit' :
 	Depends(bs_cube, bs_kernel);
 
 #	bs_cube_debug = debug_env.Install(exe_dir_dbg, debug);

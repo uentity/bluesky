@@ -32,10 +32,10 @@ else :
 # build target
 client = base_env.Program(target = os.path.join(tar_exe_dir, exe_name), source = Glob(os.path.join('src', '*.cpp'), True, True));
 # enable or disable dependencies
-if base_env['nodeps'] == '1' :
+if base_env['deps'] == 'off' :
 	Ignore(client, bs_kernel);
 	Ignore(client, bs_cube);
-else :
+elif base_env['deps'] == 'explicit' :
 	Depends(client, bs_kernel);
 	Depends(client, bs_cube);
 # make alias

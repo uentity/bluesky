@@ -126,7 +126,12 @@ def_build_kinds = ['debug', 'release'];
 custom_vars.Add(ListVariable('build_kinds', 'List of supported build kinds', def_build_kinds[0], def_build_kinds));
 
 # append some useful variables by default
-custom_vars.Add('nodeps', 'Set to 1 to build ignoring dependencies', '0');
+#custom_vars.Add('nodeps', 'Set to 1 to build ignoring dependencies', '0');
+custom_vars.Add(EnumVariable('deps', """Select how to track dependencies:
+	auto - rely on SCons internal machinery,
+	explicit - force using Depends(),
+	off - build fully ignoring dependencies""",
+	'auto', allowed_values = ['auto', 'explicit', 'off']));
 custom_vars.Add('install', 'Set to 1 to install after build', '0');
 
 # if user pointed to make install --- add path prefix variables describing where to install kernel and plugins
@@ -198,6 +203,14 @@ Export('build_kind');
 # custom script call
 custom_proc_call();
 Import('*');
+
+# dump ss_tree
+print 'Processing build scripts:';
+print '[';
+for x in ss_tree :
+	print x;
+print']';
+
 # save default custom_env
 custom_env_def = custom_env.Clone();
 
