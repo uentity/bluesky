@@ -104,7 +104,7 @@
 # then create your own build environment by cloning custom_env:
 # my_build_env = custom_env.Clone();
 
-import os, os.path;
+import os, os.path, glob;
 
 def custom_proc_call() :
 	# process custom settings
@@ -135,12 +135,15 @@ custom_vars.Add(ListVariable('build_kinds', 'List of supported build kinds', def
 #custom_vars.Add('release', 'Set to 1 to build release', '0');
 custom_vars.Add('nodeps', 'Set to 1 to build ignoring dependencies', '0');
 custom_vars.Add('install', 'Set to 1 to install after build', '0');
+
 # if user pointed to make install --- add path prefix variables describing where to install kernel and plugins
 custom_vars.Add(PathVariable('prefix', 'Point where to install BlueSky kernel', Dir('#lib').get_abspath(),
 	PathVariable.PathAccept));
 custom_vars.Add(PathVariable('plugins_prefix', 'Point where to install BlueSky plugins', '$prefix/plugins',
 	PathVariable.PathAccept));
+
 custom_vars.Add('python_name', 'Put full Python interpreter name with version here, ex. python2.5', 'python2.5');
+custom_vars.Add(BoolVariable('auto_find_ss', 'Turn on automatic SConscripts search?', 0));
 
 # debug compile flags
 #custom_vars.Add('ccflags_dbg', 'Specify compiler flags for debug build', '-O0 -ggdb3');
@@ -156,13 +159,34 @@ Export('ss_tree', 'custom_vars', 'custom_env');
 build_kinds = custom_env['build_kinds'];
 Export('build_kinds');
 
+# auto serach for SConscripts
+def ss_search(root_dir, ss_prefix, ss_list) :
+	nodes = os.listdir(root_dir);
+	for node in nodes :
+		abs_node = os.path.join(root_dir, node);
+		if not os.path.isdir(abs_node) : continue;
+#		print 'Travel path ', abs_node;
+		ss_glob = glob.glob(os.path.join(abs_node, '[Ss][Cc]onscript'));
+		if len(ss_glob) > 0 :
+			ss = os.path.join(ss_prefix, node, os.path.basename(ss_glob[0]));
+#			print 'Found ', ss;
+			if ss not in ss_list : ss_list.append(ss);
+		else :
+			ss_search(abs_node, os.path.join(ss_prefix, node), ss_list);
+
+if custom_env['auto_find_ss'] :
+#	print "Auto-search on";
+	root_dir = Dir('#').get_abspath();
+#	print 'root_dir = ', root_dir;
+	ss_list = [];
+	ss_search(root_dir, '', ss_tree);
+#	print ss_tree;
+
 # setup commonly used names
-dbg_dir = 'debug';
-rel_dir = 'release';
 plugin_dir = 'plugins';
 build_dir = '#build';
 exe_dir = '#exe';
-Export('dbg_dir', 'rel_dir', 'build_dir', 'exe_dir');
+Export('build_dir', 'exe_dir');
 
 # initialization stage is for correcting invariants, such as ss_list, etc
 build_kind = 'init';
