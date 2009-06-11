@@ -23,20 +23,24 @@ base_env['SHLIBPREFIX'] = '';
 
 if build_kind == 'debug' :
 	base_env.AppendUnique(
-			CPPDEFINES = ['_DEBUG'],
-			LIBS = ['blue_sky_d', 'boost_python-mt-d']);
+		CPPDEFINES = ['_DEBUG'],
+		LIBS = ['blue_sky_d']);
+	if base_env['platform'].startswith('lin') :
+		base_env.Append(LIBS = ['boost_python-mt-d']);
 else :
 	base_env.AppendUnique(
-			LIBS = ['blue_sky', 'boost_python-mt']);
+		LIBS = ['blue_sky']);
+	if base_env['platform'].startswith('lin') :
+		base_env.Append(LIBS = ['boost_python-mt']);
 
 # actually build target
 bspy_loader = base_env.SharedLibrary(target = os.path.join(tar_exe_dir, lib_name), source = [os.path.join('src', x) for x in cpp_list]);
+
 # do we ignore dependencies?
-if base_env['nodeps'] == '1' :
+if base_env['deps'] == 'off' :
 	Ignore(bspy_loader, bs_kernel);
-else :
+elif base_env['deps'] == 'explicit' :
 	Depends(bspy_loader, bs_kernel);
-#	bspy_loader_debug = debug_env.Install(exe_dir_dbg, debug);
 base_env.Alias(tar_name, bspy_loader);
 Export('bspy_loader');
 

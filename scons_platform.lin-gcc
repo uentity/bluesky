@@ -1,0 +1,15 @@
+import os;
+Import('*');
+
+custom_env.Append(
+	CPPDEFINES = ['UNIX'],
+	CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-fvisibility=hidden', '-fvisibility-inlines-hidden', '-pipe'],
+	CPPPATH = ['/usr/include/${python_name}'],
+);
+
+if build_kind == 'debug' :
+	custom_env.Append(CCFLAGS = ['-O0', '-ggdb']);
+elif build_kind == 'release' :
+	custom_env.Append(CCFLAGS = ['-O3', '-ftree-vectorize']);
+Export('custom_env');
+

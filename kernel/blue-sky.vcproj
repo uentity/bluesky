@@ -297,11 +297,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_conf_reader.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\bs_conf_reader.h"
+				RelativePath=".\src\bs_config_parser.cpp"
 				>
 			</File>
 			<File
@@ -380,6 +376,18 @@
 			</File>
 			<File
 				RelativePath=".\include\bs_common.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\bs_conf_reader.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\bs_conf_reader.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_config_parser.h"
 				>
 			</File>
 			<File

@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;../../kernel/src;../../kernel/src/python;$(PYTHON_PATH)/include"
-				PreprocessorDefinitions="_DEBUG;BS_EXPORTING_PLUGIN"
+				AdditionalIncludeDirectories="&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;../../kernel/src;../../kernel/include;../../kernel/include/python;$(PYTHON_PATH)/include"
+				PreprocessorDefinitions="_DEBUG;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				SmallerTypeCheck="true"
