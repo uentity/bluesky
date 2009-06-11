@@ -1,0 +1,35 @@
+import os, sys, glob
+
+def list_suffix (list, suffix) :
+	return [x + suffix for x in list];
+
+def add_suffix (x, suffix) :
+    if (len (x) == 0) :
+        return x
+    else :
+        return x + suffix
+
+class files :
+    def __init__ (self, root, excludes = []) :
+        def Glob (includes = Split ("."), excludes = None) :
+            file_list = []
+            for p in includes :
+                file_list.extend (glob.glob (os.path.join (p, "*.cpp")))
+
+            if (not excludes is None) :
+                for f in excludes :
+                    if (f in file_list) :
+                        file_list.remove (f)
+
+            file_list.sort ()
+            return file_list
+
+        self.root = ""
+        for p in root :
+            self.root = os.path.join (self.root, p)
+
+        self.sources = Glob ([os.path.join (self.root, "src"), os.path.join (self.root, "src", "python")], [os.path.join (self.root, "src", ex) for ex in excludes])
+
+Export ("list_suffix")
+Export ("add_suffix")
+Export ("files")

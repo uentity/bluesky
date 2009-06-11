@@ -197,6 +197,9 @@ build_dir = '#build';
 exe_dir = '#exe';
 Export('build_dir', 'exe_dir', 'plugin_dir');
 
+# import some useful tools
+SConscript('scons_tools');
+
 # initialization stage is for correcting invariants, such as ss_list, etc
 build_kind = 'init';
 Export('build_kind');
