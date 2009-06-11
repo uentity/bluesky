@@ -65,9 +65,9 @@ if 'py' not in custom_vars.keys() :
 
 # setup default build environment
 base_env = custom_env.Clone();
-base_env.Append(
+base_env.AppendUnique(
 	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN'],
-	CPPPATH = ['include', 'src'],
+	CPPPATH = ['#kernel/include', '#kernel/src'],
 	LIBS = ['loki', '${python_name}']
 );
 if base_env['platform'].startswith('lin') :
@@ -79,7 +79,7 @@ boost_libs_dbg = list_suffix(boost_libs, '-d');
 
 # are we building with python support?
 if base_env['py'] == '1' :
-	base_env.Append(CPPDEFINES = ['BSPY_EXPORTING'], CPPPATH = ['include/python']);
+	base_env.AppendUnique(CPPDEFINES = ['BSPY_EXPORTING'], CPPPATH = ['include/python']);
 	kernel_cpp_list += py_kernel_cpp_list;
 
 # finalize env construction
