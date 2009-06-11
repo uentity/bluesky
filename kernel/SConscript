@@ -36,6 +36,7 @@ py_kernel_cpp_list = [os.path.join('python', x) for x in Split("""
 	bs_import_common.cpp
 	bs_python_import.cpp
 	py_bs_abstract_storage.cpp
+	py_bs_assert.cpp
 	py_bs_command.cpp
 	py_bs_kernel.cpp
 	py_bs_link.cpp
