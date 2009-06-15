@@ -533,7 +533,9 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 
 			}
 		}
+#ifdef _DEBUG
 		BSOUT << msg << ")" << bs_end;
+#endif
 	}
 
 	try {
