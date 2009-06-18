@@ -24,6 +24,11 @@ namespace blue_sky {
 		const map_t &env() const;
 		vstr_t getenv(const char *e);
 
+    vstr_t operator[] (const char *e)
+    {
+      return getenv (e);
+    }
+
 	private:
 		bs_cfg_p ();
 
@@ -32,6 +37,14 @@ namespace blue_sky {
 
 	typedef singleton< bs_cfg_p > cfg;
 
+  struct bs_config 
+  {
+    bs_cfg_p::vstr_t
+    operator [] (const char *e)
+    {
+      return cfg::Instance ()[e];
+    }
+  };
 }
 
 #endif // BS_CONFIG_PARSER_H
