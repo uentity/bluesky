@@ -16,6 +16,7 @@
 #include "bs_common.h"
 #include "bs_import_common.h"
 #include "py_bs_exports.h"
+#include "py_bs_assert.h"
 
 #include <boost/python/enum.hpp>
 #include <boost/python/exception_translator.hpp>
@@ -57,6 +58,8 @@ BLUE_SKY_INIT_PY_FUN
 		.value("notpermitted_operation",notpermitted_operation)
 		.value("boost_error",boost_error)
 		.export_values();
+
+  python::py_export_assert ();
 
 	//export the rest stuff
 	py_export_messaging();
