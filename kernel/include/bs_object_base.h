@@ -34,55 +34,6 @@
 //! BlueSky kernel instance getter macro
 #define BS_KERNEL blue_sky::give_kernel::Instance()
 
-
-#if 0
-/*!
-\brief Function to clear all static lists that contains smart pointer to given instance of BlueSky type T
-\param T - type of your derived class
-\param base = type of base class from which T is inherited
-This macro is included by BLUE_SKY_TYPE_IMPL*
-*/
-
-#define BS_TYPE_FREE_INSTANCE_BODY(T, base) \
-bs_free_instance(const smart_ptr< T, true >& sp_inst) { \
-	bs_instances().lock()->remove(sp_inst); \
-	base::bs_free_instance(sp_inst); \
-}
-#define BS_TYPE_FREE_INSTANCE_IMPL(T, base) void T::BS_TYPE_FREE_INSTANCE_BODY(T, base)
-
-/*!
-\brief Function that registeres given instance of type T in all static lists of instances up the class hierarchy
-\param T - type of your derived class
-\param base = type of base class from which T is inherited
-This macro is included by BLUE_SKY_TYPE_IMPL*
-*/
-#define BS_TYPE_REG_INSTANCE_BODY(T, base) \
-bs_register_instance(const smart_ptr< T, true >& sp_inst) { \
-	base::bs_register_instance(sp_inst); \
-	lsmart_ptr< sp_objinst > l_inst(bs_instances()); \
-	if(std::find(l_inst->begin(), l_inst->end(), sp_inst) == l_inst->end()) {\
-		l_inst->push_back(sp_inst); return true; }\
-	else return false; \
-}
-#define BS_TYPE_REG_INSTANCE_IMPL(T, base) bool T::BS_TYPE_REG_INSTANCE_BODY(T, base)
-
-/*!
-	\brief Implementation of insntance releasing function for templated class specialization
-	Included by BLUE_SKY_TYPE_IMPL_T
- */
-#define BS_TYPE_FREE_INSTANCE_IMPL_T(T, base) \
-template< > BS_API_PLUGIN BS_TYPE_FREE_INSTANCE_IMPL(T, base) \
-template< > BS_API_PLUGIN void T::bs_free_this() const { T::bs_free_instance(this); }
-
-/*!
-	\brief Implementation of instance registration function for templated type specialization
-	Included by BLUE_SKY_TYPE_IMPL_T
-*/
-#define BS_TYPE_REG_INSTANCE_IMPL_T(T, base) \
-template< > BS_API_PLUGIN BS_TYPE_REG_INSTANCE_IMPL(T, base) \
-template< > BS_API_PLUGIN bool T::bs_register_this() const { return T::bs_register_instance(this); }
-#endif //0
-
 /*!
 \brief Very common declarations for both objbase and command types/
 
@@ -102,46 +53,39 @@ static bool bs_register_instance(const smart_ptr< T, true >& sp_inst); \
 virtual void bs_free_this() const; \
 virtual bool bs_register_this() const; */
 
-#define BS_COMMON_DECL_MEM(T)																			\
-public: static bs_objinst_holder::const_iterator bs_inst_begin()	\
-	{																																\
-		return BS_KERNEL.objinst_begin (bs_type ());									\
-	}																																\
-	static bs_objinst_holder::const_iterator bs_inst_end()					\
-	{																																\
-		return BS_KERNEL.objinst_end (bs_type ());										\
-	}																																\
-	static ulong bs_inst_cnt()																			\
-	{																																\
-		return BS_KERNEL.objinst_cnt(bs_type());											\
-	}
+#define BS_COMMON_DECL_MEM(T)                                        \
+    public: static bs_objinst_holder::const_iterator bs_inst_begin() \
+    {                                                                \
+        return BS_KERNEL.objinst_begin (bs_type ());                 \
+    }                                                                \
+    static bs_objinst_holder::const_iterator bs_inst_end()           \
+    {                                                                \
+        return BS_KERNEL.objinst_end (bs_type ());                   \
+    }                                                                \
+    static ulong bs_inst_cnt()                                       \
+    {                                                                \
+        return BS_KERNEL.objinst_cnt(bs_type());                     \
+    }
 
 
 /*!
 \brief Very common implementations of functions for working with static list of instances for templated type.
 */
-#define BS_COMMON_IMPL_EXT_(prefix, T, is_decl) \
-BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator \
-BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::)\
-bs_inst_begin() { return BS_KERNEL.objinst_begin(bs_type()); } \
-BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator \
-BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::)\
-bs_inst_end() { return BS_KERNEL.objinst_end(bs_type()); } \
-BOOST_PP_SEQ_ENUM(prefix) ulong \
-BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::)\
+#define BS_COMMON_IMPL_EXT_(prefix, T, is_decl)                                            \
+BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator                      \
+BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::) \
+bs_inst_begin() { return BS_KERNEL.objinst_begin(bs_type()); }                             \
+BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator                      \
+BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::) \
+bs_inst_end() { return BS_KERNEL.objinst_end(bs_type()); }                                 \
+BOOST_PP_SEQ_ENUM(prefix) ulong                                                            \
+BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::) \
 bs_inst_cnt() { return BS_KERNEL.objinst_cnt(bs_type()); }
 
-#define BS_COMMON_DECL_T_MEM(T) \
-BS_COMMON_IMPL_EXT_((public: static), (T), 1) \
+#define BS_COMMON_DECL_T_MEM(T)                \
+BS_COMMON_IMPL_EXT_((public: static), (T), 1)  \
 protected: T(bs_type_ctor_param param = NULL); \
-T(const T&); \
-/*
-public: static blue_sky::bs_objinst_holder::const_iterator bs_inst_begin() \
-	{ return BS_KERNEL.objinst_begin(bs_type()); } \
-static blue_sky::bs_objinst_holder::const_iterator bs_inst_end() \
-	{ return BS_KERNEL.objinst_end(bs_type()); } \
-static ulong bs_inst_cnt() { return BS_KERNEL.objinst_cnt(bs_type()); } \
-*/
+T(const T&);
 
 /*!
 \brief Very common implementations of functions for working with static list of instances.
@@ -149,24 +93,12 @@ static ulong bs_inst_cnt() { return BS_KERNEL.objinst_cnt(bs_type()); } \
 */
 #define BS_COMMON_IMPL(T) \
 BS_COMMON_IMPL_EXT_((), (T), 0)
-/*
-blue_sky::bs_objinst_holder::const_iterator T::bs_inst_begin() { return BS_KERNEL.objinst_begin(bs_type()); } \
-blue_sky::bs_objinst_holder::const_iterator T::bs_inst_end() { return BS_KERNEL.objinst_end(bs_type()); } \
-ulong T::bs_inst_cnt() { return BS_KERNEL.objinst_cnt(bs_type()); }
-*/
 
 /*!
 \brief Very common implementations of functions for working with static list of instances for templated type specialization.
 */
 #define BS_COMMON_IMPL_T(T) \
 BS_COMMON_IMPL_EXT_((template< > BS_API_PLUGIN), (T), 0)
-/*
-template< > BS_API_PLUGIN blue_sky::bs_objinst_holder::const_iterator T::bs_inst_begin() \
-	{ return BS_KERNEL.objinst_begin(bs_type()); } \
-template< > BS_API_PLUGIN blue_sky::bs_objinst_holder::const_iterator T::bs_inst_end() \
-	{ return BS_KERNEL.objinst_end(bs_type()); } \
-template< > BS_API_PLUGIN ulong T::bs_inst_cnt() { return BS_KERNEL.objinst_cnt(bs_type()); }
-*/
 
 //! put T definition into round braces
 #define BS_COMMON_IMPL_T_EXT(t_params_num, T) \
@@ -176,7 +108,7 @@ BS_COMMON_IMPL_EXT_((template< > BS_API_PLUGIN), BOOST_PP_TUPLE_TO_SEQ(t_params_
 \brief Very common implementations of functions for working with static list of instances for templated types.
  Generates common template functions definitions for classes with arbitrary template parameters
 */
-#define BS_COMMON_IMPL_T_DEF(T, t_params) BS_COMMON_IMPL_EXT_(\
+#define BS_COMMON_IMPL_T_DEF(T, t_params) BS_COMMON_IMPL_EXT_(                                             \
 BOOST_PP_TUPLE_TO_SEQ(BOOST_PP_SEQ_SIZE(t_params), (template< BS_TLIST_FORMER(t_params) > BS_API_PLUGIN)), \
 BOOST_PP_TUPLE_TO_SEQ(BOOST_PP_SEQ_SIZE(t_params), (T< BS_CLIST_FORMER(t_params) >)), 0)
 
@@ -185,8 +117,8 @@ BOOST_PP_TUPLE_TO_SEQ(BOOST_PP_SEQ_SIZE(t_params), (T< BS_CLIST_FORMER(t_params)
 \brief This function needed to access non-constant members from constant member functions.
 \return Proxy bs_locker object.
 */
-#define BS_LOCK_THIS_DECL(T) \
-public: lsmart_ptr< smart_ptr< T, true > > lock() const \
+#define BS_LOCK_THIS_DECL(T)                                                             \
+public: lsmart_ptr< smart_ptr< T, true > > lock() const                                  \
 { assert(this); return lsmart_ptr< smart_ptr< T, true > >(smart_ptr< T, true >(this)); }
 
 /*!
@@ -194,8 +126,8 @@ public: lsmart_ptr< smart_ptr< T, true > > lock() const \
 	\param T = name of your class
  */
 #define BLUE_SKY_TYPE_DECL(T) \
-BS_TYPE_DECL \
-BS_COMMON_DECL(T) \
+BS_TYPE_DECL                  \
+BS_COMMON_DECL(T)             \
 BS_LOCK_THIS_DECL(T)
 
 /*!
@@ -217,15 +149,15 @@ When creating specialization of type T, client should pass unique string type po
 Complete unique string type for given template specialization will be: common_stype + stype_postfix
 */
 #define BLUE_SKY_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr) \
-BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr) \
-BS_COMMON_DECL_T_MEM(T) \
+BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr)               \
+BS_COMMON_DECL_T_MEM(T)                                                          \
 BS_LOCK_THIS_DECL(T)
 
 //! same as BLUE_SKY_TYPE_DECL_T_MEM but not for template classes
-#define BLUE_SKY_TYPE_DECL_MEM(T, base, common_stype, short_descr, long_descr)	\
-	BS_TYPE_DECL_MEM((T), (base), common_stype, short_descr, long_descr, false)		\
-	BS_COMMON_DECL_MEM(T)																													\
-	BS_LOCK_THIS_DECL(T)
+#define BLUE_SKY_TYPE_DECL_MEM(T, base, common_stype, short_descr, long_descr) \
+BS_TYPE_DECL_MEM((T), (base), common_stype, short_descr, long_descr, false)    \
+BS_COMMON_DECL_MEM(T)                                                          \
+BS_LOCK_THIS_DECL(T)
 
 //------------------------ implementation ------------------------------------------------------------------------------
 /*#define BS_TYPE_IMPL_COMMON(T, base) \
@@ -234,11 +166,11 @@ BS_TYPE_REG_INSTANCE_IMPL(T, base) \
 BS_TYPE_FREE_INSTANCE_IMPL(T, base) */
 
 #define BLUE_SKY_TYPE_IMPL(T, base, type_string, short_descr, long_descr) \
-BS_TYPE_IMPL(T, base, type_string, short_descr, long_descr) \
+BS_TYPE_IMPL(T, base, type_string, short_descr, long_descr)               \
 BS_COMMON_IMPL(T)
 
 #define BLUE_SKY_TYPE_IMPL_NOCOPY(T, base, type_string, short_descr, long_descr) \
-BS_TYPE_IMPL_NOCOPY(T, base, type_string, short_descr, long_descr) \
+BS_TYPE_IMPL_NOCOPY(T, base, type_string, short_descr, long_descr)               \
 BS_COMMON_IMPL(T)
 
 #define BLUE_SKY_TYPE_IMPL_SHORT(T, base, short_descr) \
@@ -254,19 +186,19 @@ BS_TYPE_REG_INSTANCE_IMPL_T(T, base) \
 BS_TYPE_FREE_INSTANCE_IMPL_T(T, base) */
 
 #define BLUE_SKY_TYPE_IMPL_T(T, base, type_string, short_descr, long_descr) \
-BS_TYPE_IMPL_T(T, base, type_string, short_descr, long_descr) \
-BS_COMMON_IMPL_T(T) \
+BS_TYPE_IMPL_T(T, base, type_string, short_descr, long_descr)               \
+BS_COMMON_IMPL_T(T)                                                         \
 template class T;
 
 #define BLUE_SKY_TYPE_IMPL_T_NOCOPY(T, base, type_string, short_descr, long_descr) \
-BS_TYPE_IMPL_T_NOCOPY(T, base, type_string, short_descr, long_descr) \
-BS_COMMON_IMPL_T(T) \
+BS_TYPE_IMPL_T_NOCOPY(T, base, type_string, short_descr, long_descr)               \
+BS_COMMON_IMPL_T(T)                                                                \
 template class T;
 
 //! surround your class's and base's defintions with round braces
 #define BLUE_SKY_TYPE_IMPL_T_EXT(T_tup_size, T_tup, base_tup_size, base_tup, type_string, short_descr, long_descr, nocopy) \
-BS_TYPE_IMPL_T_EXT(T_tup_size, T_tup, base_tup_size, base_tup, type_string, short_descr, long_descr, nocopy) \
-BS_COMMON_IMPL_T_EXT(T_tup_size, T_tup) \
+BS_TYPE_IMPL_T_EXT(T_tup_size, T_tup, base_tup_size, base_tup, type_string, short_descr, long_descr, nocopy)               \
+BS_COMMON_IMPL_T_EXT(T_tup_size, T_tup)                                                                                    \
 template class BOOST_PP_TUPLE_REM_CTOR(T_tup_size, T_tup);
 
 #define BLUE_SKY_TYPE_IMPL_T_SHORT(T, base, short_descr) \
