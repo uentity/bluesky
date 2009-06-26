@@ -28,7 +28,9 @@ class files :
             if (p <> ".") :
                 self.root = os.path.join (self.root, p)
 
-        self.sources = super_glob ([os.path.join (self.root, "src")], [str (Glob (os.path.join (self.root, "src", ex))[0]) for ex in excludes])
+        sources = super_glob ([os.path.join (self.root, "src")], [str (Glob (os.path.join (self.root, "src", ex))[0]) for ex in excludes])
+
+        self.sources = [os.path.join ("src", os.path.split (x)[1]) for x in sources]
 
 Export ("list_suffix")
 Export ("add_suffix")
