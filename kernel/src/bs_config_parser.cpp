@@ -235,4 +235,10 @@ namespace blue_sky {
 	{
 		return cfg_holder::Instance().cfg_ref();
 	}
+
+	BS_API bs_cfg_p::vstr_t
+	bs_config::operator [] (const char *e) {
+		return cfg::Instance ()[e];
+	}
+
 };
