@@ -28,9 +28,14 @@
 
 #include "boost/type_traits/remove_const.hpp"
 #include "boost/type_traits/add_const.hpp"
-//thread-safe boost's counter, used in shared_ptr, can utilize custom deleters - for smart_ptr< T, false >
-#include "boost/detail/shared_count.hpp"
 #include "boost/checked_delete.hpp"
+#include "boost/version.hpp"
+//thread-safe boost's counter, used in shared_ptr, can utilize custom deleters - for smart_ptr< T, false >
+#if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 39
+#include "boost/detail/shared_count.hpp"
+#else
+#include "boost/smart_ptr/detail/shared_count.hpp"
+#endif
 
 #include "loki/TypeManip.h"
 //#include <iostream>
