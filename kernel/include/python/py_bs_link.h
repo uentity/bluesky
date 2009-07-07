@@ -64,7 +64,7 @@ public:
 	 py_bs_node *node() const;
 
 	 //bool is_soft() const;
-	 bool is_persistent() const;
+	 //bool is_persistent() const;
 	 /*
 	 py_bs_link copy(const py_bs_link& where);
 	 bool move(const py_bs_link& where);

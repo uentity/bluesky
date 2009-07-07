@@ -80,7 +80,7 @@ namespace blue_sky {
 
 	void get_leaf_win(string &container_, const string &src)
 	{
-		for (size_t i = src.size() - 1; i >= 0; --i) {
+		for (size_t i = src.size() - 1; i < src.size(); --i) {
 			if (src[i] == '\\')
 				break;
 			container_ = src[i] + container_;

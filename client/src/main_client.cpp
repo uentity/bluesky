@@ -869,11 +869,11 @@ try {
 		k.register_type(plugin_info, dummy::bs_type());
 
 		print_loaded_types();
-		//fill_dummy_node(100);
-		//print_tree();
+		fill_dummy_node(100);
+		print_tree();
 
-		//mt_op< dummy_changer >(50, true);
-		//mt_op< dummy_renamer >(50, true);
+		mt_op< dummy_changer >(50, true);
+		mt_op< dummy_renamer >(50, true);
 		
 		//dummy_changer(50)();
 		
@@ -882,10 +882,10 @@ try {
 		//dummy_renamer(50)();
 
 		//block until all tasks are done
-		//cout << "Waiting until all changes are made..." << endl;
-		//k.wait_tq_empty();
-		//cout << "Ok, node fully updated" << endl;
-		//print_dummy_node(bs_node::custom_idx);
+		cout << "Waiting until all changes are made..." << endl;
+		k.wait_tq_empty();
+		cout << "Ok, node fully updated" << endl;
+		print_dummy_node(bs_node::custom_idx);
 
 		k.tree_gc();
 
@@ -893,7 +893,7 @@ try {
 		smart_ptr< bs_cube > c = k.create_object(bs_cube::bs_type());
 		c.lock()->test();
 
-		//test_objects();
+		test_objects();
 
 		//test_plugins();
 

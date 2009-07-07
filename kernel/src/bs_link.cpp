@@ -141,15 +141,15 @@ public:
 class bs_link::link_impl {
 public:
 	std::string name_;
-	bool is_persistent_;
+	//bool is_persistent_;
 	const bs_link* self_;
 	//unlock signal forwarder
 	sp_slot ol_;
 	bool is_listening_;
 
 
-	link_impl(const std::string& name, bool is_persistent)
-		: name_(name), is_persistent_(is_persistent), is_listening_(false)
+	link_impl(const std::string& name)
+		: name_(name), is_listening_(false)
 	{}
 
 	virtual sp_inode inode() const = 0;
@@ -163,13 +163,9 @@ public:
 		name_ = new_name;
 	}
 
-	virtual bool is_persistent() const {
-		return is_persistent_;
-	}
-
-//	virtual void catch_on_inode(const bs_link* l) {
-//		ic_ = new inode_catcher(this, l);
-//	}
+	//virtual bool is_persistent() const {
+	//	return is_persistent_;
+	//}
 
 	virtual void listen2obj() {
 		if(!is_listening_ && inode() && self_) {
@@ -242,8 +238,8 @@ public:
 //	sp_slot ol_;
 //	bool is_listening_;
 
-	hl_impl(const string& name, bool is_persistent, const sp_obj& obj = NULL)
-		: link_impl(name, is_persistent) //, is_listening_(false)
+	hl_impl(const string& name, const sp_obj& obj = NULL)
+		: link_impl(name) //, is_listening_(false)
 	{
 		if(obj) {
 			//if object doesn't have an inode then create one
@@ -255,7 +251,7 @@ public:
 	}
 
 	hl_impl(const hl_impl& impl)
-		: link_impl(impl.name(), impl.is_persistent()) //, is_listening_(false)
+		: link_impl(impl.name()) //, is_listening_(false)
 	{
 		set_inode(impl.inode());
 	}
@@ -304,8 +300,8 @@ public:
 //	sp_slot ol_;
 //	bool is_listening_;
 
-	sl_impl(const sp_link& link, const string& name, bool is_persistent)
-		: link_impl(name, is_persistent), link_(link)
+	sl_impl(const sp_link& link, const string& name)
+		: link_impl(name), link_(link)
 	{
 		set_link(link);
 	}
@@ -344,8 +340,8 @@ bs_alias::bs_alias(bs_type_ctor_param /*p*/)
 }
 
 //standard ctor
-bs_alias::bs_alias(const sp_link& link, const std::string& name, bool is_persistent)
-	: bs_link(new sl_impl(link, name, is_persistent))
+bs_alias::bs_alias(const sp_link& link, const std::string& name)
+	: bs_link(new sl_impl(link, name))
 {
 	assert(pimpl_->inode());
 	pimpl_.lock()->set_owner(this);
@@ -372,26 +368,17 @@ string bs_alias::name() const {
 	return pimpl_->name();
 }
 
-
 sp_link bs_alias::clone(const string& clone_name) const {
 	//return new bs_alias(((sl_impl*)pimpl_.get())->link_, name(), is_persistent);
 	if(clone_name == "")
-		return new bs_alias(((sl_impl*)pimpl_.get())->link_, name(), false);
+		return new bs_alias(((sl_impl*)pimpl_.get())->link_, name());
 	else
-		return new bs_alias(((sl_impl*)pimpl_.get())->link_, clone_name, false);
+		return new bs_alias(((sl_impl*)pimpl_.get())->link_, clone_name);
 }
 
 bs_link::link_type bs_alias::link_type_id() const {
 	return alias;
 }
-
-//void bs_alias::set_persistence(bool state) const {
-//	pimpl_.lock()->is_persistent_ = state;
-//}
-
-//void bs_alias::rename(const std::string& new_name) const {
-//	((sl_impl*)pimpl_.lock().lget())->name_ = new_name;
-//}
 
 //================================== bs_link implementation ============================================================
 bs_link::bs_link(bs_type_ctor_param param)
@@ -408,7 +395,7 @@ bs_link::bs_link(bs_type_ctor_param param)
 		if(!obj->inode_)
 			obj.lock()->inode_ = new blue_sky::bs_inode(obj);
 		//create default implementation
-		pimpl_ = new hl_impl(name, false, obj);
+		pimpl_ = new hl_impl(name, obj);
 		//connect this link to corresponding inode
 		pimpl_.lock()->set_owner(this);
 	}
@@ -425,7 +412,7 @@ sp_link bs_link::create(const sp_obj& obj, const std::string& name) {
 	return BS_KERNEL.create_object(bs_type(), false, sp_dt);
 }
 
-bs_link::bs_link(const sp_obj& obj, const std::string& name, bool is_persistent)
+bs_link::bs_link(const sp_obj& obj, const std::string& name)
 	: objbase(BS_SIGNAL_RANGE(bs_link)),
 	  pimpl_((hl_impl*)NULL, mutex(), bs_static_cast())
 	  //pimpl_(new hl_impl(name, is_persistent, obj), mutex(), bs_static_cast())
@@ -435,35 +422,17 @@ bs_link::bs_link(const sp_obj& obj, const std::string& name, bool is_persistent)
 	if(!obj->inode_)
 		obj.lock()->inode_ = new blue_sky::bs_inode(obj);
 	//create default implementation
-	pimpl_ = new hl_impl(name, is_persistent, obj);
+	pimpl_ = new hl_impl(name, obj);
 
 	//connect this link to corresponding inode
 	pimpl_.lock()->set_owner(this);
 }
-
-//root node creator
-//bs_link::bs_link()
-//	: objbase(BS_SIGNAL_RANGE(bs_link)),
-//	  pimpl_((hl_impl*)NULL, mutex(), bs_static_cast())
-//{
-////	add_signal(data_changed);
-////	add_signal(inode_changed);
-////	add_signal(link_renamed);
-//
-//	sp_obj root_node = bs_node::create_node();
-//	assert(root_node);
-//	pimpl_ = new hl_impl("/", true, root_node);
-//}
 
 //ctor for childs
 bs_link::bs_link(const link_impl* impl)
 	: objbase(BS_SIGNAL_RANGE(bs_link)),
 	  pimpl_(impl, mutex(), bs_static_cast())
 {
-//	add_signal(data_changed);
-//	add_signal(inode_changed);
-//	add_signal(link_renamed);
-
 	pimpl_.lock()->set_owner(this);
 }
 
@@ -490,6 +459,13 @@ bs_link::~bs_link() {
 //deletition method
 void bs_link::dispose() const {
 	delete this;
+}
+
+sp_link bs_link::clone(const string& clone_name) const {
+	if(clone_name == "")
+		return new bs_link(data(), name());
+	else
+		return new bs_link(data(), clone_name);
 }
 
 sp_inode bs_link::inode() const {
@@ -520,39 +496,14 @@ sp_node bs_link::node() const {
 	return NULL;
 }
 
-bool bs_link::is_persistent() const {
-	return pimpl_->is_persistent();
-}
-
-sp_link bs_link::clone(const string& clone_name) const {
-	if(clone_name == "")
-		return new bs_link(data(), name(), false);
-	else
-		return new bs_link(data(), clone_name, false);
-}
-
-//sp_link bs_link::alias(const std::string& aname, bool is_persistent) const {
-//	if(soft_name != "")
-//		return new bs_alias(pimpl_->inode_, aname, is_persistent);
-//	else
-//		return new bs_alias(pimpl_->inode_, name(), is_persistent);
-//}
 
 sp_link bs_link::dumb_link(const std::string name) {
-	return new bs_link(new hl_impl(name, false, NULL));
+	return new bs_link(new hl_impl(name, NULL));
 }
 
 void bs_link::rename(const std::string& new_name) const {
 	pimpl_.lock()->rename(new_name);
 }
-
-void bs_link::set_persistence(bool state) const {
-	pimpl_.lock()->is_persistent_ = state;
-}
-
-//void bs_link::on_data_changed(const sp_slot& handler) const {
-//	pimpl_.lock()->connect_node_handler(handler);
-//}
 
 bool bs_link::is_hard_link() const {
 	return (link_type_id() == hard_link);

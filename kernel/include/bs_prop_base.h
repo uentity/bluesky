@@ -272,13 +272,13 @@ namespace blue_sky {
 	//default ctor implementation
 	template< class T >
 	bs_array< T >::bs_array(bs_type_ctor_param param)
-		: objbase(param)
+		: bs_refcounter(), objbase(param)
 	{}
 
 	//copy ctor implementation
 	template< class T >
 	bs_array< T >::bs_array(const bs_array< T >& src)
-		: objbase(src), container(src)
+		: bs_refcounter(), objbase(src), container(src)
 	{}
 
 	//creation and copy functions definitions

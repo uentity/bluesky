@@ -96,9 +96,9 @@ py_bs_node *py_bs_link::node() const {
 	 return splink->is_soft();
 }*/
 
-bool py_bs_link::is_persistent() const {
-	 return splink->is_persistent();
-}
+//bool py_bs_link::is_persistent() const {
+//	 return splink->is_persistent();
+//}
 
 bool py_bs_link::is_hard_link() const {
  return splink->is_hard_link();
@@ -143,8 +143,8 @@ void py_export_link() {
 		.def("name",&py_bs_link::name)
 		.def("full_name",&py_bs_link::full_name)
 		.def("is_node",&py_bs_link::is_node)
-		.def("node",&py_bs_link::node,return_value_policy<manage_new_object>())
-		.def("is_persistent",&py_bs_link::is_persistent);
+		.def("node",&py_bs_link::node,return_value_policy<manage_new_object>());
+		//.def("is_persistent",&py_bs_link::is_persistent);
 
 	class_< std::list< py_bs_link > >("list_link")
 		.def("__iter__",boost::python::iterator< std::list< py_bs_link > >());

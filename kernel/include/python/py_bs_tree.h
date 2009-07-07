@@ -63,6 +63,9 @@ public:
 		py_bs_inode inode() const;
 		py_objbase data() const;
 
+		bool is_persistent() const;
+		void set_persistence(bool persistent) const;
+
 	private:
 		mutable bs_node::n_iterator niter;
 		//mutable py_bs_link pylink;
@@ -112,9 +115,17 @@ public:
 	bool rename1(const std::string& old_name, const std::string& new_name) const;
 	bool rename2(const py_n_iterator& pos, const std::string& new_name) const;
 
+	// persistense maintance
+	bool is_persistent1(const py_bs_link& link) const;
+	bool is_persistent2(const std::string& link_name) const;
+	// return true if persistence was really altered
+	bool set_persistence1(const py_bs_link& link, bool persistent) const;
+	bool set_persistence2(const std::string& link_name, bool persistent) const;
+
 	static py_bs_node create_node(/*const s_traits_ptr& srt = NULL*/);
 
 	static bool is_node(const py_objbase &obj);
+
 
 private:
 	sp_node spnode;

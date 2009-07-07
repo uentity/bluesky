@@ -134,6 +134,8 @@ public:
 		sp_link get() const;
 		sp_inode inode() const;
 		sp_obj data() const;
+		bool is_persistent() const;
+		void set_persistence(bool persistent) const;
 	};
 
 	typedef std::reverse_iterator< n_iterator > rn_iterator;
@@ -181,8 +183,8 @@ public:
 
 	//leafs addition
 	//insert value
-	insert_ret_t insert(const sp_obj& obj, const std::string& name, bool force = false) const;
-	insert_ret_t insert(const sp_link& l, bool force = false) const;
+	insert_ret_t insert(const sp_obj& obj, const std::string& name, bool is_persistent = false) const;
+	insert_ret_t insert(const sp_link& l, bool is_persistent = false) const;
 	//insert from iterator range
 	void insert(const n_iterator first, const n_iterator last) const;
 
@@ -214,6 +216,13 @@ public:
 		return dynamic_cast< const bs_node* >(obj.get()) != NULL;
 	}
 
+	// persistense maintance
+	bool is_persistent(const sp_link& link) const;
+	bool is_persistent(const std::string& link_name) const;
+	// return true if persistence was really altered
+	bool set_persistence(const sp_link& link, bool persistent) const;
+	bool set_persistence(const std::string& link_name, bool persistent) const;
+
 	//virtual dtor
 	virtual ~bs_node();
 
@@ -229,8 +238,8 @@ protected:
 	//bs_node(const std::string& name, const s_traits_stack& sorts);
 
 	//leafs persistence maintance
-	void set_persistent(const std::string& leaf_name, bool persistent) const;
-	void set_persistent(const n_iterator& pos, bool persistent) const;
+	//void set_persistent(const std::string& leaf_name, bool persistent) const;
+	//void set_persistent(const n_iterator& pos, bool persistent) const;
 
 	//void mv(const sp_node& where);
 
