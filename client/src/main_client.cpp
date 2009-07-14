@@ -29,6 +29,7 @@
 #include "bs_report.h"
 #include "bs_tree.h"
 #include "bs_shell.h"
+#include "bs_kernel_tools.h"
 
 #ifdef BSPY_EXPORTING_PLUGIN
 #include "py_bs_kernel.h"
@@ -268,9 +269,9 @@ struct dummy_renamer {
 	struct rename_catcher : public bs_slot {
 		void execute(const sp_mobj& sender, int signal_code, const sp_obj& param) const {
 			sp_link link(param);
-			if(link && sp_dummy(link->data(), bs_dynamic_cast())) {
-				cout << "dummy rename signal catched, new name " << link->name() << endl;
-			}
+			//if(link && sp_dummy(link->data(), bs_dynamic_cast())) {
+			//	cout << "dummy rename signal catched, new name " << link->name() << endl;
+			//}
 		}
 	};
 
@@ -662,24 +663,6 @@ void test_plugins()
 	BSOUT << "test_plugins done" << bs_end;
 }
 
-void print_loaded_types() {
-	cout << "------------------------------------------------------------------------" << endl;
-	cout << "List of loaded BlueSky types {" << endl;
-	kernel::plugins_enum pg = k.loaded_plugins();
-	kernel::types_enum tp;
-	for(kernel::plugins_enum::const_iterator p = pg.begin(), p_end = pg.end(); p != p_end; ++p) {
-		cout << "Plugin: " << p->name_ << ", version " << p->version_ << " {" << endl;
-		tp = k.plugin_types(*p);
-		for(kernel::types_enum::const_iterator t = tp.begin(), t_end = tp.end(); t != t_end; ++t) {
-			cout << "	" << t->stype_ << " - " << t->short_descr_ << endl;
-		}
-		cout << "	}" << endl;
-	}
-
-	cout << "} end of BlueSky types list" << endl;
-	cout << "------------------------------------------------------------------------" << endl;
-}
-
 void fill_dummy_node(ulong how_many = 10) {
 	cout << "------------------------------------------------------------------------" << endl;
 	cout << "Dummy Node Filling with Dummy Objects" << endl;
@@ -744,42 +727,6 @@ void print_dummy_node(bs_node::index_type idx_t = bs_node::name_idx, bool silent
 	cout << "------------------------------------------------------------------------" << endl;
 }
 
-void print_tree(bool silent = false) {
-	cout << "------------------------------------------------------------------------" << endl;
-	cout << "BlueSky tree contents {" << endl;
-
-	sp_link leaf = k.bs_root();
-	if(!silent) cout << leaf->name() << endl;
-	sp_node n = leaf->node();
-
-	deep_iterator di;
-	measure_time tm;
-	while(!di.is_end()) {
-		if(!silent) {
-	//		cout << "|" << endl;
-	//		cout << "+--" << di->name();
-			cout << di.full_name();
-			if(di->is_node())
-				cout << "(+)";
-			cout << endl;
-		}
-		++di;
-	}
-	tm.stop();
-
-//	for(bs_node::n_iterator ni = n->begin(), end = n->end(); ni != end; ++ni) {
-//		cout << "|" << endl;
-//		cout << "+--" << ni->name();
-//		if(ni->is_node())
-//			cout << "(+)";
-//		cout << endl;
-//	}
-
-	cout << "} end of BlueSky tree contents" << endl;
-	cout << "Tree walking took " << tm.elapsed() << " seconds" << endl;
-	cout << "------------------------------------------------------------------------" << endl;
-}
-
 template< class Op >
 void mt_op(long param = how_many, bool silent = false)
 {
@@ -787,7 +734,7 @@ void mt_op(long param = how_many, bool silent = false)
 	cout << Op::title() << endl;
 	if(!silent) {
 		cout << "Initial tree state:" << endl;
-		print_tree();
+		cout << kernel_tools::walk_tree();
 	}
 	cout << Op::info() << endl;
 	thread_group g;
@@ -802,7 +749,7 @@ void mt_op(long param = how_many, bool silent = false)
 	cout << "OK, all threads are finished!" << endl << tm;
 	if(!silent) {
 		cout << "Final tree state:" << endl;
-		print_tree();
+		cout << kernel_tools::walk_tree();
 	}
 	cout << "------------------------------------------------------------------------" << endl;
 }
@@ -869,9 +816,9 @@ try {
 		k.register_type(plugin_info, dummy::bs_type());
 		sp_dummy d = BS_KERNEL.create_object("bs_dummy");
 
-		print_loaded_types();
+		kernel_tools::print_loaded_types();
 		fill_dummy_node(100);
-		print_tree();
+		cout << kernel_tools::walk_tree();
 
 		mt_op< dummy_changer >(50, true);
 		mt_op< dummy_renamer >(50, true);
@@ -909,7 +856,8 @@ try {
 		//tbb_test_mt();
 #endif
 		//test_python();
-		//print_loaded_types();
+		cout << kernel_tools::print_loaded_types();
+		cout << kernel_tools::print_registered_instances();
 		//print_dummy_node(bs_node::custom_idx);
 	}
 	catch(bs_exception ex) {
