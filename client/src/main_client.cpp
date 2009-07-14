@@ -1,15 +1,15 @@
 // This file is part of BlueSky
-// 
+//
 // BlueSky is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
 // as published by the Free Software Foundation; either version 3
 // of the License, or (at your option) any later version.
-// 
+//
 // BlueSky is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
@@ -867,6 +867,7 @@ try {
         //test_python_thread_pool();
 
 		k.register_type(plugin_info, dummy::bs_type());
+		sp_dummy d = BS_KERNEL.create_object("bs_dummy");
 
 		print_loaded_types();
 		fill_dummy_node(100);
@@ -874,9 +875,9 @@ try {
 
 		mt_op< dummy_changer >(50, true);
 		mt_op< dummy_renamer >(50, true);
-		
+
 		//dummy_changer(50)();
-		
+
 		//mt_op< dummy_changer >(50, true);
 		//mt_op< dummy_renamer >(50, true);
 		//dummy_renamer(50)();

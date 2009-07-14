@@ -88,6 +88,9 @@ public:
 	void ptr();
 	sp_obj get_sp() const;
 
+	// get reference count
+	ulong refs() const;
+
 	py_bs_inode inode() const;
 
 	bool fire_signal(int signal_code, const py_objbase& params) const;

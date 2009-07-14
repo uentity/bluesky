@@ -50,6 +50,10 @@ void py_objbase::ptr () {
 sp_obj py_objbase::get_sp() const {
 	return sp;
 }
+
+ulong py_objbase::refs() const {
+	return sp.refs();
+}
 //		const sp_obj py_objbase::get_sp() const {
 //			return sp;
 //		}
@@ -145,6 +149,7 @@ void py_export_objbase() {
 		.def("inode",&py_objbase::inode)
 		.def("fire_signal",&py_objbase::fire_signal)
 		.def("get_signal_list",&py_objbase::get_signal_list)
+		.def("refs", &py_objbase::refs)
 		.def(self == self);
 
 	class_<sp_obj, noncopyable>("sp_obj", no_init);
