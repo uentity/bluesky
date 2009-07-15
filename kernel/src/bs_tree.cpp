@@ -1327,7 +1327,7 @@ bs_node::bs_node(const s_traits_ptr& srt)
 
 blue_sky::sp_node bs_node::create_node(const s_traits_ptr& srt)
 {
-	lsmart_ptr< smart_ptr< str_data_table > > npar(BS_KERNEL.create_object(str_data_table::bs_type()));
+	lsmart_ptr< smart_ptr< str_data_table > > npar(BS_KERNEL.create_object(str_data_table::bs_type(), true));
 	//smart_ptr< str_data_table > sp_dt = give_kernel::Instance().create_object(str_data_table::bs_type());
 	//lsmart_ptr< smart_ptr< str_data_table > > npar(sp_dt);
 	//lsmart_ptr< kernel::str_dt_ptr > npar(give_kernel::Instance().pert_str_dt(bs_type()));

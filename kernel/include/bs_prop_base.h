@@ -335,7 +335,7 @@ namespace blue_sky {
 			if(p_tbl.first == tables_.end())
 				//insert new table
 				p_tbl = tables_.insert( container::value_type(BS_GET_TI(table_type),
-				give_kernel::Instance().create_object(table_type::bs_type())) );
+				give_kernel::Instance().create_object(table_type::bs_type(), true)) );
 			assert(p_tbl.first->second);
 			return smart_ptr< table_type >(p_tbl.first->second, bs_dynamic_cast());
 		}

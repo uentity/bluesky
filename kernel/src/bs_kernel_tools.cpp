@@ -126,12 +126,12 @@ std::string kernel_tools::print_registered_instances() {
 			i = obj->inode();
 			outs << obj->bs_resolve_type() << '(' << obj.refs() << ") at " << obj.get();
 			if(i) {
-				outs << " with links: ";
+				outs << " -->" << endl;
 				for(bs_inode::l_list::const_iterator pl = i->links_begin(), end_l = i->links_end(); pl != end_l; ++pl)
-					outs << "'" << (*pl)->name() << "' ";
+					outs << "\t'" << (*pl)->name() << "' [ bs_link(" << pl->refs() << ") at " << pl->get() << " ]" << endl;
 			}
-			else outs << " (dangling)";
-			outs << endl;
+			else outs << " (dangling)" << endl;
+			//outs << endl;
 		}
 	}
 	outs << "} end of BlueSky registered instances list" << endl;

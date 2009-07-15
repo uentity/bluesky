@@ -356,7 +356,7 @@ objbase* bs_alias::bs_create_instance(blue_sky::bs_type_ctor_param param) {
 }
 
 sp_link bs_alias::create(const sp_link& link, const std::string& name) {
-	lsmart_ptr< smart_ptr< str_data_table > > sp_dt(BS_KERNEL.create_object(str_data_table::bs_type()));
+	lsmart_ptr< smart_ptr< str_data_table > > sp_dt(BS_KERNEL.create_object(str_data_table::bs_type(), true));
 	if(!sp_dt)
 		throw bs_exception("BlueSky kernel", "Unable to create alias - str_val_table creation failed");
 	sp_dt->add_item< sp_obj >("link", link);
@@ -404,7 +404,7 @@ bs_link::bs_link(bs_type_ctor_param param)
 }
 
 sp_link bs_link::create(const sp_obj& obj, const std::string& name) {
-	lsmart_ptr< smart_ptr< str_data_table > > sp_dt(BS_KERNEL.create_object(str_data_table::bs_type()));
+	lsmart_ptr< smart_ptr< str_data_table > > sp_dt(BS_KERNEL.create_object(str_data_table::bs_type(), true));
 	if(!sp_dt)
 		throw bs_exception("BlueSky kernel", "Unable to create link - str_val_table creation failed");
 	sp_dt->add_item< sp_obj >("object", obj);
