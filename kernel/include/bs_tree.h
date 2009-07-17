@@ -103,7 +103,7 @@ public:
 
 	private:
 		class ni_impl;
-		ni_impl* pimpl_;
+		st_smart_ptr< ni_impl > pimpl_;
 		n_iterator(ni_impl*);
 
 	public:

@@ -133,22 +133,34 @@ typedef bs_castpol_val< BS_IMPLICIT_CAST > bs_implicit_cast;
 
 Taken from boost documentation.
 */
-struct null_deleter {
+struct null_deleter_unsafe {
 	void operator()(void const *) const
 	{}
 };
 
+struct usual_deleter_unsafe {
+	void operator()(void const *p) const;
+};
+
+struct array_deleter_unsafe {
+	void operator()(void const *p) const;
+};
+
 template< class T >
 struct usual_deleter {
-	void operator()(void const *p) const	{
-		if(p) delete static_cast< T const* >(p);
+	void operator()(T* p) const {
+		typedef char type_must_be_complete[ sizeof(T)? 1: -1 ];
+		(void) sizeof(type_must_be_complete);
+		delete p;
 	}
 };
 
 template< class T >
 struct array_deleter {
-	void operator()(void const *p) const	{
-		if(p) delete[] static_cast< T const* >(p);
+	void operator()(T* p) const {
+		typedef char type_must_be_complete[ sizeof(T)? 1: -1 ];
+		(void) sizeof(type_must_be_complete);
+		delete []p;
 	}
 };
 
@@ -159,9 +171,13 @@ struct bs_obj_deleter< T >
 */
 template< class T >
 struct bs_obj_deleter {
-	void operator()(void const* p) const {
-		if(p) static_cast< T const* >(p)->del_ref();
+	void operator()(T* p) const {
+		static_cast< const bs_refcounter* >(p)->del_ref();
 	}
+};
+
+struct bs_obj_deleter_unsafe {
+	void operator()(void const* p) const;
 };
 
 //! \namespace bs_private
@@ -230,6 +246,9 @@ namespace bs_private {
 		Standard is fine
 		*/
 		//smart_ptr_base(const this_t& lp) : p_(lp.p_) {}
+
+		// dtor
+		virtual ~smart_ptr_base() {}
 
 		/*!
 		\brief Assignment from simple pointer of any type using custom casting policy
@@ -365,6 +384,9 @@ namespace bs_private {
 		smart_ptr_base(const smart_ptr_base< R >& lp, cast_t cast)
 			: p_(lp.p_)
 		{}
+
+		// dtor
+		virtual ~smart_ptr_base() {}
 
 		template< class cast_t, class R >
 		this_t& assign(R* lp) {
@@ -781,7 +803,8 @@ public:
 	*/
 	template< class R >
 	mt_ptr(const smart_ptr< R, true >& lp)
-		: base_t(lp), mut_(*lp.mutex()), d_(bs_private::deleter_adaptor< bs_obj_deleter< R > >(bs_obj_deleter< R >()))
+		: base_t(lp), mut_(*lp.mutex()), 
+		d_(bs_private::deleter_adaptor< bs_obj_deleter< pointed_t> >(bs_obj_deleter< pointed_t >()))
 	{
 		if(lp) lp->add_ref();
 	}
@@ -872,7 +895,7 @@ private:
 //----------------------------------------------------------------------------------------------------
 
 /*!
-class smart_ptr< T, false >
+class st_smart_ptr< T >
 \ingroup smart_pointers
 \brief single-threaded smart pointer for generic types with reference counter located in smart_ptr
 */
@@ -886,6 +909,102 @@ public:
 	typedef typename base_t::pointed_t pointed_t;
 	typedef typename base_t::pointer_t pointer_t;
 	typedef typename base_t::ref_t ref_t;
+
+	// refcounter implementations
+	class bs_refcounter_sp : public bs_refcounter {
+	public:
+		explicit bs_refcounter_sp(pointer_t p) 
+			: bs_refcounter(1), p_(p)
+		{}
+
+		 void dispose() const {
+			usual_deleter< pointed_t >()(p_);
+			delete this;
+		}
+
+		 pointer_t get() const {
+			return p_;
+		}
+
+	private:
+		pointer_t p_;
+	};
+
+	// same as above + custom deleter
+	template< class D >
+	class bs_refcounter_spd : public bs_refcounter {
+	public:
+		explicit bs_refcounter_spd(pointer_t p, D d) 
+			: bs_refcounter(1), p_(p), d_(d)
+		{}
+
+		 void dispose() const {
+			d_(p_);
+			delete this;
+		 }
+
+		 pointer_t get() const {
+			 return p_;
+		 }
+
+	private:
+		pointer_t p_;
+		D d_;
+	};
+
+	// pointer for bs_refcnt - inc ref in copy ctor, dec ref in dtor
+	class bs_refcounter_ptr {
+	public:
+		explicit bs_refcounter_ptr(pointer_t p)
+			: rc_(new bs_refcounter_sp(p))
+		{}
+
+		template< class D >
+		explicit bs_refcounter_ptr(pointer_t p, D d)
+			: rc_(new bs_refcounter_spd< D >(p, d))
+		{}
+
+		bs_refcounter_ptr(const bs_refcounter_ptr& lhs)
+			: rc_(lhs.rc_)
+		{
+			if(rc_)
+				rc_->add_ref();
+		}
+
+		// dtor
+		~bs_refcounter_ptr() {
+			if(rc_)
+				rc_->del_ref();
+		}
+
+		void swap(bs_refcounter_ptr& lhs) {
+			std::swap(rc_, lhs.rc_);
+		}
+
+		bs_refcounter_ptr& operator=(const bs_refcounter_ptr& lhs) {
+			if(rc_ != lhs.rc_)
+				bs_refcounter_ptr(lhs).swap(*this);
+			return *this;
+		}
+
+		bs_refcounter* operator->() const {
+			return rc_;
+		}
+
+		ulong use_count() const {
+			return rc_ != 0 ? rc_->refs() : 0;
+		}
+
+		friend inline bool operator==(const bs_refcounter_ptr& a, const bs_refcounter_ptr& b) {
+			return a.rc_ == b.rc_;
+		}
+
+	private:
+		bs_refcounter* rc_;
+	};
+
+	//typedef bs_refcounter_ptr refcounter_ptr_t;
+	typedef boost::detail::shared_count refcounter_ptr_t;
 
 	/*!
 	\brief Constructor from simple pointer
@@ -925,18 +1044,18 @@ public:
 	\brief Constructor with custom deleter and allocator
 	As above, but with allocator. A's copy constructor shall not throw.
 	*/
-	template< class R, class D, class A, bs_cast_policy cast_t >
-	st_smart_ptr(R* lp, D d, A a, bs_castpol_val< cast_t > cast = BS_DEF_CAST_POLICY())
-		: base_t(lp, cast), count_(lp, d, a)
-	{}
+	//template< class R, class D, class A, bs_cast_policy cast_t >
+	//st_smart_ptr(R* lp, D d, A a, bs_castpol_val< cast_t > cast = BS_DEF_CAST_POLICY())
+	//	: base_t(lp, cast), count_(lp, d, a)
+	//{}
 
 	/*!
-	\brief Copy constructor.
-	Default compiler-generated should work fine
+	\brief Copy constructor - standard is fine
 	*/
 	//st_smart_ptr(const this_t& lp) throw()
 	//	: base_t(lp), count_(lp.count_)
-	//{}
+	//{
+	//}
 
 	/*!
 	\brief Templated constructor from other generic smart_ptr of different type
@@ -944,19 +1063,31 @@ public:
 	template< class R >
 	st_smart_ptr(const st_smart_ptr< R >& lp)
 		: base_t(lp), count_(lp.count_)
-	{}
+	{
+		//count_->add_ref();
+	}
 
 	template< class R, class cast_t >
 	st_smart_ptr(const st_smart_ptr< R >& lp, cast_t cast)
 		: base_t(lp, cast), count_(lp.count_)
-	{}
+	{
+		//count_->add_ref();
+	}
 
-	//~smart_ptr()
+	// dtor - std is fine
+	//~st_smart_ptr()
 	//{
+	//	count_->del_ref();
 	//}
 
 	//! \brief standard destructor is fine with boost's shared_count
 	//! \brief standard operator= is fine with boost's shared_count
+
+	// this_t assignment
+	//this_t& operator=(const this_t& lp) {
+	//	this_t(lp).swap(*this);
+	//	return *this;
+	//}
 
 	//! \brief template assignment operators
 
@@ -998,8 +1129,6 @@ public:
 		count_.swap(lp.count_);
 	}
 
-protected:
-
 private:
 #if defined(_MSC_VER)
 	friend class st_smart_ptr;
@@ -1007,8 +1136,15 @@ private:
 	template< class R > friend class st_smart_ptr;
 #endif
 
+	refcounter_ptr_t count_;
 	//! boost shared_pointer's advanced reference counter
-	boost::detail::shared_count count_;
+	//boost::detail::shared_count count_;
+
+	//void dispose() {
+	//	count_->del_ref();
+	//	if(count_->refs() == 0)
+	//		delete count_;
+	//}
 };
 
 /*!
@@ -1156,7 +1292,7 @@ public:
 	*/
 	template< class R, bs_cast_policy cast_t >
 	smart_ptr(const smart_ptr< R, true >& lp, bs_castpol_val< cast_t > cast = BS_DEF_CAST_POLICY())
-		: base_t(lp.get(), bs_obj_deleter< R >(), cast), inner_(false)
+		: base_t(lp.get(), bs_obj_deleter< pointed_t >(), cast), inner_(false)
 	{
 		if(this->p_) {
 			mut_ = &lp.mutex();
@@ -1417,7 +1553,7 @@ public:
 	\brief Destructor.
 	Dereferences pointed object.
 	*/
-	~smart_ptr() throw() {
+	~smart_ptr() {
 		if(this->p_) {
 			//DEBUG!
 			//			std::cout << "smart_ptr destructor for object " << *this->p_->name() << " is called" << std::endl;

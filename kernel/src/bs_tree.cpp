@@ -1081,8 +1081,8 @@ public:
 	};
 
 
-	//node_impl::cust_index_t::const_iterator pos_;
-	iter_backend* pos_;
+	//iter_backend* pos_;
+	st_smart_ptr< iter_backend > pos_;
 
 	//default ctor
 	//template< class index_t >
@@ -1208,7 +1208,7 @@ bs_node::n_iterator::n_iterator(const n_iterator& src)
 {}
 
 bs_node::n_iterator::~n_iterator() {
-	if(pimpl_) delete pimpl_;
+	//if(pimpl_) delete pimpl_;
 }
 
 bs_node::n_iterator::reference bs_node::n_iterator::operator*() const {
