@@ -35,6 +35,7 @@
 
 #ifdef UNIX
 #include <errno.h>
+#include <dlfcn.h>
 #endif
 
 #include "boost/graph/depth_first_search.hpp"
@@ -659,10 +660,27 @@ std::string system_message(int err_code) {
 	str = str.substr(0, str.find('\n'));
 	str = str.substr(0, str.find('\r'));
 #else
-	str = ::strerror(err_code);
+  str = ::strerror(err_code);
 #endif
 	return str;
 }
+
+std::string
+dynamic_lib_error_message ()
+{
+#ifdef _WIN32
+  return system_message (GetLastError ());
+#else
+  const char *msg_ = dlerror ();
+  if (!msg_)
+    {
+      return std::string ("NO ERROR");
+    }
+
+  return std::string (msg_);
+#endif
+}
+
 
 string last_system_message() {
 	int err_code;
@@ -675,3 +693,4 @@ string last_system_message() {
 }
 
 }	//end of namespace blue_sky
+

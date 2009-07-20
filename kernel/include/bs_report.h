@@ -19,13 +19,11 @@
 #include <list>
 #include <set>
 #include <map>
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <iostream>
 #include "bs_common.h"
 #include "bs_refcounter.h"
-#include "bs_object_base.h"
+//#include "bs_object_base.h"
+#include "bs_messaging.h"
+#include "bs_log_stream.h"
 
 #include "loki/Singleton.h"
 
@@ -46,37 +44,22 @@ namespace blue_sky {
 		int sect,prior;
 	};
 
-    //there is error with smart_pointer access... I don't know why.
-	class BS_API bs_stream { //: public bs_refcounter { //!!!!!!!!!!!!!!!!!!!!!!!
-	public:
-		virtual bool subscribe(bs_channel&);
-		virtual bool unsubscribe(bs_channel&);
-		virtual void write(const std::string&) const = 0; //{}//= 0;//{std::cout << "asdddd" << std::endl;}
-		//virtual void dispose() const;
-
-		virtual ~bs_stream() {}
-	};
 
 	class BS_API bs_channel : public bs_refcounter {
 		friend class bs_log;
-		friend struct channel_comp_names;
 	public:
 		typedef smart_ptr< bs_channel, true > sp_channel;
-		typedef smart_ptr< bs_stream > sp_stream;
-		typedef std::list< sp_stream > sp_scr_list;
-		typedef std::map<int, int> msect;
-		typedef msect::const_iterator msect_const_iterator;
-		typedef msect::iterator msect_iterator;
+		typedef smart_ptr< log::bs_stream >   sp_stream;
+		typedef std::list< sp_stream >        sp_scr_list;
+		typedef std::map<int, int>            msect;
+		typedef msect::const_iterator         msect_const_iterator;
+		typedef msect::iterator               msect_iterator;
 
 		bool attach(const sp_stream&);
 		bool detach(const sp_stream&);
 
 		template <class T> sp_channel operator<<(const T &data_) {
 			if (can_output) {
-				//if (&data_)
-				//	*(buf_.lock()) << data_;
-				//else
-				//	*buf_.lock() << "(nil)";
 				*(buf_.lock()) << data_;
 				if (!wait_end)
 					send_to_subscribers();
@@ -93,7 +76,6 @@ namespace blue_sky {
 
 		sp_channel operator<<(sp_channel(*)(const sp_channel&));
 
-		//friend struct channel_comp_names;
 		friend bool operator == (const bs_channel &lc, const bs_channel &rc);
 		friend bool operator == (const bs_channel &lc, const std::string &rstr);
 		friend bool operator < (const bs_channel &lc, const bs_channel &rc);
@@ -148,12 +130,6 @@ namespace blue_sky {
 
 	BS_API sp_channel operator<<(const sp_channel &ch, sp_channel(*what)(const sp_channel&));
 
-	struct channel_comp_names {
-		bool operator()(const smart_ptr< bs_channel > &lhs, const smart_ptr< bs_channel/*, true*/ > &rhs) const {
-			return (lhs->get_name() < rhs->get_name());
-		}
-	};
-
   struct BS_API locked_channel
   {
     locked_channel (const sp_channel &ch)
@@ -173,10 +149,7 @@ namespace blue_sky {
     {
       if (ch_->can_output)
         {
-          //if (&what)
-            buf_ << what;
-          //else
-            //buf_ << "(nil)";
+          buf_ << what;
         }
     }
 
@@ -190,12 +163,15 @@ namespace blue_sky {
 
     locked_channel &operator<< (locked_channel &(*fun) (locked_channel &));
 
-    inline locked_channel &operator<< (const priority &)
+    locked_channel &operator<< (const priority &);
+
+    sp_channel
+    get_channel () const
     {
-        return *this;
+      return ch_;
     }
 
-
+  private:
     lsmart_ptr <sp_channel> ch_;
     lsmart_ptr <smart_ptr <std::ostringstream> > locked_buf_;
     std::ostringstream &buf_;
@@ -207,9 +183,9 @@ namespace blue_sky {
 		friend class thread_log;
 		friend class std::map<int,bs_log>;
 	public:
-		typedef std::set< sp_channel , channel_comp_names > schannel;
-		typedef schannel::iterator schan_iter;
-		typedef schannel::const_iterator schan_iter_const;
+		typedef std::map <std::string, sp_channel>  channel_map_t;
+		typedef channel_map_t::iterator             schan_iter;
+		typedef channel_map_t::const_iterator       schan_iter_const;
 
 		BLUE_SKY_SIGNALS_DECL_BEGIN(bs_messaging)
 			log_channel_added,
@@ -219,48 +195,19 @@ namespace blue_sky {
 		sp_channel add_channel(const sp_channel&);
 		bool rem_channel(const std::string&);
 
-		const sp_channel& operator[](const std::string &name_) const;
-    locked_channel get_locked (const std::string &channel_name);
-
-		std::list< std::string > channel_list() const;
+		locked_channel operator[] (const std::string &name_) const;
+    locked_channel get_locked (const std::string &channel_name) const;
 
 		void dispose() const;
 
 		virtual ~bs_log() {}
-		bs_log(const bs_log &src);
-	protected:
-		//bs_log(const bs_messaging::sig_range_t&);
 	private:
 		bs_log(); // : objbase() {}
 		//BLUE_SKY_TYPE_DECL_T(bs_log)
 
-		schannel schan;
+		channel_map_t channel_map_;
 	};
 
-	class BS_API cout_scriber : public bs_stream {
-	public:
-		void write(const std::string &str) const;
-	};
-
-	class BS_API file_scriber : public bs_stream {
-	public:
-		typedef smart_ptr< std::fstream > sp_fstream;
-
-		file_scriber() {}
-	  file_scriber(const file_scriber &src) : bs_stream() { *this = src; }
-
-		file_scriber(const std::string &filename, std::ios_base::openmode mode);
-		//~file_scriber();
-		void write(const std::string &str) const;
-
-		file_scriber &operator=(const file_scriber &src) {
-			file = src.file;
-			return *this;
-		}
-
-	private:
-		sp_fstream file;
-	};
 
 	class BS_API thread_log {
 		friend struct bs_private::thread_log_wrapper;
@@ -286,7 +233,7 @@ namespace blue_sky {
 
 		void kill();
 
-		const sp_channel &operator[](const std::string&);
+		locked_channel operator[](const std::string&);
 
 	private:
 		thread_log();
@@ -302,12 +249,9 @@ namespace blue_sky {
   BS_API locked_channel &bs_end (locked_channel &ch);
 
 	BS_API sp_channel output_time(const sp_channel&);
+  BS_API locked_channel &output_time (locked_channel &ch);
 
 	BS_API sp_channel wait_end(const sp_channel&);
-
-	BS_API sp_channel bs_lock(const sp_channel&);
-
-	//BS_API const bs_channel &unlock(const bs_channel&);
 
 	inline bool operator == (const bs_channel &lc, const bs_channel &rc) {
 		return (lc.name == rc.name);
@@ -327,7 +271,7 @@ namespace blue_sky {
 
 }
 
-#define BSOUT blue_sky::give_log::Instance()[OUT_LOG]
-#define BSERROR blue_sky::give_log::Instance()[ERR_LOG]
+#define BSOUT blue_sky::give_log::Instance().get_locked (OUT_LOG)
+#define BSERROR blue_sky::give_log::Instance().get_locked (ERR_LOG)
 
 #endif // _BS_REPORTER_H

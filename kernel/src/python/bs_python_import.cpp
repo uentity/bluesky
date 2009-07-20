@@ -42,23 +42,7 @@ BLUE_SKY_INIT_PY_FUN
 	class_< std::list<std::string> >("list_string")
 		.def("__iter__", boost::python::iterator< std::list<std::string> >());
 
-	enum_<error_code>("error_code")
-		.value("no_error",no_error)
-		.value("user_defined",user_defined)
-		.value("unknown_error",unknown_error)
-		.value("system_error",system_error)
-		/*boost errors*/
-		.value("wrong_path",wrong_path)
-		.value("no_plugins",no_plugins)
-		.value("no_library",no_library)
-		.value("no_type",no_type)
-		/*logs errors*/
-		.value("out_of_range",out_of_range)
-		/*other*/
-		.value("notpermitted_operation",notpermitted_operation)
-		.value("boost_error",boost_error)
-		.export_values();
-
+  python::py_export_error_codes ();
   python::py_export_assert ();
 
 	//export the rest stuff

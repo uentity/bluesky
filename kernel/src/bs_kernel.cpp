@@ -115,6 +115,11 @@ struct lib_descriptor
 	#else
 		handle_ = LoadLibrary(LPCSTR(fname));
 	#endif
+    if (!handle_)
+      {
+        throw bs_dynamic_lib_exception ("LoadPlugin");
+      }
+
 		return (bool)handle_;
 	}
 
@@ -698,7 +703,13 @@ public:
 				lock()->register_type(*obj_t.pd_, obj_t.td_, false, &tt_ref);
 			//still nil td means that serious error happened - type cannot be registered
 			if(tt_ref.is_nil())
-				throw bs_exception("BlueSky kernel", no_type, "Unknown error happened. Type cannot be registered");
+        {
+#ifdef BS_EXCEPTION_USE_BOOST_FORMAT
+          throw bs_kernel_exception ("BlueSkt kernel", no_type, boost::format ("Unknown error. Type (%s) cannot be registered.") % obj_t.td_.name ());
+#else
+          throw bs_kernel_exception ("BlueSkt kernel", no_type, "Unknown error. Type " + obj_t.td_.name () + " cannot be registered.");
+#endif
+        }
 		}
 		return *tt_ref;
 	}
@@ -719,9 +730,14 @@ public:
 	}
 
 	sp_obj create_object_copy(const sp_obj& src, bool unmanaged) {
-		if(!src) throw bs_exception("BlueSky kernel", no_error, "Source object for copying is not defined");
+		if(!src) 
+      {
+        throw bs_kernel_exception ("BlueSky kernel", no_error, "Source object for copying is not defined");
+      }
+
 		BS_TYPE_COPY_FUN cpyfn = *demand_type(src->bs_resolve_type()).td_.copy_fun_;
-		if(!cpyfn) return NULL;
+    BS_ERROR (cpyfn, "kernel::create_object_copy: copy_fun is null");
+
 		// invoke copy creation function and make a smrt_ptr reference to new object
 		sp_obj res((*cpyfn)(src), bs_dynamic_cast());
 		if(res) {
@@ -770,8 +786,10 @@ public:
 		//ensure that given type is registered
 		fe_ptr tp;
 		register_rt_type(obj_t, &tp);
-		if(tp.is_nil()) throw bs_exception("BlueSky Kernel", blue_sky::no_type,
-			"Cannot create str_data_table for unknown type");
+		if(tp.is_nil()) 
+      {
+        throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
+      }
 
 		//create or return data_table for it
 		smart_ptr< str_data_table >& p_tbl = pert_str_tbl_[tp];
@@ -783,8 +801,10 @@ public:
 		//ensure that given type is registered
 		fe_ptr tp;
 		register_rt_type(obj_t, &tp);
-		if(tp.is_nil()) throw bs_exception("BlueSky Kernel", blue_sky::no_type,
-			"Cannot create str_data_table for unknown type");
+		if(tp.is_nil()) 
+      {
+        throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
+      }
 
 		//create or return data_table for it
 		smart_ptr< idx_data_table >& p_tbl = pert_idx_tbl_[tp];
@@ -833,7 +853,7 @@ public:
 		typename cont_t::const_iterator i = m.find(id);
 		if (i != m.end())
 			return (*i);
-		throw bs_exception("BlueSky kernel", blue_sky::no_type, err_msg, false);
+		throw bs_kernel_exception ("BlueSky kernel", blue_sky::no_type, err_msg);
 	}
 
 /*-----------------------------------------------------------------------------
@@ -993,21 +1013,15 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 	try {
 		//load library
 		lib.load(fname.c_str());
-		if(!lib.handle_)
-			throw bs_exception("LoadPlugins", blue_sky::system_error, lib.lib_sys_msg().c_str());
-		//xpn_log << "LoadLibrary: library loaded" << blue_sky::endl;
 
 		//check for plugin descriptor presence
 		lib.load_sym("bs_get_plugin_descriptor", bs_plugin_descriptor);
 		if(!bs_plugin_descriptor) {
-			msg = lib.fname_ + " is not a BlueSky plugin (bs_get_plugin_descriptor wasn't found)";
-			throw bs_exception("LoadPlugins", msg.c_str());
+			throw bs_exception ("LoadPlugins", lib.fname_ + " is not a BlueSky plugin (bs_get_plugin_descriptor wasn't found)");
 		}
 		//retrieve descriptor from plugin
 		if(!(p_descr = dynamic_cast< plugin_descriptor* >(bs_plugin_descriptor()))) {
-			//pointer to plugin descriptor is empty
-			msg = "No plugin descriptor found in module " + lib.fname_;
-			throw bs_exception("LoadPlugins", msg.c_str());
+			throw bs_exception ("LoadPlugins", "No plugin descriptor found in module " + lib.fname_);
 		}
 		//check if loaded lib is really a blue-sky kernel
 		if(*p_descr == kernel_pd_)
@@ -1140,13 +1154,14 @@ void kernel::test() const
   //log::Instance()["cout1"].echo("this message for exception",-1);
 
 	cout << "kernel.test entered" << std::endl;
-  try{
+  try
+  {
 	  path("~");
   }
   catch(const boost::filesystem::filesystem_error& e)
-    {
-      throw bs_exception("path",blue_sky::boost_error,e.what());
-    }
+  {
+    throw bs_kernel_exception ("path", blue_sky::boost_error, e.what());
+  }
 }
 
 kernel::kernel()

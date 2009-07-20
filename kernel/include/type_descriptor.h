@@ -124,6 +124,12 @@ public:
 		return stype_.c_str();
 	}
 
+  std::string 
+  name () const
+  {
+    return stype_;
+  }
+
 	//! by default type_descriptors are comparable by bs_type_info
 	bool operator <(const type_descriptor& td) const {
 		return bs_ti_ < td.bs_ti_;
@@ -171,6 +177,30 @@ BS_API inline bool operator ==(const type_descriptor& td, const BS_TYPE_INFO& ti
 BS_API inline bool operator !=(const type_descriptor& td, const BS_TYPE_INFO& ti) {
 	return !(td.type() == ti);
 }
+  namespace bs {
+
+    template <typename T>
+    std::string 
+    type_name ()
+    {
+      return T::bs_type ().stype_;
+    }
+
+    template <typename T>
+    std::string 
+    type_name (const T &t)
+    {
+      return t.bs_resolve_type ().stype_;
+    }
+
+    template <typename T, bool F>
+    std::string 
+    type_name (const smart_ptr <T, F> &p)
+    {
+      return p->bs_resolve_type ().stype_;
+    }
+
+  } // namespace bs
 
 }	//blue_sky namespace
 

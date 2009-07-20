@@ -37,13 +37,13 @@ py_bs_log::py_bs_log()
 	l(give_log::Instance())
 {}
 
-py_bs_channel *py_bs_log::get(const std::string &name_) const {
-	return new py_bs_channel(l[name_]);
-}
-
-const sp_channel& py_bs_log::operator[](const std::string &name_) const {
-	return l[name_];
-}
+//py_bs_channel *py_bs_log::get(const std::string &name_) const {
+//	return new py_bs_channel(l[name_]);
+//}
+//
+//const sp_channel& py_bs_log::operator[](const std::string &name_) const {
+//	return l[name_];
+//}
 
 py_bs_channel py_bs_log::add_channel(const py_bs_channel &ch) {
 	return py_bs_channel(l.add_channel(ch.c));
@@ -122,13 +122,13 @@ bool py_thread_log::rem_log_stream(const std::string &ch_name, const py_stream &
 	return l.rem_log_stream(ch_name,pstream.spstream);
 }
 
-const py_bs_channel *py_thread_log::get(const std::string &ch_name) const {
-	return new py_bs_channel(l[ch_name]);
-}
+//const py_bs_channel *py_thread_log::get(const std::string &ch_name) const {
+//	return new py_bs_channel(l[ch_name]);
+//}
 
-const sp_channel &py_thread_log::operator[](const std::string &ch_name) const {
-	return l[ch_name];
-}
+//const sp_channel &py_thread_log::operator[](const std::string &ch_name) const {
+//	return l[ch_name];
+//}
 
 bool py_bs_log::subscribe(int signal_code, const python_slot& slot) const {
 	return l.subscribe(signal_code,slot.spslot);
@@ -150,21 +150,21 @@ std::vector< int > py_bs_log::get_signal_list() const {
 	return l.get_signal_list();
 }
 
-std::list< std::string > py_bs_log::get_ch_list() const {
-	return l.channel_list();
-}
+//std::list< std::string > py_bs_log::get_ch_list() const {
+//	return l.channel_list();
+//}
 
 void py_export_log() {
 	class_<py_bs_log, /*bases<py_bs_messaging>,*/ noncopyable>("log")
 		.def("add_channel",&py_bs_log::add_channel)
 		.def("rem_channel",&py_bs_log::rem_channel)
-		.def("get",&py_bs_log::get, return_value_policy<manage_new_object>())
+		//.def("get",&py_bs_log::get, return_value_policy<manage_new_object>())
 		.def("subscribe",&py_bs_log::subscribe)
 		.def("unsubscribe",&py_bs_log::unsubscribe)
 		.def("num_slots",&py_bs_log::num_slots)
 		.def("fire_signal",&py_bs_log::fire_signal)
 		.def("get_signal_list",&py_bs_log::get_signal_list)
-		.def("get_ch_list",&py_bs_log::get_ch_list)
+		//.def("get_ch_list",&py_bs_log::get_ch_list)
 	;
 
 	class_<py_thread_log, noncopyable>("thread_log")
@@ -172,7 +172,8 @@ void py_export_log() {
 		.def("rem_log_channel",&py_thread_log::rem_log_channel)
 		.def("add_log_stream",&py_thread_log::add_log_stream)
 		.def("rem_log_stream",&py_thread_log::rem_log_stream)
-		.def("get",&py_thread_log::get, return_value_policy<manage_new_object>());
+		//.def("get",&py_thread_log::get, return_value_policy<manage_new_object>())
+    ;
 
 	//class_<py_stream, noncopyable>("stream")
 		//.def("write",pure_virtual(&bs_stream::write));

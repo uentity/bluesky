@@ -25,143 +25,135 @@
 #include "bs_misc.h"
 #include "bs_link.h"
 #ifndef UNIX
-	#include "windows.h"
+  #include "windows.h"
 #endif
 
 #ifdef UNIX
-	#include <errno.h>
-	#include <string.h>
+  #include <errno.h>
+  #include <string.h>
 #endif
 
-//#define XPN_LOG_INST log::Instance()[XPN_LOG] //!< blue-sky log for error output
+#ifdef BS_EXCEPTION_COLLECT_BACKTRACE
+#ifdef _WIN32
+#include "backtrace_tools_win.h"
+#else
+#include "backtrace_tools_unix.h"
+#endif
+#endif
 
 using namespace std;
 
 namespace blue_sky
 {
-
-namespace {
-
-	void bs_terminate(void)
-	{
-		 BSERROR << "BlueSky terminated." << bs_end;
-	}
-
-	struct err_pair
-	{
-		 blue_sky::error_code e;
-		 const char* descr_;
-	};
-
-	err_pair ep[] =
-		 {
-				{wrong_path, "Wrong path"},
-				{no_plugins, "No plugins found in"},
-				{out_of_range, "Out of range"},
-				{user_defined, "User defined error"},
-				{boost_error, "Boost error"},
-				{no_library, "No such library"},
-				{no_type, "No type"},
-				{notpermitted_operation, "Not permitted operation"}
-				//{no_error, "fuck off no error"}
-		 };
-
-	const unsigned int ep_size = 7;
-
-	string bs_error_message(blue_sky::error_code& ec)//, const bool pass = NULL)
-	{
-		 for(unsigned int i = 0; i < ep_size; ++i) {
-				if (ep[i].e == ec)
-					 return ep[i].descr_;
-		 }
-
-		 ec = blue_sky::system_error;
-		 return "System error";
-	}
-
-	namespace subsidiary //! namespace subsidiary
-	{
-		 /*!
-			 \brief Simple connector of two strings to format "str1 : str2"
-			 \param twho - string1 (who)
-			 \param twhat - string2 (what)
-			 \return message-string formated as "str1 : str2"
-			*/
-		 const string connector(const string &twho, const string &twhat)
-		 {
-				return (twho + ": " + twhat);
-		 }
-
-		 /*!
-			 \brief Another connector of strings to format "str1 : str2. Error type: str3"
-			 \param twho - string1 (who)
-			 \param ec - blue_sky::error_code
-			 \param twhat - string2 (what)
-			 \param system_ - false if error is not system, true - otherwise
-			 \param param1 - double message to user
-			 \param param2 - double message to user
-			 \return message-string formated as "str1 : str2. Error type: str3"
-			*/
-		 const string connector(const string &twho, error_code ec, const string &twhat,
-														bool system_ = false, const std::string& param1 = "",
-														const std::string& param2 = "")
-		 {
-				string str;
-				if (system_ || ec == blue_sky::system_error)
-					 str = twho + ": " + twhat + ". System error: " + system_message(ec);
-				else
-					 str = twho + ": " + twhat + ". BlueSky error: " + bs_error_message(ec);
-
-				if (param1 != "")
-					 str += " \"" + param1 + "\"";
-				if (param2 != "")
-					 str += ", \"" + param2 + "\"";
-
-				//str += "...";
-				return str;
-		 }
-	}	//end of subsidiary namespace
-}	//end of hidden namespace
-
-bs_exception::bs_exception(const std::string & who, const std::string & message)
-		 : who_(who), m_err_(user_defined)
+  namespace detail 
   {
-		 //set_terminate(bs_terminate);
-		 what_ = subsidiary::connector(who, message);
-		 //if (BSERROR.outputs_time())
-		 //BSERROR << output_time;
-		 BSERROR << what_.c_str() << bs_end;
-		 //if (!BSERROR.outputs_time())
-		 //BSERROR << output_time;
+#ifdef BS_EXCEPTION_COLLECT_BACKTRACE
+    std::string 
+    collect_backtrace ()
+    {
+      static const size_t max_backtrace_len = 128;
+      void *backtrace[max_backtrace_len];
+
+      size_t len = tools::get_backtrace (backtrace, max_backtrace_len);
+      if (len)
+        {
+          std::string callstack = "\nCall stack: ";
+          char **backtrace_names = tools::get_backtrace_names (backtrace, len);
+          for (size_t i = 0; i < len; ++i)
+            {
+              if (backtrace_names[i] && strlen (backtrace_names[i]))
+                {
+                  callstack += (boost::format ("\n\t%d: %s") % i % backtrace_names[i]).str ();
+                }
+              else
+                {
+                  callstack += (boost::format ("\n\t%d: <invalid entry>") % i).str ();
+                }
+            }
+
+          return callstack;
+        }
+
+      return "No call stack";
+    }
+#endif
+  } // namespace detail
+
+
+  bs_exception::bs_exception(const std::string &who, const std::string &message)
+  : who_(who), 
+  what_ (who_ + ": " + message),
+  m_err_(user_defined)
+  {
+#ifdef BS_EXCEPTION_COLLECT_BACKTRACE
+    what_ += detail::collect_backtrace ();
+#endif
   }
 
-	 bs_exception::bs_exception(const char* who, const error_code ec, const char* message,
-															bool system_, const char* param1, const char* param2)
-			: who_(who), m_err_(ec)
-	 {
-		 //set_terminate(bs_terminate);
-		 /*if(param1 == "")
-			 what_ = subsidiary::connector(who,ec,message);
-			 else*/
-			what_ = subsidiary::connector(who_, ec, string(message), system_, string(param1), string(param2));
-			//if (BSERROR.outputs_time())
-			//BSERROR << output_time;
-			BSERROR << what_.c_str() << bs_end;
-			//if (!BSERROR.outputs_time())
-			//BSERROR << output_time;
-	 }
+#ifdef BS_EXCEPTION_USE_BOOST_FORMAT
+  bs_exception::bs_exception (const std::string &who, const boost::format &message)
+  : who_ (who),
+  what_ (who_ + ": " + message.str ()),
+  m_err_ (user_defined)
+  {
+#ifdef BS_EXCEPTION_COLLECT_BACKTRACE
+    what_ += detail::collect_backtrace ();
+#endif
+  }
+#endif
 
-	 //! \return exception message string
-	 const char* bs_exception::what() const throw()
-	 {
-			return what_.c_str();
-	 }
+  //! \return exception message string
+  const char* bs_exception::what() const throw()
+  {
+    return what_.c_str();
+  }
 
-	 //! \return who provoked exception
-	 const char* bs_exception::who() const
-	 {
-			return who_.c_str();
-	 }
+  //! \return who provoked exception
+  const char* bs_exception::who() const
+  {
+    return who_.c_str();
+  }
 
+  bs_kernel_exception::bs_kernel_exception (const std::string &who, error_code ec, const std::string &what)
+  : bs_exception (who, what + ". BlueSky error: " + bs_error_message (ec))
+  {
+    m_err_ = ec;
+  }
+#ifdef BS_EXCEPTION_USE_BOOST_FORMAT
+  bs_kernel_exception::bs_kernel_exception (const std::string &who, error_code ec, const boost::format &message)
+  : bs_exception (who, message.str () + ". BlueSky error: " + bs_error_message (ec))
+  {
+    m_err_ = ec;
+  }
+#endif
+
+  bs_system_exception::bs_system_exception (const std::string &who, error_code ec, const std::string &what)
+  : bs_exception (who, what + ". System error: " + system_message (ec))
+  {
+    m_err_ = ec;
+  }
+#ifdef BS_EXCEPTION_USE_BOOST_FORMAT
+  bs_system_exception::bs_system_exception (const std::string &who, error_code ec, const boost::format &message)
+  : bs_exception (who, message.str () + ". System error: " + system_message (ec))
+  {
+    m_err_ = ec;
+  }
+#endif
+
+  /**
+   * \brief bs_dynamic_lib_exception
+   * */
+  bs_dynamic_lib_exception::bs_dynamic_lib_exception (const std::string &who)
+  : bs_exception (who, "System error: " + dynamic_lib_error_message ())
+  {
+    m_err_ = user_defined;
+  }
+#ifdef BS_EXCEPTION_USE_BOOST_FORMAT
+  bs_dynamic_lib_exception::bs_dynamic_lib_exception (const boost::format &who)
+  : bs_exception (who.str (), "System error: " + dynamic_lib_error_message ())
+  {
+    m_err_ = user_defined;
+  }
+#endif
 }
 

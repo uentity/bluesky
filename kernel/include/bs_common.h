@@ -40,11 +40,14 @@
 #include "bs_fwd.h"
 #include "smart_ptr.h"
 #include "bs_type_info.h"
+#include "bs_assert.h"
 
 #include "loki/TypeManip.h"
 //#include "loki/LokiTypeInfo.h"
 
 #include "boost/noncopyable.hpp"
+
+#include "declare_error_codes.h"
 
 #define TO_STR(s) #s //!< To string convertion macro
 
@@ -54,31 +57,19 @@ namespace blue_sky
 	//define noncopyable interface
 	typedef boost::noncopyable bs_noncopyable;
 
-#if 1
-	 /*!
-		 \brief Enum of blue-sky error codes.
-
-		 This is necessary for blue_sky::bs_exception class.
-	 */
-	typedef enum
-	{
-		 no_error = 0, //!< no error
-		 user_defined, //!< user-defined error
-		 unknown_error, //!< unknown error
-		 system_error, //!< system error
-
-		/*boost errors*/
-		 wrong_path, //!< boost::path error, wrong path
-		 no_plugins, //!< no plugins in directory
-
-		 no_library, //!< no library (for boost::graph)
-		 no_type, //!< no type for create object/command
-
-		 out_of_range, //!< out of range (for bs_log)
-		 notpermitted_operation, //!< not permitted operation
-		 boost_error //!< boost-defined error
-	} error_code;
-#endif
+  DECLARE_ERROR_CODES (
+    ((no_error,                 "no_error"))
+    ((user_defined,             "user_defined"))
+    ((unknown_error,            "unknown_error"))
+    ((system_error,             "system_error"))
+    ((wrong_path,               "wrong_path"))
+    ((no_plugins,               "no_plugins"))
+    ((no_library,               "no_library"))
+    ((no_type,                  "no_type"))
+    ((out_of_range,             "out_of_range"))
+    ((not_permited_operation,   "not_permited_operation"))
+    ((boost_error,              "boost_error"))
+  );
 
 	//forward declaration of kernel
 	//class kernel;

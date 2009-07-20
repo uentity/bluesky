@@ -36,7 +36,7 @@ public:
 	smart_ptr<bs_stream> spstream;
 };*/
 
-class BS_API stream_wrapper : public bs_stream {
+class BS_API stream_wrapper : public log::bs_stream {
 public:
 	stream_wrapper(const boost::python::object &src) : obj(src) {}
 
