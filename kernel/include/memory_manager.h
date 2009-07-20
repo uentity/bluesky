@@ -63,8 +63,8 @@ namespace blue_sky {
     void
     print_info (bool print_map = true);
 
-    static memory_manager &
-    instance ();
+    //static memory_manager &
+    //instance ();
 
   private:
     allocator_info_map_t    allocator_info_map;

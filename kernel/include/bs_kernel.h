@@ -26,6 +26,8 @@
 #include "bs_object_base.h"
 #include "bs_abstract_storage.h"
 #include "bs_link.h"
+#include "memory_manager.h"
+#include "throw_exception.h"
 
 //#define BS_AUTOLOAD_PLUGINS
 
@@ -158,6 +160,12 @@ namespace blue_sky {
 		//! Method for erasing given signal from given type
 		bool rem_signal(const BS_TYPE_INFO& obj_t, int signal_code) const;
 
+    memory_manager &
+    get_memory_manager ()
+    {
+      return memory_manager_;
+    }
+
 	private:
 		//! \brief Constructor of kernel
 		kernel();
@@ -170,6 +178,8 @@ namespace blue_sky {
 		class kernel_impl;
 		typedef mt_ptr< kernel_impl > pimpl_t;
 		pimpl_t pimpl_;
+
+    memory_manager memory_manager_;
 
 		//kernel initialization routine
 		void init();

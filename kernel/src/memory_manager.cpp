@@ -367,12 +367,12 @@ namespace detail {
     print_info (info, print_map);
   }
 
-  memory_manager &
-  memory_manager::instance ()
-  {
-    static memory_manager *mm = new memory_manager;
-    return *mm;
-  }
+  //memory_manager &
+  //memory_manager::instance ()
+  //{
+  //  static memory_manager *mm = new memory_manager;
+  //  return *mm;
+  //}
 
 
 } // namespace blue_sky
