@@ -95,15 +95,15 @@ namespace blue_sky {
 
 		//! \brief object creation method
 		//! Contains auto-registration for unknown types
-		sp_obj create_object(const type_descriptor& obj_t, bool unmanaged = false, bs_type_ctor_param param = NULL) const;
+		sp_obj create_object(const type_descriptor& obj_t, bool unmanaged = true, bs_type_ctor_param param = NULL) const;
 		//! Supply maximum info about type to create (useful for auto-registering with proper plugin_descriptor)
 		//sp_obj create_object(const type_descriptor& td, const plugin_descriptor& pd,
 		//	bool unmanaged = false, bs_type_ctor_param param = NULL) const;
 		//! Use this method if type_descriptor is unknown by any reason
-		sp_obj create_object(const std::string& obj_t, bool unmanaged = false, bs_type_ctor_param param = NULL) const;
+		sp_obj create_object(const std::string& obj_t, bool unmanaged = true, bs_type_ctor_param param = NULL) const;
 
 		//! \brief Objects copying method
-		sp_obj create_object_copy(const sp_obj& src, bool unmanaged = false) const;
+		sp_obj create_object_copy(const sp_obj& src, bool unmanaged = true) const;
 
 		//! \brief Registers object in managed instances lists
 		int register_instance(const sp_obj&) const;
