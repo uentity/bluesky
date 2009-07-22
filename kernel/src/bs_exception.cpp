@@ -34,11 +34,7 @@
 #endif
 
 #ifdef BS_EXCEPTION_COLLECT_BACKTRACE
-#ifdef _WIN32
-#include "backtrace_tools_win.h"
-#else
-#include "backtrace_tools_unix.h"
-#endif
+#include "bs_kernel_tools.h"
 #endif
 
 using namespace std;
@@ -51,30 +47,7 @@ namespace blue_sky
     std::string 
     collect_backtrace ()
     {
-      static const size_t max_backtrace_len = 128;
-      void *backtrace[max_backtrace_len];
-
-      size_t len = tools::get_backtrace (backtrace, max_backtrace_len);
-      if (len)
-        {
-          std::string callstack = "\nCall stack: ";
-          char **backtrace_names = tools::get_backtrace_names (backtrace, len);
-          for (size_t i = 0; i < len; ++i)
-            {
-              if (backtrace_names[i] && strlen (backtrace_names[i]))
-                {
-                  callstack += (boost::format ("\n\t%d: %s") % i % backtrace_names[i]).str ();
-                }
-              else
-                {
-                  callstack += (boost::format ("\n\t%d: <invalid entry>") % i).str ();
-                }
-            }
-
-          return callstack;
-        }
-
-      return "No call stack";
+      return kernel_tools::get_backtrace (128);
     }
 #endif
   } // namespace detail
