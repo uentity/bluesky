@@ -116,6 +116,13 @@ namespace detail {
     dealloc_  = &allocator_t::instance ();
   }
 
+  memory_manager::~memory_manager ()
+  {
+#ifdef BS_BOS_CORE_DEBUG_MEMORY
+    print_info ();
+#endif
+  }
+
   bool 
   memory_manager::set_backend_allocator (allocator_interface *a)
   {

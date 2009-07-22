@@ -22,6 +22,8 @@ namespace blue_sky {
 
     memory_manager ();
 
+    ~memory_manager ();
+
     /** 
      * \brief set backend memory allocator
      * \return false if alloc_ != dealloc_ (if previous
