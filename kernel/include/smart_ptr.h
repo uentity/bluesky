@@ -1618,7 +1618,8 @@ public:
 	\return number of references
 	*/
 	long refs() const {
-		if(this->p_) this->p_->refs();
+		if(this->p_) 
+      return this->p_->refs();
 		else return 0;
 	}
 
