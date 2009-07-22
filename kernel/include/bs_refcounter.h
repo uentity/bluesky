@@ -52,6 +52,7 @@ public:
 	//its meaningless to assign 2 refcounters
 	bs_refcounter& operator=(const bs_refcounter& /*src*/) { return *this; }
 
+public:
 	/*!
 	\brief Add reference.
 	*/
@@ -86,7 +87,7 @@ public:
 
 protected:
 	// ctor with given counter
-	bs_refcounter(ulong refcnt) : refcnt_(refcnt) {}
+	bs_refcounter(long refcnt) : refcnt_(refcnt) {}
 	//mutex for non-const members access
 	mutable bs_mutex mut_;
 
