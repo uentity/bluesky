@@ -29,7 +29,7 @@ public:
 
 	static std::string print_registered_instances();
 
-  static std::string get_backtrace (size_t backtrace_depth = 16);
+  static std::string get_backtrace (int backtrace_depth = 16);
 };
 
 }	// blue_sky namespace

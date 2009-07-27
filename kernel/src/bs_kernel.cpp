@@ -1082,7 +1082,7 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 			BSOUT << ", Python subsystem initialized (namespace " << py_scope << ")";
 		BSOUT << bs_end;
 	}
-	catch(const bs_exception& ex) {
+	catch(const bs_exception& /*ex*/) {
 		//unload library
 		if(p_descr)
 			unload_plugin(*p_descr);
@@ -1278,7 +1278,7 @@ sp_storage kernel::create_storage(const std::string &filename, const std::string
 		new_storage = create_object(find_type(format).td_);
 		new_storage.lock()->open(filename, flags);
 	}
-	catch(const bs_exception& ex) {
+	catch(const bs_exception& /*ex*/) {
 		// if no proper storage found
 		new_storage = create_object(empty_storage::bs_type());
 	}

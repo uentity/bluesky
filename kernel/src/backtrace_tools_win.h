@@ -7,9 +7,11 @@
 #ifndef BS_BOS_CORE_BASE_BACKTRACE_TOOLS_WIN_H_
 #define BS_BOS_CORE_BASE_BACKTRACE_TOOLS_WIN_H_
 
+#include <windows.h>
 #include <dbghelp.h>
 #include <Psapi.h>
 #include <boost/format.hpp>
+#include "bs_report.h"
 
 #pragma comment (lib, "dbghelp.lib")
 #pragma comment (lib, "psapi.lib")
@@ -110,7 +112,6 @@ namespace tools {
         if (!res)
           {
             LPVOID lpMsgBuf;
-            LPVOID lpDisplayBuf;
             DWORD dw = GetLastError(); 
 
             FormatMessage(

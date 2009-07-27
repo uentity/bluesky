@@ -507,8 +507,8 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 
 		cr.lock()->read_file(cfg_file);
 		std::string msg = lp[i] + " (";
-		int len = cr.lock()->get_length();
-		for (int b = 0; b < len; ++b)
+		size_t len = cr.lock()->get_length();
+		for (size_t b = 0; b < len; ++b)
 		{
 			if (b != 0)
 				msg += ", ";

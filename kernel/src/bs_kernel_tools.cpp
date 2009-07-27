@@ -146,17 +146,17 @@ std::string kernel_tools::print_registered_instances() {
 }
 
 std::string
-kernel_tools::get_backtrace (size_t backtrace_depth)
+kernel_tools::get_backtrace (int backtrace_depth)
 {
   static const size_t max_backtrace_len = 1024;
   void *backtrace[max_backtrace_len];
 
-  size_t len = tools::get_backtrace (backtrace, backtrace_depth);
+  int len = tools::get_backtrace (backtrace, backtrace_depth);
   if (len)
     {
       std::string callstack = "\nCall stack: ";
       char **backtrace_names = tools::get_backtrace_names (backtrace, len);
-      for (size_t i = 0; i < len; ++i)
+      for (int i = 0; i < len; ++i)
         {
           if (backtrace_names[i] && strlen (backtrace_names[i]))
             {
