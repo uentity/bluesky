@@ -629,9 +629,13 @@ void graph_to_list(vector<int> &ll, const load_graph &g)
 
 	std::sort (dfs.begin(),dfs.end());
 
-	for (int i = 0; i < dfs.size (); ++i)
-		BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") ";
+#ifdef _DEBUG
+	for (size_t i = 0; i < dfs.size (); ++i)
+    {
+		  BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") ";
+    }
 	BSOUT << bs_end;
+#endif
 
 	ll.clear();
 	for(int i = 0; i < (int)dfs.size(); ++i)
