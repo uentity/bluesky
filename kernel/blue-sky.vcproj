@@ -404,6 +404,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\include\bs_object_base_macro.h"
+				>
+			</File>
+			<File
 				RelativePath=".\include\bs_obsolete.h"
 				>
 			</File>
@@ -425,6 +429,10 @@
 			</File>
 			<File
 				RelativePath=".\include\bs_type_info.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_type_macro.h"
 				>
 			</File>
 			<File
@@ -619,6 +627,14 @@
 		<Filter
 			Name="tools"
 			>
+			<File
+				RelativePath=".\src\bs_kernel_tools.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_kernel_tools.h"
+				>
+			</File>
 			<File
 				RelativePath=".\include\pp_param_list.h"
 				>
