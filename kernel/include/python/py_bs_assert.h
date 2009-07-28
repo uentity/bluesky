@@ -39,7 +39,10 @@ public:
 		: disable_python_call_on_success (true)
 	{}
 
-	virtual ~py_assert_factory () {}
+	virtual ~py_assert_factory () 
+  {
+    bs_assert::asserter::set_factory (0);
+  }
 
 	virtual bs_assert::asserter *make (bool cond, const char *file, int line, const char *cond_str);
 
