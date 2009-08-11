@@ -48,19 +48,37 @@ public:
 	/// @return number of elements contained in array
 	virtual size_type size() const = 0;
 
-	/// @brief Items access operator (r/w)
+	/// @brief Subscripting operator
+	/// Forward call to ss(key)
+	/// @param key item key
+	/// 
+	/// @return modifyable reference to element
+	virtual reference operator[](const key_type& key) = 0;
+
+	/// @brief Items access function (r/w) - syntax sugar for acessing via pointer
 	///
 	/// @param key item key
 	///
-	/// @return modifyable refernce to element
-	virtual reference operator[](const key_type& key) = 0;
+	/// @return modifyable reference to element
+	reference ss(const key_type& key) {
+		return operator[](key);
+	}
 
-	/// @brief Items access operator (r)
+	/// @brief Subscripting operator
+	/// Forward call to ss(key)
+	/// @param key item key
+	/// 
+	/// @return modifyable reference to element
+	virtual const_reference operator[](const key_type& key) const = 0;
+
+	/// @brief Items access function (r) - syntax sugar for acessing via pointer
 	///
 	/// @param key item key
 	///
 	/// @return const refernce to element
-	virtual const_reference operator[](const key_type& key) const = 0;
+	const_reference ss(const key_type& key) const {
+		return operator[](key);
+	}
 
 	/// @brief empty destructor
 	virtual ~bs_arrbase() {};
