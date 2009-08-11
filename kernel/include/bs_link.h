@@ -132,16 +132,10 @@ public:
 	//if pointed object is a node - returns non-NULL SP to it
 	smart_ptr< blue_sky::bs_node, true > node() const;
 
-	//tells if current link cannot be deleted
-	virtual bool is_persistent() const;
 	//tests if this is an instance of bs_link, i.e. direct hard link to object
 	bool is_hard_link() const;
 	//return type id of link
 	virtual link_type link_type_id() const;
-
-	//tree modifications
-	//sp_link copy(const sp_link& where);
-	//bool move(const sp_link& where);
 
 	//clone method for links
 	virtual sp_link clone(const std::string& clone_name = "") const;
@@ -165,16 +159,13 @@ protected:
 
 	//ctors
 	//construct from object, i.e. from inode - makes hard link
-	bs_link(const sp_obj& obj, const std::string& name, bool is_persistent = false);
+	bs_link(const sp_obj& obj, const std::string& name);
 
 	//protected ctor for children
 	bs_link(const link_impl* impl);
 
 	//virtual destruction method
 	virtual void dispose() const;
-
-	//set or remove persistent state - only for bs_node
-	virtual void set_persistence(bool state = true) const;
 
 	//rebase link so that it starts pointing to another object
 	void rebase(const sp_obj& obj) const;
@@ -185,18 +176,11 @@ protected:
 	//bs_link& operator=(const bs_link& l);
 
 private:
-	//default ctor for kernel used to create root node
-	//bs_link();
 	//copies creation is prohibited - use clone() instead
 	//bs_link(const bs_link& l);
 
 	//renamer for bs_node
 	virtual void rename(const std::string& new_name) const;
-
-	//subscribe to pointed object change event
-	//virtual void on_data_changed(const sp_slot& handler) const;
-	//unsubscribe from notification about object change
-	//virtual void unsubscribe(const sp_slot& handler) const;
 
 	BLUE_SKY_TYPE_DECL(bs_link)
 };
@@ -220,7 +204,7 @@ private:
 	class sl_impl;
 
 	//standard ctor
-	bs_alias(const sp_link& link, const std::string& name, bool is_persistent = false);
+	bs_alias(const sp_link& link, const std::string& name);
 
 	//void set_persistence(bool state = true) const;
 

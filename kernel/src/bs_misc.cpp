@@ -318,7 +318,9 @@ blue_sky::error_code search_files(vector<string> &res, const char * what, const 
 #endif
 			}
 			if (mask_verify(dll_dir_itr->string().c_str(),what))
-				res.push_back(string(dll_dir_itr->string()));
+				{
+          res.push_back(string(dll_dir_itr->string()));
+        }
 		}
 	}
 	catch(const filesystem::filesystem_error &e)
@@ -477,7 +479,7 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 	sp_conf_reader cr = give_kernel::Instance().create_object(bs_conf_reader::bs_type());
 	vector<string> sp, lp;
 	edge_array_t edges;
-	vector<string> c_lib_dir = cfg::Instance().getenv("BLUE_SKY_PLUGINS_PATH");
+	const vector<string> &c_lib_dir = bs_config ()["BLUE_SKY_PLUGINS_PATH"];
 
 	for (size_t i = 0; i < c_lib_dir.size (); ++i) {
 		search_files(sp,".cfg",c_lib_dir[i].c_str ());
@@ -533,7 +535,9 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 
 			}
 		}
+#ifdef _DEBUG
 		BSOUT << msg << ")" << bs_end;
+#endif
 	}
 
 	try {

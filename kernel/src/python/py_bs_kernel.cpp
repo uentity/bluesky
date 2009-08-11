@@ -13,13 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
-#include "py_bs_kernel.h"
 #include "bs_common.h"
 #include "bs_exception.h"
+#include "bs_kernel_tools.h"
+
+#include "py_bs_kernel.h"
 #include "py_bs_log.h"
 #include "py_bs_exports.h"
 
 #include <algorithm>
+#include <boost/python/overloads.hpp>
 
 using namespace std;
 using namespace Loki;
@@ -102,6 +105,23 @@ py_bs_link py_kernel::bs_root() const {
 	return py_bs_link(kernel_.bs_root());
 }
 
+//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(kernel_tools_overloads, walk_tree, 1, 1);
+
+class py_kernel_tools {
+public:
+	static void print_loaded_types() {
+		cout << kernel_tools::print_loaded_types();
+	}
+
+	static void walk_tree() {
+		cout << kernel_tools::walk_tree();
+	}
+
+	static void print_registered_instances() {
+		cout << kernel_tools::print_registered_instances();
+	}
+};
+
 void py_export_kernel() {
 	class_<py_kernel>("kernel")
 		.def("create_object",&py_kernel::create_object)
@@ -137,7 +157,17 @@ void py_export_kernel() {
 
 	class_< std::vector< type_tuple > >("vector_type_tuple")
 		.def(vector_indexing_suite< std::vector< type_tuple > >());
+
+	class_< py_kernel_tools >("kernel_tools", no_init)
+		.def("print_loaded_types", &py_kernel_tools::print_loaded_types)
+		.def("walk_tree", &py_kernel_tools::walk_tree)
+		.def("print_registered_instances", &py_kernel_tools::print_registered_instances)
+		.staticmethod("print_loaded_types")
+		.staticmethod("walk_tree")
+		.staticmethod("print_registered_instances")
+		;
 }
 
 }	//namespace blue_sky::python
 }	//namespace blue_sky
+

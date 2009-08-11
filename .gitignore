@@ -1,0 +1,15 @@
+*.dblite
+build
+exe
+.debug
+.release
+scons_env.custom
+scons_vars.custom
+*.obj
+*.so
+*.os
+*.o
+*.user
+*.idb
+*.pdb
+plugins/bs_bos_core

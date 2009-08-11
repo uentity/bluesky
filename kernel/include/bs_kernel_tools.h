@@ -13,38 +13,24 @@
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _PY_BS_COMMAND_H
-#define _PY_BS_COMMAND_H
+#ifndef _BS_KERNEL_TOOLS_H
+#define _BS_KERNEL_TOOLS_H
 
-#include "bs_common.h"
-#include "bs_command.h"
+#include "bs_kernel.h"
 
 namespace blue_sky {
-namespace python {
 
-class BS_API py_combase {
-	 friend class py_kernel;
-	 friend class py_bs_slot;
-
+class BS_API kernel_tools {
 public:
-	 //typedef combase::sp_com sp_com;
 
-	 virtual ~py_combase() {}
+	static std::string print_loaded_types();
 
-	 const sp_com &get_spcom();
+	static std::string walk_tree(bool silent = false);
 
-	 py_combase execute();
-	 void unexecute();
-	 bool can_unexecute() const;
-
-protected:
-	 //py_combase(combase*);
-	 py_combase(const sp_com&);
-
-	 sp_com spcom;
+	static std::string print_registered_instances();
 };
 
-}	//namespace blue_sky::python
-}	//namespace blue_sky
+}	// blue_sky namespace
 
-#endif // _PY_BS_COMMAND_H
+#endif
+

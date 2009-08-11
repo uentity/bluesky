@@ -10,6 +10,7 @@ cpp_list = Split("""
 # directories
 lib_name = 'bs_cube';
 tar_name = lib_name;
+kernel_lib = 'blue_sky';
 
 # import custom settings
 Import('*');
@@ -31,6 +32,8 @@ if base_env['py'] == '1' :
 # construct debug and release env
 if build_kind == 'debug' :
 	lib_name += '_d';
+	kernel_lib += '_d';
+base_env.Append(LIBS = kernel_lib);
 
 # actually build target
 bs_cube = base_env.SharedLibrary(target = os.path.join(tar_exe_plugin_dir, lib_name), source = [os.path.join('src', x) for x in cpp_list]);

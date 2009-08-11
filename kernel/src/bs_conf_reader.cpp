@@ -33,8 +33,14 @@ namespace blue_sky {
 		std::stringstream str;
 		int idx = 0;
 
+    if (srcfile.fail ())
+      {
+        throw bs_exception ("bs_conf_reader::read_file", std::string ("Can't open config file (") + filename + ")");
+      }
+
 		char lc = 0;
-		for(char c = (char)srcfile.get(); !(srcfile.eof()); c = (char)srcfile.get()) {
+		for(; !(srcfile.fail () || (srcfile.eof()));) {
+      char c = (char)srcfile.get();
 			if (c == '}') {
 				conf_elem ce;
 				for (;;) {

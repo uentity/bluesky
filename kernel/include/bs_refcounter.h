@@ -34,64 +34,66 @@
 
 namespace blue_sky {
 
-	//! mutex type used in blue-sky
+//! mutex type used in blue-sky
 #ifdef BS_FORCE_RECURSIVE_MUTEX
-	typedef boost::recursive_mutex bs_mutex;
-	#undef BS_FORCE_RECURSIVE_MUTEX
+typedef boost::recursive_mutex bs_mutex;
+#undef BS_FORCE_RECURSIVE_MUTEX
 #else
-	typedef boost::mutex bs_mutex;
+typedef boost::mutex bs_mutex;
 #endif
 
-	class BS_API bs_refcounter {
-	public:
-		//default ctor
-		bs_refcounter() : refcnt_(0) {}
-		//copy ctor
-		bs_refcounter(const bs_refcounter& /*src*/) : refcnt_(0) {}
-		//assignment operator - does nothing
-		//its meaningless to assign 2 refcounters
-		bs_refcounter& operator=(const bs_refcounter& /*src*/) { return *this; }
+class BS_API bs_refcounter {
+public:
+	//default ctor
+	bs_refcounter() : refcnt_(0) {}
+	//copy ctor
+	bs_refcounter(const bs_refcounter& /*src*/) : refcnt_(0) {}
+	//assignment operator - does nothing
+	//its meaningless to assign 2 refcounters
+	bs_refcounter& operator=(const bs_refcounter& /*src*/) { return *this; }
 
-		/*!
-		\brief Add reference.
-		*/
-		virtual void add_ref() const {
-			++refcnt_;
-		}
+	/*!
+	\brief Add reference.
+	*/
+	virtual void add_ref() const {
+		++refcnt_;
+	}
 
-		/*!
-		\brief Delete reference.
-		*/
-		virtual void del_ref() const {
-			if(--refcnt_ == 0)
-				dispose();
-		}
+	/*!
+	\brief Delete reference.
+	*/
+	virtual void del_ref() const {
+		if(--refcnt_ == 0)
+			dispose();
+	}
 
-		/*!
-		\brief Returns references count.
-		*/
-		long refs() const { return refcnt_; }
+	/*!
+	\brief Returns references count.
+	*/
+	long refs() const { return refcnt_; }
 
-		/*!
-		\brief Self-destruction method - default is 'delete this', assumes creating with 'new'
-		*/
-		virtual void dispose() const = 0;
-		//{ delete this; }
+	/*!
+	\brief Self-destruction method - default is 'delete this', assumes creating with 'new'
+	*/
+	virtual void dispose() const = 0;
+	//{ delete this; }
 
-		/*!
-		\brief Mutex accessor.
-		\return Reference to mutex
-		*/
-		bs_mutex& mutex() const { return mut_; }
+	/*!
+	\brief Mutex accessor.
+	\return Reference to mutex
+	*/
+	bs_mutex& mutex() const { return mut_; }
 
-	protected:
-		//mutex for non-const members access
-		mutable bs_mutex mut_;
+protected:
+	// ctor with given counter
+	bs_refcounter(ulong refcnt) : refcnt_(refcnt) {}
+	//mutex for non-const members access
+	mutable bs_mutex mut_;
 
-	private:
-		//reference counter
-		mutable boost::detail::atomic_count refcnt_;
-	};
-}
+private:
+	//reference counter
+	mutable boost::detail::atomic_count refcnt_;
+};
+}	//namespace blue_sky
 
 #endif

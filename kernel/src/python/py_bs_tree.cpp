@@ -84,6 +84,14 @@ py_bs_node::py_n_iterator py_bs_node::py_n_iterator::operator--(int) {
 	return tmp;
 }
 
+bool py_bs_node::py_n_iterator::is_persistent() const {
+	return niter.is_persistent();
+}
+
+void py_bs_node::py_n_iterator::set_persistence(bool persistent) const {
+	return niter.set_persistence(persistent);
+}
+
 bool py_bs_node::py_n_iterator::operator ==(const py_bs_node::py_n_iterator &iter) const {
 	return iter.niter == niter;
 }
@@ -221,6 +229,22 @@ bool py_bs_node::is_node(const py_objbase &obj) {
 	return bs_node::is_node(obj.sp);
 }
 
+bool py_bs_node::is_persistent1(const py_bs_link& link) const {
+	return spnode->is_persistent(link.splink);
+}
+
+bool py_bs_node::is_persistent2(const std::string& link_name) const {
+	return spnode->is_persistent(link_name);
+}
+
+// return true if persistence was really altered
+bool py_bs_node::set_persistence1(const py_bs_link& link, bool persistent) const {
+	return spnode->set_persistence(link.splink, persistent);
+}
+bool py_bs_node::set_persistence2(const std::string& link_name, bool persistent) const {
+	return spnode->set_persistence(link_name, persistent);
+}
+
 void py_export_tree() {
 	class_<py_bs_node, bases<py_objbase> >("node", init<const py_objbase&>())
 		.def("__iter__",boost::python::iterator< py_bs_node >())
@@ -240,12 +264,19 @@ void py_export_tree() {
 		.def("erase",&py_bs_node::erase5)
 		.def("rename",&py_bs_node::rename1)
 		.def("rename",&py_bs_node::rename2)
-		.def("is_node",&py_bs_node::is_node);
+		.def("is_node",&py_bs_node::is_node)
+		.def("is_persistent", &py_bs_node::is_persistent1)
+		.def("is_persistent", &py_bs_node::is_persistent2)
+		.def("set_persistence", &py_bs_node::set_persistence1)
+		.def("set_persistence", &py_bs_node::set_persistence2)
+		;
 
 	class_<py_bs_node::py_n_iterator>("py_n_iterator",no_init)
 		.def("index_id",&py_bs_node::py_n_iterator::index_id)
 		.def("get",&py_bs_node::py_n_iterator::get)
 		.def("data",&py_bs_node::py_n_iterator::data)
+		.def("is_persistent", &py_bs_node::py_n_iterator::is_persistent)
+		.def("set_persistence", &py_bs_node::py_n_iterator::set_persistence)
 		;
 
 	class_<std::pair< py_bs_node::py_n_iterator, int > >("insert_ret_t",no_init)

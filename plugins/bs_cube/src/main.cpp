@@ -28,10 +28,13 @@ using namespace blue_sky::python;
 using namespace boost::python;
 #endif
 
+#include <iostream>
+
 //DEBUG
 //#include <iostream>
 
 using namespace blue_sky;
+using namespace std;
 
 typedef smart_ptr<bs_cube, true> sp_cube;
 
@@ -153,3 +156,11 @@ BLUE_SKY_INIT_PY_FUN {
 #endif
 
 }	//end of blue_sky namespace
+
+#ifdef UNIX
+//  test library deallocation
+void __attribute__ ((destructor)) my_fini(void) {
+	cout << "bs_cube library is about to die!" << endl;
+}
+#endif
+

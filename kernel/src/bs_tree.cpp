@@ -66,7 +66,12 @@ struct elem_ptr {
 	elem_ptr(const T& el) : p_(const_cast< T* >(&el)) {}
 
 	elem_ptr& operator =(const T& el) {
-		p_ = &el;
+		p_ = const_cast< T* >(&el);
+		return *this;
+	}
+
+	elem_ptr& operator =(const T* p_el) {
+		p_ = const_cast< T* >(p_el);
 		return *this;
 	}
 
@@ -77,12 +82,24 @@ struct elem_ptr {
 	T& operator *() const { return *p_; }
 
 	bool is_nil() const {
-		return p_->is_nil();
+		return p_ == &nil_el;
 	}
 
 	operator bool() const {
 		return !is_nil();
 	}
+
+	bool operator==(const elem_ptr& lhs) const {
+		return p_ == lhs.p_;
+	}
+
+	bool operator!=(const elem_ptr& lhs) const {
+		return p_ != lhs.p_;
+	}
+
+	bool operator<(const elem_ptr& lhs) const {
+		return p_ < lhs.p_;
+	}	
 
 	static T nil_el;
 
@@ -172,20 +189,22 @@ struct bs_leaf {
 
 	node_key key_;
 	sp_link link_;
+	// persistence flag
+	bool is_persistent_;
 
-	bs_leaf(const node_key& k, const sp_link& l = NULL)
-		: key_(k), link_(l)
+	bs_leaf(const node_key& k, const sp_link& l = NULL, bool is_persistent = false)
+		: key_(k), link_(l), is_persistent_(is_persistent)
 	{}
 
 	//full initialization
-	bs_leaf(const sp_link& l, const bs_node::s_traits_ptr& s)
-		: key_(node_key(l, s)), link_(l)
+	bs_leaf(const sp_link& l, const bs_node::s_traits_ptr& s, bool is_persistent)
+		: key_(node_key(l, s)), link_(l), is_persistent_(is_persistent)
 	{}
 
 	//construct with null key only for searching by ptr
-	bs_leaf(const sp_link& l) : link_(l) {}
+	bs_leaf(const sp_link& l, bool is_persistent = false) : key_(), link_(l), is_persistent_(is_persistent) {}
 
-	//for common syntax with leaf_ptr
+	// behave like leaf_ptr (allow unified syntax)
 	const bs_leaf* operator->() const {
 		return this;
 	}
@@ -206,6 +225,14 @@ struct bs_leaf {
 	void clear_key() {
 		key_.clear();
 	}
+
+	// persistense flag access
+	void set_persistence(bool persistent) {
+		// block using sp_link's mutex
+		bs_mutex::scoped_lock guard(*link_.mutex());
+		is_persistent_ = persistent;
+	}
+	const bool is_persistent() const { return is_persistent_; }
 
 	//leafs comparison predicates
 	//by link name
@@ -332,50 +359,16 @@ public:
 	//---------------- link2key helpers
 	inline sp_link link2key(const sp_link& l, name_idx_tag) const { return l; }
 	inline bs_leaf link2key(const sp_link& l, ip_idx_tag) const { return bs_leaf(l); }
-	inline bs_leaf link2key(const sp_link& l, cust_idx_tag) const { return bs_leaf(l, sort_); }
+	inline bs_leaf link2key(const sp_link& l, cust_idx_tag) const { return bs_leaf(l, sort_, false); }
+	//---------------- and reverse conversion
+	inline sp_link key2link(const sp_link& l, name_idx_tag) const { return l; }
+	inline sp_link key2link(const bs_leaf& leaf, ip_idx_tag) const { return leaf.link_; }
+	inline sp_link key2link(const leaf_ptr& leaf, cust_idx_tag) const { return leaf->link_; }
 
 	//the same, but for searching - meaningful only for custom index
 	inline sp_link link2srch_key(const sp_link& l, name_idx_tag) const { return l; }
 	inline bs_leaf link2srch_key(const sp_link& l, ip_idx_tag) const { return bs_leaf(l); }
 	inline bs_leaf link2srch_key(const sp_link& l, cust_idx_tag) const { return bs_leaf(l); }
-
-//	template< class index_t, class = void >
-//	struct link2srch_key {
-//		static inline typename index_t::key_type key(const node_impl& ni, const sp_link& l) {
-//			return bs_leaf(l, ni.sort_);
-//		}
-//
-//		//incomplete key for searching by link
-//		static inline typename index_t::key_type srch_key(const sp_link& l) {
-//			return bs_leaf(l);
-//		}
-//	};
-//
-//	//specialization for inodep index
-//	template< class unused >
-//	struct link2key< inodep_index_t, unused > {
-//		static typename name_index_t::key_type key(const node_impl&, const sp_link& l) {
-//			return bs_leaf(l);
-//		}
-//
-//		//incomplete key is the same as complete
-//		static typename name_index_t::key_type srch_key(const sp_link& l) {
-//			return bs_leaf(l);
-//		}
-//	};
-//
-//	//specialization for name index
-//	template< class unused >
-//	struct link2key< name_index_t, unused > {
-//		static typename name_index_t::key_type key(const node_impl&, const sp_link& l) {
-//			return l;
-//		}
-//
-//		//incomplete key is the same as complete
-//		static typename name_index_t::key_type srch_key(const sp_link& l) {
-//			return l;
-//		}
-//	};
 
 	//----------------- slot to handle leafs updates
 	class leaf_tracker : public bs_slot {
@@ -466,18 +459,15 @@ public:
 		: self_(NULL), sort_(ni.sort_)
 	{
 		sp_obj obj_copy;
-		sp_link tar_l;
-		for(name_index_t::const_iterator i = ni.leafs_.begin(), end = ni.leafs_.end(); i != end; ++i) {
-			sp_link cur_l = iter2link(i, name_idx_tag());
-			if((*i)->data()->bs_resolve_type().is_copyable()) {
-				obj_copy = give_kernel::Instance().create_object_copy((*i)->data());
-				if(obj_copy) {
-					add_link(new bs_link(obj_copy, (*i)->name(), (*i)->is_persistent()));
-					continue;
-				}
-			}
-			//if copy creation failed or object is non-copyable then make a hard link to it
-			add_link(new bs_link((*i)->data(), (*i)->name(), (*i)->is_persistent()));
+		for(inodep_index_t::const_iterator i = ni.ip_idx_.begin(), end = ni.ip_idx_.end(); i != end; ++i) {
+			const sp_link& cur_l = i->link_;
+			obj_copy = NULL;
+			if(cur_l->data()->bs_resolve_type().is_copyable())
+				obj_copy = give_kernel::Instance().create_object_copy(cur_l->data());
+			if(!obj_copy)
+				obj_copy = cur_l->data();
+
+			add_link(new bs_link(obj_copy, cur_l->name()), i->is_persistent());
 		}
 	}
 
@@ -487,7 +477,7 @@ public:
 	}
 
 	//-------------------------- static members ----------------------------------------------------
-	//global protected counter for creating unique node names
+	// global protected counter for creating unique node names
 	static boost::detail::atomic_count unique_cnt_s;
 	static long next_unique_val() {
 		++unique_cnt_s;
@@ -510,6 +500,12 @@ public:
 	inline cust_index_t& index(cust_idx_tag) { return cust_idx_; }
 	inline const cust_index_t& index(cust_idx_tag) const { return cust_idx_; }
 
+	// remove constness from index inside const fucntions
+	template< class index_tag >
+	inline typename index_tag::type& index_uc(index_tag tag) const {
+		return const_cast< typename index_tag::type& >(index(tag));
+	}
+
 	//---------------------------- count implementation ----------------------------------------------------------------
 	ulong count(const sort_traits::key_ptr& k) const {
 		return static_cast< ulong >(cust_idx_.count(bs_leaf(node_key(k))));
@@ -529,24 +525,25 @@ public:
 	//variation of the above function for only one value (not range)
 	//-------------------------------------- peek by name algorithm implementation -------------------------------------
 	template< class index_t >
-	typename index_t::iterator peek_by_name(const typename index_t::key_type& k, const sp_link& l) const
+	typename index_t::iterator peek_by_name(const typename index_t::key_type& k, idx_traits< index_t > i_tag) const
 	{
-		idx_traits< index_t > i_tag;
+		//idx_traits< index_t > i_tag;
 		typedef typename index_t::iterator target_iter;
 		//remove const
-		index_t& uc_idx = const_cast< index_t& >(index(i_tag));
+		index_t& uc_idx = index_uc(i_tag);
 		//find range of equal leafs
 		pair< target_iter, target_iter > rng = uc_idx.equal_range(k);
 
-		//search found region to and peek leaf by name
+		//search found region and peek leaf by name
+		const sp_link& l = key2link(k, i_tag);
 		if(rng.first == rng.second) {
 			rng.first = rng.second = uc_idx.end();
 		}
 		else if(l && !l->name().empty()) {
 			const string& link_name = l->name();
-			for(target_iter pos = rng.first; pos != rng.second; ++pos) {
-				if(iter2link(pos, i_tag)->name() == link_name)
-					return pos;
+			for(; rng.first != rng.second; ++rng.first) {
+				if(iter2link(rng.first, i_tag)->name() == link_name)
+					return rng.first;
 			}
 			//leaf with given name wasn't found
 			return uc_idx.end();
@@ -554,23 +551,19 @@ public:
 		return rng.first;
 	}
 
+	// peek_by_name that always accepts sp_link as a search key
 	template< class index_tag >
 	inline typename index_tag::type::iterator peek_by_name(const sp_link& l, index_tag tag) const {
-		return peek_by_name< typename index_tag::type >(link2key(l, tag), l);
+		return peek_by_name< typename index_tag::type >(link2key(l, tag), tag);
 	}
 
-	//represent peek_by_name as member function
-//	inline name_index_t::iterator peek_by_name(const sp_link& l, name_idx_tag) const {
-//		return _peek_by_name< name_index_t >::peek(leafs_, l);
-//	}
-
-//	inline inodep_index_t::iterator peek_by_name(const sp_link& l, ip_idx_tag) const {
-//		return peek_by_name< inodep_index_t >(l);
-//	}
-//
-//	inline cust_index_t::iterator peek_by_name(const sp_link& l, cust_idx_tag) const {
-//		return peek_by_name< cust_index_t >(l);
-//	}
+	// simplified version of the above for name_index_t
+	name_index_t::iterator peek_by_name(const name_index_t::key_type& k, name_idx_tag) const {
+		//remove const
+		name_index_t& uc_idx = const_cast< name_index_t& >(leafs_);
+		//find leaf
+		return uc_idx.find(k);
+	}
 
 	//---------- raw_find helper
 	template< class index_t >
@@ -588,84 +581,56 @@ public:
 	typename index_tag::type::iterator find(const std::string& name, index_tag tag) const {
 		name_index_t::iterator pl = find(name, name_idx_tag());
 		if(pl != leafs_.end())
-			return peek_by_name(iter2link(pl, name_idx_tag()), tag);
+			return peek_by_name(*pl, tag);
 		else
-			return const_cast< typename index_tag::type& >(index(tag)).end();
+			return index_uc(tag).end();
 	}
 
-//	inodep_index_t::iterator find(const string& name, ip_idx_tag idx) const {
-//		name_index_t::iterator pl = find(name, name_idx_tag());
-//		if(pl != leafs_.end())
-//			return peek_by_name< inodep_index_t >(*pl, idx);
-//		else
-//			return const_cast< inodep_index_t& >(ip_idx_).end();
-//	}
-//
-//	cust_index_t::iterator find(const string& name, cust_idx_tag idx) const {
-//		name_index_t::iterator pl = find(name, name_idx_tag());
-//		if(pl != leafs_.end())
-//			return peek_by_name(*pl, idx);
-//		else
-//			return const_cast< cust_index_t& >(cust_idx_).end();
-//	}
-
-	//find leaf by link and possibly match the name
+	// find leaf by link and possibly match the name
 	name_index_t::iterator find(const sp_link& l, name_idx_tag, bool = true) const {
-		return raw_find< name_index_t >(leafs_, l);
+		return raw_find(leafs_, l);
 	}
 
 	template< class index_tag >
 	typename index_tag::type::iterator find(const sp_link& l, index_tag tag, bool match_name = true) const
 	{
 		typedef typename index_tag::type index_t;
-		typedef typename index_t::iterator iter;
-		//remove const
-		index_t& uc_idx = const_cast< index_t& >(index(tag));
-		if(!l || (!l->data() && l->name().empty()))
+
+		index_t& uc_idx = index_uc(tag);
+		if(!l)
 			//link is incorrect - nothing to search
 			return uc_idx.end();
 
-		if(!l->data()) {
-			//if data is NULL then we always search by name
-			return find(l->name(), tag);
-		}
-		else if(match_name) {
-			//search by full leaf
+		if(match_name)
 			return peek_by_name(l, tag);
-		}
 		else
-			return raw_find< index_t >(uc_idx, l);
+			return raw_find(uc_idx, l);
 	}
 
-//	inodep_index_t::iterator find(const sp_link& l, ip_idx_tag, bool match_name = true) const {
-//		return find_link(ip_idx_, l, match_name);
-//	}
-//
-//	cust_index_t::iterator find(const sp_link& l, cust_idx_tag, bool match_name = true) const {
-//		return find_link(cust_idx_, l, match_name);
-//	}
-
 	//------------------------- equal range imlementation --------------------------------------------------------------
-	pair< name_index_t::iterator, name_index_t::iterator > equal_range(const sp_link& l, name_idx_tag idx) const
+	pair< name_index_t::iterator, name_index_t::iterator >
+	equal_range(const sp_link& l, name_idx_tag tag) const
 	{
 		pair< name_index_t::iterator, name_index_t::iterator > rng;
 		if(l)
-			rng.first = find(l, idx, true);
+			rng.first = find(l, tag);
 		else
-			rng.first = const_cast< name_index_t& >(leafs_).end();
+			rng.first = index_uc(tag).end();
 		rng.second = rng.first;
 		if(rng.first != leafs_.end())
 			++rng.second;
 		return rng;
 	}
 
-	template< class index_t >
-	pair< typename index_t::iterator, typename index_t::iterator >
-	_equal_range(const index_t& idx, const sp_link& l) const
+	template< class index_tag >
+	pair< typename index_tag::type::iterator, typename index_tag::type::iterator >
+	equal_range(const sp_link& l, index_tag tag) const
 	{
-		index_t& uc_idx = const_cast< index_t& >(idx);
+		//idx_traits< index_t > tag;
+		typedef typename index_tag::type index_t;
+		index_t& uc_idx = index_uc(tag);
 		if(l)
-			return uc_idx.equal_range(link2key(l, idx_traits< index_t >()));
+			return uc_idx.equal_range(link2key(l, tag));
 		else {
 			typedef typename index_t::iterator iterator;
 			pair< iterator, iterator > rng;
@@ -675,22 +640,35 @@ public:
 		}
 	}
 
-	pair< inodep_index_t::iterator, inodep_index_t::iterator > equal_range(const sp_link& l, ip_idx_tag) const
-	{
-		return _equal_range(ip_idx_, l);
-	}
-
-	pair< cust_index_t::iterator, cust_index_t::iterator > equal_range(const sp_link& l, cust_idx_tag) const
-	{
-		return _equal_range(cust_idx_, l);
-	}
-
 	pair< cust_index_t::iterator, cust_index_t::iterator > equal_range(const sort_traits::key_ptr& k) const {
-		return const_cast< cust_index_t& >(cust_idx_).equal_range(bs_leaf(node_key(k)));
+		return index_uc(cust_idx_tag()).equal_range(bs_leaf(node_key(k)));
+	}
+
+	//------------------ convert iterator to leaf
+	inline leaf_ptr iter2leaf(const name_index_t::const_iterator& i, name_idx_tag) const {
+		inodep_index_t::const_iterator p = peek_by_name(*i, ip_idx_tag());
+		if(p != ip_idx_.end())
+			return *p;
+		else return leaf_ptr::nil_el;
+	}
+
+	template< class index_t >
+	inline leaf_ptr iter2leaf(const typename index_t::const_iterator& i, idx_traits< index_t >) const {
+		return *i;
+	}
+
+	//------------------ convert leaf to iterator
+	inline name_index_t::iterator leaf2iter(const leaf_ptr& leaf, name_idx_tag tag) const {
+		return peek_by_name(leaf->link_, tag);
+	}
+
+	template< class index_t >
+	inline typename index_t::iterator leaf2iter(const leaf_ptr& leaf, idx_traits< index_t > tag) const {
+		return peek_by_name((typename index_t::key_type&)leaf, tag);
 	}
 
 	//-------------------------------- node_impl leafs operations ------------------------------------------------------
-	insert_ret_t add_link(const sp_link& l, bool force = false, bool emit_signal = true) {
+	insert_ret_t add_link(const sp_link& l, bool is_persistent, bool force = false, bool emit_signal = true) {
 		pair< name_index_t::iterator, bool > new_l;
 		//insert_ret_t res(si2ni< name_index_t >(leafs_.end()), ins_ok);
 		insert_ret_t res;
@@ -709,7 +687,7 @@ public:
 			if(force) {
 				//if we are forcing - erase existing link and insert new one
 				erase_leaf(new_l.first, name_idx_tag());
-				return add_link(l, false, emit_signal);
+				return add_link(l, is_persistent, false, emit_signal);
 			}
 			else {
 				res.second = ins_name_conflict;
@@ -720,7 +698,7 @@ public:
 		//if we are here then a really new link was inserted
 		//if(res.second == ins_ok) {
 		//insert into inodep index
-		bs_leaf& leaf = const_cast< bs_leaf& >(*ip_idx_.insert(bs_leaf(l)));
+		bs_leaf& leaf = const_cast< bs_leaf& >(*ip_idx_.insert(bs_leaf(l, is_persistent)));
 		node_key::key_state ks = node_key::key_bad;
 
 		//try to generate key and insert into custom_index
@@ -757,14 +735,6 @@ public:
 			index(tag).erase(pos);
 	}
 
-//	void erase_from_idx(const sp_link& l, cust_idx_tag) {
-//		_erase_from_idx(cust_idx_, l);
-//	}
-//
-//	void erase_from_idx(const sp_link& l, ip_idx_tag) {
-//		_erase_from_idx(ip_idx_, l);
-//	}
-
 	void erase_leaf(const name_index_t::iterator& pos, name_idx_tag tag) {
 		sp_link dying = iter2link(pos, tag);
 		erase_from_idx(dying, cust_idx_tag());
@@ -793,10 +763,11 @@ public:
 	bool rem_leaf(const typename index_tag::type::iterator& pos, index_tag tag, bool emit_signal = true) {
 		//idx_traits< index_t > tag;
 		if(pos == index(tag).end()) return false;
+		if(iter2leaf(pos, tag)->is_persistent()) return false;
+
 		//save link
 		sp_link dying = iter2link(pos, tag);
-		if(dying->is_persistent()) return false;
-
+		//if(dying->is_persistent()) return false;
 		//stop tracking leaf's object
 		dying->unsubscribe(bs_link::data_changed, lt_);
 
@@ -812,10 +783,8 @@ public:
 	//------------------------------------- remove link ----------------------------------------------------------------
 	ulong rem_link(const sp_link& l, name_idx_tag tag, bool = true) {
 		name_index_t::iterator p_victim = find(l, tag);
-		if(p_victim != leafs_.end() && !(*p_victim)->is_persistent()) {
-			rem_leaf(p_victim, tag);
+		if(rem_leaf(p_victim, tag))
 			return 1;
-		}
 		else return 0;
 	}
 
@@ -825,8 +794,6 @@ public:
 		ulong cnt = 0;
 		if(rng.first != idx.end()) {
 			for(typename index_t::iterator pos = rng.first; pos != rng.second; ++pos) {
-				//if(iter2link(pos, tag())->is_persistent()) continue;
-				//delete leaf
 				if(rem_leaf(pos, tag()))
 					++cnt;
 			}
@@ -849,14 +816,6 @@ public:
 		return erase_range(index(tag), rng);
 	}
 
-//	ulong rem_link(const sp_link& l, cust_idx_tag, bool match_name) {
-//		return _rem_link(cust_idx_, l, match_name);
-//	}
-//
-//	ulong rem_link(const sp_link& l, ip_idx_tag, bool match_name) {
-//		return _rem_link(ip_idx_, l, match_name);
-//	}
-
 	//remove all links pointing to the same object
 	ulong rem_link(const sp_obj& obj) {
 		return rem_link(new bs_link(obj, ""), ip_idx_tag(), false);
@@ -873,30 +832,19 @@ public:
 
 	//--------------------------------------- rename operation ---------------------------------------------------------
 	bool rename(const sp_link& l, const std::string& new_name) {
-		//new version of rename
 		string old_name = l->name();
 		//make dumb link with new name
 		sp_link dumb_new = bs_link::dumb_link(new_name);
 		//check for name conflict
 		if(leafs_.find(dumb_new) == leafs_.end()) {
-			// new algorithm
-			// find corresponding leaf
-			inodep_index_t::iterator pleaf = peek_by_name(l, ip_idx_tag());
 			// remove old link from name index
+			inodep_index_t::iterator pleaf = peek_by_name(l, ip_idx_tag());
 			leafs_.erase(l);
-			// rename link
-			l->rename(new_name);
 			// insert link with new name
+			l->rename(new_name);
 			leafs_.insert(l);
 			// update custom index
 			update_custom_idx(const_cast< ip_idx_tag::val_t& >(*pleaf));
-
-		//	//erase link with old name
-		//	rem_leaf(raw_find(leafs_, l), name_idx_tag(), false);
-		//	//rename link
-		//	l->rename(new_name);
-		//	//add link with new name
-		//	add_link(l, false, false);
 
 			//fire signal that leaf was renamed
 			if(self_)
@@ -949,7 +897,7 @@ public:
 			cust_index_t new_cidx;
 			try {
 				for(inodep_index_t::iterator p = ip_idx_.begin(), end = ip_idx_.end(); p != end; ++p)
-					new_cidx.insert(bs_leaf(p->link_, new_sort));
+					new_cidx.insert(bs_leaf(p->link_, new_sort, p->is_persistent()));
 			}
 			catch(const bs_exception&) {
 				return false;
@@ -968,7 +916,7 @@ public:
 
 		//cout << "changing cust_idx for leaf '" << l.link_->name() << "'" << endl;
 		//search for given leaf
-		cust_index_t::iterator pl = peek_by_name< cust_index_t >(l, l.link_);
+		cust_index_t::iterator pl = peek_by_name< cust_index_t >(l, cust_idx_tag());
 		if(pl != cust_idx_.end()) {
 			//we've found a leaf - rebuild key
 			cust_idx_.erase(pl);
@@ -983,10 +931,24 @@ public:
 		return false;
 	}
 
-	void set_persistent(const std::string& leaf_name, bool persistent) const {
-		name_index_t::iterator pl = find(leaf_name, name_idx_tag());
-		if(pl != leafs_.end())
-			pl->lock()->set_persistence(persistent);
+	// true if persistence was really set
+	template< class key_t >
+	bool set_persistence(const key_t& key, bool persistent) const {
+		inodep_index_t::iterator pl = find(key, ip_idx_tag());
+		if(pl != ip_idx_.end()) {
+			// we can remove constness and modify bs_leaf inplace, because we don't touch sorting key
+			const_cast< bs_leaf& >(*pl).set_persistence(persistent);
+			return true;
+		}
+		return false;
+	}
+
+	template< class key_t >
+	bool is_persistent(const key_t& key) const {
+		inodep_index_t::iterator pl = find(key, ip_idx_tag());
+		if(pl != ip_idx_.end())
+			return pl->is_persistent();
+		else return false;
 	}
 };
 
@@ -999,6 +961,7 @@ class bs_node::n_iterator::ni_impl {
 public:
 	struct iter_backend {
 		virtual const sp_link& link() const = 0;
+		virtual leaf_ptr leaf() const = 0;
 		virtual void operator++() = 0;
 		virtual void operator--() = 0;
 		virtual bool operator==(const iter_backend&) = 0;
@@ -1064,6 +1027,12 @@ public:
 			//return traits::link(pos_);
 		}
 
+		leaf_ptr leaf() const {
+			if(nimpl_)
+				return nimpl_->iter2leaf(pos_, tag_t());
+			else return leaf_ptr::nil_el;
+		}
+
 		void operator++() {
 			++pos_;
 		}
@@ -1074,16 +1043,15 @@ public:
 		bool operator==(const iter_backend& ib) {
 			if(ib.index_sn() == index_sn())
 				return (pos_ == static_cast< const iter_backend_impl& >(ib).pos_);
-			else if(!ib.is_end())
-				return link() == ib.link();
-			else if(is_end())
-				return true;
+			else if(!is_end() && !ib.is_end())
+				return leaf() == ib.leaf();
+			//else if(is_end())
+			//	return true;
 			else return false;
 		}
 
 		int index_sn() const {
 			return (int)tag_t::tag;
-			//return traits::index_sn();
 		}
 
 		void assign(const iter_backend& ib) {
@@ -1092,6 +1060,7 @@ public:
 				//assert(ib.nimpl());
 				return;
 			}
+			nimpl_ = ib.nimpl();
 
 			//check if lhs is of the same type
 			//const iter_backend_impl* p_bi = dynamic_cast< const iter_backend_impl* >(&ib);
@@ -1099,11 +1068,11 @@ public:
 			if(ib.index_sn() == index_sn())
 				pos_ = static_cast< const iter_backend_impl& >(ib).pos_;
 			else if(!ib.is_end())
-				pos_ = ib.nimpl()->find(ib.link(), tag_t());
+				pos_ = nimpl_->leaf2iter(ib.leaf(), tag_t());
+				//pos_ = nimpl_->find(ib.link(), tag_t());
 			else
 				pos_ = nimpl_->index(tag_t()).end();
 
-			nimpl_ = ib.nimpl();
 		}
 
 		bool is_end() const {
@@ -1112,8 +1081,8 @@ public:
 	};
 
 
-	//node_impl::cust_index_t::const_iterator pos_;
-	iter_backend* pos_;
+	//iter_backend* pos_;
+	st_smart_ptr< iter_backend > pos_;
 
 	//default ctor
 	//template< class index_t >
@@ -1189,6 +1158,10 @@ public:
 		return pos_->link();
 	}
 
+	leaf_ptr leaf() const {
+		return pos_->leaf();
+	}
+
 	index_type index_id() const {
 		return (index_type)pos_->index_sn();
 	}
@@ -1235,7 +1208,7 @@ bs_node::n_iterator::n_iterator(const n_iterator& src)
 {}
 
 bs_node::n_iterator::~n_iterator() {
-	if(pimpl_) delete pimpl_;
+	//if(pimpl_) delete pimpl_;
 }
 
 bs_node::n_iterator::reference bs_node::n_iterator::operator*() const {
@@ -1304,15 +1277,14 @@ bs_node::index_type bs_node::n_iterator::index_id() const {
 	return pimpl_->index_id();
 }
 
-//===================================== bs_node  implementation ========================================================
+bool bs_node::n_iterator::is_persistent() const {
+	return pimpl_->leaf()->is_persistent();
+}
 
-//bs_node::s_traits_ptr bs_node::sort_by_name() {
-//	return _srt_by_name::instance();
-//}
-//
-//bs_node::s_traits_ptr bs_node::sort_by_ptr() {
-//	return _srt_by_ptr::instance();
-//}
+void bs_node::n_iterator::set_persistence(bool persistent) const {
+	pimpl_->leaf()->set_persistence(persistent);
+}
+//===================================== bs_node  implementation ========================================================
 
 //destructor
 bs_node::~bs_node()
@@ -1355,7 +1327,7 @@ bs_node::bs_node(const s_traits_ptr& srt)
 
 blue_sky::sp_node bs_node::create_node(const s_traits_ptr& srt)
 {
-	lsmart_ptr< smart_ptr< str_data_table > > npar(BS_KERNEL.create_object(str_data_table::bs_type()));
+	lsmart_ptr< smart_ptr< str_data_table > > npar(BS_KERNEL.create_object(str_data_table::bs_type(), true));
 	//smart_ptr< str_data_table > sp_dt = give_kernel::Instance().create_object(str_data_table::bs_type());
 	//lsmart_ptr< smart_ptr< str_data_table > > npar(sp_dt);
 	//lsmart_ptr< kernel::str_dt_ptr > npar(give_kernel::Instance().pert_str_dt(bs_type()));
@@ -1448,13 +1420,13 @@ bs_node::n_range bs_node::equal_range(const sp_link& l, index_type idx_t) const 
 	}
 }
 
-bs_node::insert_ret_t bs_node::insert(const sp_obj& obj, const std::string& name, bool force) const {
-	insert_ret_t res = pimpl_.lock()->add_link(bs_link::create(obj, name), force);
+bs_node::insert_ret_t bs_node::insert(const sp_obj& obj, const std::string& name, bool is_persistent) const {
+	insert_ret_t res = pimpl_.lock()->add_link(bs_link::create(obj, name), is_persistent, false);
 	return res;
 }
 
-bs_node::insert_ret_t bs_node::insert(const sp_link& l, bool force) const {
-	insert_ret_t res = pimpl_.lock()->add_link(l, force);
+bs_node::insert_ret_t bs_node::insert(const sp_link& l, bool is_persistent) const {
+	insert_ret_t res = pimpl_.lock()->add_link(l, is_persistent, false);
 	return res;
 }
 
@@ -1525,12 +1497,20 @@ void bs_node::stop_leafs_tracking() const {
 	pimpl_->stop_leafs_tracking();
 }
 
-void bs_node::set_persistent(const std::string& leaf_name, bool persistent) const {
-	pimpl_->set_persistent(leaf_name, persistent);
+bool bs_node::set_persistence(const std::string& link_name, bool persistent) const {
+	return pimpl_->set_persistence(link_name, persistent);
 }
 
-void bs_node::set_persistent(const n_iterator& pos, bool persistent) const {
-	pimpl_->set_persistent(pos->name(), persistent);
+bool bs_node::set_persistence(const sp_link& l, bool persistent) const {
+	return pimpl_->set_persistence(l, persistent);
+}
+
+bool bs_node::is_persistent(const std::string& link_name) const {
+	return pimpl_->is_persistent(link_name);
+}
+
+bool bs_node::is_persistent(const sp_link& l) const {
+	return pimpl_->is_persistent(l);
 }
 
 //------------------------- sort_traits implementation -----------------------------------------------------------------
@@ -1555,3 +1535,4 @@ BLUE_SKY_TYPE_STD_CREATE(bs_node);
 BLUE_SKY_TYPE_IMPL_SHORT(bs_node, objbase, "The node of BlueSky data storage");
 
 }	//end of namespace blue_sky
+
