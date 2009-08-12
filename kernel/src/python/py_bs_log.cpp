@@ -16,6 +16,7 @@
 #include "py_bs_log.h"
 #include "py_bs_exports.h"
 #include "py_bs_object_base.h"
+#include "bs_kernel.h"
 
 #include <bs_exception.h>
 #include <boost/python/call_method.hpp>
@@ -34,7 +35,7 @@ BS_API const sp_channel &bs_end2(const sp_channel &r) {
 
 py_bs_log::py_bs_log()
 	: //py_bs_messaging(sp_log(new bs_log(give_log::Instance())))
-	l(give_log::Instance())
+	l(BS_KERNEL.get_log ())
 {}
 
 //py_bs_channel *py_bs_log::get(const std::string &name_) const {
@@ -104,7 +105,7 @@ void py_bs_channel::set_auto_newline(bool nl = false) {
 	auto_newline = nl;
 }
 
-py_thread_log::py_thread_log() : l(give_tlog::Instance()) {}
+py_thread_log::py_thread_log() : l(BS_KERNEL.get_tlog ()) {}
 
 py_bs_channel py_thread_log::add_log_channel(const std::string &name) {
 	return py_bs_channel(l.add_log_channel(name));

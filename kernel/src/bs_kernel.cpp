@@ -26,6 +26,7 @@
 #include "bs_prop_base.h"
 #include "bs_tree.h"
 #include "bs_report.h"
+#include "bs_log_scribers.h"
 
 #include <stdio.h>
 //#include <iostream>
@@ -82,6 +83,79 @@ namespace std {
 		return (lhs.name_ < rhs.name_);
 	}
 }
+
+//
+namespace blue_sky {
+
+  struct kernel::bs_kernel_log : public bs_log
+  {
+    bs_kernel_log ()
+    {
+    	this->add_channel (sp_channel (new bs_channel (OUT_LOG)));
+	    this->add_channel (sp_channel (new bs_channel (ERR_LOG)));
+
+	    char *c_dir = NULL;
+	    if (!(c_dir = getenv("BS_KERNEL_DIR")))
+		    c_dir = (char *)".";
+
+	    this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
+	    this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
+	    this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
+	    this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/errors.log"), ios::out|ios::app)));
+
+	    this->get_locked (OUT_LOG) << output_time;
+	    this->get_locked (ERR_LOG) << output_time;
+    }
+
+    bs_log &
+    get_log ()
+    {
+      return *this;
+    }
+
+    void
+    register_signals ()
+    {
+      this->add_signal (BS_SIGNAL_RANGE (bs_log));
+    }
+  };
+
+  struct kernel::thread_kernel_log : public thread_log
+  {
+    thread_kernel_log ()
+    {
+      //BSOUT << "Thread log init with address " << &j << bs_end;
+    }
+
+    thread_log &
+    get_log ()
+    {
+      return *this;
+    }
+
+    void
+    register_signals ()
+    {
+      //this->add_signal (BS_SIGNAL_RANGE (thread_log));
+    }
+  };
+
+  bs_log &
+  kernel::get_log ()
+  {
+    BS_ASSERT (bs_log_);
+    return bs_log_->get_log ();
+  }
+
+  thread_log &
+  kernel::get_tlog ()
+  {
+    BS_ASSERT (thread_log_);
+    return thread_log_->get_log ();
+  }
+
+} // blue_sky namespace
+
 
 //all implementation contained in blue_sky namespace
 namespace blue_sky {
@@ -1165,7 +1239,9 @@ void kernel::test() const
 }
 
 kernel::kernel()
-	: pimpl_(new kernel_impl, kernel_impl::guard_)
+	: bs_log_ (new bs_kernel_log),
+  thread_log_ (new thread_kernel_log),
+  pimpl_(new kernel_impl, kernel_impl::guard_)
 {
 	//initialize logs
 	//log::Instance().init_logs();
@@ -1182,6 +1258,9 @@ kernel::~kernel()
 // }
 
 void kernel::init() {
+  bs_log_->register_signals ();
+  thread_log_->register_signals ();
+
 	pimpl_.lock()->init();
 }
 

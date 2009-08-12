@@ -8,6 +8,7 @@
 #include "bs_exception.h"
 #include "bs_assert.h"
 #include "bs_report.h"
+#include "bs_kernel.h"
 
 // to avoid DUMB linker error we have to include bs_object_base.h
 #include "bs_object_base.h"

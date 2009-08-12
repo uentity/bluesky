@@ -3,6 +3,7 @@
 #include "bs_exception.h"
 #include "bs_tree.h"
 #include "bs_misc.h"
+#include "bs_kernel.h"
 
 #include <boost/regex.hpp>
 

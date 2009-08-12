@@ -199,64 +199,64 @@ namespace bs_private {
 
 
 
-	namespace bs_private {
+	//namespace bs_private {
 
-		struct BS_API log_wrapper {
-			log_wrapper()	: ref_fun_(&log_wrapper::initial_log_getter) {
-				//explicitly increment reference counter
-				j.add_ref();
-			}
+	//	struct BS_API log_wrapper {
+	//		log_wrapper()	: ref_fun_(&log_wrapper::initial_log_getter) {
+	//			//explicitly increment reference counter
+	//			j.add_ref();
+	//		}
 
-			~log_wrapper() {
-			}
+	//		~log_wrapper() {
+	//		}
 
-			bs_log &usual_log_getter() {
-				return j;
-			}
+	//		bs_log &usual_log_getter() {
+	//			return j;
+	//		}
 
-			bs_log &initial_log_getter() {
-				ref_fun_ = &log_wrapper::usual_log_getter;
+	//		bs_log &initial_log_getter() {
+	//			ref_fun_ = &log_wrapper::usual_log_getter;
 
-				init_loging();
-				return j;
-			}
+	//			init_loging();
+	//			return j;
+	//		}
 
-			void init_loging();
+	//		void init_loging();
 
-			bs_log& j_ref() {
-				return (this->*ref_fun_)();
-			}
+	//		bs_log& j_ref() {
+	//			return (this->*ref_fun_)();
+	//		}
 
-			bs_log j;
-			bs_log& (log_wrapper::*ref_fun_)();
-		};
+	//		bs_log j;
+	//		bs_log& (log_wrapper::*ref_fun_)();
+	//	};
 
-		struct BS_API thread_log_wrapper {
-			thread_log_wrapper() : ref_fun_(&thread_log_wrapper::initial_log_getter) {
-			}
+	//	struct BS_API thread_log_wrapper {
+	//		thread_log_wrapper() : ref_fun_(&thread_log_wrapper::initial_log_getter) {
+	//		}
 
-			thread_log &usual_log_getter() {
-				return j;
-			}
+	//		thread_log &usual_log_getter() {
+	//			return j;
+	//		}
 
-			thread_log &initial_log_getter() {
-				ref_fun_ = &thread_log_wrapper::usual_log_getter;
+	//		thread_log &initial_log_getter() {
+	//			ref_fun_ = &thread_log_wrapper::usual_log_getter;
 
-				init_loging();
-				return j;
-			}
+	//			init_loging();
+	//			return j;
+	//		}
 
-			void init_loging();
+	//		void init_loging();
 
-			thread_log& j_ref() {
-				return (this->*ref_fun_)();
-			}
+	//		thread_log& j_ref() {
+	//			return (this->*ref_fun_)();
+	//		}
 
-			thread_log j;
-			thread_log& (thread_log_wrapper::*ref_fun_)();
-		};
+	//		thread_log j;
+	//		thread_log& (thread_log_wrapper::*ref_fun_)();
+	//	};
 
-	}
+	//}
 
 	sp_channel bs_log::add_channel(const sp_channel &dest) {
     BS_ERROR (dest, "bs_log::add_channel: dest is null");
@@ -305,39 +305,39 @@ namespace bs_private {
 	typedef SingletonHolder< bs_private::log_wrapper, CreateUsingNew, PhoenixSingleton > log_holder;
 	typedef SingletonHolder< bs_private::thread_log_wrapper, CreateUsingNew, PhoenixSingleton > thread_log_holder;
 
-	template< > BS_API bs_log& singleton< bs_log >::Instance() {
-		return log_holder::Instance().j_ref();
-	}
+	//template< > BS_API bs_log& singleton< bs_log >::Instance() {
+	//	return log_holder::Instance().j_ref();
+	//}
 
-	template< > BS_API thread_log& singleton< thread_log >::Instance() {
-		return thread_log_holder::Instance().j_ref();
-	}
+	//template< > BS_API thread_log& singleton< thread_log >::Instance() {
+	//	return thread_log_holder::Instance().j_ref();
+	//}
 
 	void bs_channel::dispose() const {
 		delete this;
 	}
 
-	void bs_private::log_wrapper::init_loging() {
-		bs_log &l = give_log::Instance();
-		l.add_channel(sp_channel(new bs_channel(OUT_LOG)));
-		l.add_channel(sp_channel(new bs_channel(ERR_LOG)));
+	//void bs_private::log_wrapper::init_loging() {
+	//	bs_log &l = give_log::Instance();
+	//	l.add_channel(sp_channel(new bs_channel(OUT_LOG)));
+	//	l.add_channel(sp_channel(new bs_channel(ERR_LOG)));
 
-		char *c_dir = NULL;
-		if (!(c_dir = getenv("BS_KERNEL_DIR")))
-			c_dir = (char *)".";
+	//	char *c_dir = NULL;
+	//	if (!(c_dir = getenv("BS_KERNEL_DIR")))
+	//		c_dir = (char *)".";
 
-		BSOUT.get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-		BSOUT.get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
-		BSERROR.get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-		BSERROR.get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/errors.log"), ios::out|ios::app)));
+	//	BSOUT.get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
+	//	BSOUT.get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
+	//	BSERROR.get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
+	//	BSERROR.get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/errors.log"), ios::out|ios::app)));
 
-		BSOUT << output_time;
-		BSERROR << output_time;
-	}
+	//	BSOUT << output_time;
+	//	BSERROR << output_time;
+	//}
 
-	void bs_private::thread_log_wrapper::init_loging() {
-		BSOUT << "Thread log init with address " << &j << bs_end;
-	}
+	//void bs_private::thread_log_wrapper::init_loging() {
+	//	BSOUT << "Thread log init with address " << &j << bs_end;
+	//}
 
 	sp_channel thread_log::add_log_channel(const std::string &name) {
 		unsigned long int thread = bs_private::get_thread_id();
@@ -493,7 +493,7 @@ namespace bs_private {
 	{}*/
 
 	bs_log::bs_log()
-		: bs_refcounter(), bs_messaging(BS_SIGNAL_RANGE(bs_log))
+		: bs_refcounter(), bs_messaging () //(BS_SIGNAL_RANGE(bs_log))
 	{}
 
 	//bs_log::bs_log(const bs_log &src)

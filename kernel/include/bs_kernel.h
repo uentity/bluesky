@@ -26,6 +26,7 @@
 #include "bs_object_base.h"
 #include "bs_abstract_storage.h"
 #include "bs_link.h"
+#include "bs_report.h"
 #include "memory_manager.h"
 #include "throw_exception.h"
 
@@ -166,6 +167,12 @@ namespace blue_sky {
       return memory_manager_;
     }
 
+    bs_log &
+    get_log ();
+
+    thread_log &
+    get_tlog ();
+
 	private:
 		//! \brief Constructor of kernel
 		kernel();
@@ -174,12 +181,20 @@ namespace blue_sky {
 		//! \brief Destructor.
 		~kernel();
 
-		//! PIMPL for kernel
+
+    // concrete kernel's log impl
+    struct bs_kernel_log;
+    struct thread_kernel_log;
+
+    //! PIMPL for kernel
 		class kernel_impl;
 		typedef mt_ptr< kernel_impl > pimpl_t;
-		pimpl_t pimpl_;
 
-    memory_manager memory_manager_;
+    // don't change line order. never.
+    boost::shared_ptr <bs_kernel_log>         bs_log_;
+    boost::shared_ptr <thread_kernel_log>     thread_log_;
+		pimpl_t                                   pimpl_;
+    memory_manager                            memory_manager_;
 
 		//kernel initialization routine
 		void init();
