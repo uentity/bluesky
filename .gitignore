@@ -13,3 +13,4 @@ scons_vars.custom
 *.idb
 *.pdb
 plugins/bs_bos_core
+*.log
