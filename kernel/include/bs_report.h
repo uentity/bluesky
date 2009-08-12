@@ -271,8 +271,8 @@ namespace blue_sky {
 
 }
 
-#define BSOUT   BS_KERNEL.get_log ().get_locked (OUT_LOG)
-#define BSERR   BS_KERNEL.get_log ().get_locked (ERR_LOG)
+#define BSOUT   kernel::get_log ().get_locked (OUT_LOG)
+#define BSERR   kernel::get_log ().get_locked (ERR_LOG)
 
 //! deprecated
 #define BSERROR BS_KERNEL.get_log ().get_locked (ERR_LOG)

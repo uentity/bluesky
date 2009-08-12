@@ -58,6 +58,8 @@
 //Loki
 //#include "loki/AssocVector.h"
 //#include "loki/Factory.h"
+#include "loki/Singleton.h"
+
 
 using namespace std;
 using namespace boost;
@@ -87,71 +89,113 @@ namespace std {
 //
 namespace blue_sky {
 
-  struct kernel::bs_kernel_log : public bs_log
+  namespace detail {
+
+    struct bs_log_wrapper : public bs_log
+    {
+      bs_log_wrapper ()
+      {
+        if (!kernel_dead ())
+          {
+            register_signals ();
+          }
+
+    	  this->add_channel (sp_channel (new bs_channel (OUT_LOG)));
+	      this->add_channel (sp_channel (new bs_channel (ERR_LOG)));
+
+	      char *c_dir = NULL;
+	      if (!(c_dir = getenv("BS_KERNEL_DIR")))
+		      c_dir = (char *)".";
+
+	      this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
+	      this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
+	      this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
+	      this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/errors.log"), ios::out|ios::app)));
+
+	      this->get_locked (OUT_LOG) << output_time;
+	      this->get_locked (ERR_LOG) << output_time;
+      }
+
+      static bool &
+      kernel_dead ()
+      {
+        static bool kernel_dead_ = false;
+
+        return kernel_dead_;
+      }
+
+			bs_log & 
+      get_log () 
+      {
+				return *this;
+			}
+
+      void
+      register_signals ()
+      {
+        this->add_signal (BS_SIGNAL_RANGE (bs_log));
+      }
+		};
+
+    struct thread_log_wrapper : public thread_log
+    {
+      thread_log_wrapper ()
+      {
+      }
+
+      thread_log &
+      get_log ()
+      {
+        return *this;
+      }
+
+      void
+      register_signals ()
+      {
+      }
+
+      static bool &
+      kernel_dead ()
+      {
+        static bool kernel_dead_ = false;
+
+        return kernel_dead_;
+      }
+    };
+
+    using namespace Loki;
+
+    typedef SingletonHolder < bs_log_wrapper, CreateUsingNew, PhoenixSingleton >      bs_log_holder;
+    typedef SingletonHolder < thread_log_wrapper, CreateUsingNew, PhoenixSingleton >  thread_log_holder;
+  }
+
+  typedef singleton <bs_log>      bs_log_singleton;
+  typedef singleton <thread_log>  thread_log_singleton;
+
+  template <> 
+  bs_log & 
+  singleton <bs_log>::Instance() 
   {
-    bs_kernel_log ()
-    {
-    	this->add_channel (sp_channel (new bs_channel (OUT_LOG)));
-	    this->add_channel (sp_channel (new bs_channel (ERR_LOG)));
+    return detail::bs_log_holder::Instance().get_log ();
+  }
 
-	    char *c_dir = NULL;
-	    if (!(c_dir = getenv("BS_KERNEL_DIR")))
-		    c_dir = (char *)".";
-
-	    this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-	    this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
-	    this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-	    this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/errors.log"), ios::out|ios::app)));
-
-	    this->get_locked (OUT_LOG) << output_time;
-	    this->get_locked (ERR_LOG) << output_time;
-    }
-
-    bs_log &
-    get_log ()
-    {
-      return *this;
-    }
-
-    void
-    register_signals ()
-    {
-      this->add_signal (BS_SIGNAL_RANGE (bs_log));
-    }
-  };
-
-  struct kernel::thread_kernel_log : public thread_log
+  template <>
+  thread_log &
+  singleton <thread_log>::Instance ()
   {
-    thread_kernel_log ()
-    {
-      //BSOUT << "Thread log init with address " << &j << bs_end;
-    }
-
-    thread_log &
-    get_log ()
-    {
-      return *this;
-    }
-
-    void
-    register_signals ()
-    {
-      //this->add_signal (BS_SIGNAL_RANGE (thread_log));
-    }
-  };
+    return detail::thread_log_holder::Instance ().get_log ();
+  }
 
   bs_log &
   kernel::get_log ()
   {
-    BS_ASSERT (bs_log_);
-    return bs_log_->get_log ();
+    return bs_log_singleton::Instance ();
   }
 
   thread_log &
   kernel::get_tlog ()
   {
-    BS_ASSERT (thread_log_);
-    return thread_log_->get_log ();
+    return thread_log_singleton::Instance ();
   }
 
 } // blue_sky namespace
@@ -1239,9 +1283,7 @@ void kernel::test() const
 }
 
 kernel::kernel()
-	: bs_log_ (new bs_kernel_log),
-  thread_log_ (new thread_kernel_log),
-  pimpl_(new kernel_impl, kernel_impl::guard_)
+	: pimpl_(new kernel_impl, kernel_impl::guard_)
 {
 	//initialize logs
 	//log::Instance().init_logs();
@@ -1250,16 +1292,22 @@ kernel::kernel()
 kernel::~kernel()
 {
 	UnloadPlugins();
+
+  // WTF?? 
 	if(pimpl_.get()) delete pimpl_.get();
+
+  detail::bs_log_wrapper::kernel_dead () = true;
+  detail::thread_log_wrapper::kernel_dead () = true;
 }
 
 // kernel::str_dt_ptr kernel::global_dt() const {
 // 	return str_dt_ptr(&pimpl_->data_tbl_, pimpl_->data_tbl_.mutex());
 // }
 
-void kernel::init() {
-  bs_log_->register_signals ();
-  thread_log_->register_signals ();
+void kernel::init() 
+{
+  //detail::bs_log_holder::Instance ().register_signals ();
+  //detail::thread_log_holder::Instance ().register_signals ();
 
 	pimpl_.lock()->init();
 }

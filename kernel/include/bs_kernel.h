@@ -167,10 +167,10 @@ namespace blue_sky {
       return memory_manager_;
     }
 
-    bs_log &
+    static bs_log &
     get_log ();
 
-    thread_log &
+    static thread_log &
     get_tlog ();
 
 	private:
@@ -182,19 +182,13 @@ namespace blue_sky {
 		~kernel();
 
 
-    // concrete kernel's log impl
-    struct bs_kernel_log;
-    struct thread_kernel_log;
-
     //! PIMPL for kernel
 		class kernel_impl;
 		typedef mt_ptr< kernel_impl > pimpl_t;
 
     // don't change line order. never.
-    boost::shared_ptr <bs_kernel_log>         bs_log_;
-    boost::shared_ptr <thread_kernel_log>     thread_log_;
-		pimpl_t                                   pimpl_;
-    memory_manager                            memory_manager_;
+		pimpl_t         pimpl_;
+    memory_manager  memory_manager_;
 
 		//kernel initialization routine
 		void init();
