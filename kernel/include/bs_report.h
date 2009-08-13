@@ -67,9 +67,9 @@ namespace blue_sky {
 			return sp_channel(this);
 		}
 
-		bs_channel &add_section(int);
+		bs_channel &add_section(size_t section, size_t level);
 		bs_channel &rem_section(int);
-		bs_channel &set_priority(priority);
+		bs_channel &set_priority(const priority &);
 		void set_can_output(bool);
 
 		sp_channel operator<<(priority);
@@ -154,6 +154,8 @@ namespace blue_sky {
         }
     }
 
+    locked_channel &
+    operator () (size_t section, size_t level);
 
     template <typename T>
     locked_channel &operator << (const T &what)
@@ -170,6 +172,13 @@ namespace blue_sky {
     get_channel () const
     {
       return ch_;
+    }
+
+    locked_channel &
+    set_priority (size_t section, size_t level)
+    {
+      ch_->set_priority (priority (section, level));
+      return *this;
     }
 
   private:

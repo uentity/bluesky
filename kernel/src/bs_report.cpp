@@ -156,8 +156,15 @@ namespace bs_private {
 			wait_end = true;
 	}
 
-	bs_channel &bs_channel::add_section(int sect) {
-		msects[sect];
+	bs_channel &
+  bs_channel::add_section(size_t section, size_t level) 
+  {
+    if (msects.find (section) != msects.end ())
+      {
+        bs_throw_exception ("Section already added");
+      }
+
+    msects.insert (std::make_pair (section, level));
 		return *this;
 	}
 
@@ -168,10 +175,13 @@ namespace bs_private {
 		return *this;
 	}
 
-	bs_channel &bs_channel::set_priority(priority tp) {
+	bs_channel &
+  bs_channel::set_priority (const priority &tp) 
+  {
 		msects[tp.sect] = tp.prior;
 		return *this;
 	}
+
 	bool bs_channel::outputs_time() const { return output_time; }
 	bool bs_channel::waits_end() const { return wait_end; }
 
@@ -486,6 +496,30 @@ namespace bs_private {
 
 		return *this;
 	}
+
+  locked_channel &
+  locked_channel::operator () (size_t section, size_t level)
+  {
+    bs_channel::msect_const_iterator iter = ch_->msects.find (section);
+    if (iter != ch_->msects.end ())
+      {
+        if (iter->second < level || iter->second == -1)
+          {
+            ch_->can_output = false;
+          }
+        else
+          {
+            ch_->can_output = true;
+          }
+      }
+    else
+      {
+        ch_->can_output = false;
+      }
+
+    return *this;
+  }
+
 
 	//ctors
 	/*bs_log::bs_log(const bs_log& src)
