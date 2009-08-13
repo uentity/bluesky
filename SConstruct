@@ -141,6 +141,9 @@ custom_vars.Add(PathVariable('plugins_prefix', 'Point where to install BlueSky p
 	PathVariable.PathAccept));
 
 custom_vars.Add('python_name', 'Put full Python interpreter name with version here, ex. python2.5', 'python2.5');
+# add variable to decide whether to build with python support
+custom_vars.Add('py', 'Set to 1 to build with Python support', '0');
+
 custom_vars.Add(BoolVariable('auto_find_ss', 'Turn on automatic SConscripts search?', 0));
 
 # search for platform-oriented scripts

@@ -1737,7 +1737,7 @@ bool inline operator <(const T* lp, const bs_private::smart_ptr_base< R >& rp) {
 	return (lp < rp.get());
 }
 
-#ifdef BSPY_EXPORTING
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
 // HACK! allow boost::python to obtain pure pointer via forced const_cast
 // NOTE! this will break all locking rules in Python
 // TODO: replace this with better solution

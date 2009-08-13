@@ -32,6 +32,13 @@ class files :
 
         self.sources = [os.path.join ("src", os.path.split (x)[1]) for x in sources]
 
+def bs_common_defines(custom_env) :
+	custom_env.AppendUnique(CPPDEFINES = ["BS_EXPORTING_PLUGIN"]);
+	if custom_env['py'] == '1' :
+		custom_env.AppendUnique(CPPDEFINES = ["BSPY_EXPORTING_PLUGIN"]);
+
 Export ("list_suffix")
 Export ("add_suffix")
 Export ("files")
+Export ("bs_common_defines")
+

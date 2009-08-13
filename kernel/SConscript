@@ -57,13 +57,6 @@ Import('*');
 lib_name = 'blue_sky';
 tar_name = 'kernel';
 
-# add variable to decide whether to build with python support
-if 'py' not in custom_vars.keys() :
-	custom_vars.Add('py', 'Set to 1 to build with Python support', '0');
-	custom_vars.Update(custom_env);
-	# export changes -- seems that this step isn't needed (?)
-	#Export('custom_vars', 'custom_env');
-
 # setup default build environment
 base_env = custom_env.Clone();
 base_env.AppendUnique(
