@@ -340,6 +340,8 @@ struct dummy_changer {
 		for(long i = 0; i < how_many_; ++i) {
 			//select random dummy object
 			bs_objinst_holder::const_iterator p_inst = dummy::bs_inst_begin();
+			if(p_inst == dummy::bs_inst_end()) continue;
+
 			std::advance(p_inst, randUB(dummy::bs_inst_cnt()));
 
 			//randomly change dummy's internal value
