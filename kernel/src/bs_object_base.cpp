@@ -65,26 +65,25 @@ BS_COMMON_IMPL(objbase)
  * \brief Default constructor
  */
 objbase::objbase(bs_type_ctor_param)
-	: bs_refcounter(), bs_messaging(BS_SIGNAL_RANGE(objbase)) //, inode_(new blue_sky::bs_inode(this))
+	: bs_refcounter(), bs_messaging(BS_SIGNAL_RANGE(objbase)), inode_(NULL)
 {
 	add_ref();
 }
 
 objbase::objbase(const bs_messaging::sig_range_t& sr)
-	: bs_refcounter(), bs_messaging(sr) //, inode_(new blue_sky::bs_inode(this))
+	: bs_refcounter(), bs_messaging(sr), inode_(NULL)
 {
 	add_ref();
 	add_signal(BS_SIGNAL_RANGE(objbase));
 }
 
 objbase::objbase(const objbase& obj)
-	: bs_refcounter(), bs_messaging(obj) //, inode_(new blue_sky::bs_inode(this))
+	: bs_refcounter(), bs_messaging(obj), inode_(NULL)
 {
 	add_ref();
 }
 
 void objbase::swap(objbase& rhs) {
-	//swap signals
 	bs_messaging::swap(rhs);
 	std::swap(inode_, rhs.inode_);
 }
@@ -102,9 +101,6 @@ void objbase::swap(objbase& rhs) {
 //	}
 //}
 
-/*!
- * \brief Destructor
- */
 objbase::~objbase()
 {}
 
@@ -112,7 +108,8 @@ void objbase::dispose() const {
 	delete this;
 }
 
-smart_ptr< bs_inode, true > objbase::inode() const {
+//smart_ptr< bs_inode, true > objbase::inode() const {
+const bs_inode* objbase::inode() const {
 	return inode_;
 }
 

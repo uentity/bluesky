@@ -1503,7 +1503,7 @@ public:
 
 	/*!
 	\brief Templated Constructor from simple pointer.
-	\param lp - any s5imple pointer. Default casting policy is used to determine if R can be casted to T
+	\param lp - any simple pointer. Default casting policy is used to determine if R can be casted to T
 	*/
 	template< class R >
 	/*explicit */smart_ptr(R* lp) : base_t(lp)
@@ -1593,7 +1593,7 @@ public:
 	}
 
 	/*!
-	\brief Assignment from smart_ptr of any blue-sky using default casting policy
+	\brief Assignment from smart_ptr of any blue-sky type using default casting policy
 	*/
 	template< class R >
 	this_t& operator=(const smart_ptr< R, true >& lp) throw() {

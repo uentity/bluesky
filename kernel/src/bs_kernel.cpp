@@ -637,8 +637,8 @@ public:
 
 		//if object is dangling, ie it's inode has zero hard links,
 		//delete the inode (remove reference to obj)
-		if(obj->inode_ && obj->inode_->links_count() == 0)
-			obj.lock()->inode_.release();
+		//if(obj->inode_ && obj->inode_->links_count() == 0)
+		//	obj.lock()->inode_.release();
 
 		//go through chain of type_descriptors up to objbase
 		type_descriptor td = obj->bs_resolve_type();

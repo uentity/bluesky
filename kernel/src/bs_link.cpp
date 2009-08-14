@@ -90,6 +90,8 @@ time_t bs_inode::mtime() const {
 //}
 
 void bs_inode::dispose() const {
+	// reset weak pointer to this in objbase
+	if(obj_) obj_.lock()->inode_ = NULL;
 	delete this;
 }
 
@@ -163,10 +165,6 @@ public:
 		name_ = new_name;
 	}
 
-	//virtual bool is_persistent() const {
-	//	return is_persistent_;
-	//}
-
 	virtual void listen2obj() {
 		if(!is_listening_ && inode() && self_) {
 			if(!ol_) ol_ = new obj_listener(self_);
@@ -235,25 +233,27 @@ private:
 public:
 	//member variables
 	sp_inode inode_;
-//	sp_slot ol_;
-//	bool is_listening_;
 
 	hl_impl(const string& name, const sp_obj& obj = NULL)
 		: link_impl(name) //, is_listening_(false)
 	{
 		if(obj) {
 			//if object doesn't have an inode then create one
-			if(!obj->inode_)
-				obj.lock()->inode_ = new blue_sky::bs_inode(obj);
-
-			set_inode(obj->inode());
+			if(!obj->inode_) {
+				inode_ = new blue_sky::bs_inode(obj);
+				obj.lock()->inode_ = inode_;
+				//obj.lock()->inode_ = new blue_sky::bs_inode(obj);
+			}
+			else
+				inode_ = obj->inode();
+			//set_inode(obj->inode());
 		}
 	}
 
 	hl_impl(const hl_impl& impl)
-		: link_impl(impl.name()) //, is_listening_(false)
+		: link_impl(impl.name()), inode_(impl.inode_) //, is_listening_(false)
 	{
-		set_inode(impl.inode());
+		//set_inode(impl.inode());
 	}
 
 	void set_owner(const bs_link* l, bool start_listening = false) {
@@ -267,38 +267,23 @@ public:
 		return inode_;
 	}
 
-	void set_inode(const sp_inode& i) {
-		//bool listen_status = is_listening_;
-		stop_listening();
-		//switch inode
-		if(!i) {
-			//reset pimpl
-			inode_ = NULL;
-		//	return;
-		}
-		else {
-			inode_ = i;
-			//subscribe to object's unlock event
-			//connect_node_handler(node_hr_);
-		}
-		//if we were listening - start listening for new object
-		//if(listen_status && ol_)
-		//	listen2obj(((obj_listener*)ol_.get())->l_);
-	}
+	//void set_inode(const sp_inode& i) {
+	//	//bool listen_status = is_listening_;
+	//	stop_listening();
+	//	//switch inode
+	//	if(!i)
+	//		inode_ = NULL;
+	//	else
+	//		inode_ = i;
+	//}
 
 	~hl_impl() {}
-
-	/*	sp_node root() const {
-	return root_->node();
-	}*/
 };
 
 //============================ alias implementation ====================================================================
 class bs_alias::sl_impl : public link_impl {
 public:
 	sp_link link_;
-//	sp_slot ol_;
-//	bool is_listening_;
 
 	sl_impl(const sp_link& link, const string& name)
 		: link_impl(name), link_(link)
@@ -324,9 +309,6 @@ public:
 		else {
 			link_ = l;
 		}
-		//if we were listening - start listening for new object
-		//if(listen_status && ol_)
-		//	listen2obj(((obj_listener*)ol_.get())->l_);
 	}
 
 	~sl_impl() {};
@@ -391,9 +373,6 @@ bs_link::bs_link(bs_type_ctor_param param)
 		if(!obj)
 			throw bs_exception("BlueSky kernel", "NULL object pointer passed to blue_sky::link constructor");
 		string name = sp_dt->extract_value< std::string >("name");
-		//if object doesn't have an inode then create one
-		if(!obj->inode_)
-			obj.lock()->inode_ = new blue_sky::bs_inode(obj);
 		//create default implementation
 		pimpl_ = new hl_impl(name, obj);
 		//connect this link to corresponding inode
@@ -418,9 +397,6 @@ bs_link::bs_link(const sp_obj& obj, const std::string& name)
 	  //pimpl_(new hl_impl(name, is_persistent, obj), mutex(), bs_static_cast())
 {
 	if(!obj) throw bs_exception("BlueSky kernel", "NULL object pointer passed to blue_sky::link constructor");
-	//if object doesn't have an inode then create one
-	if(!obj->inode_)
-		obj.lock()->inode_ = new blue_sky::bs_inode(obj);
 	//create default implementation
 	pimpl_ = new hl_impl(name, obj);
 
@@ -435,21 +411,6 @@ bs_link::bs_link(const link_impl* impl)
 {
 	pimpl_.lock()->set_owner(this);
 }
-
-//protected copy ctor
-//bs_link::bs_link(const blue_sky::bs_link &l)
-//: pimpl_(new hl_impl(*l.pimpl_), mutex(), bs_static_cast())
-//{}
-
-//void bs_link::swap(bs_link& l) const {
-//	pimpl_.lock()->swap(l.pimpl_);
-//}
-
-//bs_link& bs_link::operator=(const bs_link& l) {
-//	//assignment through swap
-//	bs_link(l).swap(*this);
-//	return *this;
-//}
 
 //destructor
 bs_link::~bs_link() {
