@@ -75,6 +75,14 @@ using namespace boost::filesystem;
 //export specific BlueSky kernel's plugin_descriptor
 BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", "1.0RC4", "Plugin tag for BlueSky kernel", "", "bs")
 
+// define default value for unmanaged parameter to create_object
+bool blue_sky::kernel::unmanaged_def_val() {
+#ifdef BS_CREATE_UNMANAGED_OBJECTS
+	return true;
+#else
+	return false;
+#endif
+}
 //std::less specialization for plugin_descriptor
 namespace std {
 	template< >
@@ -848,13 +856,12 @@ public:
 	}
 
 	sp_obj create_object_copy(const sp_obj& src, bool unmanaged) {
-		if(!src) 
-      {
-        throw bs_kernel_exception ("BlueSky kernel", no_error, "Source object for copying is not defined");
-      }
+		if(!src) {
+			throw bs_kernel_exception ("BlueSky kernel", no_error, "Source object for copying is not defined");
+		}
 
 		BS_TYPE_COPY_FUN cpyfn = *demand_type(src->bs_resolve_type()).td_.copy_fun_;
-    BS_ERROR (cpyfn, "kernel::create_object_copy: copy_fun is null");
+		BS_ERROR (cpyfn, "kernel::create_object_copy: copy_fun is null");
 
 		// invoke copy creation function and make a smrt_ptr reference to new object
 		sp_obj res((*cpyfn)(src), bs_dynamic_cast());

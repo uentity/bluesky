@@ -96,15 +96,15 @@ namespace blue_sky {
 
 		//! \brief object creation method
 		//! Contains auto-registration for unknown types
-		sp_obj create_object(const type_descriptor& obj_t, bool unmanaged = true, bs_type_ctor_param param = NULL) const;
+		sp_obj create_object(const type_descriptor& obj_t, bool unmanaged = unmanaged_def_val(), bs_type_ctor_param param = NULL) const;
 		//! Supply maximum info about type to create (useful for auto-registering with proper plugin_descriptor)
 		//sp_obj create_object(const type_descriptor& td, const plugin_descriptor& pd,
 		//	bool unmanaged = false, bs_type_ctor_param param = NULL) const;
 		//! Use this method if type_descriptor is unknown by any reason
-		sp_obj create_object(const std::string& obj_t, bool unmanaged = true, bs_type_ctor_param param = NULL) const;
+		sp_obj create_object(const std::string& obj_t, bool unmanaged = unmanaged_def_val(), bs_type_ctor_param param = NULL) const;
 
 		//! \brief Objects copying method
-		sp_obj create_object_copy(const sp_obj& src, bool unmanaged = true) const;
+		sp_obj create_object_copy(const sp_obj& src, bool unmanaged = unmanaged_def_val()) const;
 
 		//! \brief Registers object in managed instances lists
 		int register_instance(const sp_obj&) const;
@@ -181,6 +181,7 @@ namespace blue_sky {
 		//! \brief Destructor.
 		~kernel();
 
+		static bool unmanaged_def_val();
 
     //! PIMPL for kernel
 		class kernel_impl;
@@ -188,7 +189,7 @@ namespace blue_sky {
 
     // don't change line order. never.
 		pimpl_t         pimpl_;
-    memory_manager  memory_manager_;
+		memory_manager  memory_manager_;
 
 		//kernel initialization routine
 		void init();
@@ -197,11 +198,11 @@ namespace blue_sky {
 	//! \brief singleton for accessing the instance of kernel
 	typedef singleton< kernel > give_kernel;
 
-	BS_API inline bool operator ==(const type_tuple& tl, const type_tuple& tr) {
+	inline bool operator ==(const type_tuple& tl, const type_tuple& tr) {
 		return (tl.pd_ == tr.pd_ && tl.td_ == tl.td_);
 	}
 
-	BS_API inline bool operator !=(const type_tuple& tl, const type_tuple& tr) {
+	inline bool operator !=(const type_tuple& tl, const type_tuple& tr) {
 		 return !(tl.pd_ == tr.pd_ && tl.td_ == tl.td_);
 	}
 }
