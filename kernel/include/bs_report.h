@@ -123,6 +123,7 @@ namespace blue_sky {
 	};
 	typedef bs_channel::sp_channel sp_channel;
 	typedef bs_channel::sp_stream sp_stream;
+	typedef lsmart_ptr< sp_channel > lsp_channel;
 
 	template<class T>
 	sp_channel operator<<(const sp_channel &ch, const T &what) {
@@ -168,7 +169,7 @@ namespace blue_sky {
 
     locked_channel &operator<< (const priority &);
 
-    sp_channel
+    lsp_channel
     get_channel () const
     {
       return ch_;
@@ -182,7 +183,7 @@ namespace blue_sky {
     }
 
   private:
-    lsmart_ptr <sp_channel>                       ch_;
+    lsp_channel                       ch_;
     lsmart_ptr <smart_ptr <std::ostringstream> >  locked_buf_;
     std::ostringstream                            &buf_;
   };
