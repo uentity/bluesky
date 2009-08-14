@@ -40,23 +40,9 @@
 #endif
 #endif
 
-namespace blue_sky {
-namespace detail {
+#include "get_thread_id.h"
 
-#ifndef UNIX
-    static size_t
-    get_thread_id ()
-    {
-      return GetCurrentThreadId ();
-    }
-#else
-    static size_t
-    get_thread_id ()
-    {
-      return pthread_self();
-    }
-#endif
-} // namespace detail
+namespace blue_sky {
 
   struct memory_manager::allocator_info
   {
