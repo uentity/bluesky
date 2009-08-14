@@ -16,34 +16,18 @@
 #include <algorithm>
 #include <iostream>
 
-#ifdef UNIX
-	#include <pthread.h>
-#elif defined(_WIN32) && defined(_MSC_VER)
-	#include "windows.h"
-#endif
-
 #include "bs_misc.h"
 #include "bs_report.h"
 #include "bs_exception.h"
 #include "throw_exception.h"
 #include "bs_link.h"
 #include "bs_log_scribers.h"
+#include "get_thread_id.h"
 
 using namespace std;
 using namespace Loki;
 
 namespace blue_sky {
-namespace bs_private {
-	unsigned long int get_thread_id() {
-#ifdef UNIX
-		return (unsigned long int)pthread_self();
-#elif defined(_WIN32) && defined(_MSC_VER)
-		return (unsigned long int)GetCurrentThreadId();
-#endif
-	}
-} // namespace bs_private
-
-	int bs_channel::counter = 0;
 
   namespace log {
     bool bs_stream::subscribe(bs_channel &src) {
@@ -55,85 +39,79 @@ namespace bs_private {
     }
   } // namespace log
 
-	bs_channel::bs_channel()
-		: output_time(false)
-		, wait_end(true)
-		, can_output(true)
-		, buf_(new ostringstream)
-	{
-		char str[8];
-		sprintf(str,"%d",counter);
-		counter++;
-		name = str;
-	}
+	//bs_channel::bs_channel()
+	//	: output_time(false)
+	//	, wait_end(true)
+	//	, can_output(true)
+	//{
+	//}
 
-	bs_channel::bs_channel(const string &src)
+	bs_channel::bs_channel(const string &channel_name)
 		: output_time(false)
 		, wait_end(true)
 		, can_output(true)
-		, name(src)
-		, buf_(new ostringstream)
+		, name(channel_name)
 	{}
 
 	bs_channel::bs_channel(const bs_channel &src)
 		: bs_refcounter(src)
-		, buf_(new ostringstream)
 	{
 		*this = src;
 	}
 
 	bs_channel::bs_channel(const bs_channel &src, const std::string &tname)
 		: bs_refcounter(src)
-		, buf_(new ostringstream)
 	{
 		*this = src;
 		name = tname;
 	}
 
 	const bs_channel &bs_channel::operator=(const bs_channel &src) {
-		msects = src.msects;
-		output_time = src.output_time;
-		wait_end = src.wait_end;
-		can_output = src.can_output;
-		name = src.name;
-		buf_.lock ()->str(src.buf_.lock ()->str().c_str());
-		scribes = src.scribes;
-		prefix = src.prefix;
+		sections_       = src.sections_;
+		output_time     = src.output_time;
+		wait_end        = src.wait_end;
+		can_output      = src.can_output;
+		name            = src.name;
+		output_streams_ = src.output_streams_;
+		prefix          = src.prefix;
+
+		buf_.str(src.buf_.str());
+
 		return *this;
 	}
 
 
 	bool bs_channel::attach(const sp_stream &src) {
-		sp_scr_list::iterator s = find(scribes.begin(),scribes.end(),src);
-		if(s == scribes.end()) {
-			scribes.push_back(src);
+		stream_iterator_t s = find(output_streams_.begin(), output_streams_.end(), src);
+		if(s == output_streams_.end()) {
+			output_streams_.push_back(src);
 			return true;
 		}
 		return false;
 	}
 
 	bool bs_channel::detach(const sp_stream &src) {
-		sp_scr_list::iterator s = find(scribes.begin(),scribes.end(),src);
-		if (s != scribes.end()) {
-			scribes.remove(src);
+		stream_iterator_t s = find(output_streams_.begin(),output_streams_.end(),src);
+		if (s != output_streams_.end()) {
+			output_streams_.erase (s);
 			return true;
 		}
 		return false;
 	}
 
 	void bs_channel::send_to_subscribers() {
-		if (output_time && buf_.lock ()->str().length()) {
+		if (output_time && buf_.str().length()) {
 			ostringstream tmp;
 			tmp << "[" << gettime() << "]: " << prefix;
-			buf_.lock ()->str(tmp.str() + buf_.lock ()->str());
-			//for (sp_scr_list::iterator i = scribes.begin(); i != scribes.end(); ++i)
+			buf_.str(tmp.str() + buf_.str());
+			//for (sp_scr_list::iterator i = output_streams_.begin(); i != output_streams_.end(); ++i)
 				//(*i).lock()->write(tmp.str());
 		}
 
-		for (sp_scr_list::iterator i = scribes.begin(); i != scribes.end(); ++i)
-			i->lock()->write(buf_.lock ()->str());
+		for (stream_iterator_t i = output_streams_.begin(); i != output_streams_.end(); ++i)
+			i->lock()->write(buf_.str());
 
-		buf_.lock ()->str("");
+		buf_.str("");
 	}
 
 	void bs_channel::set_can_output(bool t) {
@@ -157,37 +135,38 @@ namespace bs_private {
 	}
 
 	bs_channel &
-  bs_channel::add_section(size_t section, size_t level) 
+  bs_channel::add_section(int section, int level) 
   {
-    if (msects.find (section) != msects.end ())
+    if (sections_.find (section) != sections_.end ())
       {
         bs_throw_exception ("Section already added");
       }
 
-    msects.insert (std::make_pair (section, level));
+    sections_.insert (std::make_pair (section, level));
 		return *this;
 	}
 
 	bs_channel &bs_channel::rem_section(int sect) {
-		msect_iterator iter = msects.find(sect);
-		if (iter != msects.end())
-			msects.erase(iter);
+		section_iterator_t iter = sections_.find(sect);
+		if (iter != sections_.end())
+			sections_.erase(iter);
+
 		return *this;
 	}
 
 	bs_channel &
   bs_channel::set_priority (const priority &tp) 
   {
-		msects[tp.sect] = tp.prior;
+		sections_[tp.sect] = tp.prior;
 		return *this;
 	}
 
 	bool bs_channel::outputs_time() const { return output_time; }
 	bool bs_channel::waits_end() const { return wait_end; }
 
-	sp_channel bs_channel::operator<<(priority op) {
-		msect_const_iterator iter = msects.find(op.sect);
-		if (iter != msects.end()) {
+	sp_channel bs_channel::operator<<(const priority &op) {
+		section_iterator_const_t iter = sections_.find(op.sect);
+		if (iter != sections_.end()) {
 			if (iter->second < op.prior || iter->second == -1)
 				//this->send_to_subscribers();
 				this->can_output = false;
@@ -207,71 +186,10 @@ namespace bs_private {
 		return foo(sp_channel(this));
 	}
 
-
-
-	//namespace bs_private {
-
-	//	struct BS_API log_wrapper {
-	//		log_wrapper()	: ref_fun_(&log_wrapper::initial_log_getter) {
-	//			//explicitly increment reference counter
-	//			j.add_ref();
-	//		}
-
-	//		~log_wrapper() {
-	//		}
-
-	//		bs_log &usual_log_getter() {
-	//			return j;
-	//		}
-
-	//		bs_log &initial_log_getter() {
-	//			ref_fun_ = &log_wrapper::usual_log_getter;
-
-	//			init_loging();
-	//			return j;
-	//		}
-
-	//		void init_loging();
-
-	//		bs_log& j_ref() {
-	//			return (this->*ref_fun_)();
-	//		}
-
-	//		bs_log j;
-	//		bs_log& (log_wrapper::*ref_fun_)();
-	//	};
-
-	//	struct BS_API thread_log_wrapper {
-	//		thread_log_wrapper() : ref_fun_(&thread_log_wrapper::initial_log_getter) {
-	//		}
-
-	//		thread_log &usual_log_getter() {
-	//			return j;
-	//		}
-
-	//		thread_log &initial_log_getter() {
-	//			ref_fun_ = &thread_log_wrapper::usual_log_getter;
-
-	//			init_loging();
-	//			return j;
-	//		}
-
-	//		void init_loging();
-
-	//		thread_log& j_ref() {
-	//			return (this->*ref_fun_)();
-	//		}
-
-	//		thread_log j;
-	//		thread_log& (thread_log_wrapper::*ref_fun_)();
-	//	};
-
-	//}
-
 	sp_channel bs_log::add_channel(const sp_channel &dest) {
     BS_ERROR (dest, "bs_log::add_channel: dest is null");
 
-		schan_iter_const itr = channel_map_.find(dest->get_name ());
+		channel_iterator_const_t itr = channel_map_.find(dest->get_name ());
 		if (itr == channel_map_.end()) {
       channel_map_.insert (std::make_pair (dest->get_name (), dest));
 			this->fire_signal(bs_log::log_channel_added);
@@ -282,7 +200,7 @@ namespace bs_private {
 
 	bool bs_log::rem_channel(const std::string &ch_name) {
 
-		schan_iter itr = channel_map_.find(ch_name);
+		channel_iterator_t itr = channel_map_.find(ch_name);
 		if (itr != channel_map_.end()) {
 			channel_map_.erase(itr);
 			this->fire_signal(bs_log::log_channel_removed);
@@ -291,19 +209,9 @@ namespace bs_private {
 		return false;
 	}
 
-	locked_channel bs_log::operator[](const std::string &name_) const {
-		schan_iter_const itr = channel_map_.find(name_);
-		if (itr != channel_map_.end()) 
-      {
-        return locked_channel (itr->second);
-      }
-
-    bs_throw_exception (boost::format ("Unknown log name [%s]") % name_);
-	}
-
   locked_channel bs_log::get_locked (const std::string &name_) const
   {
-		schan_iter_const it = channel_map_.find(name_);
+		channel_iterator_const_t it = channel_map_.find(name_);
 		if (it != channel_map_.end()) 
       {
         return locked_channel (it->second);
@@ -312,45 +220,16 @@ namespace bs_private {
     bs_throw_exception (boost::format ("Unknown log name [%s]") % name_);
   }
 
-	typedef SingletonHolder< bs_private::log_wrapper, CreateUsingNew, PhoenixSingleton > log_holder;
-	typedef SingletonHolder< bs_private::thread_log_wrapper, CreateUsingNew, PhoenixSingleton > thread_log_holder;
-
-	//template< > BS_API bs_log& singleton< bs_log >::Instance() {
-	//	return log_holder::Instance().j_ref();
-	//}
-
-	//template< > BS_API thread_log& singleton< thread_log >::Instance() {
-	//	return thread_log_holder::Instance().j_ref();
-	//}
+locked_channel bs_log::operator[](const std::string& channel_name) const {
+	return get_locked(channel_name);
+}
 
 	void bs_channel::dispose() const {
 		delete this;
 	}
 
-	//void bs_private::log_wrapper::init_loging() {
-	//	bs_log &l = give_log::Instance();
-	//	l.add_channel(sp_channel(new bs_channel(OUT_LOG)));
-	//	l.add_channel(sp_channel(new bs_channel(ERR_LOG)));
-
-	//	char *c_dir = NULL;
-	//	if (!(c_dir = getenv("BS_KERNEL_DIR")))
-	//		c_dir = (char *)".";
-
-	//	BSOUT.get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-	//	BSOUT.get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
-	//	BSERROR.get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-	//	BSERROR.get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/errors.log"), ios::out|ios::app)));
-
-	//	BSOUT << output_time;
-	//	BSERROR << output_time;
-	//}
-
-	//void bs_private::thread_log_wrapper::init_loging() {
-	//	BSOUT << "Thread log init with address " << &j << bs_end;
-	//}
-
 	sp_channel thread_log::add_log_channel(const std::string &name) {
-		unsigned long int thread = bs_private::get_thread_id();
+		unsigned long int thread = detail::get_thread_id();
 		sp_log tlog = (*logs.lock())[thread];
 		if (!tlog)
 			tlog = new bs_log();
@@ -358,7 +237,7 @@ namespace bs_private {
 	}
 
 	sp_channel thread_log::add_log_channel(const sp_channel &ch) {
-		unsigned long int thread = bs_private::get_thread_id();
+		unsigned long int thread = detail::get_thread_id();
 		sp_log tlog = (*logs.lock())[thread];
 		if (!tlog)
 			tlog = new bs_log();
@@ -366,7 +245,7 @@ namespace bs_private {
 	}
 
 	bool thread_log::add_log_stream(const std::string &name, const sp_stream &strm) {
-		unsigned long int thread = bs_private::get_thread_id();
+		unsigned long int thread = detail::get_thread_id();
 		sp_log tlog = (*logs.lock())[thread];
 		if (!tlog)
 			tlog = new bs_log();
@@ -374,7 +253,7 @@ namespace bs_private {
 	}
 
 	bool thread_log::rem_log_channel(const std::string &name) {
-		unsigned long int thread = bs_private::get_thread_id();
+		unsigned long int thread = detail::get_thread_id();
 		sp_log tlog = (*logs.lock())[thread];
 		if (!tlog)
 			tlog = new bs_log();
@@ -382,7 +261,7 @@ namespace bs_private {
 	}
 
 	bool thread_log::rem_log_stream(const std::string &name, const sp_stream &strm) {
-		unsigned long int thread = bs_private::get_thread_id();
+		unsigned long int thread = detail::get_thread_id();
 		sp_log tlog = (*logs.lock())[thread];
 		if (!tlog)
 			tlog = new bs_log();
@@ -390,12 +269,12 @@ namespace bs_private {
 	}
 
 	void thread_log::kill() {
-		unsigned long int thread = bs_private::get_thread_id();
+		unsigned long int thread = detail::get_thread_id();
 		logs.lock()->erase(thread);
 	}
 
 	locked_channel thread_log::operator[](const std::string &name) {
-		unsigned long int thread = bs_private::get_thread_id();
+		unsigned long int thread = detail::get_thread_id();
 		sp_log tlog = (*logs.lock())[thread];
 		if (!tlog)
 			tlog = new bs_log();
@@ -411,26 +290,15 @@ namespace bs_private {
 			logs.push_back(*i);
 	}*/
 
-	BS_API sp_channel bs_end(const sp_channel &r) {
-		r << "\n";
-		r.lock()->set_can_output(true);
-		r.lock()->send_to_subscribers();
-		return r;
-	}
   BS_API locked_channel &bs_end (locked_channel &ch)
   {
     ch.bs_end ();
     return ch;
   }
 
-	BS_API sp_channel output_time(const sp_channel &r) {
-		r.lock()->set_output_time();
-		return r;
-	}
-
   BS_API locked_channel &output_time (locked_channel &ch)
   {
-    output_time (ch.get_channel ());
+    ch.get_channel ()->set_output_time ();
     return ch;
   }
 
@@ -456,28 +324,36 @@ namespace bs_private {
   void
   locked_channel::bs_end ()
   {
-    (*locked_buf_) << "\n";
-
-    if (ch_->output_time && (*locked_buf_).str ().length())
+    //std::cout << "xxxxxxx: (" << ch_->can_output << ") " << buf_.str () << std::endl;
+    if (ch_->can_output)
       {
-        static string open_ = "[";
-        static string close_ = "]: ";
+        buf_ << "\n";
 
-        (*locked_buf_).str (open_ + gettime () + close_ + ch_->prefix + (*locked_buf_).str ());
+        if (ch_->output_time && buf_.str ().length())
+          {
+            static string open_ = "[";
+            static string close_ = "]: ";
+
+            buf_.str (open_ + gettime () + close_ + ch_->prefix + buf_.str ());
+          }
+
+        std::string str = buf_.str ();
+        bs_channel::stream_iterator_t i = ch_->output_streams_.begin(), e = ch_->output_streams_.end();
+        for (; i != e; ++i)
+          {
+            (*i).lock()->write (str);
+          }
       }
 
-    std::string str = (*locked_buf_).str ();
-    for (bs_channel::sp_scr_list::iterator i = ch_->scribes.begin(), e = ch_->scribes.end(); i != e; ++i)
-      (*i).lock()->write (str);
-
-    (*locked_buf_).str("");
+    buf_.str("");
+    ch_->set_can_output (true);
   }
 
 	locked_channel &locked_channel::operator<< (const priority &op) 
   {
-    bs_channel::msect_const_iterator iter = ch_->msects.find (op.sect);
+    bs_channel::section_iterator_const_t iter = ch_->sections_.find (op.sect);
 
-		if (iter != ch_->msects.end ()) 
+		if (iter != ch_->sections_.end ()) 
       {
         if (iter->second < op.prior || iter->second == -1)
           {
@@ -498,10 +374,10 @@ namespace bs_private {
 	}
 
   locked_channel &
-  locked_channel::operator () (size_t section, size_t level)
+  locked_channel::operator () (int section, int level)
   {
-    bs_channel::msect_const_iterator iter = ch_->msects.find (section);
-    if (iter != ch_->msects.end ())
+    bs_channel::section_iterator_const_t iter = ch_->sections_.find (section);
+    if (iter != ch_->sections_.end ())
       {
         if (iter->second < level || iter->second == -1)
           {

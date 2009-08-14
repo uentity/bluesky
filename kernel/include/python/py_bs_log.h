@@ -57,7 +57,6 @@ public:
 class BS_API py_bs_channel {
 	friend class py_bs_log;
 public:
-	py_bs_channel();
 	py_bs_channel(const std::string&);
 	py_bs_channel(const sp_channel&);
 

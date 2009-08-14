@@ -21,27 +21,25 @@
 #include <map>
 #include "bs_common.h"
 #include "bs_refcounter.h"
-//#include "bs_object_base.h"
 #include "bs_messaging.h"
 #include "bs_log_stream.h"
 
 #include "loki/Singleton.h"
 
-//#include <boost/thread/condition_variable.hpp>
-
 namespace blue_sky {
-
-	//typedef enum {
-	//	OUT_LOG, //!< output to "$(BS_KERNEL_DIR)/blue_sky.log" file
-	//	ERR_LOG, //!< output to "(BS_KERNEL_DIR)/errors.log" file
-	//} jours;
 
 #define OUT_LOG "out"
 #define ERR_LOG "err"
 
 	struct BS_API priority {
-	  priority(int v = -1,int p = -1) : sect(v),prior(p) {}
-		int sect,prior;
+	  priority (int section = -1, int priority = -1) 
+      : sect (section)
+      , prior (priority) 
+    {
+    }
+
+		int sect;
+    int prior;
 	};
 
 
@@ -49,54 +47,54 @@ namespace blue_sky {
 		friend class bs_log;
 	public:
 		typedef smart_ptr< bs_channel, true > sp_channel;
-		typedef smart_ptr< log::bs_stream >   sp_stream;
-		typedef std::list< sp_stream >        sp_scr_list;
-		typedef std::map<int, int>            msect;
-		typedef msect::const_iterator         msect_const_iterator;
-		typedef msect::iterator               msect_iterator;
 
-		bool attach(const sp_stream&);
-		bool detach(const sp_stream&);
+		typedef smart_ptr <log::bs_stream>    sp_stream_t;
+		typedef std::vector <sp_stream_t>     stream_list_t;
+    typedef stream_list_t::iterator       stream_iterator_t;
 
-		template <class T> sp_channel operator<<(const T &data_) {
-			if (can_output) {
-				*(buf_.lock()) << data_;
-				if (!wait_end)
-					send_to_subscribers();
-			}
-			return sp_channel(this);
-		}
+		typedef std::map <int, int>           sections_t;
+		typedef sections_t::const_iterator    section_iterator_const_t;
+		typedef sections_t::iterator          section_iterator_t;
 
-		bs_channel &add_section(size_t section, size_t level);
-		bs_channel &rem_section(int);
-		bs_channel &set_priority(const priority &);
-		void set_can_output(bool);
+    typedef sp_channel (*functor_t) (const sp_channel &);
 
-		sp_channel operator<<(priority);
-
-		sp_channel operator<<(sp_channel(*)(const sp_channel&));
-
-		friend bool operator == (const bs_channel &lc, const bs_channel &rc);
-		friend bool operator == (const bs_channel &lc, const std::string &rstr);
-		friend bool operator < (const bs_channel &lc, const bs_channel &rc);
-		friend bool operator < (const bs_channel &lc, const std::string &rstr);
-
-		~bs_channel() {}
-
-		void send_to_subscribers();
-
-    //protected:
+  public:
 		//! ctors
-		bs_channel();
+		//bs_channel();
 		bs_channel(const std::string&);
 
 		//! copy ctor
 		bs_channel(const bs_channel&);
 		bs_channel(const bs_channel &src, const std::string &tname);
 
+		~bs_channel() {}
+
 		//! Assignment operator
 		const bs_channel &operator=(const bs_channel&);
 
+		bool attach(const sp_stream_t &);
+		bool detach(const sp_stream_t &);
+
+		template <class T> sp_channel operator<<(const T &data) {
+			if (can_output) 
+        {
+          buf_ << data;
+          if (!wait_end)
+            send_to_subscribers();
+			  }
+
+			return sp_channel(this);
+		}
+
+		sp_channel operator<< (const priority &p);
+		sp_channel operator<< (functor_t functor);
+
+		bs_channel &add_section (int section, int level);
+		bs_channel &rem_section (int section);
+		bs_channel &set_priority (const priority &p);
+
+		void set_can_output (bool);
+		void send_to_subscribers();
 		void set_output_time();
 		void set_wait_end();
 		bool outputs_time() const;
@@ -109,20 +107,21 @@ namespace blue_sky {
 		void dispose() const;
 
 	protected:
-		std::map<int,int>               msects; //priority_pair rpair;
+		sections_t                      sections_; 
 		bool                            output_time;
     bool                            wait_end;
     bool                            can_output;
-		static int                      counter;
 		std::string                     name;
-		smart_ptr<std::ostringstream>   buf_;
-		sp_scr_list                     scribes;
+		std::ostringstream              buf_;
 		std::string                     prefix;
+
+		stream_list_t                   output_streams_;
 
     friend struct locked_channel;
 	};
-	typedef bs_channel::sp_channel sp_channel;
-	typedef bs_channel::sp_stream sp_stream;
+
+	typedef bs_channel::sp_channel  sp_channel;
+	typedef bs_channel::sp_stream_t sp_stream;
 	typedef lsmart_ptr< sp_channel > lsp_channel;
 
 	template<class T>
@@ -136,10 +135,8 @@ namespace blue_sky {
   {
     locked_channel (const sp_channel &ch)
     : ch_ (ch)
-    , locked_buf_ (ch_->buf_)
-    , buf_ (*locked_buf_)
+    , buf_ (ch_->buf_)
     {
-
     }
 
     void
@@ -156,7 +153,7 @@ namespace blue_sky {
     }
 
     locked_channel &
-    operator () (size_t section, size_t level);
+    operator () (int section, int level);
 
     template <typename T>
     locked_channel &operator << (const T &what)
@@ -176,7 +173,7 @@ namespace blue_sky {
     }
 
     locked_channel &
-    set_priority (size_t section, size_t level)
+    set_priority (int section, int level)
     {
       ch_->set_priority (priority (section, level));
       return *this;
@@ -184,32 +181,36 @@ namespace blue_sky {
 
   private:
     lsp_channel                       ch_;
-    lsmart_ptr <smart_ptr <std::ostringstream> >  locked_buf_;
     std::ostringstream                            &buf_;
   };
 
 
-	class BS_API bs_log : public bs_messaging {
-		friend struct bs_private::log_wrapper;
-		friend class thread_log;
-		friend class std::map<int,bs_log>;
+	class BS_API bs_log : public bs_messaging 
+  {
 	public:
 		typedef std::map <std::string, sp_channel>  channel_map_t;
-		typedef channel_map_t::iterator             schan_iter;
-		typedef channel_map_t::const_iterator       schan_iter_const;
+		typedef channel_map_t::iterator             channel_iterator_t;
+		typedef channel_map_t::const_iterator       channel_iterator_const_t;
 
 		BLUE_SKY_SIGNALS_DECL_BEGIN(bs_messaging)
 			log_channel_added,
 			log_channel_removed,
 		BLUE_SKY_SIGNALS_DECL_END
 
-		sp_channel add_channel(const sp_channel&);
-		bool rem_channel(const std::string&);
+  public:
+		sp_channel 
+    add_channel(const sp_channel&);
 
-		locked_channel operator[] (const std::string &name_) const;
-    locked_channel get_locked (const std::string &channel_name) const;
+		bool 
+    rem_channel(const std::string&);
 
-		void dispose() const;
+    locked_channel 
+    get_locked (const std::string &channel_name) const;
+
+	locked_channel operator[] (const std::string& channel_name) const;
+
+		void 
+    dispose() const;
 
 		virtual ~bs_log() {}
 		bs_log();
@@ -219,75 +220,34 @@ namespace blue_sky {
 	};
 
 
-	class BS_API thread_log {
-		friend struct bs_private::thread_log_wrapper;
-	public:
-		typedef smart_ptr<bs_log>               sp_log;
-		typedef std::map<int, sp_log>           mlog;
-		typedef smart_ptr<mlog>                 sp_mlog;
-		typedef mlog::const_iterator            const_iterator;
-		typedef mlog::iterator                  iterator;
-
-		/*BLUE_SKY_SIGNALS_DECL_BEGIN(thread_log)
-			log_channel_added,
-			log_channel_removed,
-			log_stream_added,
-			log_stream_removed,
-		BLUE_SKY_SIGNALS_DECL_END*/
-
-		sp_channel add_log_channel(const std::string&);
-		sp_channel add_log_channel(const sp_channel&);
-		bool add_log_stream(const std::string&,const sp_stream&);
-		bool rem_log_channel(const std::string&);
-		bool rem_log_stream(const std::string&,const sp_stream&);
-
-		void kill();
-
-		locked_channel operator[](const std::string&);
-
-		thread_log();
-		//thread_log(const thread_log&);
-
-	private:
-		sp_mlog logs;
-	};
-
-	//typedef singleton< bs_log > give_log;
-	//typedef singleton< thread_log > give_tlog;
-
-	BS_API sp_channel     bs_end(const sp_channel&);
   BS_API locked_channel &bs_end (locked_channel &ch);
-
-	BS_API sp_channel     output_time(const sp_channel&);
   BS_API locked_channel &output_time (locked_channel &ch);
 
 	BS_API sp_channel     wait_end(const sp_channel&);
   
 	inline bool operator == (const bs_channel &lc, const bs_channel &rc) {
-		return (lc.name == rc.name);
+		return (lc.get_name () == rc.get_name ());
 	}
 
 	inline bool operator < (const bs_channel &lc, const bs_channel &rc) {
-		return (lc.name < rc.name);
+		return (lc.get_name () < rc.get_name ());
 	}
 
 	inline bool operator == (const bs_channel &lc, const std::string &rc_name) {
-		return (lc.name == rc_name);
+		return (lc.get_name () == rc_name);
 	}
 
 	inline bool operator < (const bs_channel &lc, const std::string &rc_name) {
-		return (lc.name < rc_name);
+		return (lc.get_name () < rc_name);
 	}
 
-}
+} // namespace blue_sky
+
+#include "bs_report_thread.h"
 
 #define BSOUT   kernel::get_log ().get_locked (OUT_LOG)
 #define BSERR   kernel::get_log ().get_locked (ERR_LOG)
-
-//! deprecated
-#define BSERROR BS_KERNEL.get_log ().get_locked (ERR_LOG)
-
-//#define BSOUT   blue_sky::give_log::Instance().get_locked (OUT_LOG)
-//#define BSERROR blue_sky::give_log::Instance().get_locked (ERR_LOG)
+#define BSERROR BSERR
 
 #endif // _BS_REPORTER_H
+

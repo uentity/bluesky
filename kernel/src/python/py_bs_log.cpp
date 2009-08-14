@@ -70,7 +70,6 @@ void stream_wrapper::write(const std::string &str) const {
 // 	}
 // }
 
-py_bs_channel::py_bs_channel() : c(new bs_channel),auto_newline(true) {}
 py_bs_channel::py_bs_channel(const std::string &a) : c(new bs_channel(a)),auto_newline(true) {}
 py_bs_channel::py_bs_channel(const sp_channel &s) : c(s),auto_newline(true) {}
 
@@ -184,7 +183,7 @@ void py_export_log() {
 
 	class_<py_stream, noncopyable>("wstream", init<const boost::python::object&>());
 
-	class_<py_bs_channel>("channel")
+	class_<py_bs_channel>("channel", init <const std::string &> ())
 		.def(init<std::string>())
 		.def("attach",&py_bs_channel::attach)
 		.def("detach",&py_bs_channel::detach)
