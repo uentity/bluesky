@@ -13,8 +13,7 @@ namespace log {
 namespace detail {
 
 	void cout_scriber::write(const std::string &str) const {
-//#ifdef _DEBUG
-    // TODO: miryanov
+#ifndef _DEBUG
     static bool is_buffer_installed = false;
     if (!is_buffer_installed)
       {
@@ -22,9 +21,9 @@ namespace detail {
         cout.rdbuf ()->pubsetbuf (cout_buffer, sizeof (cout_buffer));
         is_buffer_installed = true;
       }
+#endif
 
     cout << str.c_str ();
-//#endif
 	}
 
 	file_scriber::file_scriber(const std::string &filename, ios_base::openmode mode)
