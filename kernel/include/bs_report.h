@@ -105,6 +105,7 @@ namespace blue_sky {
 		void set_prefix(const std::string&);
 
 		std::string get_name() const {return name;}
+    bool get_can_output () const {return can_output;}
 
 		void dispose() const;
 
@@ -195,10 +196,11 @@ namespace blue_sky {
   template <typename log_t, typename what_t>
   struct proxy_log
   {
-    proxy_log (log_t &log, const what_t &what)
+    proxy_log (log_t &log, const what_t &what, bool can_output)
       : log_ (log)
       , what_ (what)
       , finished_ (false)
+      , can_output_ (can_output)
     {
     }
 
@@ -210,10 +212,15 @@ namespace blue_sky {
         }
     }
 
+    bool get_can_output () const {return can_output_;}
+
     void
     output (const std::string &w, bool is_end = true)
     {
-      log_.output (detail::get_str (what_) + w, is_end);
+      if (log_.get_can_output ())
+        log_.output (detail::get_str (what_) + w, is_end);
+      else
+        log_.output ("", is_end);
     }
 
     void
@@ -227,26 +234,33 @@ namespace blue_sky {
     operator << (const T &w)
     {
       finished_ = true;
-      return proxy_log <proxy_log <log_t, what_t>, T> (*this, w);
+      return proxy_log <proxy_log <log_t, what_t>, T> (*this, w, log_.get_can_output ());
     }
 
     void
-    operator << (void (*T) (const proxy_log_end &))
+    operator << (void (*) (const proxy_log_end &))
     {
       finished_ = true;
-      log_.output (detail::get_str (what_));
+      if (log_.get_can_output ())
+        log_.output (detail::get_str (what_));
+      else
+        log_.output ("");
     }
 
     void
-    operator << (void (*T) (const proxy_log_line &))
+    operator << (void (*) (const proxy_log_line &))
     {
       finished_ = true;
-      log_.output (detail::get_str (what_), false);
+      if (log_.get_can_output ())
+        log_.output (detail::get_str (what_), false);
+      else
+        log_.output ("", false);
     }
 
     log_t         &log_;
     const what_t  &what_;
     bool          finished_;
+    bool          can_output_;
   };
 
   struct BS_API locked_channel
@@ -272,6 +286,12 @@ namespace blue_sky {
         }
     }
 
+    bool
+    get_can_output () const
+    {
+      return ch_->get_can_output ();
+    }
+
     locked_channel &
     operator () (int section, int level);
 
@@ -279,18 +299,18 @@ namespace blue_sky {
     proxy_log <locked_channel, T>
     operator << (const T &what)
     {
-      return proxy_log <locked_channel, T> (*this, what);
+      return proxy_log <locked_channel, T> (*this, what, ch_->get_can_output ());
     }
 
     locked_channel &
-    operator << (void (*T) (const proxy_log_output_time &))
+    operator << (void (*) (const proxy_log_output_time &))
     {
       ch_->set_output_time ();
       return *this;
     }
 
     void
-    operator << (void (*T) (const proxy_log_end &))
+    operator << (void (*) (const proxy_log_end &))
     {
       bs_end ();
     }
