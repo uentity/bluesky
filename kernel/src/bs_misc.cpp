@@ -632,7 +632,7 @@ void graph_to_list(vector<int> &ll, const load_graph &g)
 #ifdef _DEBUG
 	for (size_t i = 0; i < dfs.size (); ++i)
     {
-		  BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") ";
+		  BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") " << bs_line;
     }
 	BSOUT << bs_end;
 #endif

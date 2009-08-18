@@ -1087,9 +1087,9 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 		}
 
 		//finally everything ok now
-		BSOUT << "BlueSky plugin " << lib.fname_.c_str() << " loaded";
+		BSOUT << "BlueSky plugin " << lib.fname_.c_str() << " loaded" << bs_line;
 		if(py_scope.size())
-			BSOUT << ", Python subsystem initialized (namespace " << py_scope << ")";
+			BSOUT << ", Python subsystem initialized (namespace " << py_scope << ")" << bs_line;
 		BSOUT << bs_end;
 	}
 	catch(const bs_exception& ex) {
@@ -1103,12 +1103,12 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 		return blue_sky::no_library;
 	}
 	catch(const std::exception& ex) {
-		BSERROR << "LoadPlugins: " << ex.what();
+		BSERROR << "LoadPlugins: " << ex.what() << bs_end;
 		return blue_sky::system_error;
 	}
 	catch(...) {
 		//something really serious happened
-		BSERROR << "Unknown error happened during plugins loading. Terminating.";
+		BSERROR << "Unknown error happened during plugins loading. Terminating." << bs_end;
 		terminate();
 	}
 
@@ -1138,8 +1138,10 @@ blue_sky::error_code kernel::kernel_impl::load_plugins(bool init_py_subsyst) {
 		if(init_py) {
 			boost::python::detail::init_module(plugin_info.py_namespace_.c_str(), init_py);
 			//create bs_scope exporting
-			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace ";
-			BSOUT << plugin_info.py_namespace_ << bs_end;
+			BSOUT 
+              << "BlueSky kernel Python subsystem initialized successfully under namespace "
+			  << plugin_info.py_namespace_ 
+              << bs_end;
 		}
 		else {
 			BSERROR << "Python subsystem wasn't found in BlueSky kernel" << bs_end;

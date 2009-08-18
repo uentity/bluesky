@@ -26,6 +26,8 @@
 
 #include "loki/Singleton.h"
 
+#include "throw_exception.h"
+
 namespace blue_sky {
 
 #define OUT_LOG "out"
@@ -131,11 +133,124 @@ namespace blue_sky {
 
 	BS_API sp_channel operator<<(const sp_channel &ch, sp_channel(*what)(const sp_channel&));
 
+  struct proxy_log_end {};
+  struct proxy_log_line {};
+  static void bs_end (const proxy_log_end &)
+  {
+  }
+
+  static void bs_line (const proxy_log_line &)
+  {
+  }
+
+  namespace detail {
+
+    template <typename T>
+    static std::string
+    get_str (const T &t)
+    {
+      return boost::lexical_cast <std::string> (t);
+    }
+
+    //template <>
+    //struct get_str <boost::format>
+    //{
+    //  static std::string
+    //  get (const boost::format &t)
+    //  {
+    //    return t.str ();
+    //  }
+    //};
+
+    static std::string
+    get_str (int t)
+    {
+      return boost::lexical_cast <std::string> (t);
+    }
+
+    static std::string
+    get_str (const double &t)
+    {
+      return boost::lexical_cast <std::string> (t);
+    }
+
+    static std::string
+    get_str (const char *t)
+    {
+      return t;
+    }
+
+    static std::string
+    get_str (const std::string &t)
+    {
+      return t;
+    }
+  }
+
+  template <typename log_t, typename what_t>
+  struct proxy_log
+  {
+    proxy_log (log_t &log, const what_t &what)
+      : log_ (log)
+      , what_ (what)
+      , finished_ (false)
+    {
+    }
+
+    ~proxy_log ()
+    {
+      if (!finished_)
+        {
+          log_.log_output_not_finished ();
+        }
+    }
+
+    void
+    output (const std::string &w, bool is_end = true)
+    {
+      log_.output (detail::get_str (what_) + w, is_end);
+    }
+
+    void
+    log_output_not_finished ()
+    {
+      log_.log_output_not_finished ();
+    }
+
+    template <typename T>
+    proxy_log <proxy_log <log_t, what_t>, T>
+    operator << (const T &w)
+    {
+      finished_ = true;
+      return proxy_log <proxy_log <log_t, what_t>, T> (*this, w);
+    }
+
+    void
+    operator << (void (*T) (const proxy_log_end &))
+    {
+      finished_ = true;
+      log_.output (detail::get_str (what_));
+    }
+
+    void
+    operator << (void (*T) (const proxy_log_line &))
+    {
+      finished_ = true;
+      log_.output (detail::get_str (what_), false);
+    }
+
+    log_t         &log_;
+    const what_t  &what_;
+    bool          finished_;
+  };
+
   struct BS_API locked_channel
   {
-    locked_channel (const sp_channel &ch)
+    locked_channel (const sp_channel &ch, const char *file, int line)
     : ch_ (ch)
     , buf_ (ch_->buf_)
+    , file_ (file)
+    , line_ (line)
     {
     }
 
@@ -156,15 +271,17 @@ namespace blue_sky {
     operator () (int section, int level);
 
     template <typename T>
-    locked_channel &operator << (const T &what)
+    proxy_log <locked_channel, T>
+    operator << (const T &what)
     {
-        output (what);
-        return *this;
+      return proxy_log <locked_channel, T> (*this, what);
     }
 
-    locked_channel &operator<< (locked_channel &(*fun) (locked_channel &));
-
-    locked_channel &operator<< (const priority &);
+    void
+    operator << (void (*T) (const proxy_log_end &))
+    {
+      bs_end ();
+    }
 
     lsp_channel
     get_channel () const
@@ -179,9 +296,34 @@ namespace blue_sky {
       return *this;
     }
 
+    void
+    output (const std::string &w, bool is_end = true)
+    {
+      if (ch_->can_output)
+        {
+          buf_ << w;
+
+          if (is_end)
+            bs_end ();
+        }
+    }
+
+    void
+    log_output_not_finished ()
+    {
+      bool can_output = ch_->can_output;
+      ch_->can_output = true;
+      buf_ << "INVALID OUTPUT TO LOG: FILE (" << file_ << "), LINE (" << line_ << ")";
+      bs_end ();
+
+      ch_->can_output = can_output;
+    }
+
   private:
-    lsp_channel                       ch_;
-    std::ostringstream                            &buf_;
+    lsp_channel         ch_;
+    std::ostringstream  &buf_;
+    const char          *file_;
+    int                 line_;
   };
 
 
@@ -205,9 +347,7 @@ namespace blue_sky {
     rem_channel(const std::string&);
 
     locked_channel 
-    get_locked (const std::string &channel_name) const;
-
-	locked_channel operator[] (const std::string& channel_name) const;
+    get_locked (const std::string &channel_name, const char *file, int line) const;
 
 		void 
     dispose() const;
@@ -220,7 +360,7 @@ namespace blue_sky {
 	};
 
 
-  BS_API locked_channel &bs_end (locked_channel &ch);
+  //BS_API locked_channel &bs_end (locked_channel &ch);
   BS_API locked_channel &output_time (locked_channel &ch);
 
 	BS_API sp_channel     wait_end(const sp_channel&);
@@ -245,8 +385,8 @@ namespace blue_sky {
 
 #include "bs_report_thread.h"
 
-#define BSOUT   kernel::get_log ().get_locked (OUT_LOG)
-#define BSERR   kernel::get_log ().get_locked (ERR_LOG)
+#define BSOUT   kernel::get_log ().get_locked (OUT_LOG, __FILE__, __LINE__)
+#define BSERR   kernel::get_log ().get_locked (ERR_LOG, __FILE__, __LINE__)
 #define BSERROR BSERR
 
 #endif // _BS_REPORTER_H

@@ -209,20 +209,16 @@ namespace blue_sky {
 		return false;
 	}
 
-  locked_channel bs_log::get_locked (const std::string &name_) const
+  locked_channel bs_log::get_locked (const std::string &name_, const char *file, int line) const
   {
 		channel_iterator_const_t it = channel_map_.find(name_);
 		if (it != channel_map_.end()) 
       {
-        return locked_channel (it->second);
+        return locked_channel (it->second, file, line);
       }
 
     bs_throw_exception (boost::format ("Unknown log name [%s]") % name_);
   }
-
-locked_channel bs_log::operator[](const std::string& channel_name) const {
-	return get_locked(channel_name);
-}
 
 	void bs_channel::dispose() const {
 		delete this;
@@ -249,7 +245,7 @@ locked_channel bs_log::operator[](const std::string& channel_name) const {
 		sp_log tlog = (*logs.lock())[thread];
 		if (!tlog)
 			tlog = new bs_log();
-		return tlog.lock()->get_locked (name).get_channel ()->attach(strm);
+		return tlog.lock()->get_locked (name, __FILE__, __LINE__).get_channel ()->attach(strm);
 	}
 
 	bool thread_log::rem_log_channel(const std::string &name) {
@@ -265,7 +261,7 @@ locked_channel bs_log::operator[](const std::string& channel_name) const {
 		sp_log tlog = (*logs.lock())[thread];
 		if (!tlog)
 			tlog = new bs_log();
-		return tlog.lock()->get_locked (name).get_channel ()->detach(strm);
+		return tlog.lock()->get_locked (name, __FILE__, __LINE__).get_channel ()->detach(strm);
 	}
 
 	void thread_log::kill() {
@@ -278,7 +274,7 @@ locked_channel bs_log::operator[](const std::string& channel_name) const {
 		sp_log tlog = (*logs.lock())[thread];
 		if (!tlog)
 			tlog = new bs_log();
-		return tlog.lock()->get_locked (name);
+		return tlog.lock()->get_locked (name, __FILE__, __LINE__);
 	}
 
 	thread_log::thread_log()
@@ -289,12 +285,6 @@ locked_channel bs_log::operator[](const std::string& channel_name) const {
 		for (const_iterator i = tl.logs.begin(); i != tl.logs.end(); ++i)
 			logs.push_back(*i);
 	}*/
-
-  BS_API locked_channel &bs_end (locked_channel &ch)
-  {
-    ch.bs_end ();
-    return ch;
-  }
 
   BS_API locked_channel &output_time (locked_channel &ch)
   {
@@ -311,20 +301,9 @@ locked_channel bs_log::operator[](const std::string& channel_name) const {
 		return sp_channel(new bs_channel(*r));
 	}
 
-	BS_API sp_channel operator<<(const sp_channel &ch, sp_channel(*what)(const sp_channel&)) {
-		return what(ch);
-	}
-
-  BS_API locked_channel &
-  locked_channel::operator<< (locked_channel &(*fun) (locked_channel &))
-  {
-      return fun (*this);
-  }
-
   void
   locked_channel::bs_end ()
   {
-    //std::cout << "xxxxxxx: (" << ch_->can_output << ") " << buf_.str () << std::endl;
     if (ch_->can_output)
       {
         buf_ << "\n";
@@ -348,30 +327,6 @@ locked_channel bs_log::operator[](const std::string& channel_name) const {
     buf_.str("");
     ch_->set_can_output (true);
   }
-
-	locked_channel &locked_channel::operator<< (const priority &op) 
-  {
-    bs_channel::section_iterator_const_t iter = ch_->sections_.find (op.sect);
-
-		if (iter != ch_->sections_.end ()) 
-      {
-        if (iter->second < op.prior || iter->second == -1)
-          {
-            //this->send_to_subscribers();
-            ch_->can_output = false;
-          }
-        else
-          {
-            ch_->can_output = true;
-          }
-      }
-		else
-      {
-			  ch_->can_output = false;
-      }
-
-		return *this;
-	}
 
   locked_channel &
   locked_channel::operator () (int section, int level)
