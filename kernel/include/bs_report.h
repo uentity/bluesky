@@ -135,11 +135,16 @@ namespace blue_sky {
 
   struct proxy_log_end {};
   struct proxy_log_line {};
+  struct proxy_log_output_time {};
   static void bs_end (const proxy_log_end &)
   {
   }
 
   static void bs_line (const proxy_log_line &)
+  {
+  }
+
+  static void output_time (const proxy_log_output_time &)
   {
   }
 
@@ -277,6 +282,13 @@ namespace blue_sky {
       return proxy_log <locked_channel, T> (*this, what);
     }
 
+    locked_channel &
+    operator << (void (*T) (const proxy_log_output_time &))
+    {
+      ch_->set_output_time ();
+      return *this;
+    }
+
     void
     operator << (void (*T) (const proxy_log_end &))
     {
@@ -360,10 +372,8 @@ namespace blue_sky {
 	};
 
 
-  //BS_API locked_channel &bs_end (locked_channel &ch);
-  BS_API locked_channel &output_time (locked_channel &ch);
-
-	BS_API sp_channel     wait_end(const sp_channel&);
+	BS_API sp_channel
+  wait_end(const sp_channel&);
   
 	inline bool operator == (const bs_channel &lc, const bs_channel &rc) {
 		return (lc.get_name () == rc.get_name ());

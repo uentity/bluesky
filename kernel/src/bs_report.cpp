@@ -286,12 +286,6 @@ namespace blue_sky {
 			logs.push_back(*i);
 	}*/
 
-  BS_API locked_channel &output_time (locked_channel &ch)
-  {
-    ch.get_channel ()->set_output_time ();
-    return ch;
-  }
-
 	BS_API sp_channel wait_end(const sp_channel &r) {
 		r.lock()->set_wait_end();
 		return r;
