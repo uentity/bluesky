@@ -154,9 +154,9 @@ namespace blue_sky {
 BLUE_SKY_PLUGIN_DESCRIPTOR("bs_client", "1.0.0", "", "");
 BS_TYPE_IMPL_T_MEM(str_val_table, int);
 BS_TYPE_IMPL_T_MEM(str_val_table, bool);
-BS_TYPE_IMPL_T_MEM(bs_array, double);
-BS_TYPE_IMPL_T_MEM(bs_array, int);
-BS_TYPE_IMPL_T_MEM(bs_array, std::string);
+//BS_TYPE_IMPL_T_MEM(bs_array, double);
+//BS_TYPE_IMPL_T_MEM(bs_array, int);
+//BS_TYPE_IMPL_T_MEM(bs_array, std::string);
 }
 
 struct dummy_restricter : public bs_node::restrict_types {

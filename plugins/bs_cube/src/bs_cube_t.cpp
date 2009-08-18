@@ -28,7 +28,7 @@
 #define EXP_RES_NOBR BOOST_PP_TUPLE_REM_CTOR(2, EXPAND_RES)
 
 namespace blue_sky {
-BS_TYPE_IMPL_T_MEM(blue_sky::bs_array, int)
+//BS_TYPE_IMPL_T_MEM(blue_sky::bs_array, int)
 BS_TYPE_IMPL_T_MEM(str_val_table, smart_ptr< bs_cube_t< float > >)
 BS_TYPE_IMPL_T_MEM(str_val_table, smart_ptr< bs_cube_t< int > >)
 }

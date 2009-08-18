@@ -38,6 +38,15 @@ namespace blue_sky {
 		*this = src;
 	}
 
+	// put some common specializations of bs_array to kernel lib
+	BS_TYPE_IMPL_T_MEM(bs_array, float);
+	BS_TYPE_IMPL_T_MEM(bs_array, double);
+	BS_TYPE_IMPL_T_MEM(bs_array, int);
+	BS_TYPE_IMPL_T_MEM(bs_array, ulong);
+	BS_TYPE_IMPL_T_MEM(bs_array, unsigned char);
+	BS_TYPE_IMPL_T_MEM(bs_array, std::string);
+
+	// data-table related exports
 	BLUE_SKY_TYPE_STD_CREATE_T(data_table< str_val_table >);
 	BLUE_SKY_TYPE_STD_CREATE_T(data_table< bs_array >);
 	BLUE_SKY_TYPE_STD_COPY_T(data_table< str_val_table >);

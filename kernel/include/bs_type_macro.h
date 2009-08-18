@@ -111,7 +111,7 @@ BS_TYPE_IMPL_T_NOCOPY(T, #T, short_descr, "")
 
 //------------------- templated implementation II - creates definition of bs_type --------------------------------------
 #define BS_TYPE_IMPL_T_MEM(T, spec_type)                          \
-template< > blue_sky::type_descriptor T< spec_type >::bs_type() { \
+template< > BS_API_PLUGIN blue_sky::type_descriptor T< spec_type >::bs_type() { \
     return td_maker(std::string("_") + #spec_type); }
 
 //------------------- common extended create & copy instance macroses --------------------------------------------------
