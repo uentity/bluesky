@@ -178,10 +178,10 @@ void py_export_log() {
 	//class_<py_stream, noncopyable>("stream")
 		//.def("write",pure_virtual(&bs_stream::write));
 
-	class_<stream_wrapper, noncopyable>("stream", init<const boost::python::object&>())
+	class_<stream_wrapper, noncopyable>("stream", init<const std::string &, const boost::python::object&>())
 		.def("write", &stream_wrapper::write);
 
-	class_<py_stream, noncopyable>("wstream", init<const boost::python::object&>());
+	class_<py_stream, noncopyable>("wstream", init<const std::string &, const boost::python::object&>());
 
 	class_<py_bs_channel>("channel", init <const std::string &> ())
 		.def(init<std::string>())

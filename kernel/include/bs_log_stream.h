@@ -38,6 +38,11 @@ namespace log {
 
   public:
 
+    bs_stream (const std::string &name)
+    : name_ (name)
+    {
+    }
+
     inline bool 
     check_section (int section, int level) const
     {
@@ -64,6 +69,12 @@ namespace log {
         }
     }
 
+    const std::string &
+    get_name () const
+    {
+      return name_;
+    }
+
     void add_section (int section, int level);
     void rem_section (int section);
 
@@ -79,6 +90,7 @@ namespace log {
   private:
 
 		sections_t                      sections_; 
+    std::string                     name_;
 
 	};
 

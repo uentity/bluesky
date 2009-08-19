@@ -62,22 +62,15 @@ namespace blue_sky {
 		bool attach(const sp_stream_t &);
 		bool detach(const sp_stream_t &);
 
-		//sp_channel operator<< (const priority &p);
-		//sp_channel operator<< (functor_t functor);
-
 		bs_channel &add_section (int section, int level);
 		bs_channel &rem_section (int section);
 		bs_channel &set_priority (const priority &p);
 
-		//void send_to_subscribers();
 		void set_output_time();
-		//void set_wait_end();
-		//bool outputs_time() const;
-		//bool waits_end() const;
-
 		void set_prefix(const std::string&);
 
 		std::string get_name() const {return name;}
+    sp_stream_t get_stream (const std::string &name) const;
 
 		void dispose() const;
 

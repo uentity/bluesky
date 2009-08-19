@@ -23,11 +23,12 @@ namespace detail {
       }
 #endif
 
-    cout << str.c_str ();
+    cout << str;
 	}
 
-	file_scriber::file_scriber(const std::string &filename, ios_base::openmode mode)
-		: file(new fstream(filename.c_str(),mode))
+	file_scriber::file_scriber(const std::string &name, const std::string &filename, ios_base::openmode mode)
+		: bs_stream (name), 
+    file(new fstream(filename.c_str(),mode))
 	{}
 
 	//file_scriber::~file_scriber() {
@@ -35,10 +36,7 @@ namespace detail {
 	//}
 
 	void file_scriber::write(const std::string &str) const {
-#ifdef _DEBUG
-    // TODO: miryanov
-		*(file.lock()) << str;
-#endif
+		*(file) << str;
 	}
 
 } // namespace detail

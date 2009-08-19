@@ -15,6 +15,12 @@ namespace detail {
 
 	class BS_API cout_scriber : public bs_stream {
 	public:
+
+    cout_scriber (const std::string &name)
+    : bs_stream (name)
+    {
+    }
+
 		void write(const std::string &str) const;
 	};
 
@@ -22,17 +28,8 @@ namespace detail {
 	public:
 		typedef smart_ptr< std::fstream > sp_fstream;
 
-		file_scriber() {}
-	  file_scriber(const file_scriber &src) : bs_stream() { *this = src; }
-
-		file_scriber(const std::string &filename, std::ios_base::openmode mode);
-		//~file_scriber();
+		file_scriber(const std::string &name, const std::string &filename, std::ios_base::openmode mode);
 		void write(const std::string &str) const;
-
-		file_scriber &operator=(const file_scriber &src) {
-			file = src.file;
-			return *this;
-		}
 
 	private:
 		sp_fstream file;

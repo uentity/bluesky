@@ -118,36 +118,12 @@ namespace blue_sky {
 		return false;
 	}
 
-	//void bs_channel::send_to_subscribers() {
-	//	if (output_time && buf_.str().length()) {
-	//		ostringstream tmp;
-	//		tmp << "[" << gettime() << "]: " << prefix;
-	//		buf_.str(tmp.str() + buf_.str());
-	//		//for (sp_scr_list::iterator i = output_streams_.begin(); i != output_streams_.end(); ++i)
-	//			//(*i).lock()->write(tmp.str());
-	//	}
-
-	//	for (stream_iterator_t i = output_streams_.begin(); i != output_streams_.end(); ++i)
-	//		i->lock()->write(buf_.str());
-
-	//	buf_.str("");
-	//}
-
 	void bs_channel::set_output_time() {
 		if(output_time)
 			output_time = false;
 		else
 			output_time = true;
 	}
-
-	//void bs_channel::set_wait_end() {
-	//	if(wait_end) {
-	//		wait_end = false;
-	//		output_time = false;
-	//	}
-	//	else
-	//		wait_end = true;
-	//}
 
 	bs_channel &
   bs_channel::add_section(int section, int level) 
@@ -180,30 +156,24 @@ namespace blue_sky {
 		return *this;
 	}
 
-	//bool bs_channel::outputs_time() const { return output_time; }
-	//bool bs_channel::waits_end() const { return wait_end; }
-
-	//sp_channel bs_channel::operator<<(const priority &op) {
-	//	section_iterator_const_t iter = sections_.find(op.sect);
-	//	if (iter != sections_.end()) {
-	//		if (iter->second < op.prior || iter->second == -1)
-	//			//this->send_to_subscribers();
-	//			this->can_output = false;
-	//		else
-	//			this->can_output = true;
-	//	}
-	//	else
-	//		this->can_output = false;
-	//	return sp_channel(this);
-	//}
-
 	void bs_channel::set_prefix(const std::string &pref) {
 		prefix = pref;
 	}
 
-	//sp_channel bs_channel::operator<<(sp_channel(*foo)(const sp_channel&)) {
-	//	return foo(sp_channel(this));
-	//}
+  bs_channel::sp_stream_t
+  bs_channel::get_stream (const std::string &name) const
+  {
+    for (size_t i = 0, cnt = output_streams_.size (); i < cnt; ++i)
+      {
+        if (output_streams_[i]->get_name () == name)
+          {
+            return output_streams_[i];
+          }
+      }
+
+    bs_throw_exception (boost::format ("Unknown stream name %s") % name);
+  }
+
 
 	sp_channel bs_log::add_channel(const sp_channel &dest) {
     BS_ERROR (dest, "bs_log::add_channel: dest is null");
@@ -293,39 +263,6 @@ namespace blue_sky {
 		for (const_iterator i = tl.logs.begin(); i != tl.logs.end(); ++i)
 			logs.push_back(*i);
 	}*/
-
-	//BS_API sp_channel wait_end(const sp_channel &r) {
-	//	r.lock()->set_wait_end();
-	//	return r;
-	//}
-
-	//BS_API sp_channel bs_lock(const sp_channel &r) {
-	//	return sp_channel(new bs_channel(*r));
-	//}
-
-  //locked_channel &
-  //locked_channel::operator () (int section, int level)
-  //{
-  //  bs_channel::section_iterator_const_t iter = ch_->sections_.find (section);
-  //  if (iter != ch_->sections_.end ())
-  //    {
-  //      if (iter->second < level || iter->second == -1)
-  //        {
-  //          ch_->can_output = false;
-  //        }
-  //      else
-  //        {
-  //          ch_->can_output = true;
-  //        }
-  //    }
-  //  else
-  //    {
-  //      ch_->can_output = false;
-  //    }
-
-  //  return *this;
-  //}
-
 
 	//ctors
 	/*bs_log::bs_log(const bs_log& src)
