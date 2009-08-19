@@ -28,8 +28,8 @@ namespace blue_sky {
 namespace python {
 
 BS_API const sp_channel &bs_end2(const sp_channel &r) {
-		r.lock()->set_can_output(true);
-		r.lock()->send_to_subscribers();
+		//r.lock()->set_can_output(true);
+		//r.lock()->send_to_subscribers();
 		return r;
 }
 
@@ -74,10 +74,10 @@ py_bs_channel::py_bs_channel(const std::string &a) : c(new bs_channel(a)),auto_n
 py_bs_channel::py_bs_channel(const sp_channel &s) : c(s),auto_newline(true) {}
 
 void py_bs_channel::write(const char *str) const {
-	if (auto_newline)
-		*c.lock() << str << bs_end;
-	else
-		bs_end2(*c.lock() << str);
+	//if (auto_newline)
+	//	*c.lock() << str << bs_end;
+	//else
+	//	bs_end2(*c.lock() << str);
 }
 
 bool py_bs_channel::attach(const py_stream &s) const {
@@ -97,7 +97,7 @@ void py_bs_channel::set_output_time() const {
 }
 
 void py_bs_channel::set_wait_end() const {
-	c.lock()->set_wait_end();
+	//c.lock()->set_wait_end();
 }
 
 void py_bs_channel::set_auto_newline(bool nl = false) {

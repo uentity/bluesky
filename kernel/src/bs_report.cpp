@@ -37,6 +37,30 @@ namespace blue_sky {
     bool bs_stream::unsubscribe(bs_channel &src) {
       return src.detach(sp_stream(this));
     }
+
+    void
+    bs_stream::add_section (int section, int level)
+    {
+      if (sections_.find (section) != sections_.end ())
+        {
+          bs_throw_exception ("Section already exists");
+        }
+
+      sections_.insert (std::make_pair (section, level));
+    }
+    void
+    bs_stream::rem_section (int section)
+    {
+      section_iterator_t iter = sections_.find(section);
+      if (iter != sections_.end())
+        sections_.erase (iter);
+    }
+
+    void
+    bs_stream::set_priority (const priority &p)
+    {
+      sections_[p.sect] = p.prior;
+    }
   } // namespace log
 
 	//bs_channel::bs_channel()
@@ -49,7 +73,6 @@ namespace blue_sky {
 	bs_channel::bs_channel(const string &channel_name)
 		: output_time(false)
 		, wait_end(true)
-		, can_output(true)
 		, name(channel_name)
 	{}
 
@@ -67,15 +90,11 @@ namespace blue_sky {
 	}
 
 	const bs_channel &bs_channel::operator=(const bs_channel &src) {
-		sections_       = src.sections_;
 		output_time     = src.output_time;
 		wait_end        = src.wait_end;
-		can_output      = src.can_output;
 		name            = src.name;
 		output_streams_ = src.output_streams_;
 		prefix          = src.prefix;
-
-		buf_.str(src.buf_.str());
 
 		return *this;
 	}
@@ -99,24 +118,20 @@ namespace blue_sky {
 		return false;
 	}
 
-	void bs_channel::send_to_subscribers() {
-		if (output_time && buf_.str().length()) {
-			ostringstream tmp;
-			tmp << "[" << gettime() << "]: " << prefix;
-			buf_.str(tmp.str() + buf_.str());
-			//for (sp_scr_list::iterator i = output_streams_.begin(); i != output_streams_.end(); ++i)
-				//(*i).lock()->write(tmp.str());
-		}
+	//void bs_channel::send_to_subscribers() {
+	//	if (output_time && buf_.str().length()) {
+	//		ostringstream tmp;
+	//		tmp << "[" << gettime() << "]: " << prefix;
+	//		buf_.str(tmp.str() + buf_.str());
+	//		//for (sp_scr_list::iterator i = output_streams_.begin(); i != output_streams_.end(); ++i)
+	//			//(*i).lock()->write(tmp.str());
+	//	}
 
-		for (stream_iterator_t i = output_streams_.begin(); i != output_streams_.end(); ++i)
-			i->lock()->write(buf_.str());
+	//	for (stream_iterator_t i = output_streams_.begin(); i != output_streams_.end(); ++i)
+	//		i->lock()->write(buf_.str());
 
-		buf_.str("");
-	}
-
-	void bs_channel::set_can_output(bool t) {
-		can_output = t;
-	}
+	//	buf_.str("");
+	//}
 
 	void bs_channel::set_output_time() {
 		if(output_time)
@@ -125,31 +140,31 @@ namespace blue_sky {
 			output_time = true;
 	}
 
-	void bs_channel::set_wait_end() {
-		if(wait_end) {
-			wait_end = false;
-			output_time = false;
-		}
-		else
-			wait_end = true;
-	}
+	//void bs_channel::set_wait_end() {
+	//	if(wait_end) {
+	//		wait_end = false;
+	//		output_time = false;
+	//	}
+	//	else
+	//		wait_end = true;
+	//}
 
 	bs_channel &
   bs_channel::add_section(int section, int level) 
   {
-    if (sections_.find (section) != sections_.end ())
+    for (size_t i = 0, cnt = output_streams_.size (); i < cnt; ++i)
       {
-        bs_throw_exception ("Section already added");
+        output_streams_[i]->add_section (section, level);
       }
 
-    sections_.insert (std::make_pair (section, level));
 		return *this;
 	}
 
-	bs_channel &bs_channel::rem_section(int sect) {
-		section_iterator_t iter = sections_.find(sect);
-		if (iter != sections_.end())
-			sections_.erase(iter);
+	bs_channel &bs_channel::rem_section(int section) {
+    for (size_t i = 0, cnt = output_streams_.size (); i < cnt; ++i)
+      {
+        output_streams_[i]->rem_section (section);
+      }
 
 		return *this;
 	}
@@ -157,34 +172,38 @@ namespace blue_sky {
 	bs_channel &
   bs_channel::set_priority (const priority &tp) 
   {
-		sections_[tp.sect] = tp.prior;
+    for (size_t i = 0, cnt = output_streams_.size (); i < cnt; ++i)
+      {
+        output_streams_[i]->set_priority (tp);
+      }
+
 		return *this;
 	}
 
-	bool bs_channel::outputs_time() const { return output_time; }
-	bool bs_channel::waits_end() const { return wait_end; }
+	//bool bs_channel::outputs_time() const { return output_time; }
+	//bool bs_channel::waits_end() const { return wait_end; }
 
-	sp_channel bs_channel::operator<<(const priority &op) {
-		section_iterator_const_t iter = sections_.find(op.sect);
-		if (iter != sections_.end()) {
-			if (iter->second < op.prior || iter->second == -1)
-				//this->send_to_subscribers();
-				this->can_output = false;
-			else
-				this->can_output = true;
-		}
-		else
-			this->can_output = false;
-		return sp_channel(this);
-	}
+	//sp_channel bs_channel::operator<<(const priority &op) {
+	//	section_iterator_const_t iter = sections_.find(op.sect);
+	//	if (iter != sections_.end()) {
+	//		if (iter->second < op.prior || iter->second == -1)
+	//			//this->send_to_subscribers();
+	//			this->can_output = false;
+	//		else
+	//			this->can_output = true;
+	//	}
+	//	else
+	//		this->can_output = false;
+	//	return sp_channel(this);
+	//}
 
 	void bs_channel::set_prefix(const std::string &pref) {
 		prefix = pref;
 	}
 
-	sp_channel bs_channel::operator<<(sp_channel(*foo)(const sp_channel&)) {
-		return foo(sp_channel(this));
-	}
+	//sp_channel bs_channel::operator<<(sp_channel(*foo)(const sp_channel&)) {
+	//	return foo(sp_channel(this));
+	//}
 
 	sp_channel bs_log::add_channel(const sp_channel &dest) {
     BS_ERROR (dest, "bs_log::add_channel: dest is null");
@@ -208,17 +227,6 @@ namespace blue_sky {
 		}
 		return false;
 	}
-
-  locked_channel bs_log::get_locked (const std::string &name_, const char *file, int line) const
-  {
-		channel_iterator_const_t it = channel_map_.find(name_);
-		if (it != channel_map_.end()) 
-      {
-        return locked_channel (it->second, file, line);
-      }
-
-    bs_throw_exception (boost::format ("Unknown log name [%s]") % name_);
-  }
 
 	void bs_channel::dispose() const {
 		delete this;
@@ -286,64 +294,37 @@ namespace blue_sky {
 			logs.push_back(*i);
 	}*/
 
-	BS_API sp_channel wait_end(const sp_channel &r) {
-		r.lock()->set_wait_end();
-		return r;
-	}
+	//BS_API sp_channel wait_end(const sp_channel &r) {
+	//	r.lock()->set_wait_end();
+	//	return r;
+	//}
 
-	BS_API sp_channel bs_lock(const sp_channel &r) {
-		return sp_channel(new bs_channel(*r));
-	}
+	//BS_API sp_channel bs_lock(const sp_channel &r) {
+	//	return sp_channel(new bs_channel(*r));
+	//}
 
-  void
-  locked_channel::bs_end ()
-  {
-    if (ch_->can_output)
-      {
-        buf_ << "\n";
+  //locked_channel &
+  //locked_channel::operator () (int section, int level)
+  //{
+  //  bs_channel::section_iterator_const_t iter = ch_->sections_.find (section);
+  //  if (iter != ch_->sections_.end ())
+  //    {
+  //      if (iter->second < level || iter->second == -1)
+  //        {
+  //          ch_->can_output = false;
+  //        }
+  //      else
+  //        {
+  //          ch_->can_output = true;
+  //        }
+  //    }
+  //  else
+  //    {
+  //      ch_->can_output = false;
+  //    }
 
-        if (ch_->output_time && buf_.str ().length())
-          {
-            static string open_ = "[";
-            static string close_ = "]: ";
-
-            buf_.str (open_ + gettime () + close_ + ch_->prefix + buf_.str ());
-          }
-
-        std::string str = buf_.str ();
-        bs_channel::stream_iterator_t i = ch_->output_streams_.begin(), e = ch_->output_streams_.end();
-        for (; i != e; ++i)
-          {
-            (*i).lock()->write (str);
-          }
-      }
-
-    buf_.str("");
-    ch_->set_can_output (true);
-  }
-
-  locked_channel &
-  locked_channel::operator () (int section, int level)
-  {
-    bs_channel::section_iterator_const_t iter = ch_->sections_.find (section);
-    if (iter != ch_->sections_.end ())
-      {
-        if (iter->second < level || iter->second == -1)
-          {
-            ch_->can_output = false;
-          }
-        else
-          {
-            ch_->can_output = true;
-          }
-      }
-    else
-      {
-        ch_->can_output = false;
-      }
-
-    return *this;
-  }
+  //  return *this;
+  //}
 
 
 	//ctors
