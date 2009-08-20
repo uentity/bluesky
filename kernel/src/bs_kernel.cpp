@@ -94,121 +94,6 @@ namespace std {
 	}
 }
 
-//
-namespace blue_sky {
-
-  namespace detail {
-
-    struct bs_log_wrapper : public bs_log
-    {
-      bs_log_wrapper ()
-      {
-        if (!kernel_dead ())
-          {
-            register_signals ();
-          }
-
-    	  this->add_channel (sp_channel (new bs_channel (OUT_LOG)));
-	      this->add_channel (sp_channel (new bs_channel (ERR_LOG)));
-
-	      char *c_dir = NULL;
-	      if (!(c_dir = getenv("BS_KERNEL_DIR")))
-		      c_dir = (char *)".";
-
-	      this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-	      this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
-	      this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-	      this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/errors.log"), ios::out|ios::app)));
-
-	      this->get_locked (OUT_LOG) << output_time;
-	      this->get_locked (ERR_LOG) << output_time;
-      }
-
-      static bool &
-      kernel_dead ()
-      {
-        static bool kernel_dead_ = false;
-
-        return kernel_dead_;
-      }
-
-			bs_log & 
-      get_log () 
-      {
-				return *this;
-			}
-
-      void
-      register_signals ()
-      {
-        this->add_signal (BS_SIGNAL_RANGE (bs_log));
-      }
-		};
-
-    struct thread_log_wrapper : public thread_log
-    {
-      thread_log_wrapper ()
-      {
-      }
-
-      thread_log &
-      get_log ()
-      {
-        return *this;
-      }
-
-      void
-      register_signals ()
-      {
-      }
-
-      static bool &
-      kernel_dead ()
-      {
-        static bool kernel_dead_ = false;
-
-        return kernel_dead_;
-      }
-    };
-
-    using namespace Loki;
-
-    typedef SingletonHolder < bs_log_wrapper, CreateUsingNew, PhoenixSingleton >      bs_log_holder;
-    typedef SingletonHolder < thread_log_wrapper, CreateUsingNew, PhoenixSingleton >  thread_log_holder;
-  }
-
-  typedef singleton <bs_log>      bs_log_singleton;
-  typedef singleton <thread_log>  thread_log_singleton;
-
-  template <> 
-  bs_log & 
-  singleton <bs_log>::Instance() 
-  {
-    return detail::bs_log_holder::Instance().get_log ();
-  }
-
-  template <>
-  thread_log &
-  singleton <thread_log>::Instance ()
-  {
-    return detail::thread_log_holder::Instance ().get_log ();
-  }
-
-  bs_log &
-  kernel::get_log ()
-  {
-    return bs_log_singleton::Instance ();
-  }
-
-  thread_log &
-  kernel::get_tlog ()
-  {
-    return thread_log_singleton::Instance ();
-  }
-
-} // blue_sky namespace
-
-
 //all implementation contained in blue_sky namespace
 namespace blue_sky {
 
@@ -1300,11 +1185,8 @@ kernel::~kernel()
 {
 	UnloadPlugins();
 
-  // WTF?? 
+	// WTF?? 
 	if(pimpl_.get()) delete pimpl_.get();
-
-  detail::bs_log_wrapper::kernel_dead () = true;
-  detail::thread_log_wrapper::kernel_dead () = true;
 }
 
 // kernel::str_dt_ptr kernel::global_dt() const {
