@@ -27,12 +27,6 @@ using namespace boost::python;
 namespace blue_sky {
 namespace python {
 
-BS_API const sp_channel &bs_end2(const sp_channel &r) {
-		//r.lock()->set_can_output(true);
-		//r.lock()->send_to_subscribers();
-		return r;
-}
-
 py_bs_log::py_bs_log()
 	: //py_bs_messaging(sp_log(new bs_log(give_log::Instance())))
 	l(BS_KERNEL.get_log ())
@@ -74,10 +68,7 @@ py_bs_channel::py_bs_channel(const std::string &a) : c(new bs_channel(a)),auto_n
 py_bs_channel::py_bs_channel(const sp_channel &s) : c(s),auto_newline(true) {}
 
 void py_bs_channel::write(const char *str) const {
-	//if (auto_newline)
-	//	*c.lock() << str << bs_end;
-	//else
-	//	bs_end2(*c.lock() << str);
+  locked_channel (c, __FILE__, __LINE__) << str << bs_end;
 }
 
 bool py_bs_channel::attach(const py_stream &s) const {
@@ -94,14 +85,6 @@ std::string py_bs_channel::get_name() const {
 
 void py_bs_channel::set_output_time() const {
 	c.lock()->set_output_time();
-}
-
-void py_bs_channel::set_wait_end() const {
-	//c.lock()->set_wait_end();
-}
-
-void py_bs_channel::set_auto_newline(bool nl = false) {
-	auto_newline = nl;
 }
 
 py_thread_log::py_thread_log() : l(BS_KERNEL.get_tlog ()) {}
@@ -190,8 +173,7 @@ void py_export_log() {
 		.def("get_name",&py_bs_channel::get_name)
 		.def("write",&py_bs_channel::write)
 		.def("set_output_time",&py_bs_channel::set_output_time)
-		.def("set_wait_end",&py_bs_channel::set_wait_end)
-		.def("set_auto_newline",&py_bs_channel::set_auto_newline);
+    ;
 
 	enum_<bs_log::signal_codes>("log_signal_codes")
 		.value("log_channel_added",bs_log::log_channel_added)
