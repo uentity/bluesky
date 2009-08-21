@@ -20,11 +20,12 @@
  * \date 22.08.2008
  * */
 
-#include <cassert>
 #include "setup_common_api.h"
 //#include "bs_refcounter.h"
 #include "bs_object_base.h"
 #include "bs_link.h"
+
+#include <cassert>
 
 namespace blue_sky {
 void BS_API bs_refcounter_add_ref (const bs_refcounter *p) {
@@ -48,15 +49,15 @@ void BS_API bs_refcounter_del_ref (const bs_refcounter *p) {
 	}
 }
 
-void BS_API usual_deleter_unsafe::operator()(void const *p) const {
-	delete p;
+void BS_API usual_deleter_unsafe::operator()(void *p) const {
+	delete static_cast <char *> (p);
 }
 
-void BS_API array_deleter_unsafe::operator()(void const *p) const {
-	delete []p;
+void BS_API array_deleter_unsafe::operator()(void *p) const {
+	delete [] static_cast <char *> (p);
 }
 
-void BS_API bs_obj_deleter_unsafe::operator()(void const *p) const {
+void BS_API bs_obj_deleter_unsafe::operator()(void *p) const {
 	static_cast< bs_refcounter const* >(p)->del_ref();
 }
 

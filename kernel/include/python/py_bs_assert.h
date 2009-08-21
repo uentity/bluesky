@@ -51,7 +51,7 @@ public:
 		disable_python_call_on_success = d;
 	}
 
-	py_assert_factory_setter *make_python (bool cond, const char *file, int line, const char *cond_str)
+	py_assert_factory_setter *make_python (bool /*cond*/, const char * /*file*/, int /*line*/, const char * /*cond_str*/)
 	{
 		return new py_assert_factory_setter ();
 	}

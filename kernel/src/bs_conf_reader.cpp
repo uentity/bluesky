@@ -17,11 +17,12 @@ namespace blue_sky {
 		mval[name] = val;
 	}
 
-	bs_conf_reader::bs_conf_reader(bs_type_ctor_param /*param*/)
+	bs_conf_reader::bs_conf_reader(bs_type_ctor_param param)
+  : objbase (param)
 	{}
 
 	bs_conf_reader::bs_conf_reader(const bs_conf_reader& src)
-		: bs_refcounter (src)
+  : bs_refcounter (src), objbase (src)
 	{
 		*this = src;
 	}
@@ -31,14 +32,12 @@ namespace blue_sky {
 		carray.clear();
 		std::ifstream srcfile(filename);
 		std::stringstream str;
-		int idx = 0;
 
     if (srcfile.fail ())
       {
         throw bs_exception ("bs_conf_reader::read_file", std::string ("Can't open config file (") + filename + ")");
       }
 
-		char lc = 0;
 		for(; !(srcfile.fail () || (srcfile.eof()));) {
       char c = (char)srcfile.get();
 			if (c == '}') {

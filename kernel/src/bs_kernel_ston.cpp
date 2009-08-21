@@ -55,13 +55,13 @@ struct bs_log_wrapper : public bs_log
 		if (!(c_dir = getenv("BS_KERNEL_DIR")))
 			c_dir = (char *)".";
 
-		this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-		this->get_locked (OUT_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
-		this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::cout_scriber));
-		this->get_locked (ERR_LOG).get_channel ()->attach(sp_stream(new log::detail::file_scriber (string(c_dir) + string("/errors.log"), ios::out|ios::app)));
+		this->get_locked (OUT_LOG, __FILE__, __LINE__).get_channel ()->attach(sp_stream(new log::detail::cout_scriber ("COUT")));
+		this->get_locked (OUT_LOG, __FILE__, __LINE__).get_channel ()->attach(sp_stream(new log::detail::file_scriber ("FILE", string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
+		this->get_locked (ERR_LOG, __FILE__, __LINE__).get_channel ()->attach(sp_stream(new log::detail::cout_scriber ("COUT")));
+		this->get_locked (ERR_LOG, __FILE__, __LINE__).get_channel ()->attach(sp_stream(new log::detail::file_scriber ("FILE", string(c_dir) + string("/errors.log"), ios::out|ios::app)));
 
-		this->get_locked (OUT_LOG) << output_time;
-		this->get_locked (ERR_LOG) << output_time;
+		this->get_locked (OUT_LOG, __FILE__, __LINE__) << output_time;
+		this->get_locked (ERR_LOG, __FILE__, __LINE__) << output_time;
 	}
 
 	//static bool &

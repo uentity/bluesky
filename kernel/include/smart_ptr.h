@@ -134,16 +134,16 @@ typedef bs_castpol_val< BS_IMPLICIT_CAST > bs_implicit_cast;
 Taken from boost documentation.
 */
 struct null_deleter_unsafe {
-	void operator()(void const *) const
+	void operator()(void *) const
 	{}
 };
 
 struct usual_deleter_unsafe {
-	void operator()(void const *p) const;
+	void operator()(void *p) const;
 };
 
 struct array_deleter_unsafe {
-	void operator()(void const *p) const;
+	void operator()(void *p) const;
 };
 
 template< class T >
@@ -177,7 +177,7 @@ struct bs_obj_deleter {
 };
 
 struct bs_obj_deleter_unsafe {
-	void operator()(void const* p) const;
+	void operator()(void * p) const;
 };
 
 //! \namespace bs_private
@@ -488,12 +488,15 @@ public:
 	/*!
 	\brief Constructor from simple pointer with disjoint mutex.
 	*/
-	bs_locker(pointer_t lp, bs_mutex& m)
-		: p_(const_cast< pure_pointer_t >(lp))
 #ifndef BS_DISABLE_MT_LOCKS
-		  , lobj_(m)
-#endif
+	bs_locker(pointer_t lp, bs_mutex& m)
+		: p_(const_cast< pure_pointer_t >(lp)), lobj_(m)
 	{}
+#else
+	bs_locker(pointer_t lp, bs_mutex& )
+		: p_(const_cast< pure_pointer_t >(lp))
+	{}
+#endif
 
 	pure_pointer_t operator->() const {
 		return p_;

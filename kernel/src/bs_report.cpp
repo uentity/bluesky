@@ -13,9 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
-#include <algorithm>
-#include <iostream>
-
 #include "bs_misc.h"
 #include "bs_report.h"
 #include "bs_exception.h"
@@ -23,6 +20,9 @@
 #include "bs_link.h"
 #include "bs_log_scribers.h"
 #include "get_thread_id.h"
+
+#include <algorithm>
+#include <iostream>
 
 using namespace std;
 using namespace Loki;

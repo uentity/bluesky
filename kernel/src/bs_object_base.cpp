@@ -78,7 +78,7 @@ objbase::objbase(const bs_messaging::sig_range_t& sr)
 }
 
 objbase::objbase(const objbase& obj)
-	: bs_refcounter(), bs_messaging(obj), inode_(NULL)
+	: bs_refcounter(obj), bs_messaging(obj), inode_(NULL)
 {
 	add_ref();
 }

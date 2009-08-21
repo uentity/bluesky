@@ -3,7 +3,7 @@ Import('*');
 
 custom_env.Append(
 	CPPDEFINES = ['UNIX'],
-	CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-fvisibility=hidden', '-fvisibility-inlines-hidden', '-pipe'],
+	CCFLAGS = ['-W', '-Wall', '-Wno-deprecated', '-fvisibility-inlines-hidden', '-pipe', '-Wno-pragmas', '-Wno-unknown-pragmas', '-Wno-unused-parameter', '-Wno-unused-value'],
 	CPPPATH = ['/usr/include/${python_name}'],
 );
 

@@ -26,8 +26,8 @@ public:
 	 *        reference to prevent python gc of collection of this object
 	 * */
 	py_asserter_caller (const boost::python::object &obj)
-		: obj (obj)
-		  , bs_assert::asserter (true, "", -1, "")
+    : bs_assert::asserter (true, "", -1, "")
+		, obj (obj)
 	{
 		Py_INCREF (obj.ptr ());
 	}

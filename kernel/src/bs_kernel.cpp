@@ -632,7 +632,7 @@ public:
 		return (pd != kernel_pd_ && pd != runtime_pd_);
 	}
 
-	bool register_type(const plugin_descriptor& pd, const type_descriptor& td, bool inner_type = false,
+	bool register_type(const plugin_descriptor& pd, const type_descriptor& td, bool /*inner_type */= false,
 		fe_ptr* tp_ref = NULL)
 	{
 		if(td.type().is_nil()) return false;

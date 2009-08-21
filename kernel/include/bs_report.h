@@ -16,18 +16,18 @@
 #ifndef _BS_REPORTER_H
 #define _BS_REPORTER_H
 
-#include <list>
-#include <set>
-#include <map>
 #include "bs_common.h"
 #include "bs_refcounter.h"
 #include "bs_messaging.h"
 #include "bs_log_stream.h"
 #include "bs_misc.h"
+#include "throw_exception.h"
 
 #include "loki/Singleton.h"
 
-#include "throw_exception.h"
+#include <list>
+#include <set>
+#include <map>
 
 namespace blue_sky {
 
@@ -100,15 +100,15 @@ namespace blue_sky {
   struct proxy_log_end {};
   struct proxy_log_line {};
   struct proxy_log_output_time {};
-  static void bs_end (const proxy_log_end &)
+  inline void bs_end (const proxy_log_end &)
   {
   }
 
-  static void bs_line (const proxy_log_line &)
+  inline void bs_line (const proxy_log_line &)
   {
   }
 
-  static void output_time (const proxy_log_output_time &)
+  inline void output_time (const proxy_log_output_time &)
   {
   }
 
