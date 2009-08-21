@@ -24,11 +24,33 @@
 #include "boost/preprocessor/cat.hpp"
 #include "boost/preprocessor/punctuation/comma_if.hpp"
 #include "boost/preprocessor/control/iif.hpp"
+#include <boost/preprocessor/control/expr_iif.hpp>
 #include "boost/preprocessor/facilities/empty.hpp"
 #include "boost/preprocessor/tuple/to_seq.hpp"
 #include "boost/preprocessor/seq/enum.hpp"
 #include "boost/preprocessor/seq/for_each_i.hpp"
 #include "boost/preprocessor/seq/size.hpp"
+#include "boost/preprocessor/seq/cat.hpp"
+#include "boost/preprocessor/seq/push_back.hpp"
+#include "boost/preprocessor/seq/to_array.hpp"
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/identity.hpp>
+
+// trick to overcome M$VC c4003 warnings
+#include <boost/preprocessor/array/data.hpp>
+#include <boost/preprocessor/tuple/rem.hpp> 
+
+#define BS_SEQ_NIL() (;)
+#define BS_ARRAY_NIL() (0, ())
+
+#define BS_ARRAY_ENUM(array) \
+    BOOST_PP_TUPLE_REM_CTOR( \
+        BOOST_PP_ARRAY_SIZE(array), \
+        BOOST_PP_ARRAY_DATA(array) \
+    )
+
+#define BS_FMT_TYPE_SPEC(T, is_decl) \
+BS_ARRAY_ENUM(BOOST_PP_IIF(is_decl, BS_ARRAY_NIL(), BOOST_PP_SEQ_TO_ARRAY(T)))BOOST_PP_EXPR_IIF(BOOST_PP_COMPL(is_decl), ::)
 
 //================================ macro definitions ===================================================================
 #define BS_TYPE_DECL \
@@ -80,10 +102,10 @@ BOOST_PP_SEQ_ENUM(prefix) blue_sky::type_descriptor BOOST_PP_SEQ_ENUM(T)::bs_res
 
 //----------------- implementation for non-templated classes -----------------------------------------------------------
 #define BS_TYPE_IMPL(T, base, type_string, short_descr, long_descr) \
-BS_TYPE_IMPL_EXT_((), (T), (base), type_string, short_descr, long_descr, false)
+BS_TYPE_IMPL_EXT_(BS_SEQ_NIL(), (T), (base), type_string, short_descr, long_descr, false)
 
 #define BS_TYPE_IMPL_NOCOPY(T, base, type_string, short_descr, long_descr) \
-BS_TYPE_IMPL_EXT_((), (T), (base), type_string, short_descr, long_descr, true)
+BS_TYPE_IMPL_EXT_(BS_SEQ_NIL(), (T), (base), type_string, short_descr, long_descr, true)
 
 #define BS_TYPE_IMPL_SHORT(T, short_descr) \
 BS_TYPE_IMPL(T, #T, short_descr, "")
@@ -115,21 +137,20 @@ template< > BS_API_PLUGIN blue_sky::type_descriptor T< spec_type >::bs_type() { 
     return td_maker(std::string("_") + #spec_type); }
 
 //------------------- common extended create & copy instance macroses --------------------------------------------------
-#define BS_TYPE_STD_CREATE_EXT_(prefix, T, is_decl)                                          \
-BOOST_PP_SEQ_ENUM(prefix) blue_sky::objbase*                                                 \
-BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::)   \
-bs_create_instance(bs_type_ctor_param param BOOST_PP_IIF(is_decl, = NULL, BOOST_PP_EMPTY())) \
+#define BS_TYPE_STD_CREATE_EXT_(prefix, T, is_decl)                             \
+BOOST_PP_SEQ_ENUM(prefix) blue_sky::objbase* BS_FMT_TYPE_SPEC(T, is_decl)       \
+bs_create_instance(bs_type_ctor_param param BOOST_PP_EXPR_IIF(is_decl, = NULL)) \
 { return new BOOST_PP_SEQ_ENUM(T)(param); }
 
-#define BS_TYPE_STD_COPY_EXT_(prefix, T, is_decl)                                                                                       \
-BOOST_PP_SEQ_ENUM(prefix) blue_sky::objbase* BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::) \
-bs_create_copy(bs_type_cpy_ctor_param src) {                                                                                            \
-    return new BOOST_PP_SEQ_ENUM(T)(*static_cast< const BOOST_PP_SEQ_ENUM(T)* >(src.get()));                                            \
+#define BS_TYPE_STD_COPY_EXT_(prefix, T, is_decl)                                            \
+BOOST_PP_SEQ_ENUM(prefix) blue_sky::objbase* BS_FMT_TYPE_SPEC(T, is_decl)                    \
+bs_create_copy(bs_type_cpy_ctor_param src) {                                                 \
+    return new BOOST_PP_SEQ_ENUM(T)(*static_cast< const BOOST_PP_SEQ_ENUM(T)* >(src.get())); \
 }
 
 //------------------- bs_create_instance macro -------------------------------------------------------------------------
 #define BLUE_SKY_TYPE_STD_CREATE(T) \
-BS_TYPE_STD_CREATE_EXT_((), (T), 0)
+BS_TYPE_STD_CREATE_EXT_(BS_SEQ_NIL(), (T), 0)
 
 #define BLUE_SKY_TYPE_STD_CREATE_MEM(T) \
 	BS_TYPE_STD_CREATE_EXT_((static), (T), 1)
@@ -160,7 +181,7 @@ BOOST_PP_TUPLE_TO_SEQ(BOOST_PP_SEQ_SIZE(t_params), (T< BS_CLIST_FORMER(t_params)
 
 //----------------- bs_create_copy macro -------------------------------------------------------------------------------
 #define BLUE_SKY_TYPE_STD_COPY(T) \
-BS_TYPE_STD_COPY_EXT_((), (T), 0)
+BS_TYPE_STD_COPY_EXT_(BS_SEQ_NIL(), (T), 0)
 
 #define BLUE_SKY_TYPE_STD_COPY_MEM(T) \
 BS_TYPE_STD_COPY_EXT_((static), (T), 1)
