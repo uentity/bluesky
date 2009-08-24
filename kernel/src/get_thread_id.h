@@ -18,16 +18,16 @@ namespace blue_sky {
 namespace detail {
 
 #ifndef UNIX
-    static size_t
+    static unsigned long int
     get_thread_id ()
     {
-      return GetCurrentThreadId ();
+      return (unsigned long int)GetCurrentThreadId ();
     }
 #else
-    static size_t
+    static unsigned long int
     get_thread_id ()
     {
-      return pthread_self();
+      return (unsigned long int)pthread_self();
     }
 #endif
 

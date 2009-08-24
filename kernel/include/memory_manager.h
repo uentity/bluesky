@@ -16,7 +16,7 @@ namespace blue_sky {
     struct allocator_info;
     struct allocator_interface;
 
-    typedef size_t                                  thread_id_t;
+    typedef unsigned long int                       thread_id_t;
     typedef std::map <thread_id_t, allocator_info*> allocator_info_map_t;
     typedef size_t                                  ptr_diff_t;
 
