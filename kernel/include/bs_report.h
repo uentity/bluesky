@@ -112,50 +112,6 @@ namespace blue_sky {
   {
   }
 
-  namespace detail {
-
-    template <typename T>
-    inline std::string
-    get_str (const T &t)
-    {
-      return boost::lexical_cast <std::string> (t);
-    }
-
-    //template <>
-    //struct get_str <boost::format>
-    //{
-    //  static std::string
-    //  get (const boost::format &t)
-    //  {
-    //    return t.str ();
-    //  }
-    //};
-
-    inline std::string
-    get_str (int t)
-    {
-      return boost::lexical_cast <std::string> (t);
-    }
-
-    inline std::string
-    get_str (const double &t)
-    {
-      return boost::lexical_cast <std::string> (t);
-    }
-
-    inline std::string
-    get_str (const char *t)
-    {
-      return t;
-    }
-
-    inline std::string
-    get_str (const std::string &t)
-    {
-      return t;
-    }
-  }
-
   template <typename log_t, typename proxy_t, typename what_t>
   struct proxy_log
   {
