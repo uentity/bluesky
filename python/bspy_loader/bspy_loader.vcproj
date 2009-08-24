@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)/../../kernel/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;;&quot;$(LOKI_PATH)/include&quot;"
-				PreprocessorDefinitions="WIN32;_DEBUG;BS_EXPORTING_PLUGIN;TARGET_NAME=$(TargetName);BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_;BS_DISABLE_MT_LOCKS"
+				PreprocessorDefinitions="WIN32;_DEBUG;BS_EXPORTING_PLUGIN;TARGET_NAME=$(TargetName);BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_;BS_DISABLE_MT_LOCKS;BS_EXCEPTION_USE_BOOST_FORMAT"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
