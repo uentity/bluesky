@@ -78,11 +78,11 @@ namespace blue_sky {
 		return carray.size();
 	}
 
-	const bs_conf_reader::conf_elem &bs_conf_reader::get(int i) const {
+	const bs_conf_reader::conf_elem &bs_conf_reader::get(size_t i) const {
 		return carray[i];
 	}
 
-	bs_conf_reader::conf_elem &bs_conf_reader::get(int i) {
+	bs_conf_reader::conf_elem &bs_conf_reader::get(size_t i) {
 		return carray[i];
 	}
 

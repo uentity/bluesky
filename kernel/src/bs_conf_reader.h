@@ -56,8 +56,8 @@ namespace blue_sky {
 		void read_file(const char *filename);
 		size_t get_length() const;
 
-		const conf_elem &get(int i) const;
-		conf_elem &get(int i);
+		const conf_elem &get(size_t i) const;
+		conf_elem &get(size_t i);
 
 	private:
 		conf_elem_array carray;
