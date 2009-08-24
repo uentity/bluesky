@@ -40,6 +40,7 @@ namespace blue_sky {
       return std::string (tmp, len);
     }
 
+#ifndef UNIX
     inline std::string
     get_str (const unsigned long int &t)
     {
@@ -48,6 +49,7 @@ namespace blue_sky {
 
       return std::string (tmp, len);
     }
+#endif
 
     inline std::string
     get_str (const double &t)
