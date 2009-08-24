@@ -138,11 +138,11 @@ struct null_deleter_unsafe {
 	{}
 };
 
-struct usual_deleter_unsafe {
+struct BS_API usual_deleter_unsafe {
 	void operator()(void *p) const;
 };
 
-struct array_deleter_unsafe {
+struct BS_API array_deleter_unsafe {
 	void operator()(void *p) const;
 };
 
@@ -176,7 +176,7 @@ struct bs_obj_deleter {
 	}
 };
 
-struct bs_obj_deleter_unsafe {
+struct BS_API bs_obj_deleter_unsafe {
 	void operator()(void * p) const;
 };
 
