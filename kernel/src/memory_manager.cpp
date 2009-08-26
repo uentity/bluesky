@@ -44,10 +44,14 @@
 
 namespace blue_sky {
 
+#ifndef BS_BACKTRACE_LEN
+#define BS_BACKTRACE_LEN 14
+#endif
+
   struct memory_manager::allocator_info
   {
 #ifdef BS_BOS_CORE_COLLECT_BACKTRACE
-    enum { max_backtrace_len = 14, };
+    enum { max_backtrace_len = BS_BACKTRACE_LEN, };
     struct alloc_info
     {
       size_t    size_;

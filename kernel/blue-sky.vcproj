@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
-				PreprocessorDefinitions="_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING;BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_BOS_CORE_COLLECT_BACKTRACE_;BS_EXCEPTION_USE_BOOST_FORMAT"
+				PreprocessorDefinitions="_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING;BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				SmallerTypeCheck="true"
@@ -129,7 +129,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories="&quot;$(STLPORT_PATH_)/stlport&quot;;&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
-				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_BOS_CORE_COLLECT_BACKTRACE_;BS_EXCEPTION_USE_BOOST_FORMAT"
+				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="true"
 				FloatingPointExceptions="true"
@@ -570,6 +570,22 @@
 			<File
 				RelativePath=".\src\memory_manager.cpp"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions="BS_BACKTRACE_LEN=48;BS_BOS_CORE_COLLECT_BACKTRACE_"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions="BS_BACKTRACE_LEN=48;BS_BOS_CORE_COLLECT_BACKTRACE_"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\include\memory_manager.h"
