@@ -1092,7 +1092,9 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 			BSOUT << ", Python subsystem initialized (namespace " << py_scope << ")";
 		BSOUT << bs_end;
 	}
-	catch(const bs_exception& /*ex*/) {
+	catch(const bs_exception& ex) {
+		// print error information
+		BSOUT << ex.what();
 		//unload library
 		if(p_descr)
 			unload_plugin(*p_descr);
