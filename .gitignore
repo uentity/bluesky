@@ -12,5 +12,4 @@ scons_vars.custom
 *.user
 *.idb
 *.pdb
-plugins/bs_bos_core
 *.log
