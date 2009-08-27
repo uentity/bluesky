@@ -114,55 +114,51 @@ struct thread_log_wrapper : public thread_log
 /// @brief Wrapper allowing to do some initialization on first give_kernel()::Instance() call
 /// just after the kernel class is created
 struct wrapper_kernel {
+	kernel k_;
 
-	 kernel* k_;
+	kernel& (wrapper_kernel::*ref_fun_)();
 
-	 kernel& (wrapper_kernel::*ref_fun_)();
+	// constructor
+	wrapper_kernel()
+		: ref_fun_(&wrapper_kernel::initial_kernel_getter)
+	{
+		kernel_alive = true;
+	}
 
-	 // constructor
-	 wrapper_kernel()
-		 : k_(new kernel), ref_fun_(&wrapper_kernel::initial_kernel_getter)
-	 {
-		 kernel_alive = true;
-	 }
+	// normal getter - just returns kernel reference
+	kernel& usual_kernel_getter() {
+		return k_;
+	}
 
-	 // normal getter - just returns kernel reference
-	 kernel& usual_kernel_getter() {
-		 return *k_;
-	 }
-
-	 // when kernel reference is obtained for the first time
-	 kernel& initial_kernel_getter() {
-		 // first switch to usual getter to avoid infinite constructor recursion during load_plugins()
-		 ref_fun_ = &wrapper_kernel::usual_kernel_getter;
-		 // initialize kernel
-		 k_->init();
+	// when kernel reference is obtained for the first time
+	kernel& initial_kernel_getter() {
+		// first switch to usual getter to avoid infinite constructor recursion during load_plugins()
+		ref_fun_ = &wrapper_kernel::usual_kernel_getter;
+		// initialize kernel
+		k_.init();
 
 #ifdef BS_AUTOLOAD_PLUGINS
-		 // load plugins
-		 k_->LoadPlugins();
+		// load plugins
+		k_.LoadPlugins();
 #endif
-		 // return reference
-		 return *k_;
-	 }
+		// return reference
+		return k_;
+	}
 
-	 kernel& k_ref() {
+	kernel& k_ref() {
 		return (this->*ref_fun_)();
-	 }
+	}
 
-	 ~wrapper_kernel() {
-		// force kernel destruction
-		 delete k_;
-
+	~wrapper_kernel() {
 		// signal that it is destroyed
 		kernel_alive = false;
 
 		//bs_log_wrapper::kernel_dead () = true;
 		//thread_log_wrapper::kernel_dead () = true;
-	 }
-// 			 kernel& k_ref() {
-// 				 return k_;
-// 			 }
+	}
+	//kernel& k_ref() {
+	//    return k_;
+	//}
 };
 
 typedef SingletonHolder < bs_log_wrapper, CreateUsingNew, PhoenixSingleton >      bs_log_holder;
