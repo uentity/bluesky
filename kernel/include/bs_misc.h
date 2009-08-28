@@ -83,7 +83,7 @@ BS_C_API int version_comparator(const char * //!< left version
 								 , const char * //!< right version
 								 );
 //! \brief get time function
-BS_API const char * gettime();
+BS_API std::string gettime();
 
 BS_API blue_sky::error_code search_files(std::vector<std::string> &res, const char * what, const char * lib_dir);
 

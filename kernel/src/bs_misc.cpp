@@ -139,7 +139,8 @@ bool compare(const char* src , const char* dbt, const char* before, const char* 
 }
 
 //! \return string of chars, contains current time
-const char * gettime()
+std::string 
+gettime()
 {
 	time_t cur_time;
 	char * cur_time_str = NULL;

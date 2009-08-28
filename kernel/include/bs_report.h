@@ -181,8 +181,8 @@ namespace blue_sky {
     {
       if (ch_->output_time && msg.length())
         {
-          static std::string open_ = "[";
-          static std::string close_ = "]: ";
+          std::string open_ = "[";
+          std::string close_ = "]: ";
 
           msg = open_ + gettime () + close_ + ch_->prefix + msg + "\n";
         }
