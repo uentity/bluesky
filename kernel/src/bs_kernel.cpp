@@ -466,8 +466,8 @@ public:
 	//}
 
 	~kernel_impl() {
-		string s = "~kernel_impl called";
-		cout << s << endl;
+		//string s = "~kernel_impl called";
+		//cout << s << endl;
 	}
 
 	//kernel initialization routine
@@ -1190,7 +1190,7 @@ kernel::~kernel()
 	UnloadPlugins();
 
 	// WTF?? 
-	if(pimpl_.get()) delete pimpl_.get();
+  if(pimpl_.get()) delete pimpl_.get();
 }
 
 // kernel::str_dt_ptr kernel::global_dt() const {

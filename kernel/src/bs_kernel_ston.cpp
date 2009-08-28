@@ -25,6 +25,7 @@
 #include "thread_pool.h"
 #include "bs_report.h"
 #include "bs_log_scribers.h"
+#include "bs_kernel_tools.h"
 
 //#define LOKI_CLASS_LEVEL_THREADING
 #include "loki/Singleton.h"
@@ -68,10 +69,8 @@ struct bs_log_wrapper : public bs_log
 	//kernel_dead ()
 	//{
 	//	static bool kernel_dead_ = false;
-
 	//	return kernel_dead_;
 	//}
-
 	bs_log & 
 	get_log () 
 	{
@@ -101,12 +100,10 @@ struct thread_log_wrapper : public thread_log
 	register_signals ()
 	{
 	}
-
 	//static bool &
 	//kernel_dead ()
 	//{
 	//	static bool kernel_dead_ = false;
-
 	//	return kernel_dead_;
 	//}
 };
@@ -150,15 +147,13 @@ struct wrapper_kernel {
 	}
 
 	~wrapper_kernel() {
+#ifdef _DEBUG
+		BSOUT << kernel_tools::get_backtrace (128) << bs_end;
+#endif
+		k_.get_memory_manager ().print_info ();
 		// signal that it is destroyed
 		kernel_alive = false;
-
-		//bs_log_wrapper::kernel_dead () = true;
-		//thread_log_wrapper::kernel_dead () = true;
 	}
-	//kernel& k_ref() {
-	//    return k_;
-	//}
 };
 
 typedef SingletonHolder < bs_log_wrapper, CreateUsingNew, PhoenixSingleton >      bs_log_holder;

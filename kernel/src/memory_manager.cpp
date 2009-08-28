@@ -109,9 +109,6 @@ namespace blue_sky {
 
   memory_manager::~memory_manager ()
   {
-#ifdef BS_BOS_CORE_DEBUG_MEMORY
-    print_info ();
-#endif
   }
 
   bool 
@@ -324,6 +321,7 @@ namespace blue_sky {
   void
   memory_manager::print_info (allocator_info *info, bool print_map)
   {
+#ifdef BS_BOS_CORE_DEBUG_MEMORY
     BSOUT << "allocate_count: " << info->alloc_call_count << bs_end;
     BSOUT << "deallocate_count: " << info->dealloc_call_count << bs_end;
     BSOUT << "total_alloc_size: " << info->total_alloc_size << bs_end;
@@ -352,26 +350,21 @@ namespace blue_sky {
 #endif
           }
       }
+#endif
   }
 
   void
   memory_manager::print_info (bool print_map)
   {
+#ifdef BS_BOS_CORE_DEBUG_MEMORY
     thread_id_t thread_id = detail::get_thread_id ();
 
     allocator_info *info = get_allocator_info (allocator_info_map, thread_id);
     BS_ASSERT (info) (thread_id);
 
     print_info (info, print_map);
+#endif
   }
-
-  //memory_manager &
-  //memory_manager::instance ()
-  //{
-  //  static memory_manager *mm = new memory_manager;
-  //  return *mm;
-  //}
-
 
 } // namespace blue_sky
 
