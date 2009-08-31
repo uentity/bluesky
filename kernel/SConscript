@@ -83,6 +83,14 @@ if ("boost_suffix" not in custom_vars.keys ()) :
     custom_vars.Add ("boost_suffix", "Set custom boost_suffix", "-mt")
     custom_vars.Update (custom_env)
 
+if ("log_buffer" not in custom_vars.keys ()) :
+    custom_vars.Add ("log_buffer", "Set to 1 to use buffered output in log in release", "1")
+    custom_vars.Update (custom_env)
+
+if ("log_buffer_force" not in custom_vars.keys ()) :
+    custom_vars.Add ("log_buffer_force", "Set to 1 to use buffered output in log in release and debug", "0")
+    custom_vars.Update (custom_env)
+
 # setup default build environment
 base_env = custom_env.Clone();
 base_env.AppendUnique(
@@ -116,6 +124,9 @@ if (base_env["tcmalloc"] == "1") :
 
 if (base_env["debug_info"] == "1") :
     base_env.AppendUnique (CCFLAGS = ["-ggdb"])
+
+base_env.AppendUnique (CPPDEFINES = ["BS_LOG_USE_BUFFER=" + str (base_env["log_buffer"])])
+base_env.AppendUnique (CPPDEFINES = ["BS_LOG_USE_BUFFER_FORCE=" + str (base_env["log_buffer_force"])])
 
 # finalize env construction
 if build_kind == 'debug' :
