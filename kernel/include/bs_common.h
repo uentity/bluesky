@@ -22,9 +22,12 @@
 #ifndef _BS_COMMON_H
 #define _BS_COMMON_H
 
+#if PYTHON_VERSION > 25
 #ifdef BSPY_EXPORTING
 #include <Python.h>
 #endif
+#endif
+
 #include "setup_common_api.h"
 
 //setup default plugin api
