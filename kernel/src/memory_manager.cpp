@@ -86,7 +86,8 @@ namespace blue_sky {
       dealloc_call_count (0),
       total_alloc_size (0),
       total_dealloc_size (0),
-      alloc_size (0)
+      alloc_size (0),
+      max_alloc_size (0)
     {
     }
 
@@ -95,6 +96,7 @@ namespace blue_sky {
     size_t          total_alloc_size;
     size_t          total_dealloc_size;
     size_t          alloc_size;
+    size_t          max_alloc_size;
     alloc_map_t     alloc_map;
     dealloc_map_t   dealloc_map;
   };
@@ -216,6 +218,11 @@ namespace blue_sky {
     info->alloc_size += size;
     info->total_alloc_size += size;
 
+    if (info->alloc_size > info->max_alloc_size)
+      {
+        info->max_alloc_size = info->alloc_size;
+      }
+
     allocator_info::alloc_map_t::iterator address_it = info->alloc_map.find (ptr);
     if (address_it != info->alloc_map.end ())
       {
@@ -327,6 +334,7 @@ namespace blue_sky {
     BSOUT << "total_alloc_size: " << info->total_alloc_size << bs_end;
     BSOUT << "total_dealloc_size: " << info->total_dealloc_size << bs_end;
     BSOUT << "alloc_size: " << info->alloc_size << bs_end;
+    BSOUT << "max_alloc_size: " << info->max_alloc_size << bs_end;
     if (print_map)
       {
         BSOUT << "alloc_map: " << bs_end;
