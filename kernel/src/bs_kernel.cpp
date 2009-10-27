@@ -953,30 +953,27 @@ PyMethodDef initial_methods[] = { { 0, 0, 0, 0 } };
 
 void bspy_init_plugin(const string& nested_scope, void(*init_function)())
 {
-    static PyObject* m
-        = Py_InitModule(const_cast< char* >(plugin_info.py_namespace_.c_str()), initial_methods);
+  static PyObject* m = Py_InitModule(plugin_info.py_namespace_.c_str(), initial_methods);
+
 	// Create the current module scope
 	static scope current_module(object(((borrowed_reference_t*)m)));
-	static object exp_scope_plug = class_< py_scope_plug >("bs_scope");
 
-    if (m != 0)
+  if (!m)
+  {
+    bs_throw_exception (boost::format ("Py_InitModule: Can't create module for %s") 
+      % plugin_info.py_namespace_);
+  }
+
+  std::string name = plugin_info.py_namespace_ + "." + nested_scope;
+  PyObject *nested_module = Py_InitModule (name.c_str (), initial_methods);
+  if (!nested_module)
     {
-        // Create the current module scope
-//        object m_obj(((borrowed_reference_t*)m));
-//        scope current_module(m_obj);
-
-        //make nested scope
-		current_module.attr(nested_scope.c_str()) = exp_scope_plug();
-		boost::python::scope outer = //exp_scope_plug();
-			object(current_module.attr(nested_scope.c_str()));
-			//object(current_module.attr(nested_scope.c_str()));
-			//boost::python::object(nested_scope);
-			//boost::python::class_< py_scope_plug >(nested_scope.c_str());
-
-
-
-        handle_exception(init_function);
+      bs_throw_exception (boost::format ("Py_InitModule: Can't create module for %s") % nested_scope);
     }
+  scope nested_scope_ (object (((borrowed_reference_t *)nested_module)));
+  current_module.attr (nested_scope.c_str ()) = nested_scope_;
+
+  handle_exception(init_function);
 }
 
 string extract_root_name(const string& full_name) {
