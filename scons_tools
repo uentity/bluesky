@@ -10,11 +10,12 @@ def add_suffix (x, suffix) :
         return x + suffix
 
 class files :
-    def __init__ (self, root, excludes = []) :
+    def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"]) :
         def super_glob (inc = Split ("."), excludes = []) :
             file_list = []
-            for p in inc :
-                file_list.extend ([str (x) for x in Glob (os.path.join (p, "*.cpp"))])
+            for e in ext :
+        	for p in inc :
+            	    file_list.extend ([str (x) for x in Glob (os.path.join (p, e))])
 
             for f in excludes :
                 if (f in file_list) :
