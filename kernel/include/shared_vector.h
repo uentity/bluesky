@@ -124,6 +124,8 @@ namespace blue_sky {
             }
           this->array_->N = xlen;
         }
+
+      return *this;
     }
 
     template <typename forward_iterator>
@@ -178,6 +180,14 @@ namespace blue_sky {
     {
       typedef typename std::iterator_traits <input_iterator>::iterator_category iterator_category_t;
       ctor_range__ (first, last, iterator_category_t ());
+    }
+
+    void
+    ctor_copy__ (const shared_vector &x)
+    {
+      this->array_->N = x.size ();
+      this->array_->elems = allocator_.allocate (capacity_);
+      detail::uninitialized_copy_a (x.begin (), x.end (), this->begin (), allocator_);
     }
 
     void
@@ -749,6 +759,13 @@ namespace blue_sky {
     {
       typedef is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
       ctor_dispatch__ (first, last, integral_t ());
+    }
+
+    shared_vector (const shared_vector &x)
+    : allocator_ (x.allocator_)
+    , capacity_ (x.capacity ())
+    {
+      ctor_copy__ (x);
     }
 
     size_type 
