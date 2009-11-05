@@ -91,6 +91,41 @@ namespace blue_sky {
       };
     };
 
+    void
+    dtor__ ()
+    {
+      detail::destroy (this->begin (), this->end (), allocator_);
+      detail::deallocate (this->begin (), capacity_, allocator_);
+    }
+
+    shared_vector &
+    operator_assignment__ (const shared_vector &x)
+    {
+      if (&x != this)
+        {
+          const size_type xlen = x.size ();
+          if (xlen > capacity ())
+            {
+              pointer tmp (allocate_and_copy__ (xlen, x.begin (), x.end ()));
+
+              detail::destroy (this->begin (), this->end (), allocator_);
+              detail::deallocate (this->begin (), capacity_, allocator_);
+
+              this->array_->elems = tmp;
+            }
+          else if (this->size () >= xlen)
+            {
+              detail::destroy (std::copy (x.begin (), x.end (), this->begin ()), this->end (), allocator_);
+            }
+          else
+            {
+              std::copy (x.begin (), x.begin () + this->size (), this->begin ());
+              detail::uninitialized_copy_a (x.begin () + this->size (), x.end (), this->end (), allocator_);
+            }
+          this->array_->N = xlen;
+        }
+    }
+
     template <typename forward_iterator>
     pointer
     allocate_and_copy__ (size_type n, forward_iterator first, forward_iterator last)
@@ -638,6 +673,25 @@ namespace blue_sky {
     {
       typedef is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
       assign_dispatch__ (first, last, integral_t ());
+    }
+
+    /**
+     *  @brief  %Vector assignment operator.
+     *  @param  x  A %vector of identical element and allocator types.
+     *
+     *  All the elements of @a x are copied, but any extra memory in
+     *  @a x (for fast expansion) will not be copied.  Unlike the
+     *  copy constructor, the allocator object is not copied.
+     */
+    shared_vector &
+    operator= (const shared_vector &x)
+    {
+      return operator_assignment__ (x);
+    }
+
+    ~shared_vector ()
+    {
+      dtor__ ();
     }
 
     shared_vector ()
