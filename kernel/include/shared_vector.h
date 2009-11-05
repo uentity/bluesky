@@ -8,17 +8,80 @@
 #define BS_SHARED_VECTOR_H_
 
 #include "shared_array.h"
+#include "throw_exception.h"
 
 namespace blue_sky {
 
-  template <typename T/*, typename allocator_t*/>
+  namespace detail {
+
+    template <typename forward_iterator, typename size_type, typename value_type, typename allocator_t>
+    void
+    uninitialized_fill_n_a (forward_iterator first, size_type n, const value_type& value, allocator_t &allocator)
+    {
+      forward_iterator cur = first;
+      try
+        {
+          for (; n > 0; --n, ++cur)
+            allocator.construct (&*cur, value);
+        }
+      catch(...)
+        {
+          //std::_Destroy(__first, __cur, __alloc);
+          //__throw_exception_again;
+          bs_throw_exception ("");
+        }
+    }
+
+    template <typename input_iterator, typename forward_iterator, typename allocator_t>
+    forward_iterator
+    uninitialized_copy_a (input_iterator first, input_iterator last, forward_iterator result, allocator_t &allocator)
+    {
+      forward_iterator cur = result;
+      try
+        {
+          for (; first != last; ++first, ++cur)
+            allocator.construct (&*cur, *first);
+
+          return cur;
+        }
+      catch(...)
+        {
+          //std::_Destroy(__first, __cur, __alloc);
+          //__throw_exception_again;
+          bs_throw_exception ("");
+        }
+    }
+
+    template <typename forward_iterator, typename allocator_t>
+    void
+    destroy (forward_iterator first, forward_iterator last, allocator_t &allocator)
+    {
+      for (; first != last; ++first)
+        allocator.destroy (&*first);
+    }
+
+    template <typename pointer, typename size_type, typename allocator_t>
+    void
+    deallocate (pointer p, size_type n, allocator_t &allocator)
+    {
+      if (p)
+        {
+          allocator.deallocate (p, n);
+        }
+    }
+  }
+
+  template <typename T, typename allocator_t__ = std::allocator <T> >
   struct shared_vector : shared_array <T>
   {
-    typedef shared_array <T> base_t;
-    typedef typename base_t::value_type value_type;
-    typedef typename base_t::size_type  size_type;
-    typedef typename base_t::iterator   iterator;
+    typedef shared_array <T>                        base_t;
+    typedef typename base_t::value_type             value_type;
+    typedef typename base_t::size_type              size_type;
+    typedef typename base_t::iterator               iterator;
     typedef typename std::allocator <T>::pointer    pointer;
+    typedef allocator_t__                           allocator_t;
+
+    allocator_t allocator_;
 
     template <bool b>
     struct is_integral__ 
@@ -28,15 +91,24 @@ namespace blue_sky {
       };
     };
 
+    template <typename forward_iterator>
+    pointer
+    allocate_and_copy__ (size_type n, forward_iterator first, forward_iterator last)
+    {
+      pointer result = allocator_.allocate (n);
+      detail::uninitialized_copy_a (first, last, result, allocator_);
+      return result;
+    }
+
     void
     ctor_fill__ (size_type n, const value_type &value)
     {
-      T *new_memory = new T [n];
-
-      std::fill_n (new_memory, n, value);
-      this->array_->elems = new_memory;
+      T *new_memory = allocator_.allocate (n);
+      detail::uninitialized_fill_n_a (new_memory, n, value, allocator_);
 
       this->array_->N = n;
+      this->array_->elems = new_memory;
+
       capacity_ = n;
     }
 
@@ -49,10 +121,12 @@ namespace blue_sky {
     ctor_range__ (forward_iterator first, forward_iterator last, std::forward_iterator_tag)
     {
       const size_type n = std::distance (first, last);
-      T *new_memory = new T [n];
-      std::copy (first, last, new_memory);
-      this->array_->elems = new_memory;
+      T *new_memory = allocator_.allocate (n);
+
+      detail::uninitialized_copy_a (first, last, new_memory, allocator_);
+
       this->array_->N = n;
+      this->array_->elems = new_memory;
       capacity_ = n;
     }
 
@@ -76,13 +150,13 @@ namespace blue_sky {
     {
       if (n > capacity_)
         {
-          shared_vector tmp (n, value);
+          shared_vector tmp (n, value, allocator_);
           tmp.swap (*this);
         }
       else if (n > this->size ())
         {
           std::fill (this->begin (), this->end (), value);
-          std::fill_n (this->end (), n - this->size (), value);
+          detail::uninitialized_fill_n_a (this->end (), n - this->size (), value, allocator_);
           this->array_->N += (n - this->size ());
         }
       else
@@ -111,11 +185,12 @@ namespace blue_sky {
       pointer old_memory = this->array_->elems;
       if (n > capacity_)
         {
-          pointer new_memory = new T [n];
-          std::copy (first, last, new_memory);
-          this->array_->elems = new_memory;
+          pointer new_memory (allocate_and_copy__ (n, first, last));
+          detail::destroy (this->begin (), this->end (), allocator_);
+          detail::deallocate (this->begin (), this->size (), allocator_);
+
           this->array_->N = n;
-          delete [] old_memory;
+          this->array_->elems = new_memory;
         }
       else if (this->size () >= n)
         {
@@ -127,7 +202,7 @@ namespace blue_sky {
           forward_iterator middle = first;
           std::advance (middle, this->size ());
           std::copy (first, last, old_memory);
-          pointer new_finish = std::copy (middle, last, this->end ());
+          pointer new_finish = detail::uninitialized_copy_a (middle, last, this->end (), allocator_);
           this->array_->N = size_type (new_finish - this->begin ());
         }
     }
@@ -143,7 +218,7 @@ namespace blue_sky {
     void
     push_back_value__ (const value_type &value)
     {
-      this->array_->elems[this->array_->N] = value;
+      allocator_.construct (&this->array_->elems[this->array_->N], value);
       ++this->array_->N;
     }
 
@@ -165,7 +240,7 @@ namespace blue_sky {
 
               if (elems_after > n)
                 {
-                  std::copy (old_finish - n, old_finish, old_finish);
+                  detail::uninitialized_copy_a (old_finish - n, old_finish, old_finish, allocator_);
                   std::copy_backward (pos, old_finish - n, old_finish);
                   std::fill (pos, pos + n, value);
 
@@ -173,28 +248,39 @@ namespace blue_sky {
                 }
               else
                 {
-                  std::fill_n (old_finish, n - elems_after, value);
+                  detail::uninitialized_fill_n_a (old_finish, n - elems_after, value, allocator_);
                   this->array_->N += n - elems_after;
-                  std::copy (pos, old_finish, this->end ());
+                  detail::uninitialized_copy_a (pos, old_finish, this->end (), allocator_);
                   this->array_->N += elems_after;
                   std::fill (pos, old_finish, value);
                 }
             }
           else
             {
-              capacity_ = new_capacity (n);
-              T *new_memory = new T[capacity_];
+              size_type new_capacity_ = new_capacity (n);
+              pointer new_memory = allocator_.allocate (new_capacity_);
+              pointer new_finish = new_memory;
 
-              T *new_finish = std::copy (this->begin (), pos, new_memory);
-              std::fill_n (new_finish, n, value);
-              new_finish += n;
-              new_finish = std::copy (pos, this->end (), new_finish);
+              try 
+                {
+                  new_finish = detail::uninitialized_copy_a (this->begin (), pos, new_memory, allocator_);
+                  detail::uninitialized_fill_n_a (new_finish, n, value, allocator_);
+                  new_finish += n;
+                  new_finish = detail::uninitialized_copy_a (pos, this->end (), new_finish, allocator_);
+                }
+              catch (...)
+                {
+                  detail::destroy (new_memory, new_finish, allocator_);
+                  detail::deallocate (new_memory, new_capacity_, allocator_);
+                  throw;
+                }
 
-              T *old_memory = this->array_->elems;
-              this->array_->elems = new_memory;
+              detail::destroy (this->begin (), this->end (), allocator_);
+              detail::deallocate (this->begin (), capacity_, allocator_);
+
               this->array_->N += n;
-
-              delete [] old_memory;
+              this->array_->elems = new_memory;
+              capacity_ = new_capacity_;
             }
         }
     }
@@ -216,7 +302,7 @@ namespace blue_sky {
               pointer old_finish = this->array_->elems + this->array_->N;
               if (elems_after > n)
                 {
-                  std::copy (old_finish - n, old_finish, old_finish);
+                  detail::uninitialized_copy_a (old_finish - n, old_finish, old_finish, allocator_);
                   std::copy_backward (pos, old_finish - n, old_finish);
                   std::copy (first, last, pos);
 
@@ -226,9 +312,9 @@ namespace blue_sky {
                 {
                   forward_iterator middle = first;
                   std::advance (middle, elems_after);
-                  std::copy (middle, last, this->end ());
+                  detail::uninitialized_copy_a (middle, last, this->end (), allocator_);
                   this->array_->N += n - elems_after;
-                  std::copy (pos, old_finish, this->end ());
+                  detail::uninitialized_copy_a (pos, old_finish, this->end (), allocator_);
                   this->array_->N += elems_after;
                   std::copy (first, middle, pos);
                   
@@ -236,17 +322,29 @@ namespace blue_sky {
             }
           else
             {
-              capacity_ = new_capacity (n);
-              T *new_memory = new T[capacity_];
-              T *new_finish = std::copy (this->begin (), pos, new_memory);
-              new_finish = std::copy (first, last, new_finish);
-              new_finish = std::copy (pos, this->end (), new_finish);
+              size_type new_capacity_ = new_capacity (n);
+              pointer new_memory = allocator_.allocate (new_capacity_);
+              pointer new_finish = new_memory;
+              
+              try 
+                {
+                  new_finish = detail::uninitialized_copy_a (this->begin (), pos, new_memory, allocator_);
+                  new_finish = detail::uninitialized_copy_a (first, last, new_finish, allocator_);
+                  new_finish = detail::uninitialized_copy_a (pos, this->end (), new_finish, allocator_);
+                }
+              catch (...)
+                {
+                  detail::destroy (new_memory, new_finish, allocator_);
+                  detail::deallocate (new_memory, new_capacity_, allocator_);
+                  throw;
+                }
 
-              T *old_memory = this->array_->elems;
-              this->array_->elems = new_memory;
+              detail::destroy (this->begin (), this->end (), allocator_);
+              detail::deallocate (this->begin (), capacity_, allocator_);
+
               this->array_->N += n;
-
-              delete [] old_memory;
+              this->array_->elems = new_memory;
+              capacity_ = new_capacity_;
             }
         }
     }
@@ -268,6 +366,7 @@ namespace blue_sky {
     void
     erase_at_end__ (size_type n)
     {
+      detail::destroy (this->end () - n, this->end (), allocator_);
       this->array_->N -= n;
     }
 
@@ -280,6 +379,7 @@ namespace blue_sky {
         }
 
       --this->array_->N;
+      detail::destroy (this->end (), this->end () + 1, allocator_);
       return position;
     }
 
@@ -319,16 +419,26 @@ namespace blue_sky {
     {
       if (this->array_->N == capacity_)
         {
-          capacity_ = new_capacity (1);
-          T *new_memory = new T [capacity_];
-          T *old_memory = this->array_->elems;
+          size_type new_capacity_ = new_capacity (1);
+          pointer new_memory = allocator_.allocate (new_capacity_);
+          pointer new_finish = new_memory;
 
-          std::copy (old_memory, old_memory + this->array_->N, new_memory);
+          try
+            {
+              new_finish = detail::uninitialized_copy_a (this->begin (), this->end (), new_memory, allocator_);
+            }
+          catch (...)
+            {
+              detail::destroy (new_memory, new_finish, allocator_);
+              detail::deallocate (new_memory, new_capacity_, allocator_);
+              throw;
+            }
+
+          detail::destroy (this->begin (), this->end (), allocator_);
+          detail::deallocate (this->begin (), capacity_, allocator_);
 
           this->array_->elems = new_memory;
-          delete [] old_memory;
-
-          //capacity_ = shared_array_allocator <T>::realloc (this);
+          capacity_ = new_capacity_;
         }
 
       push_back_value__ (value);
@@ -526,7 +636,6 @@ namespace blue_sky {
     void
     assign(input_iterator first, input_iterator last)
     {
-      // Check whether it's an integral type.  If so, it's not an iterator.
       typedef is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
       assign_dispatch__ (first, last, integral_t ());
     }
@@ -536,8 +645,9 @@ namespace blue_sky {
     {
     }
 
-    shared_vector (size_type n, const value_type &value = value_type ())
-    : capacity_ (0)
+    shared_vector (size_type n, const value_type &value = value_type (), const allocator_t &allocator = allocator_t ())
+    : allocator_ (allocator)
+    , capacity_ (0)
     {
       ctor_fill__ (n, value);
     }
