@@ -728,6 +728,38 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="arrays"
+			>
+			<File
+				RelativePath=".\include\aligned_allocator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\array_ext.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\shared_array.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\shared_array_allocator.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\shared_array_allocator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\shared_vector.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\shared_vector.h"
+				>
+			</File>
+		</Filter>
 		<File
 			RelativePath=".\src\main.cpp"
 			>

@@ -51,7 +51,7 @@ namespace blue_sky {
 
     template <typename D>
     shared_array (const D &d, T *e = 0, size_t N = 0)
-    : array_ (new array_ext <T> (e, N), d)
+    : array_ (new array_ext <T> (e, N)/*, d*/)
     {
     }
     

@@ -439,6 +439,20 @@ namespace blue_sky {
         insert_fill__ (this->end(), new_size - this->size(), value);
     }
 
+    void
+    reserve__ (size_type n)
+    {
+      if (capacity_ < n)
+        {
+          pointer new_memory = new T [n];
+          std::copy (this->begin (), this->end (), new_memory);
+          pointer old_memory = this->array_->elems;
+          this->array_->elems = new_memory;
+          capacity_ = n;
+          delete [] old_memory;
+        }
+    }
+
     /**
      *  @brief  Add data to the end of the %vector.
      *  @param  x  Data to be added.
@@ -566,7 +580,7 @@ namespace blue_sky {
     iterator
     erase (iterator position)
     {
-      erase__ (position);
+      return erase__ (position);
     }
 
     /**
@@ -590,7 +604,7 @@ namespace blue_sky {
     iterator
     erase (iterator first, iterator last)
     {
-      erase__ (first, last);
+      return erase__ (first, last);
     }
 
     /**
@@ -689,6 +703,29 @@ namespace blue_sky {
       return operator_assignment__ (x);
     }
 
+    /**
+     *  @brief  Attempt to preallocate enough memory for specified number of
+     *          elements.
+     *  @param  n  Number of elements required.
+     *  @throw  std::length_error  If @a n exceeds @c max_size().
+     *
+     *  This function attempts to reserve enough memory for the
+     *  %vector to hold the specified number of elements.  If the
+     *  number requested is more than max_size(), length_error is
+     *  thrown.
+     *
+     *  The advantage of this function is that if optimal code is a
+     *  necessity and the user can determine the number of elements
+     *  that will be required, the user can reserve the memory in
+     *  %advance, and thus prevent a possible reallocation of memory
+     *  and copying of %vector data.
+     */
+    void
+    reserve (size_type n)
+    {
+      reserve__ (n);
+    }
+
     ~shared_vector ()
     {
       dtor__ ();
@@ -727,7 +764,7 @@ namespace blue_sky {
   private:
     size_t new_capacity (size_t i) const
     {
-      return this->array_->N + std::max (this->array_->N, i);
+      return this->array_->N + (std::max) (this->array_->N, i);
     }
 
   };
