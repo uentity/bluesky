@@ -33,6 +33,8 @@ kernel_cpp_list = Split("""
     thread_pool.cpp
     memory_manager.cpp
     bs_log_scribers.cpp
+    shared_array_allocator.cpp
+    shared_vector.cpp
 """);
 
 py_kernel_cpp_list = [os.path.join('python', x) for x in Split("""
