@@ -8,460 +8,495 @@
 #define BS_SHARED_VECTOR_H_
 
 #include "shared_array.h"
-#include "throw_exception.h"
 
 namespace blue_sky {
 
   namespace detail {
 
-    template <typename forward_iterator, typename size_type, typename value_type, typename allocator_t>
-    void
-    uninitialized_fill_n_a (forward_iterator first, size_type n, const value_type& value, allocator_t &allocator)
+    template <typename T, typename allocator_type = std::allocator <T> >
+    struct shared_vector_impl : shared_array <T, allocator_type>
     {
-      forward_iterator cur = first;
-      try
-        {
-          for (; n > 0; --n, ++cur)
-            allocator.construct (&*cur, value);
-        }
-      catch(...)
-        {
-          //std::_Destroy(__first, __cur, __alloc);
-          //__throw_exception_again;
-          bs_throw_exception ("");
-        }
-    }
+      typedef shared_array <T, allocator_type>        base_t;
+      typedef typename base_t::value_type             value_type;
+      typedef typename base_t::size_type              size_type;
+      typedef typename base_t::iterator               iterator;
+      typedef typename std::allocator <T>::pointer    pointer;
+      typedef allocator_type                          allocator_t;
 
-    template <typename input_iterator, typename forward_iterator, typename allocator_t>
-    forward_iterator
-    uninitialized_copy_a (input_iterator first, input_iterator last, forward_iterator result, allocator_t &allocator)
-    {
-      forward_iterator cur = result;
-      try
-        {
-          for (; first != last; ++first, ++cur)
-            allocator.construct (&*cur, *first);
+      template <bool b>
+      struct is_integral__ 
+      {
+        enum {
+          value = b,
+        };
+      };
 
-          return cur;
-        }
-      catch(...)
-        {
-          //std::_Destroy(__first, __cur, __alloc);
-          //__throw_exception_again;
-          bs_throw_exception ("");
-        }
-    }
+      allocator_t   allocator_;
 
-    template <typename forward_iterator, typename allocator_t>
-    void
-    destroy (forward_iterator first, forward_iterator last, allocator_t &allocator)
-    {
-      for (; first != last; ++first)
-        allocator.destroy (&*first);
-    }
+      size_type 
+      capacity () const
+      {
+        return this->array_->capacity_;
+      }
 
-    template <typename pointer, typename size_type, typename allocator_t>
-    void
-    deallocate (pointer p, size_type n, allocator_t &allocator)
-    {
-      if (p)
-        {
-          allocator.deallocate (p, n);
-        }
-    }
+      shared_vector_impl ()
+      {
+      }
+
+      shared_vector_impl (const allocator_t &allocator)
+      : allocator_ (allocator)
+      {
+      }
+
+      shared_vector_impl (const shared_vector_impl &v)
+      : base_t (v)
+      , allocator_ (v.allocator_)
+      {
+      }
+
+    protected:
+      size_t new_capacity__ (size_t i) const
+      {
+        return this->array_->N + (std::max) (this->array_->N, i);
+      }
+
+      template <typename shared_vector>
+      shared_vector &
+      operator_assignment__ (shared_vector &this_, const shared_vector &x)
+      {
+        if (&x != this)
+          {
+            const size_type xlen = x.size ();
+            if (xlen > capacity ())
+              {
+                pointer tmp (allocate_and_copy__ (xlen, x.begin (), x.end ()));
+
+                detail::destroy (this->begin (), this->end (), allocator_);
+                detail::deallocate (this->begin (), this->array_->capacity_, allocator_);
+
+                this->array_->elems = tmp;
+              }
+            else if (this->size () >= xlen)
+              {
+                detail::destroy (std::copy (x.begin (), x.end (), this->begin ()), this->end (), allocator_);
+              }
+            else
+              {
+                std::copy (x.begin (), x.begin () + this->size (), this->begin ());
+                detail::uninitialized_copy_a (x.begin () + this->size (), x.end (), this->end (), allocator_);
+              }
+            this->array_->N = xlen;
+          }
+
+        return this_;
+      }
+      template <typename forward_iterator>
+      pointer
+      allocate_and_copy__ (size_type n, forward_iterator first, forward_iterator last)
+      {
+        pointer result = allocator_.allocate (n);
+        detail::uninitialized_copy_a (first, last, result, allocator_);
+        return result;
+      }
+
+      void
+      ctor_fill__ (size_type n, const value_type &value)
+      {
+        T *new_memory = allocator_.allocate (n);
+        detail::uninitialized_fill_n_a (new_memory, n, value, allocator_);
+
+        this->array_->elems = new_memory;
+        this->array_->N = n;
+        this->array_->capacity_ = n;
+      }
+
+      template <typename input_iterator>
+      void
+      ctor_range__ (input_iterator first, input_iterator last, std::input_iterator_tag);
+
+      template <typename forward_iterator>
+      void
+      ctor_range__ (forward_iterator first, forward_iterator last, std::forward_iterator_tag)
+      {
+        const size_type n = std::distance (first, last);
+        T *new_memory = allocator_.allocate (n);
+
+        detail::uninitialized_copy_a (first, last, new_memory, allocator_);
+
+        this->array_->elems = new_memory;
+        this->array_->N = n;
+        this->array_->capacity_ = n;
+      }
+
+      template <typename integer_t>
+      void
+      ctor_dispatch__ (integer_t n, integer_t value, is_integral__ <true>)
+      {
+        ctor_fill__ (n, value);
+      }
+
+      template <typename input_iterator>
+      void
+      ctor_dispatch__ (input_iterator first, input_iterator last, is_integral__ <false>)
+      {
+        typedef typename std::iterator_traits <input_iterator>::iterator_category iterator_category_t;
+        ctor_range__ (first, last, iterator_category_t ());
+      }
+
+      template <typename shared_vector>
+      void
+      ctor_copy__ (const shared_vector &x)
+      {
+        this->array_->N = x.size ();
+        this->array_->elems = allocator_.allocate (this->array_->capacity_);
+        detail::uninitialized_copy_a (x.begin (), x.end (), this->begin (), allocator_);
+      }
+
+      void
+      assign_fill__ (size_type n, const value_type &value)
+      {
+        if (n > this->array_->capacity_)
+          {
+            shared_vector_impl tmp (allocator_);
+            tmp.ctor_fill__ (n, value);
+            tmp.swap__ (*this);
+          }
+        else if (n > this->size ())
+          {
+            std::fill (this->begin (), this->end (), value);
+            detail::uninitialized_fill_n_a (this->end (), n - this->size (), value, allocator_);
+            this->array_->N += (n - this->size ());
+          }
+        else
+          {
+            std::fill_n (this->begin (), n, value);
+            this->array_->N = n;
+          }
+      }
+
+      template <typename integer_t>
+      void
+      assign_dispatch__ (integer_t n, integer_t value, is_integral__ <true>)
+      {
+        assign_fill__ (n, value);
+      }
+
+      template <typename input_iterator>
+      void
+      assign_range__ (input_iterator first, input_iterator last, std::input_iterator_tag);
+
+      template <typename forward_iterator>
+      void
+      assign_range__ (forward_iterator first, forward_iterator last, std::forward_iterator_tag)
+      {
+        const size_type n = std::distance (first, last);
+        pointer old_memory = this->array_->elems;
+        if (n > this->array_->capacity_)
+          {
+            pointer new_memory (allocate_and_copy__ (n, first, last));
+            detail::destroy (this->begin (), this->end (), allocator_);
+            detail::deallocate (this->begin (), this->size (), allocator_);
+
+            this->array_->elems = new_memory;
+            this->array_->N = n;
+          }
+        else if (this->size () >= n)
+          {
+            std::copy (first, last, old_memory);
+            this->array_->N = n;
+          }
+        else
+          {
+            forward_iterator middle = first;
+            std::advance (middle, this->size ());
+            std::copy (first, last, old_memory);
+            pointer new_finish = detail::uninitialized_copy_a (middle, last, this->end (), allocator_);
+            this->array_->N = size_type (new_finish - this->begin ());
+          }
+      }
+
+      template <typename input_iterator>
+      void
+      assign_dispatch__ (input_iterator first, input_iterator last, is_integral__ <false>)
+      {
+        typedef typename std::iterator_traits <input_iterator>::iterator_category iterator_category_t;
+        assign_range__ (first, last, iterator_category_t ());
+      }
+
+      void
+      allocate_for_push_back__ ()
+      {
+        size_type new_capacity_ = new_capacity__ (1);
+        pointer new_memory = allocator_.allocate (new_capacity_);
+        pointer new_finish = new_memory;
+
+        try
+          {
+            new_finish = detail::uninitialized_copy_a (this->begin (), this->end (), new_memory, allocator_);
+          }
+        catch (...)
+          {
+            detail::destroy (new_memory, new_finish, allocator_);
+            detail::deallocate (new_memory, new_capacity_, allocator_);
+            throw;
+          }
+
+        detail::destroy (this->begin (), this->end (), allocator_);
+        detail::deallocate (this->begin (), this->array_->capacity_, allocator_);
+
+        this->array_->elems = new_memory;
+        this->array_->capacity_ = new_capacity_;
+      }
+
+      void
+      push_back_value__ (const value_type &value)
+      {
+        allocator_.construct (&this->array_->elems[this->array_->N], value);
+        ++this->array_->N;
+      }
+
+      void
+      push_back__ (const value_type &value)
+      {
+        if (this->array_->N == this->array_->capacity_)
+          {
+            allocate_for_push_back__ ();
+          }
+
+        push_back_value__ (value);
+      }
+
+      bool
+      valid_size__ ()
+      {
+        return this->array_->N != this->array_->capacity_;
+      }
+
+      void
+      insert_fill__ (iterator pos, size_type n, const value_type &value)
+      {
+        if (n != 0)
+          {
+            if ((this->array_->capacity_ - this->array_->N) >= n)
+              {
+                size_type elems_after = this->end () - pos;
+                pointer old_finish = this->array_->elems + this->array_->N;
+
+                if (elems_after > n)
+                  {
+                    detail::uninitialized_copy_a (old_finish - n, old_finish, old_finish, allocator_);
+                    std::copy_backward (pos, old_finish - n, old_finish);
+                    std::fill (pos, pos + n, value);
+
+                    this->array_->N += n;
+                  }
+                else
+                  {
+                    detail::uninitialized_fill_n_a (old_finish, n - elems_after, value, allocator_);
+                    this->array_->N += n - elems_after;
+                    detail::uninitialized_copy_a (pos, old_finish, this->end (), allocator_);
+                    this->array_->N += elems_after;
+                    std::fill (pos, old_finish, value);
+                  }
+              }
+            else
+              {
+                size_type new_capacity_ = new_capacity__ (n);
+                pointer new_memory = allocator_.allocate (new_capacity_);
+                pointer new_finish = new_memory;
+
+                try 
+                  {
+                    new_finish = detail::uninitialized_copy_a (this->begin (), pos, new_memory, allocator_);
+                    detail::uninitialized_fill_n_a (new_finish, n, value, allocator_);
+                    new_finish += n;
+                    new_finish = detail::uninitialized_copy_a (pos, this->end (), new_finish, allocator_);
+                  }
+                catch (...)
+                  {
+                    detail::destroy (new_memory, new_finish, allocator_);
+                    detail::deallocate (new_memory, new_capacity_, allocator_);
+                    throw;
+                  }
+
+                detail::destroy (this->begin (), this->end (), allocator_);
+                detail::deallocate (this->begin (), this->array_->capacity_, allocator_);
+
+                this->array_->elems = new_memory;
+                this->array_->N += n;
+                this->array_->capacity_ = new_capacity_;
+              }
+          }
+      }
+
+      template <typename input_iterator>
+      void
+      insert_range__ (iterator pos, input_iterator first, input_iterator last, std::input_iterator_tag);
+
+      template <typename forward_iterator>
+      void
+      insert_range__ (iterator pos, forward_iterator first, forward_iterator last, std::forward_iterator_tag)
+      {
+        if (first != last)
+          {
+            const size_type n = std::distance (first, last);
+            if ((this->array_->capacity_ - this->array_->N) >= n)
+              {
+                const size_type elems_after = this->end () - pos;
+                pointer old_finish = this->array_->elems + this->array_->N;
+                if (elems_after > n)
+                  {
+                    detail::uninitialized_copy_a (old_finish - n, old_finish, old_finish, allocator_);
+                    std::copy_backward (pos, old_finish - n, old_finish);
+                    std::copy (first, last, pos);
+
+                    this->array_->N += n;
+                  }
+                else
+                  {
+                    forward_iterator middle = first;
+                    std::advance (middle, elems_after);
+                    detail::uninitialized_copy_a (middle, last, this->end (), allocator_);
+                    this->array_->N += n - elems_after;
+                    detail::uninitialized_copy_a (pos, old_finish, this->end (), allocator_);
+                    this->array_->N += elems_after;
+                    std::copy (first, middle, pos);
+                    
+                  }
+              }
+            else
+              {
+                size_type new_capacity_ = new_capacity__ (n);
+                pointer new_memory = allocator_.allocate (new_capacity_);
+                pointer new_finish = new_memory;
+                
+                try 
+                  {
+                    new_finish = detail::uninitialized_copy_a (this->begin (), pos, new_memory, allocator_);
+                    new_finish = detail::uninitialized_copy_a (first, last, new_finish, allocator_);
+                    new_finish = detail::uninitialized_copy_a (pos, this->end (), new_finish, allocator_);
+                  }
+                catch (...)
+                  {
+                    detail::destroy (new_memory, new_finish, allocator_);
+                    detail::deallocate (new_memory, new_capacity_, allocator_);
+                    throw;
+                  }
+
+                detail::destroy (this->begin (), this->end (), allocator_);
+                detail::deallocate (this->begin (), this->array_->capacity_, allocator_);
+
+                this->array_->elems = new_memory;
+                this->array_->N += n;
+                this->array_->capacity_ = new_capacity_;
+              }
+          }
+      }
+
+      template <typename integer_t>
+      void
+      insert_dispatch__ (iterator position, integer_t n, integer_t value, is_integral__ <true>)
+      {
+        insert_fill__ (position, n, value);
+      }
+      template <typename input_iterator>
+      void
+      insert_dispatch__ (iterator position, input_iterator first, input_iterator last, is_integral__ <false>)
+      {
+        typedef typename std::iterator_traits <input_iterator>::iterator_category iterator_category_t;
+        insert_range__ (position, first, last, iterator_category_t ());
+      }
+
+      iterator
+      insert__ (iterator pos, const value_type &value)
+      {
+        size_type n = pos - this->begin ();
+        if (pos == this->end () && valid_size__ ())
+          {
+            push_back_value__ (value);
+          }
+        else
+          {
+            insert_fill__ (pos, size_type (1), value);
+          }
+
+        return iterator (this->begin () + n);
+      }
+      void
+      erase_at_end__ (size_type n)
+      {
+        detail::destroy (this->end () - n, this->end (), allocator_);
+        this->array_->N -= n;
+      }
+
+      iterator
+      erase__ (iterator position)
+      {
+        if (position + 1 != this->end ())
+          {
+            std::copy (position + 1, this->end (), position);
+          }
+
+        --this->array_->N;
+        detail::destroy (this->end (), this->end () + 1, allocator_);
+        return position;
+      }
+
+      iterator
+      erase__ (iterator first, iterator last)
+      {
+        if (last != this->end ())
+          {
+            std::copy (last, this->end (), first);
+          }
+
+        erase_at_end__ (last - first);
+        return first;
+      }
+
+      void
+      resize__ (size_type new_size, const value_type &value)
+      {
+        if (new_size < this->size())
+          erase_at_end__ (this->size () - new_size);
+        else
+          insert_fill__ (this->end(), new_size - this->size(), value);
+      }
+
+      void
+      reserve__ (size_type n)
+      {
+        if (this->array_->capacity_ < n)
+          {
+            pointer new_memory = new T [n];
+            std::copy (this->begin (), this->end (), new_memory);
+            pointer old_memory = this->array_->elems;
+            this->array_->elems = new_memory;
+            this->array_->capacity_ = n;
+            delete [] old_memory;
+          }
+      }
+
+      template <typename shared_vector>
+      void
+      swap__ (shared_vector &v)
+      {
+        std::swap (this->array_->elems, v.array_->elems);
+        std::swap (this->array_->N, v.array_->N);
+        std::swap (this->array_->capacity_, v.array_->capacity_);
+      }
+    };
   }
 
   template <typename T, typename allocator_t__ = std::allocator <T> >
-  struct shared_vector : shared_array <T>
+  struct shared_vector : detail::shared_vector_impl <T, allocator_t__>
   {
-    typedef shared_array <T>                        base_t;
-    typedef typename base_t::value_type             value_type;
-    typedef typename base_t::size_type              size_type;
-    typedef typename base_t::iterator               iterator;
-    typedef typename std::allocator <T>::pointer    pointer;
-    typedef allocator_t__                           allocator_t;
-
-    allocator_t allocator_;
-
-    template <bool b>
-    struct is_integral__ 
-    {
-      enum {
-        value = b,
-      };
-    };
-
-    void
-    dtor__ ()
-    {
-      detail::destroy (this->begin (), this->end (), allocator_);
-      detail::deallocate (this->begin (), capacity_, allocator_);
-    }
-
-    shared_vector &
-    operator_assignment__ (const shared_vector &x)
-    {
-      if (&x != this)
-        {
-          const size_type xlen = x.size ();
-          if (xlen > capacity ())
-            {
-              pointer tmp (allocate_and_copy__ (xlen, x.begin (), x.end ()));
-
-              detail::destroy (this->begin (), this->end (), allocator_);
-              detail::deallocate (this->begin (), capacity_, allocator_);
-
-              this->array_->elems = tmp;
-            }
-          else if (this->size () >= xlen)
-            {
-              detail::destroy (std::copy (x.begin (), x.end (), this->begin ()), this->end (), allocator_);
-            }
-          else
-            {
-              std::copy (x.begin (), x.begin () + this->size (), this->begin ());
-              detail::uninitialized_copy_a (x.begin () + this->size (), x.end (), this->end (), allocator_);
-            }
-          this->array_->N = xlen;
-        }
-
-      return *this;
-    }
-
-    template <typename forward_iterator>
-    pointer
-    allocate_and_copy__ (size_type n, forward_iterator first, forward_iterator last)
-    {
-      pointer result = allocator_.allocate (n);
-      detail::uninitialized_copy_a (first, last, result, allocator_);
-      return result;
-    }
-
-    void
-    ctor_fill__ (size_type n, const value_type &value)
-    {
-      T *new_memory = allocator_.allocate (n);
-      detail::uninitialized_fill_n_a (new_memory, n, value, allocator_);
-
-      this->array_->N = n;
-      this->array_->elems = new_memory;
-
-      capacity_ = n;
-    }
-
-    template <typename input_iterator>
-    void
-    ctor_range__ (input_iterator first, input_iterator last, std::input_iterator_tag);
-
-    template <typename forward_iterator>
-    void
-    ctor_range__ (forward_iterator first, forward_iterator last, std::forward_iterator_tag)
-    {
-      const size_type n = std::distance (first, last);
-      T *new_memory = allocator_.allocate (n);
-
-      detail::uninitialized_copy_a (first, last, new_memory, allocator_);
-
-      this->array_->N = n;
-      this->array_->elems = new_memory;
-      capacity_ = n;
-    }
-
-    template <typename integer_t>
-    void
-    ctor_dispatch__ (integer_t n, integer_t value, is_integral__ <true>)
-    {
-      ctor_fill__ (n, value);
-    }
-
-    template <typename input_iterator>
-    void
-    ctor_dispatch__ (input_iterator first, input_iterator last, is_integral__ <false>)
-    {
-      typedef typename std::iterator_traits <input_iterator>::iterator_category iterator_category_t;
-      ctor_range__ (first, last, iterator_category_t ());
-    }
-
-    void
-    ctor_copy__ (const shared_vector &x)
-    {
-      this->array_->N = x.size ();
-      this->array_->elems = allocator_.allocate (capacity_);
-      detail::uninitialized_copy_a (x.begin (), x.end (), this->begin (), allocator_);
-    }
-
-    void
-    assign_fill__ (size_type n, const value_type &value)
-    {
-      if (n > capacity_)
-        {
-          shared_vector tmp (n, value, allocator_);
-          tmp.swap (*this);
-        }
-      else if (n > this->size ())
-        {
-          std::fill (this->begin (), this->end (), value);
-          detail::uninitialized_fill_n_a (this->end (), n - this->size (), value, allocator_);
-          this->array_->N += (n - this->size ());
-        }
-      else
-        {
-          std::fill_n (this->begin (), n, value);
-          this->array_->N = n;
-        }
-    }
-
-    template <typename integer_t>
-    void
-    assign_dispatch__ (integer_t n, integer_t value, is_integral__ <true>)
-    {
-      assign_fill__ (n, value);
-    }
-
-    template <typename input_iterator>
-    void
-    assign_range__ (input_iterator first, input_iterator last, std::input_iterator_tag);
-
-    template <typename forward_iterator>
-    void
-    assign_range__ (forward_iterator first, forward_iterator last, std::forward_iterator_tag)
-    {
-      const size_type n = std::distance (first, last);
-      pointer old_memory = this->array_->elems;
-      if (n > capacity_)
-        {
-          pointer new_memory (allocate_and_copy__ (n, first, last));
-          detail::destroy (this->begin (), this->end (), allocator_);
-          detail::deallocate (this->begin (), this->size (), allocator_);
-
-          this->array_->N = n;
-          this->array_->elems = new_memory;
-        }
-      else if (this->size () >= n)
-        {
-          std::copy (first, last, old_memory);
-          this->array_->N = n;
-        }
-      else
-        {
-          forward_iterator middle = first;
-          std::advance (middle, this->size ());
-          std::copy (first, last, old_memory);
-          pointer new_finish = detail::uninitialized_copy_a (middle, last, this->end (), allocator_);
-          this->array_->N = size_type (new_finish - this->begin ());
-        }
-    }
-
-    template <typename input_iterator>
-    void
-    assign_dispatch__ (input_iterator first, input_iterator last, is_integral__ <false>)
-    {
-      typedef typename std::iterator_traits <input_iterator>::iterator_category iterator_category_t;
-      assign_range__ (first, last, iterator_category_t ());
-    }
-
-    void
-    push_back_value__ (const value_type &value)
-    {
-      allocator_.construct (&this->array_->elems[this->array_->N], value);
-      ++this->array_->N;
-    }
-
-    bool
-    valid_size__ ()
-    {
-      return this->array_->N != capacity_;
-    }
-
-    void
-    insert_fill__ (iterator pos, size_type n, const value_type &value)
-    {
-      if (n != 0)
-        {
-          if ((capacity_ - this->array_->N) >= n)
-            {
-              size_type elems_after = this->end () - pos;
-              pointer old_finish = this->array_->elems + this->array_->N;
-
-              if (elems_after > n)
-                {
-                  detail::uninitialized_copy_a (old_finish - n, old_finish, old_finish, allocator_);
-                  std::copy_backward (pos, old_finish - n, old_finish);
-                  std::fill (pos, pos + n, value);
-
-                  this->array_->N += n;
-                }
-              else
-                {
-                  detail::uninitialized_fill_n_a (old_finish, n - elems_after, value, allocator_);
-                  this->array_->N += n - elems_after;
-                  detail::uninitialized_copy_a (pos, old_finish, this->end (), allocator_);
-                  this->array_->N += elems_after;
-                  std::fill (pos, old_finish, value);
-                }
-            }
-          else
-            {
-              size_type new_capacity_ = new_capacity (n);
-              pointer new_memory = allocator_.allocate (new_capacity_);
-              pointer new_finish = new_memory;
-
-              try 
-                {
-                  new_finish = detail::uninitialized_copy_a (this->begin (), pos, new_memory, allocator_);
-                  detail::uninitialized_fill_n_a (new_finish, n, value, allocator_);
-                  new_finish += n;
-                  new_finish = detail::uninitialized_copy_a (pos, this->end (), new_finish, allocator_);
-                }
-              catch (...)
-                {
-                  detail::destroy (new_memory, new_finish, allocator_);
-                  detail::deallocate (new_memory, new_capacity_, allocator_);
-                  throw;
-                }
-
-              detail::destroy (this->begin (), this->end (), allocator_);
-              detail::deallocate (this->begin (), capacity_, allocator_);
-
-              this->array_->N += n;
-              this->array_->elems = new_memory;
-              capacity_ = new_capacity_;
-            }
-        }
-    }
-
-    template <typename input_iterator>
-    void
-    insert_range__ (iterator pos, input_iterator first, input_iterator last, std::input_iterator_tag);
-
-    template <typename forward_iterator>
-    void
-    insert_range__ (iterator pos, forward_iterator first, forward_iterator last, std::forward_iterator_tag)
-    {
-      if (first != last)
-        {
-          const size_type n = std::distance (first, last);
-          if ((capacity_ - this->array_->N) >= n)
-            {
-              const size_type elems_after = this->end () - pos;
-              pointer old_finish = this->array_->elems + this->array_->N;
-              if (elems_after > n)
-                {
-                  detail::uninitialized_copy_a (old_finish - n, old_finish, old_finish, allocator_);
-                  std::copy_backward (pos, old_finish - n, old_finish);
-                  std::copy (first, last, pos);
-
-                  this->array_->N += n;
-                }
-              else
-                {
-                  forward_iterator middle = first;
-                  std::advance (middle, elems_after);
-                  detail::uninitialized_copy_a (middle, last, this->end (), allocator_);
-                  this->array_->N += n - elems_after;
-                  detail::uninitialized_copy_a (pos, old_finish, this->end (), allocator_);
-                  this->array_->N += elems_after;
-                  std::copy (first, middle, pos);
-                  
-                }
-            }
-          else
-            {
-              size_type new_capacity_ = new_capacity (n);
-              pointer new_memory = allocator_.allocate (new_capacity_);
-              pointer new_finish = new_memory;
-              
-              try 
-                {
-                  new_finish = detail::uninitialized_copy_a (this->begin (), pos, new_memory, allocator_);
-                  new_finish = detail::uninitialized_copy_a (first, last, new_finish, allocator_);
-                  new_finish = detail::uninitialized_copy_a (pos, this->end (), new_finish, allocator_);
-                }
-              catch (...)
-                {
-                  detail::destroy (new_memory, new_finish, allocator_);
-                  detail::deallocate (new_memory, new_capacity_, allocator_);
-                  throw;
-                }
-
-              detail::destroy (this->begin (), this->end (), allocator_);
-              detail::deallocate (this->begin (), capacity_, allocator_);
-
-              this->array_->N += n;
-              this->array_->elems = new_memory;
-              capacity_ = new_capacity_;
-            }
-        }
-    }
-
-    template <typename integer_t>
-    void
-    insert_dispatch__ (iterator position, integer_t n, integer_t value, is_integral__ <true>)
-    {
-      insert_fill__ (position, n, value);
-    }
-    template <typename input_iterator>
-    void
-    insert_dispatch__ (iterator position, input_iterator first, input_iterator last, is_integral__ <false>)
-    {
-      typedef typename std::iterator_traits <input_iterator>::iterator_category iterator_category_t;
-      insert_range__ (position, first, last, iterator_category_t ());
-    }
-
-    void
-    erase_at_end__ (size_type n)
-    {
-      detail::destroy (this->end () - n, this->end (), allocator_);
-      this->array_->N -= n;
-    }
-
-    iterator
-    erase__ (iterator position)
-    {
-      if (position + 1 != this->end ())
-        {
-          std::copy (position + 1, this->end (), position);
-        }
-
-      --this->array_->N;
-      detail::destroy (this->end (), this->end () + 1, allocator_);
-      return position;
-    }
-
-    iterator
-    erase__ (iterator first, iterator last)
-    {
-      if (last != this->end ())
-        {
-          std::copy (last, this->end (), first);
-        }
-
-      erase_at_end__ (last - first);
-      return first;
-    }
-
-    void
-    resize__ (size_type new_size, const value_type &value)
-    {
-      if (new_size < this->size())
-        erase_at_end__ (this->size () - new_size);
-      else
-        insert_fill__ (this->end(), new_size - this->size(), value);
-    }
-
-    void
-    reserve__ (size_type n)
-    {
-      if (capacity_ < n)
-        {
-          pointer new_memory = new T [n];
-          std::copy (this->begin (), this->end (), new_memory);
-          pointer old_memory = this->array_->elems;
-          this->array_->elems = new_memory;
-          capacity_ = n;
-          delete [] old_memory;
-        }
-    }
+    typedef detail::shared_vector_impl <T, allocator_t__>   base_t;
+    typedef typename base_t::value_type                     value_type;
+    typedef typename base_t::size_type                      size_type;
+    typedef typename base_t::iterator                       iterator;
+    typedef typename std::allocator <T>::pointer            pointer;
+    typedef allocator_t__                                   allocator_t;
 
     /**
      *  @brief  Add data to the end of the %vector.
@@ -476,31 +511,14 @@ namespace blue_sky {
     void
     push_back (const value_type &value)
     {
-      if (this->array_->N == capacity_)
+      if (this->owned_)
         {
-          size_type new_capacity_ = new_capacity (1);
-          pointer new_memory = allocator_.allocate (new_capacity_);
-          pointer new_finish = new_memory;
-
-          try
-            {
-              new_finish = detail::uninitialized_copy_a (this->begin (), this->end (), new_memory, allocator_);
-            }
-          catch (...)
-            {
-              detail::destroy (new_memory, new_finish, allocator_);
-              detail::deallocate (new_memory, new_capacity_, allocator_);
-              throw;
-            }
-
-          detail::destroy (this->begin (), this->end (), allocator_);
-          detail::deallocate (this->begin (), capacity_, allocator_);
-
-          this->array_->elems = new_memory;
-          capacity_ = new_capacity_;
+          push_back__ (value);
         }
-
-      push_back_value__ (value);
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     /**
@@ -517,18 +535,14 @@ namespace blue_sky {
     iterator
     insert (iterator pos, const value_type &value)
     {
-      size_type n = pos - this->begin ();
-      if (pos == this->end () && valid_size__ ())
+      if (this->owned_)
         {
-          push_back_value__ (value);
+          return insert__ (pos, value);
         }
       else
         {
-          //insert__ (pos, value);
-          insert_fill__ (pos, size_type (1), value);
+          bs_throw_exception ("Error: shared_vector not owns data");
         }
-
-      return iterator (this->begin () + n);
     }
 
     /**
@@ -547,7 +561,14 @@ namespace blue_sky {
     void
     insert (iterator pos, size_type n, const value_type &value)
     {
-      insert_fill__ (pos, n, value);
+      if (this->owned_)
+        {
+          insert_fill__ (pos, n, value);
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     /**
@@ -568,8 +589,15 @@ namespace blue_sky {
     void
     insert (iterator position, input_iterator first, input_iterator last)
     {
-      typedef is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
-      insert_dispatch__ (position, first, last, integral_t ());
+      if (this->owned_)
+        {
+          typedef typename base_t::template is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
+          insert_dispatch__ (position, first, last, integral_t ());
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
     
     /**
@@ -590,7 +618,14 @@ namespace blue_sky {
     iterator
     erase (iterator position)
     {
-      return erase__ (position);
+      if (this->owned_)
+        {
+          return erase__ (position);
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     /**
@@ -614,7 +649,14 @@ namespace blue_sky {
     iterator
     erase (iterator first, iterator last)
     {
-      return erase__ (first, last);
+      if (this->owned_)
+        {
+          return erase__ (first, last);
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     /**
@@ -631,7 +673,14 @@ namespace blue_sky {
     void
     resize (size_type new_size, const value_type &value = value_type ())
     {
-      resize__ (new_size, value);
+      if (this->owned_)
+        {
+          resize__ (new_size, value);
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     /**
@@ -643,7 +692,14 @@ namespace blue_sky {
     void
     clear ()
     { 
-      erase_at_end__ (this->size ());
+      if (this->owned_)
+        {
+          erase_at_end__ (this->size ());
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     /**
@@ -656,11 +712,16 @@ namespace blue_sky {
      *  std::swap(v1,v2) will feed to this function.
      */
     void
-    swap( shared_vector & v)
+    swap (shared_vector &v)
     {
-      std::swap (this->array_->elems, v.array_->elems);
-      std::swap (this->array_->N, v.array_->N);
-      std::swap (this->capacity_, v.capacity_);
+      if (this->owned_)
+        {
+          swap__ (v);
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     /**
@@ -676,7 +737,14 @@ namespace blue_sky {
     void
     assign (size_type n, const value_type &value)
     { 
-      assign_fill__ (n, value); 
+      if (this->owned_)
+        {
+          assign_fill__ (n, value); 
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     /**
@@ -695,8 +763,15 @@ namespace blue_sky {
     void
     assign(input_iterator first, input_iterator last)
     {
-      typedef is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
-      assign_dispatch__ (first, last, integral_t ());
+      if (this->owned_)
+        {
+          typedef typename base_t::template is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
+          assign_dispatch__ (first, last, integral_t ());
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     /**
@@ -710,7 +785,16 @@ namespace blue_sky {
     shared_vector &
     operator= (const shared_vector &x)
     {
-      return operator_assignment__ (x);
+      this->array_ = x.array_;
+      this->owned_ = x.owned_;
+      //if (this->owned_)
+      //  {
+      //    return operator_assignment__ (*this, x);
+      //  }
+      //else
+      //  {
+      //    bs_throw_exception ("Error: shared_vector not owns data");
+      //  }
     }
 
     /**
@@ -733,57 +817,61 @@ namespace blue_sky {
     void
     reserve (size_type n)
     {
-      reserve__ (n);
-    }
-
-    ~shared_vector ()
-    {
-      dtor__ ();
+      if (this->owned_)
+        {
+          reserve__ (n);
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     shared_vector ()
-    : capacity_ (0)
     {
     }
 
     shared_vector (size_type n, const value_type &value = value_type (), const allocator_t &allocator = allocator_t ())
-    : allocator_ (allocator)
-    , capacity_ (0)
+    : base_t (allocator)
     {
-      ctor_fill__ (n, value);
+      if (this->owned_)
+        {
+          ctor_fill__ (n, value);
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     template <typename input_iterator>
     shared_vector (input_iterator first, input_iterator last)
-    : capacity_ (0)
     {
-      typedef is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
-      ctor_dispatch__ (first, last, integral_t ());
+      if (this->owned_)
+        {
+          typedef typename base_t::template is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
+          ctor_dispatch__ (first, last, integral_t ());
+        }
+      else
+        {
+          bs_throw_exception ("Error: shared_vector not owns data");
+        }
     }
 
     shared_vector (const shared_vector &x)
-    : allocator_ (x.allocator_)
-    , capacity_ (x.capacity ())
+    : base_t (x)
     {
-      ctor_copy__ (x);
-    }
-
-    size_type 
-    capacity () const
-    {
-      return capacity_;
+      //if (this->owned_)
+      //  {
+      //    ctor_copy__ (x);
+      //  }
+      //else
+      //  {
+      //    bs_throw_exception ("Error: shared_vector not owns data");
+      //  }
     }
 
     using base_t::back;
-
-    size_type capacity_;
-
-  private:
-    size_t new_capacity (size_t i) const
-    {
-      return this->array_->N + (std::max) (this->array_->N, i);
-    }
-
   };
 
 } // namespace blue_sky

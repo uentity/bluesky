@@ -9,20 +9,23 @@
 
 #include <boost/shared_ptr.hpp>
 #include "array_ext.h"
+#include "shared_array_detail.h"
+#include "aligned_allocator.h"
 
 namespace blue_sky {
 
-  template <typename T>
+  template <typename T, typename allocator_type = aligned_allocator <T, 16> >
   struct shared_array 
   {
     // type definitions
-    typedef T              value_type;
-    typedef T*             iterator;
-    typedef const T*       const_iterator;
-    typedef T&             reference;
-    typedef const T&       const_reference;
-    typedef std::size_t    size_type;
-    typedef std::ptrdiff_t difference_type;
+    typedef T               value_type;
+    typedef T*              iterator;
+    typedef const T*        const_iterator;
+    typedef T&              reference;
+    typedef const T&        const_reference;
+    typedef std::size_t     size_type;
+    typedef std::ptrdiff_t  difference_type;
+    typedef allocator_type  allocator_t;
 
     struct internal_deleter
     {
@@ -31,7 +34,15 @@ namespace blue_sky {
       };
 
       void
-      operator () (array_ext <T> *t);
+      operator () (array_ext <T> *t)
+      {
+        allocator_t allocator_;
+
+        detail::destroy (t->begin (), t->end (), allocator_);
+        detail::deallocate (t->begin (), t->capacity_, allocator_);
+
+        delete t;
+      }
     };
 
     struct numpy_deleter
@@ -41,25 +52,35 @@ namespace blue_sky {
       };
 
       void
-      operator () (array_ext <T> *t);
+      operator () (array_ext <T> *t)
+      {
+        delete t;
+      }
     };
 
-    shared_array ()
-    : array_ (new array_ext <T> (0, 0))
+    shared_array (const internal_deleter &d = internal_deleter ())
+    : array_ (new array_ext <T> (0, 0), d)
+    , owned_ (d.owner)
     {
     }
 
-    template <typename D>
-    shared_array (const D &d, T *e = 0, size_t N = 0)
-    : array_ (new array_ext <T> (e, N)/*, d*/)
+    shared_array (const internal_deleter &d, T *e, size_t N)
+    : array_ (new array_ext <T> (e, N), d)
+    , owned_ (d.owner)
+    {
+    }
+    shared_array (const numpy_deleter &d, T *e, size_t N)
+    : array_ (new array_ext <T> (e, N), d)
+    , owned_ (d.owner)
+    {
+    }
+
+    shared_array (const shared_array &v)
+    : array_ (v.array_)
+    , owned_ (v.owned_)
     {
     }
     
-    //shared_array (T *e = 0, size_t N = 0)
-    //: array_ (new array_ext <T> (e, N))
-    //{
-    //}
-
     // iterator support
     iterator begin()
     {
@@ -165,7 +186,7 @@ namespace blue_sky {
     {
       return array_->c_array ();
     }
-    shared_array <T> &operator= (const shared_array <T> &rhs)
+    shared_array &operator= (const shared_array &rhs)
     {
       (*array_) = (*rhs.array_);
       return *this;
@@ -177,7 +198,8 @@ namespace blue_sky {
     }
 
   public:
-    boost::shared_ptr <array_ext <T> > array_;
+    boost::shared_ptr <array_ext <T> >  array_;
+    bool                                owned_;
   };
 
 

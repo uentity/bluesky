@@ -50,6 +50,7 @@ namespace blue_sky {
     array_ext (T *e = 0, size_t N = 0) 
     : elems (e)
     , N (N)
+    , capacity_ (N)
     {
     }
 
@@ -172,8 +173,11 @@ namespace blue_sky {
     array_ext <T> &operator= (array_ext <T> &rhs)
     {
       BS_ASSERT (rhs.size () == size ()) (rhs.size ()) (size ());
-      elems = rhs.elems;
-      N = rhs.N;
+
+      elems     = rhs.elems;
+      N         = rhs.N;
+      capacity_ = rhs.capacity_;
+
       return *this;
     }
 
@@ -194,6 +198,7 @@ namespace blue_sky {
   public:
     T             *elems;
     size_t        N;
+    size_t        capacity_;
   };
 
   // global swap()

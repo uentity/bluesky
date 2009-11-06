@@ -9,25 +9,14 @@
 
 namespace blue_sky {
 
-  namespace detail {
-
-    template <typename T>
-    struct BS_API_PLUGIN shared_array_allocator
-    {
-      static blue_sky::shared_array <T>
-      allocate (size_t N);
-
-      static void
-      deallocate (T *e);
-    };
-  }
-
-
   template <typename T>
   blue_sky::shared_array <T>
   internal_array (size_t N)
   {
-    return detail::shared_array_allocator <T>::allocate (N);
+    typedef blue_sky::shared_array <T> shared_array_t;
+
+    return shared_array_t (typename shared_array_t::internal_deleter (), 
+      typename shared_array_t::allocator_t ().allocate (N), N);
   }
 
   template <typename T>

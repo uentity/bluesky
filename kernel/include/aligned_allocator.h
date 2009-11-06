@@ -8,6 +8,7 @@
 #define BS_TOOLS_ALIGNED_ALLOCATOR_H_
 
 #include "memory_manager.h"
+#include "bs_kernel.h"
 
 namespace blue_sky
 {

@@ -53,7 +53,7 @@ test_suite_3 (T &t)
   t.erase (t.end () - 1);
 
   t.erase (t.begin () + 0, t.begin () + 3);
-  t.erase (t.begin () + 3, t.begin () + 2);
+  t.erase (t.begin () + 2, t.begin () + 3);
 }
 
 template <typename T>
@@ -129,8 +129,12 @@ print (T &t, X &x)
   for (size_t i = 0; i < t.size (); ++i)
     {
       std::cout << "t[" << i << "] = " << t[i] << " - " << x[i] << std::endl;
+      if (t[i] != x[i])
+        {
+          bs_throw_exception ("!!!");
+        }
     }
-  std::cout << "t.size () = " << t.size () << ", t.capacity = " << t.capacity_ << std::endl;
+  std::cout << "t.size () = " << t.size () << ", t.capacity = " << t.capacity () << std::endl;
   std::cout << "x.size () = " << x.size () << ", x.capacity = " << x.capacity () << std::endl;
 }
 
