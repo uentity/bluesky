@@ -168,6 +168,7 @@ kernel_tools::get_backtrace (int backtrace_depth)
             }
         }
 
+      free (backtrace_names);
       return callstack;
     }
 
