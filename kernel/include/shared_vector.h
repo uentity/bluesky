@@ -787,6 +787,8 @@ namespace blue_sky {
     {
       this->array_ = x.array_;
       this->owned_ = x.owned_;
+
+      return *this;
       //if (this->owned_)
       //  {
       //    return operator_assignment__ (*this, x);

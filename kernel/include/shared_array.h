@@ -188,7 +188,8 @@ namespace blue_sky {
     }
     shared_array &operator= (const shared_array &rhs)
     {
-      (*array_) = (*rhs.array_);
+      array_ = rhs.array_;
+      owned_ = rhs.owned_;
       return *this;
     }
     // assign one value to all elements
