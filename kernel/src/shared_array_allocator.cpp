@@ -4,10 +4,8 @@
  * \author Sergey Miryanov
  * \date 02.11.2009
  * */
-#include "shared_array.h"
+#include "shared_vector.h"
 #include "shared_array_allocator.h"
-
-#include <iostream>
 
 namespace blue_sky {
 

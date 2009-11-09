@@ -203,17 +203,7 @@ namespace blue_sky {
     bool                                owned_;
   };
 
-
-  typedef unsigned char             uint8_t;
-  typedef float                     float16_t;
-
-  typedef shared_array <uint8_t>    array_uint8_t;
-  typedef shared_array <float16_t>  array_float16_t;
-
 } // namespace blue_sky
-
-#include "shared_array_allocator.h"
-
 
 #endif // #ifndef BS_TOOLS_SHARED_ARRAY_H_
 

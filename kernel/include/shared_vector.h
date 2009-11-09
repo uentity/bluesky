@@ -13,7 +13,7 @@ namespace blue_sky {
 
   namespace detail {
 
-    template <typename T, typename allocator_type = std::allocator <T> >
+    template <typename T, typename allocator_type = aligned_allocator <T, 16> >
     struct shared_vector_impl : shared_array <T, allocator_type>
     {
       typedef shared_array <T, allocator_type>        base_t;
@@ -51,6 +51,11 @@ namespace blue_sky {
       shared_vector_impl (const shared_vector_impl &v)
       : base_t (v)
       , allocator_ (v.allocator_)
+      {
+      }
+
+      explicit shared_vector_impl (const base_t &v)
+      : base_t (v)
       {
       }
 
@@ -488,7 +493,7 @@ namespace blue_sky {
     };
   }
 
-  template <typename T, typename allocator_t__ = std::allocator <T> >
+  template <typename T, typename allocator_t__ = aligned_allocator <T, 16> >
   struct shared_vector : detail::shared_vector_impl <T, allocator_t__>
   {
     typedef detail::shared_vector_impl <T, allocator_t__>   base_t;
@@ -873,10 +878,25 @@ namespace blue_sky {
       //  }
     }
 
+    explicit shared_vector (const shared_array <T, allocator_t> &x)
+    : base_t (x)
+    {
+    }
+
     using base_t::back;
+    using base_t::assign;
+    using base_t::size;
   };
 
+  typedef unsigned char               uint8_t;
+  typedef float                       float16_t;
+
+  typedef shared_vector <uint8_t>     array_uint8_t;
+  typedef shared_vector <float16_t>   array_float16_t;
+
 } // namespace blue_sky
+
+#include "shared_array_allocator.h"
 
 void
 test_shared_vector ();
