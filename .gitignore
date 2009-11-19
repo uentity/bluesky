@@ -13,3 +13,5 @@ scons_vars.custom
 *.idb
 *.pdb
 *.log
+plugins
+tags
