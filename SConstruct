@@ -260,6 +260,9 @@ for i in range(len(build_kinds)) :
 	custom_env.AppendUnique(LIBPATH = [tar_exe_dir, tar_exe_plugin_dir]);
 	if build_kind == 'debug' :
 		custom_env.AppendUnique(CPPDEFINES = ['_DEBUG']);
+	elif (build_kind == 'release') :
+		custom_env.AppendUnique(CPPDEFINES = ['NDEBUG']);
+
 	Export('custom_env');
 	
 	# parse scons files
