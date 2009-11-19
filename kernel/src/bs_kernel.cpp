@@ -1091,7 +1091,7 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 	}
 	catch(const bs_exception& ex) {
 		// print error information
-		BSOUT << ex.what();
+		BSOUT << ex.what() << bs_end;
 		//unload library
 		if(p_descr)
 			unload_plugin(*p_descr);
