@@ -31,6 +31,10 @@ namespace blue_sky
       typedef aligned_allocator <U, alignment_> other;
     };
 
+    enum {
+      alignment_size = alignment_, 
+    };
+
     aligned_allocator () throw ()
     : base_t ()
     {
