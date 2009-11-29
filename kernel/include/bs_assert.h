@@ -8,6 +8,7 @@
 #define BS_ASSERT_H_
 
 #include "bs_common.h"
+#include <boost/lexical_cast.hpp>
 
 namespace blue_sky {
 

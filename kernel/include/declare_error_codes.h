@@ -10,7 +10,7 @@
 #ifdef BSPY_EXPORTING
 #include <boost/python/enum.hpp>
 #endif
-#include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/preprocessor.hpp>
 
 #define DECLARE_ERROR_CODE_ENUM_I(r, data, i, elem)                       \
   BOOST_PP_TUPLE_ELEM (2, 0, elem) = i,
