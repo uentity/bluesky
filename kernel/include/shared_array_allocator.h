@@ -9,17 +9,6 @@
 
 namespace blue_sky {
 
-  //template <typename T>
-  //blue_sky::shared_vector <T, aligned_allocator <T, 16> >
-  //internal_array (size_t N)
-  //{
-  //  typedef blue_sky::shared_array <T, aligned_allocator <T, 16> > shared_array_t;
-  //  typedef blue_sky::shared_vector <T, aligned_allocator <T, 16> > shared_vector_t;
-
-  //  return shared_vector_t (shared_array_t (typename shared_array_t::internal_deleter (), 
-  //    typename shared_array_t::allocator_t ().allocate (N), N));
-  //}
-
   template <typename T>
   blue_sky::shared_vector <T, aligned_allocator <T, 16> >
   numpy_array (T *e, size_t N)

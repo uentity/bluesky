@@ -144,23 +144,25 @@ namespace blue_sky {
     {
       template <typename forward_iterator, typename size_type, typename value_type, typename allocator_t>
       static void
-      uninitialized_fill_n_a (forward_iterator first, size_type n, const value_type& value, allocator_t &allocator)
+      uninitialized_fill_n_a (forward_iterator first, size_type n, const value_type& value, allocator_t &)
       {
-        for (size_t idx = 0; idx < n; ++idx)
-          first[idx] = value;
+        std::fill_n (first, n, value);
+        //for (size_t idx = 0; idx < n; ++idx)
+        //  first[idx] = value;
       }
 
       template <typename input_iterator, typename forward_iterator, typename allocator_t>
       static forward_iterator
-      uninitialized_copy_a (input_iterator first, input_iterator last, forward_iterator result, allocator_t &allocator)
+      uninitialized_copy_a (input_iterator first, input_iterator last, forward_iterator result, allocator_t &)
       {
-        forward_iterator cur = result;
+        return std::copy (first, last, result);
+        //forward_iterator cur = result;
 
-        size_t idx = 0;
-        for (; first != last; ++first, ++idx)
-          cur[idx] = *first;
+        //size_t idx = 0;
+        //for (; first != last; ++first, ++idx)
+        //  cur[idx] = *first;
 
-        return cur + idx;
+        //return cur + idx;
       }
 
       static T *
@@ -256,7 +258,8 @@ namespace blue_sky {
         this->array_end_  = new_memory + n;
         this->capacity_   = new_capacity;
 
-        detail::add_owner__ (this->begin (), new_capacity, &this->array_, &this->array_end_, &this->capacity_);
+        BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
+        change_owner (new_memory, new_memory + n, new_capacity);
       }
 
       void
@@ -267,7 +270,8 @@ namespace blue_sky {
         this->array_      = new_memory;
         this->array_end_  = new_memory;
 
-        detail::add_owner__ (this->begin (), this->capacity (), &this->array_, &this->array_end_, &this->capacity_);
+        BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
+        change_owner (new_memory, new_memory, this->capacity ());
       }
 
       template <typename input_iterator>
@@ -288,7 +292,8 @@ namespace blue_sky {
         this->array_end_  = new_finish;
         this->capacity_   = new_capacity;
 
-        detail::add_owner__ (this->begin (), new_capacity, &this->array_, &this->array_end_, &this->capacity_);
+        BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
+        change_owner (new_memory, new_finish, new_capacity);
       }
 
       template <typename integer_t>
@@ -306,16 +311,18 @@ namespace blue_sky {
         ctor_range__ (first, last, iterator_category_t ());
       }
 
-      template <typename shared_vector>
-      void
-      ctor_copy__ (const shared_vector &x)
-      {
-        this->array_ = allocator_.allocate (this->capacity ());
-        this->array_end_ = this->array_ + x.size ();
+      //template <typename shared_vector>
+      //void
+      //ctor_copy__ (const shared_vector &x)
+      //{
+      //  this->array_ = allocator_.allocate (this->capacity ());
+      //  this->array_end_ = this->array_ + x.size ();
 
-        opt_t::uninitialized_copy_a (x.begin (), x.end (), this->begin (), allocator_);
-        detail::add_owner__ (this->begin (), this->capacity (), &this->array_, &this->array_end_, &this->capacity_);
-      }
+      //  opt_t::uninitialized_copy_a (x.begin (), x.end (), this->begin (), allocator_);
+
+      //  BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
+      //  this->owner_list_->push_back (this);
+      //}
 
       void
       assign_fill__ (size_t n, const value_type &value)
@@ -331,13 +338,13 @@ namespace blue_sky {
             std::fill (this->begin (), this->end (), value);
             opt_t::uninitialized_fill_n_a (this->end (), n - this->size (), value, allocator_);
             
-            detail::change_owner__ (this->begin (), this->end () + n - this->size ());
+            this->change_owner (this->end () + n - this->size ());
           }
         else
           {
             std::fill_n (this->begin (), n, value);
             
-            detail::change_owner__ (this->begin (), this->begin () + n);
+            this->change_owner (this->begin () + n);
           }
       }
 
@@ -365,12 +372,12 @@ namespace blue_sky {
 
             detail_t::destroy (this->begin (), this->end (), allocator_);
             detail::deallocate (this->begin (), this->capacity (), allocator_); //size ()?
-            detail::change_owner__ (this->begin (), new_memory, new_memory + n, new_capacity);
+            this->change_owner (new_memory, new_memory + n, new_capacity);
           }
         else if (this->size () >= n)
           {
             std::copy (first, last, old_memory);
-            detail::change_owner__ (this->begin (), this->begin () + n);
+            this->change_owner (this->begin () + n);
           }
         else
           {
@@ -378,7 +385,7 @@ namespace blue_sky {
             std::advance (middle, this->size ());
             std::copy (first, last, old_memory);
             pointer new_finish = opt_t::uninitialized_copy_a (middle, last, this->end (), allocator_);
-            detail::change_owner__ (this->begin (), this->begin () + size_t (new_finish - this->begin ()));
+            this->change_owner (this->begin () + size_t (new_finish - this->begin ()));
           }
       }
 
@@ -402,14 +409,14 @@ namespace blue_sky {
 
         detail_t::destroy (this->begin (), this->end (), allocator_);
         detail::deallocate (this->begin (), this->capacity (), allocator_);
-        detail::change_owner__ (this->begin (), new_memory, new_finish, new_capacity);
+        this->change_owner (new_memory, new_finish, new_capacity);
       }
 
       void
       push_back_value__ (const value_type &value)
       {
         allocator_.construct (&this->array_[this->size ()], value);
-        detail::change_owner__ (this->begin (), this->end () + 1);
+        this->change_owner (this->end () + 1);
       }
 
       void
@@ -445,7 +452,7 @@ namespace blue_sky {
                     std::copy_backward (pos, old_finish - n, old_finish);
                     std::fill (pos, pos + n, value);
 
-                    detail::change_owner__ (this->begin (), this->end () + n);
+                    this->change_owner (this->end () + n);
                   }
                 else
                   {
@@ -455,7 +462,7 @@ namespace blue_sky {
                     this->array_end_ += elems_after;
                     std::fill (pos, old_finish, value);
 
-                    detail::change_owner__ (this->begin (), this->end ());
+                    this->change_owner (this->end ());
                   }
               }
             else
@@ -469,7 +476,7 @@ namespace blue_sky {
 
                 detail_t::destroy (this->begin (), this->end (), allocator_);
                 detail::deallocate (this->begin (), this->capacity (), allocator_);
-                detail::change_owner__ (this->begin (), new_memory, new_finish, new_capacity);
+                this->change_owner (new_memory, new_finish, new_capacity);
               }
           }
       }
@@ -495,7 +502,7 @@ namespace blue_sky {
                     std::copy_backward (pos, old_finish - n, old_finish);
                     std::copy (first, last, pos);
 
-                    detail::change_owner__ (this->begin (), this->end () + n);
+                    this->change_owner (this->end () + n);
                   }
                 else
                   {
@@ -507,7 +514,7 @@ namespace blue_sky {
                     this->array_end_ += elems_after;
                     std::copy (first, middle, pos);
                     
-                    detail::change_owner__ (this->begin (), this->end ());
+                    this->change_owner (this->end ());
                   }
               }
             else
@@ -521,7 +528,7 @@ namespace blue_sky {
 
                 detail_t::destroy (this->begin (), this->end (), allocator_);
                 detail::deallocate (this->begin (), this->capacity (), allocator_);
-                detail::change_owner__ (this->begin (), new_memory, new_finish, new_capacity);
+                this->change_owner (new_memory, new_finish, new_capacity);
               }
           }
       }
@@ -559,7 +566,7 @@ namespace blue_sky {
       erase_at_end__ (size_t n)
       {
         detail_t::destroy (this->end () - n, this->end (), allocator_);
-        detail::change_owner__ (this->begin (), this->end () - n);
+        this->change_owner (this->end () - n);
       }
 
       iterator
@@ -571,7 +578,7 @@ namespace blue_sky {
           }
 
         detail_t::destroy (this->end () - 1, this->end (), allocator_);
-        detail::change_owner__ (this->begin (), this->end () - 1);
+        this->change_owner (this->end () - 1);
         return position;
       }
 
@@ -618,15 +625,14 @@ namespace blue_sky {
       void
       swap__ (shared_vector &v)
       {
-        detail::add_owner__ (v.array_, v.capacity_, &this->array_, &this->array_end_, &this->capacity_);
-        detail::add_owner__ (this->array_, this->capacity_, &v.array_, &v.array_end_, &v.capacity_);
+        T *array_x        = this->array_;
+        T *array_end_x    = this->array_end_;
+        size_t capacity_x = this->capacity_;
 
-        detail::rem_owner__ (this->array_, &this->array_);
-        detail::rem_owner__ (v.array_, &v.array_);
+        BS_ASSERT (this->owner_list_ && v.owner_list_);
 
-        std::swap (this->array_,     v.array_);
-        std::swap (this->array_end_, v.array_end_);
-        std::swap (this->capacity_,  v.capacity_);
+        this->change_owner (v.array_, v.array_end_, v.capacity_);
+        v.change_owner (array_x, array_end_x, capacity_x);
       }
     };
   }

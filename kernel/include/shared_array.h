@@ -16,97 +16,12 @@
 
 namespace blue_sky {
 
-  struct BS_API_PLUGIN shared_array_manager
-  {
-    static shared_array_manager *
-    instance ();
-
-    shared_array_manager ();
-    ~shared_array_manager ();
-
-    struct owner_t
-    {
-      owner_t (void *array, void *array_end, size_t *capacity)
-      : array (array)
-      , array_end (array_end)
-      , capacity (capacity)
-      {
-      }
-
-      void    *array;
-      void    *array_end;
-      size_t  *capacity;
-    };
-
-    void
-    add_array (void *array, size_t size, const owner_t &owner);
-
-    bool
-    rem_array (void *array, void *owner);
-
-    void
-    change_array (void *array, void *new_memory, void *new_finish, const size_t &new_capacity);
-
-    void
-    change_array_end (void *array, void *new_finish);
-
-    struct impl;
-    impl *impl_;
-  };
-
   namespace detail {
-
-    inline bool
-    is_owner__ (const size_t &holder)
-    {
-      return (holder & 1) != 0;
-    }
-
-    inline size_t
-    owner__ (bool is_owner, const size_t &holder)
-    {
-      if ((holder & 1) != 0)
-        {
-          return holder + 1 + is_owner;
-        }
-      else
-        {
-          return holder + is_owner;
-        }
-    }
-
-    template <typename T>
-    inline void
-    add_owner__ (T *ownee, size_t size, T **owner, T **array_end, size_t *capacity)
-    {
-      shared_array_manager::instance ()->add_array (ownee, size, shared_array_manager::owner_t (owner, array_end, capacity));
-    }
-
-    template <typename T>
-    inline bool
-    rem_owner__ (T *ownee, T **owner)
-    {
-      return shared_array_manager::instance ()->rem_array (ownee, owner);
-    }
 
     inline size_t
     new_capacity__ (size_t size, size_t i, bool is_owner)
     {
-      return owner__ (is_owner, size + (std::max) (size, i));
-    }
-
-    template <typename T>
-    inline void
-    change_owner__ (T *ownee, T *new_memory, T *new_finish, const size_t &new_capacity)
-    {
-      shared_array_manager::instance ()->change_array (ownee, new_memory, new_finish, new_capacity);
-    }
-
-    template <typename T>
-    inline void
-    change_owner__ (T *ownee, T *new_finish)
-    {
-      shared_array_manager::instance ()->change_array_end (ownee, new_finish);
+      return size + (std::max) (size, i);
     }
   }
 
@@ -130,25 +45,30 @@ namespace blue_sky {
 
     ~shared_array ()
     {
-      if (detail::rem_owner__ (array_, &array_))
+      if (owner_list_ && remove_owner ())
         {
           detail::detail_t <boost::is_arithmetic <T>::value>::destroy (begin (), end (), allocator_);
           detail::deallocate (begin (), capacity_, allocator_);
+
+          delete owner_list_;
         }
     }
 
     shared_array ()
     : array_ (0)
     , array_end_ (0)
-    , capacity_ (detail::owner__ (true, 0))
+    , capacity_ (0)
+    , owner_list_ (new owner_list_t)
     {
-      detail::add_owner__ (array_, 0, &array_, &array_end_, &capacity_);
+      BS_ASSERT (owner_list_);
+      owner_list_->push_back (this);
     }
 
     shared_array (const numpy_deleter &d, T *e, size_t N)
     : array_ (e)
     , array_end_ (e + N)
-    , capacity_ (detail::owner__ (false, N))
+    , capacity_ (N)
+    , owner_list_ (0)
     {
     }
 
@@ -156,29 +76,33 @@ namespace blue_sky {
     : array_ (v.array_)
     , array_end_ (v.array_end_)
     , capacity_ (v.capacity_)
+    , owner_list_ (v.owner_list_)
     {
-      if (detail::is_owner__ (v.capacity_))
+      if (owner_list_)
         {
-          detail::add_owner__ (array_, v.capacity (), &array_, &array_end_, &capacity_);
+          owner_list_->push_back (this);
         }
     }
 
     shared_array &
     operator= (const shared_array &v)
     {
-      if (detail::is_owner__ (capacity_) && detail::rem_owner__ (array_, &array_))
+      if (owner_list_ && remove_owner ())
         {
           detail::detail_t <boost::is_arithmetic <T>::value>::destroy (begin (), end (), allocator_);
           detail::deallocate (begin (), capacity_, allocator_);
+
+          delete owner_list_;
         }
 
       array_      = v.array_;
       array_end_  = v.array_end_;
       capacity_   = v.capacity_;
+      owner_list_ = v.owner_list_;
 
-      if (detail::is_owner__ (v.capacity_))
+      if (owner_list_)
         {
-          detail::add_owner__ (array_, v.capacity (), &array_, &array_end_, &capacity_);
+          owner_list_->push_back (this);
         }
 
       return *this;
@@ -326,20 +250,59 @@ namespace blue_sky {
     bool 
     is_owner () const
     {
-      return detail::is_owner__ (capacity_);
+      return owner_list_;
     }
 
+    bool
+    remove_owner ()
+    {
+      for (size_t i = 0, cnt = owner_list_->size (); i < cnt; ++i)
+        {
+          if (owner_list_->operator[] (i) == this)
+            {
+              owner_list_->erase (owner_list_->begin () + i);
+              break;
+            }
+        }
+
+      return owner_list_->empty ();
+    }
+
+    void
+    change_owner (T *new_memory, T *new_finish, const size_t &new_capacity)
+    {
+      owner_list_t &list = *owner_list_;
+      for (size_t i = 0, cnt = list.size (); i < cnt; ++i)
+        {
+          owner_t owner     = list[i];
+          owner->array_     = new_memory;
+          owner->array_end_ = new_finish;
+          owner->capacity_  = new_capacity;
+        }
+    }
+
+    void
+    change_owner (T *new_finish)
+    {
+      owner_list_t &list = *owner_list_;
+      for (size_t i = 0, cnt = list.size (); i < cnt; ++i)
+        {
+          list[i]->array_end_ = new_finish;
+        }
+    }
+
+    typedef shared_array <T> *    owner_t;
+    typedef std::vector <owner_t> owner_list_t;
 
   public:
     T             *array_;
     T             *array_end_;
     size_t        capacity_;
+    owner_list_t  *owner_list_;
     allocator_t   allocator_;
   };
 
 } // namespace blue_sky
-
-#include "shared_array_manager.h"
 
 #endif // #ifndef BS_TOOLS_SHARED_ARRAY_H_
 
