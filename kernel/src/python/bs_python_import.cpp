@@ -18,6 +18,8 @@
 #include "py_bs_exports.h"
 #include "py_bs_assert.h"
 
+#include "shared_vector.h"
+
 #include <boost/python/enum.hpp>
 #include <boost/python/exception_translator.hpp>
 
@@ -36,8 +38,7 @@ BLUE_SKY_INIT_PY_FUN
 		.def(self == self)
 		.def(self != self);
 
-	class_< std::vector<int> >("vector_int")
-		.def(vector_indexing_suite< std::vector< int > >());
+  py_export_vectors ();
 
 	class_< std::list<std::string> >("list_string")
 		.def("__iter__", boost::python::iterator< std::list<std::string> >());

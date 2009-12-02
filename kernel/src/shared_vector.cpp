@@ -7,6 +7,13 @@
 #include "shared_vector.h"
 #include <iostream>
 
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#endif
+
+#include <boost/array.hpp>
+
 using namespace blue_sky;
 
 template <typename T>
@@ -180,3 +187,56 @@ test_shared_vector ()
   test_suite_9 (x);
   print (t, x);
 }
+
+namespace blue_sky {
+namespace python {
+
+  namespace detail {
+    template <typename T>
+    void
+    resize (T *t, size_t s, typename T::value_type v)
+    {
+      t->resize (s, v);
+    }
+
+    template <typename T>
+    void
+    vector_assign (T *t, size_t s, typename T::value_type v)
+    {
+      t->assign (s, v);
+    }
+
+    template <typename T>
+    void
+    array_assign (T *t, typename T::value_type v)
+    {
+      t->assign (v);
+    }
+  }
+
+  template <typename T>
+  void
+  export_shared_vector (const char *name)
+  {
+    using namespace boost::python;
+
+    typedef shared_vector <T> Y;
+
+    class_ <Y> (name)
+      .def (vector_indexing_suite <Y> ())
+      .def ("resize", detail::resize <Y>)
+      .def ("assign", detail::vector_assign <Y>)
+      ;
+  }
+
+  void
+  py_export_vectors ()
+  {
+    export_shared_vector <float>   ("vector_float");
+    export_shared_vector <double>  ("vector_double");
+    export_shared_vector <int>     ("vector_int");
+    export_shared_vector <char>    ("vector_char");
+  }
+
+} // namespace python
+} // namespace blue_sky
