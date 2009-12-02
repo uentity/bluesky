@@ -14,6 +14,11 @@
 namespace blue_sky {
 
   namespace detail {
+    inline size_t
+    new_capacity__ (size_t size, size_t i)
+    {
+      return size + (std::max) (size, i);
+    }
 
     template <typename T, bool is_arithmetic>
     struct shared_vector_opt
@@ -77,7 +82,7 @@ namespace blue_sky {
       }
 
       static T *
-      allocate_for_push_back_copy_a (shared_array <T> *a, 
+      allocate_for_push_back_copy_a (private_::shared_array <T> *a, 
         T *new_memory, T *new_finish, const size_t &new_capacity)
       {
         try
@@ -95,7 +100,7 @@ namespace blue_sky {
       }
 
       static T *
-      insert_fill_copy_a (shared_array <T> *a,
+      insert_fill_copy_a (private_::shared_array <T> *a,
         T *pos, size_t n, const T &value, 
         T *new_memory, T *new_finish, const size_t &new_capacity)
       {
@@ -118,7 +123,7 @@ namespace blue_sky {
 
       template <typename forward_iterator>
       static T *
-      insert_range_copy_a (shared_array <T> *a,
+      insert_range_copy_a (private_::shared_array <T> *a,
         T *pos, forward_iterator first, forward_iterator last,
         T *new_memory, T *new_finish, const size_t &new_capacity)
       {
@@ -147,8 +152,6 @@ namespace blue_sky {
       uninitialized_fill_n_a (forward_iterator first, size_type n, const value_type& value, allocator_t &)
       {
         std::fill_n (first, n, value);
-        //for (size_t idx = 0; idx < n; ++idx)
-        //  first[idx] = value;
       }
 
       template <typename input_iterator, typename forward_iterator, typename allocator_t>
@@ -156,24 +159,17 @@ namespace blue_sky {
       uninitialized_copy_a (input_iterator first, input_iterator last, forward_iterator result, allocator_t &)
       {
         return std::copy (first, last, result);
-        //forward_iterator cur = result;
-
-        //size_t idx = 0;
-        //for (; first != last; ++first, ++idx)
-        //  cur[idx] = *first;
-
-        //return cur + idx;
       }
 
       static T *
-      allocate_for_push_back_copy_a (shared_array <T> *a,
+      allocate_for_push_back_copy_a (private_::shared_array <T> *a,
         T *new_memory, T *, const size_t &)
       {
         return uninitialized_copy_a (a->begin (), a->end (), new_memory, a->allocator_);
       }
 
       static T *
-      insert_fill_copy_a (shared_array <T> *a, 
+      insert_fill_copy_a (private_::shared_array <T> *a, 
         T *pos, size_t n, const T &value, 
         T *new_memory, T *, const size_t &)
       {
@@ -187,7 +183,7 @@ namespace blue_sky {
 
       template <typename forward_iterator>
       static T *
-      insert_range_copy_a (shared_array <T> *a,
+      insert_range_copy_a (private_::shared_array <T> *a,
         T *pos, forward_iterator first, forward_iterator last,
         T *new_memory, T *, const size_t &)
       {
@@ -200,13 +196,13 @@ namespace blue_sky {
     };
 
     template <typename T, typename allocator_type = aligned_allocator <T, 16> >
-    struct shared_vector_impl : shared_array <T, allocator_type>
+    struct shared_vector_impl : private_::shared_array <T, allocator_type>
     {
-      typedef shared_array <T, allocator_type>        base_t;
-      typedef typename base_t::value_type             value_type;
-      typedef typename base_t::iterator               iterator;
-      typedef typename std::allocator <T>::pointer    pointer;
-      typedef allocator_type                          allocator_t;
+      typedef private_::shared_array <T, allocator_type>              base_t;
+      typedef typename base_t::value_type                             value_type;
+      typedef typename base_t::iterator                               iterator;
+      typedef typename std::allocator <T>::pointer                    pointer;
+      typedef allocator_type                                          allocator_t;
 
       typedef shared_vector_opt <T, boost::is_arithmetic <T>::value>  opt_t;
       typedef detail::detail_t <boost::is_arithmetic <T>::value>      detail_t;
@@ -228,8 +224,8 @@ namespace blue_sky {
       {
       }
 
-      explicit shared_vector_impl (const base_t &v)
-      : base_t (v)
+      shared_vector_impl (const typename base_t::numpy_deleter &d, T *e, size_t N)
+      : base_t (d, e, N)
       {
       }
 
@@ -249,7 +245,7 @@ namespace blue_sky {
       void
       ctor_fill__ (size_t n, const value_type &value)
       {
-        const size_t new_capacity = detail::new_capacity__ (1, n, true);
+        const size_t new_capacity = detail::new_capacity__ (1, n);
         pointer new_memory = allocator_.allocate (new_capacity);
 
         opt_t::uninitialized_fill_n_a (new_memory, n, value, allocator_);
@@ -283,7 +279,7 @@ namespace blue_sky {
       ctor_range__ (forward_iterator first, forward_iterator last, std::forward_iterator_tag)
       {
         const size_t n = std::distance (first, last);
-        size_t new_capacity = detail::new_capacity__ (1, n, true);
+        size_t new_capacity = detail::new_capacity__ (1, n);
 
         pointer new_memory = allocator_.allocate (new_capacity);
         pointer new_finish = opt_t::uninitialized_copy_a (first, last, new_memory, allocator_);
@@ -310,19 +306,6 @@ namespace blue_sky {
         typedef typename std::iterator_traits <input_iterator>::iterator_category iterator_category_t;
         ctor_range__ (first, last, iterator_category_t ());
       }
-
-      //template <typename shared_vector>
-      //void
-      //ctor_copy__ (const shared_vector &x)
-      //{
-      //  this->array_ = allocator_.allocate (this->capacity ());
-      //  this->array_end_ = this->array_ + x.size ();
-
-      //  opt_t::uninitialized_copy_a (x.begin (), x.end (), this->begin (), allocator_);
-
-      //  BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
-      //  this->owner_list_->push_back (this);
-      //}
 
       void
       assign_fill__ (size_t n, const value_type &value)
@@ -367,7 +350,7 @@ namespace blue_sky {
         pointer old_memory = this->array_;
         if (n > this->capacity ())
           {
-            size_t new_capacity = detail::new_capacity__ (this->size (), n, true);
+            size_t new_capacity = detail::new_capacity__ (this->size (), n);
             pointer new_memory (allocate_and_copy__ (new_capacity, first, last));
 
             detail_t::destroy (this->begin (), this->end (), allocator_);
@@ -401,7 +384,7 @@ namespace blue_sky {
       allocate_for_push_back__ ()
       {
         BS_ASSERT (this->is_owner ());
-        const size_t new_capacity = detail::new_capacity__ (this->size (), 1, true);
+        const size_t new_capacity = detail::new_capacity__ (this->size (), 1);
         pointer new_memory = allocator_.allocate (new_capacity);
         pointer new_finish = new_memory;
 
@@ -468,7 +451,7 @@ namespace blue_sky {
             else
               {
                 BS_ASSERT (this->is_owner ());
-                const size_t new_capacity = detail::new_capacity__ (this->size (), n, true);
+                const size_t new_capacity = detail::new_capacity__ (this->size (), n);
                 pointer new_memory = allocator_.allocate (new_capacity);
                 pointer new_finish = new_memory;
 
@@ -520,7 +503,7 @@ namespace blue_sky {
             else
               {
                 BS_ASSERT (this->is_owner ());
-                const size_t new_capacity = detail::new_capacity__ (this->size (), n, true);
+                const size_t new_capacity = detail::new_capacity__ (this->size (), n);
                 pointer new_memory = allocator_.allocate (new_capacity);
                 pointer new_finish = new_memory;
                 
@@ -910,7 +893,7 @@ namespace blue_sky {
      */
     template<typename input_iterator>
     void
-    assign(input_iterator first, input_iterator last)
+    assign (input_iterator first, input_iterator last)
     {
       if (this->is_owner ())
         {
@@ -987,18 +970,10 @@ namespace blue_sky {
     shared_vector (const shared_vector &x)
     : base_t (x)
     {
-      //if (this->owned_)
-      //  {
-      //    ctor_copy__ (x);
-      //  }
-      //else
-      //  {
-      //    bs_throw_exception ("Error: shared_vector not owns data");
-      //  }
     }
 
-    explicit shared_vector (const shared_array <T, allocator_t> &x)
-    : base_t (x)
+    shared_vector (const typename private_::shared_array <T>::numpy_deleter &d, T *e, size_t N)
+    : base_t (d, e, N)
     {
     }
 
@@ -1007,6 +982,13 @@ namespace blue_sky {
     using base_t::size;
   };
 
+  template <typename T>
+  shared_vector <T>
+  shared_array (T *data, size_t size)
+  {
+    return shared_vector <T> (typename private_::shared_array <T>::numpy_deleter (), data, size);
+  }
+
   typedef unsigned char               uint8_t;
   typedef float                       float16_t;
 
@@ -1014,8 +996,6 @@ namespace blue_sky {
   typedef shared_vector <float16_t>   array_float16_t;
 
 } // namespace blue_sky
-
-#include "shared_array_allocator.h"
 
 void
 test_shared_vector ();

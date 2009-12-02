@@ -11,6 +11,7 @@
 #include "bs_assert.h"
 
 namespace blue_sky {
+namespace private_ {
 
   template<class T>
   class array_ext
@@ -208,7 +209,9 @@ namespace blue_sky {
     BS_ASSERT (x.size () == y.size ()) (x.size ()) (y.size ());
     x.swap(y);
   }
-}
+
+} // namespace private_
+} // namespace blue_sky
 
 #endif // BS_TOOLS_ARRAY_EXT_H_
 

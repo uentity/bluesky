@@ -15,29 +15,23 @@
 #include <boost/type_traits.hpp>
 
 namespace blue_sky {
-
-  namespace detail {
-
-    inline size_t
-    new_capacity__ (size_t size, size_t i, bool is_owner)
-    {
-      return size + (std::max) (size, i);
-    }
-  }
-
+namespace private_ {
 
   template <typename T, typename allocator_type = aligned_allocator <T, 16> >
   struct shared_array 
   {
     // type definitions
-    typedef T               value_type;
-    typedef T*              iterator;
-    typedef const T*        const_iterator;
-    typedef T&              reference;
-    typedef const T&        const_reference;
-    typedef std::ptrdiff_t  difference_type;
-    typedef allocator_type  allocator_t;
-    typedef size_t          size_type;
+    typedef T                                     value_type;
+    typedef T*                                    iterator;
+    typedef const T*                              const_iterator;
+    typedef T&                                    reference;
+    typedef const T&                              const_reference;
+    typedef std::ptrdiff_t                        difference_type;
+    typedef allocator_type                        allocator_t;
+    typedef size_t                                size_type;
+
+    typedef std::reverse_iterator<iterator>       reverse_iterator;
+    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
     struct numpy_deleter
     {
@@ -115,128 +109,134 @@ namespace blue_sky {
     }
 
     // iterator support
-    iterator begin()
+    iterator 
+    begin()
     {
       return iterator (array_);
     }
-    const_iterator begin() const
+    const_iterator 
+    begin() const
     {
       return const_iterator (array_);
     }
-    iterator end()
+    iterator 
+    end()
     {
       return iterator (array_end_);
     }
-    const_iterator end() const
+    const_iterator 
+    end() const
     {
       return const_iterator (array_end_);
     }
 
-    //reverse_iterator rbegin()
-    //{
-    //  return reverse_iterator(end());
-    //}
-    //const_reverse_iterator rbegin() const
-    //{
-    //  return const_reverse_iterator(end());
-    //}
-    //reverse_iterator rend()
-    //{
-    //  return reverse_iterator(begin());
-    //}
-    //const_reverse_iterator rend() const
-    //{
-    //  return const_reverse_iterator(begin());
-    //}
+    reverse_iterator 
+    rbegin()
+    {
+      return reverse_iterator(end());
+    }
+    const_reverse_iterator 
+    rbegin() const
+    {
+      return const_reverse_iterator(end());
+    }
+    reverse_iterator 
+    rend()
+    {
+      return reverse_iterator(begin());
+    }
+    const_reverse_iterator 
+    rend() const
+    {
+      return const_reverse_iterator(begin());
+    }
 
-    // front() and back()
-    reference front()
+    reference 
+    front()
     {
       return *begin ();
     }
-
-    const_reference front() const
+    const_reference 
+    front() const
     {
       return *begin ();
     }
-
-    reference back()
+    reference 
+    back()
     {
       return *(end () - 1);
     }
-
-    const_reference back() const
+    const_reference 
+    back() const
     {
       return *(end () - 1);
     }
     
-    // operator[]
-    reference operator[](size_t i)
+    reference 
+    operator[](size_t i)
     {
       return array_[i];
     }
 
-    const_reference operator[](size_t i) const
+    const_reference 
+    operator[](size_t i) const
     {
       return array_[i];
     }
 
-    // at() with range check
-    reference at(size_t i)
+    reference 
+    at(size_t i)
     {
       rangecheck (i);
       return array_[i];
     }
-    const_reference at(size_t i) const
+    const_reference 
+    at(size_t i) const
     {
       rangecheck (i);
       return array_[i];
     }
-    // size is constant
-    size_t size() const
+
+    size_t 
+    size() const
     {
       return size_t (array_end_ - array_);
-      //return array_->size ();
     }
-    bool empty() const
+    bool 
+    empty() const
     {
       return array_ == array_end_;
-      //return array_->empty ();
     }
-    size_t max_size() const
+    size_t 
+    max_size() const
     {
       return size ();
-      //return array_->max_size ();
     }
 
-    // direct access to data (read-only)
-    const T* data() const
+    const T* 
+    data() const
     {
       return array_;
-      //return array_->data ();
     }
-    T* data()
+    T* 
+    data()
     {
       return array_;
-      //return array_->data ();
-    }
-
-    // use array as C array (direct read/write access to data)
-    T* c_array()
-    {
-      return array_;
-      //return array_->c_array ();
     }
 
-    // assign one value to all elements
-    void assign (const T& value)
+    T* 
+    c_array()
     {
-      //array_->assign (value);
+      return array_;
+    }
+
+    void 
+    assign (const T& value)
+    {
       std::fill_n (begin (), size (), value);
     }
 
   private:
-    // check range 
     void 
     rangecheck (size_t i) const
     {
@@ -302,6 +302,7 @@ namespace blue_sky {
     allocator_t   allocator_;
   };
 
+} // namespace private_
 } // namespace blue_sky
 
 #endif // #ifndef BS_TOOLS_SHARED_ARRAY_H_
