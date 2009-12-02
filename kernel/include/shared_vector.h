@@ -620,15 +620,21 @@ namespace blue_sky {
     };
   }
 
-  template <typename T, typename allocator_t__ = aligned_allocator <T, 16> >
-  struct shared_vector : detail::shared_vector_impl <T, allocator_t__>
+  template <typename T/*, typename allocator_t__ = aligned_allocator <T, 16>*/ >
+  struct shared_vector : detail::shared_vector_impl <T, aligned_allocator <T, 16> >
   {
-    typedef detail::shared_vector_impl <T, allocator_t__>   base_t;
+    typedef aligned_allocator <T, 16>                       allocator_t;
+    typedef detail::shared_vector_impl <T, allocator_t>     base_t;
     typedef typename base_t::value_type                     value_type;
     typedef typename base_t::iterator                       iterator;
     typedef typename std::allocator <T>::pointer            pointer;
-    typedef allocator_t__                                   allocator_t;
     typedef size_t                                          size_type;
+
+    template <typename Y>
+    struct array
+    {
+      typedef shared_vector <Y> type;
+    };
 
     /**
      *  @brief  Add data to the end of the %vector.
