@@ -25,7 +25,9 @@ namespace detail {
     operator= (PyObject *p)
     {
       if (obj != Py_None)
-        Py_XDECREF (obj);
+        {
+          Py_XDECREF (obj);
+        }
 
       obj = p;
     }
@@ -38,7 +40,9 @@ namespace detail {
     ~py_object_handler ()
     {
       if (obj != Py_None)
-        Py_XDECREF (obj);
+        {
+          Py_XDECREF (obj);
+        }
     }
 
     PyObject *obj;
