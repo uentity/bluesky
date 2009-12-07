@@ -1006,7 +1006,7 @@ namespace blue_sky {
 void
 test_shared_vector ();
 
-#ifdef BSPY_EXPORTING_PLUGIN
+#ifdef BSPY_EXPORTING
 namespace blue_sky {
 namespace python {
 

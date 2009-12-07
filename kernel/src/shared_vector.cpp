@@ -7,7 +7,7 @@
 #include "shared_vector.h"
 #include <iostream>
 
-#ifdef BSPY_EXPORTING_PLUGIN
+#ifdef BSPY_EXPORTING
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #endif
@@ -188,6 +188,7 @@ test_shared_vector ()
   print (t, x);
 }
 
+#ifdef BSPY_EXPORTING
 namespace blue_sky {
 namespace python {
 
@@ -240,3 +241,5 @@ namespace python {
 
 } // namespace python
 } // namespace blue_sky
+
+#endif // #ifdef BSPY_EXPORTING
