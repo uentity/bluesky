@@ -93,6 +93,10 @@ if ("log_buffer_force" not in custom_vars.keys ()) :
     custom_vars.Add ("log_buffer_force", "Set to 1 to use buffered output in log in release and debug", "0")
     custom_vars.Update (custom_env)
 
+if ("unmanaged" not in custom_vars.keys ()) :
+    custom_vars.Add ("unmanaged", "Set to 1 to direct kernel to unmanage created objects", "1")
+    custom_vars.Update (custom_env)
+
 # setup default build environment
 base_env = custom_env.Clone();
 base_env.AppendUnique(
@@ -126,6 +130,9 @@ if (base_env["tcmalloc"] == "1") :
 
 if (base_env["debug_info"] == "1") :
     base_env.AppendUnique (CCFLAGS = ["-ggdb"])
+
+if (base_env["unmanaged"] == "1") :
+    base_env.AppendUnique (CPPDEFINES = ["BS_CREATE_UNMANAGED_OBJECTS"])
 
 base_env.AppendUnique (CPPDEFINES = ["BS_LOG_USE_BUFFER=" + str (base_env["log_buffer"])])
 base_env.AppendUnique (CPPDEFINES = ["BS_LOG_USE_BUFFER_FORCE=" + str (base_env["log_buffer_force"])])
