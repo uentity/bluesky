@@ -72,8 +72,20 @@ using namespace boost::filesystem;
 #define XPN_LOG_INST log::Instance()[XPN_LOG] //!< blue-sky log for errors output
 #define MAIN_LOG_INST log::Instance()[MAIN_LOG] //!< blue-sky log for every output
 
-//export specific BlueSky kernel's plugin_descriptor
-BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", "1.0RC4", "Plugin tag for BlueSky kernel", "", "bs")
+namespace blue_sky {
+namespace private_ {
+
+namespace kernel_types {
+  BLUE_SKY_PLUGIN_DESCRIPTOR_EXT ("BlueSky kernel", "1.0RC4", "Plugin tag for BlueSky kernel", "", "bs")
+} // namespace kernel_types
+
+namespace runtime_types {
+  BLUE_SKY_PLUGIN_DESCRIPTOR_EXT_STATIC ("Runtime types", "0.1", "Plugin tag for runtime types", "", "")
+} // namespace runtime_types
+
+} // namespace private_
+} // namespace blue_sky
+
 
 // define default value for unmanaged parameter to create_object
 bool blue_sky::kernel::unmanaged_def_val() {
@@ -140,7 +152,10 @@ struct lib_descriptor
 	#ifdef UNIX
 			dlclose(handle_);
 	#elif defined(_WIN32)
-			FreeLibrary(handle_);
+			if (!FreeLibrary(handle_))
+        {
+          throw bs_dynamic_lib_exception ("Can't unload library");
+        }
 	#endif
 		}
 		handle_ = NULL;
@@ -236,6 +251,8 @@ struct elem_ptr {
 	elem_ptr() : p_(&nil_el) {}
 
 	elem_ptr(const T& el) : p_(&el) {}
+
+  elem_ptr (const T *el) : p_ (el) {}
 
 	elem_ptr& operator =(const T& el) {
 		p_ = &el;
@@ -418,10 +435,9 @@ public:
 	// at last a storage itself
 	sig_storage_t sig_storage_;
 
-	//! plugin descriptor tag fot kernel types
-	static plugin_descriptor& kernel_pd_;
-	//! plugin descriptor tag for runtime types
-	static plugin_descriptor runtime_pd_;
+	
+	const plugin_descriptor *kernel_pd_;       //! plugin descriptor tag fot kernel types
+	const plugin_descriptor *runtime_pd_;      //! plugin descriptor tag for runtime types
 
 	//last error message stored here
 	string last_err_;
@@ -441,6 +457,8 @@ public:
 
 	//constructor
 	kernel_impl()
+  : kernel_pd_ (blue_sky::private_::kernel_types::bs_get_plugin_descriptor ())
+  , runtime_pd_ (blue_sky::private_::runtime_types::bs_get_plugin_descriptor ())
 	{
 		//register inner plugin_descriptors in dictionary
 		pl_dict_.insert(kernel_pd_);
@@ -562,7 +580,7 @@ public:
 
 	void clean_plugin_tails(const plugin_descriptor& pd) {
 		//we cannot clear kernel internal types
-		if(pd == kernel_pd_) return;
+		if(pd == *kernel_pd_) return;
 		//get all types of given plugin
 		pair< plt_enum::iterator, plt_enum::iterator > pl_types =
 			plugin_types_.equal_range(fab_elem(pd));
@@ -629,7 +647,7 @@ public:
 
 
 	bool is_inner_pd(const plugin_descriptor& pd) {
-		return (pd != kernel_pd_ && pd != runtime_pd_);
+		return (pd != *kernel_pd_ && pd != *runtime_pd_);
 	}
 
 	bool register_type(const plugin_descriptor& pd, const type_descriptor& td, bool /*inner_type */= false,
@@ -761,11 +779,11 @@ public:
 	}
 
 	bool register_kernel_type(const type_descriptor& td, fe_ptr* tp_ref = NULL) {
-		return register_type(kernel_pd_, td, true, tp_ref);
+		return register_type(*kernel_pd_, td, true, tp_ref);
 	}
 
 	bool register_rt_type(const type_descriptor& td, fe_ptr* tp_ref = NULL) {
-		return register_type(runtime_pd_, td, true, tp_ref);
+		return register_type(*runtime_pd_, td, true, tp_ref);
 	}
 
 	plugins_enum loaded_plugins() const {
@@ -912,20 +930,8 @@ public:
 
 };	//end of kernel_impl declaration
 
-namespace {
-	//tags for runtime types
-	class _bs_runtime_types_tag_ {};
-	//class _bs_kernel_types_tag_ {};
-}
-
 //kernel_impl guard
 bs_mutex kernel::kernel_impl::guard_;
-//descriptors for kernel & runtime types
-plugin_descriptor& kernel::kernel_impl::kernel_pd_(plugin_info);
-//plugin_descriptor kernel::kernel_impl::kernel_pd_(BS_GET_TI(bs_private::_bs_kernel_types_tag_), "BlueSky kernel",
-//												  "0.1", "Plugin tag for BlueSky kernel");
-plugin_descriptor kernel::kernel_impl::runtime_pd_(BS_GET_TI(_bs_runtime_types_tag_), "Runtime types",
-												   "0.1", "Plugin tag for runtime types");
 
 void kernel::kernel_impl::error_processor(const blue_sky::error_code& e, const char* lib_dir) const
 {
@@ -953,7 +959,8 @@ PyMethodDef initial_methods[] = { { 0, 0, 0, 0 } };
 
 void bspy_init_plugin(const string& nested_scope, void(*init_function)())
 {
-  static PyObject* m = Py_InitModule(plugin_info.py_namespace_.c_str(), initial_methods);
+  const plugin_descriptor *pd = blue_sky::private_::kernel_types::bs_get_plugin_descriptor ();
+  static PyObject* m = Py_InitModule(pd->py_namespace_.c_str(), initial_methods);
 
 	// Create the current module scope
 	static scope current_module(object(((borrowed_reference_t*)m)));
@@ -961,10 +968,10 @@ void bspy_init_plugin(const string& nested_scope, void(*init_function)())
   if (!m)
   {
     bs_throw_exception (boost::format ("Py_InitModule: Can't create module for %s") 
-      % plugin_info.py_namespace_);
+      % pd->py_namespace_);
   }
 
-  std::string name = plugin_info.py_namespace_ + "." + nested_scope;
+  std::string name = pd->py_namespace_ + "." + nested_scope;
   PyObject *nested_module = Py_InitModule (name.c_str (), initial_methods);
   if (!nested_module)
     {
@@ -1031,7 +1038,7 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 			throw bs_exception ("LoadPlugins", "No plugin descriptor found in module " + lib.fname_);
 		}
 		//check if loaded lib is really a blue-sky kernel
-		if(*p_descr == kernel_pd_)
+		if(*p_descr == *kernel_pd_)
 			return blue_sky::no_library;
 
 		//enumerate plugin
@@ -1077,7 +1084,8 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 
 				//init python subsystem
 				bspy_init_plugin(p_descr->py_namespace_, init_py_fn);
-				py_scope = plugin_info.py_namespace_ + "." + p_descr->py_namespace_;
+        const plugin_descriptor *pd = blue_sky::private_::kernel_types::bs_get_plugin_descriptor ();
+				py_scope = pd->py_namespace_ + "." + p_descr->py_namespace_;
 				//boost::python::detail::init_module(py_scope.c_str(), init_py_fn);
 				//BSERROR << "LoadPlugins: Error during initialization of Python sybsystem in plugin " << lib.fname_ << bs_end;
 			}
@@ -1133,12 +1141,13 @@ blue_sky::error_code kernel::kernel_impl::load_plugins(bool init_py_subsyst) {
 		lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
 		//init kernel's py subsyst
 		if(init_py) {
-			boost::python::detail::init_module(plugin_info.py_namespace_.c_str(), init_py);
+      const plugin_descriptor *pd = blue_sky::private_::kernel_types::bs_get_plugin_descriptor ();
+			boost::python::detail::init_module(pd->py_namespace_.c_str(), init_py);
 			//create bs_scope exporting
 			BSOUT 
-              << "BlueSky kernel Python subsystem initialized successfully under namespace "
-			  << plugin_info.py_namespace_ 
-              << bs_end;
+        << "BlueSky kernel Python subsystem initialized successfully under namespace "
+			  << pd->py_namespace_ 
+        << bs_end;
 		}
 		else {
 			BSERROR << "Python subsystem wasn't found in BlueSky kernel" << bs_end;

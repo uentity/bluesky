@@ -48,6 +48,11 @@ namespace blue_sky {
 	}
 
 //------------------------------plugin_descriptor-----------------------------------------------------------
+#ifdef _DEBUG
+  plugin_descriptor::~plugin_descriptor ()
+  {
+  }
+#endif
 	plugin_descriptor::plugin_descriptor()
 		 : name_(BS_NIL_PLUGIN_TAG), tag_()
 	{}

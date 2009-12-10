@@ -51,7 +51,7 @@
 #include "loki/TypeManip.h"
 //#include "loki/LokiTypeInfo.h"
 
-#include "boost/noncopyable.hpp"
+#include <boost/noncopyable.hpp>
 
 #include "declare_error_codes.h"
 
@@ -101,6 +101,10 @@ namespace blue_sky
 		//! ctor for searching in containers
 		plugin_descriptor(const char* name);
 
+#ifdef _DEBUG
+    ~plugin_descriptor ();
+#endif
+
 		//! standard ctor for using in plugins
 		plugin_descriptor(const BS_TYPE_INFO& plugin_tag, const char* name, const char* version, const char* short_descr,
 			const char* long_descr = "", const char* py_namespace = "");
@@ -146,6 +150,20 @@ namespace blue_sky
 
 }	//end of blue_sky namespace
 
+#define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT_STATIC(name, version, short_descr, long_descr, py_namespace)   \
+  namespace {                                                                                         \
+    class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_                                                   \
+    {                                                                                                 \
+    };                                                                                                \
+  }                                                                                                   \
+static const blue_sky::plugin_descriptor* bs_get_plugin_descriptor()                                  \
+{                                                                                                     \
+  static blue_sky::plugin_descriptor *plugin_info_ = new blue_sky::plugin_descriptor (                \
+    BS_GET_TI (_bs_this_plugin_tag_),                                                                 \
+    name, version, short_descr, long_descr, py_namespace);                                            \
+  return plugin_info_;                                                                                \
+}
+
 /*!
 	\brief Plugin descriptor macro.
 
@@ -156,17 +174,25 @@ namespace blue_sky
 	BLUE_SKY_PLUGIN_DESCRIPTOR_EXT allows you to set Python namespace (scope) name for all classes
 	exported to Python.
 
+  \param tag = tag for class
 	\param name = name of the plugin
 	\param version = plugin version
 	\param short_descr = short description of the plugin
 	\param long_descr = long description of the plugin
 */
-#define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, short_descr, long_descr, py_namespace) \
-namespace { class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_{}; \
-static blue_sky::plugin_descriptor plugin_info(BS_GET_TI(_bs_this_plugin_tag_), name, version, \
-	short_descr, long_descr, py_namespace); } \
-BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() \
-{ return &plugin_info; }
+#define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, short_descr, long_descr, py_namespace)          \
+  namespace {                                                                                         \
+    class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_                                                   \
+    {                                                                                                 \
+    };                                                                                                \
+  }                                                                                                   \
+BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor()                         \
+{                                                                                                     \
+  static blue_sky::plugin_descriptor *plugin_info_ = new blue_sky::plugin_descriptor (                \
+    BS_GET_TI (_bs_this_plugin_tag_),                                                                 \
+    name, version, short_descr, long_descr, py_namespace);                                            \
+  return plugin_info_;                                                                                \
+}
 
 #define BLUE_SKY_PLUGIN_DESCRIPTOR(name, version, short_descr, long_descr) \
 BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, short_descr, long_descr, "")
