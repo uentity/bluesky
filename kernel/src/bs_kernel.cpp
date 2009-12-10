@@ -1193,7 +1193,15 @@ kernel::kernel()
 
 kernel::~kernel()
 {
+  BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());
+  pimpl_->instances_.clear ();
+
 	UnloadPlugins();
+
+  BS_ASSERT (pimpl_->loaded_plugins_.empty ());
+  BS_ASSERT (pimpl_->pert_str_tbl_.empty ());
+  BS_ASSERT (pimpl_->pert_idx_tbl_.empty ());
+  BS_ASSERT (pimpl_->sig_storage_.empty ()) (pimpl_->sig_storage_.size ());
 
 	// WTF?? 
   if(pimpl_.get()) delete pimpl_.get();
