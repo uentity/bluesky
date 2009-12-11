@@ -97,10 +97,18 @@ if ("unmanaged" not in custom_vars.keys ()) :
     custom_vars.Add ("unmanaged", "Set to 1 to direct kernel to unmanage created objects", "1")
     custom_vars.Update (custom_env)
 
+if ("debug_memory" not in custom_vars.keys ()) :
+    custom_vars.Add ("debug_memory", "Set to 1 to collect information about memory allocations", "0")
+    custom_vars.Update (custom_env)
+
+if ("collect_memory_backtrace" not in custom_vars.keys ()) :
+    custom_vars.Add ("collect_memory_backtrace", "Set to 1 to collect backtrace information about memory allocations, valid only if debug_memory == 1", "0")
+    custom_vars.Update (custom_env)
+
 # setup default build environment
 base_env = custom_env.Clone();
 base_env.AppendUnique(
-    CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN', "BS_EXCEPTION_COLLECT_BACKTRACE"],#, "BS_BOS_CORE_DEBUG_MEMORY", "BS_BOS_CORE_COLLECT_BACKTRACE"],
+    CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN', "BS_EXCEPTION_COLLECT_BACKTRACE"],
     CPPPATH = ['#kernel/include', '#kernel/src'],
     LIBS = ['loki', '${python_name}']
 );
@@ -133,6 +141,11 @@ if (base_env["debug_info"] == "1") :
 
 if (base_env["unmanaged"] == "1") :
     base_env.AppendUnique (CPPDEFINES = ["BS_CREATE_UNMANAGED_OBJECTS"])
+
+if (base_env["debug_memory"] == "1") :
+    base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_DEBUG_MEMORY"])
+    if (base_env["collect_memory_backtrace"] == "1") :
+        base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_COLLECT_BACKTRACE"])
 
 base_env.AppendUnique (CPPDEFINES = ["BS_LOG_USE_BUFFER=" + str (base_env["log_buffer"])])
 base_env.AppendUnique (CPPDEFINES = ["BS_LOG_USE_BUFFER_FORCE=" + str (base_env["log_buffer_force"])])
