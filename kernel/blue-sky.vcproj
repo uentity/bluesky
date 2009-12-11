@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
-				PreprocessorDefinitions="_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING;BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT"
+				PreprocessorDefinitions="_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING;BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;BS_CREATE_UNMANAGED_OBJECTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				SmallerTypeCheck="true"
