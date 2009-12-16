@@ -1,4 +1,12 @@
 /**
+ *       \file  kernel_signals.h
+ *      \brief  New version of synchronious signal system, for each
+ *              signal allocated boost::signal with 'right' type and
+ *              signature
+ *     \author  Sergey Miryanov (sergey-miryanov), sergey.miryanov@gmail.com
+ *       \date  16.12.2009
+ *  \copyright  This source code is released under the terms of 
+ *              the BSD License. See LICENSE for more details.
  * */
 #ifndef BLUE_SKY_KERNEL_SIGNALS_H_
 #define BLUE_SKY_KERNEL_SIGNALS_H_
@@ -11,6 +19,12 @@
 
 namespace blue_sky {
 
+/**
+ * \brief  Declares function that raised (fired) signal
+ * \param  name Signal name
+ * \param  p Tuple with signal parameters
+ * \param  ps Tuple size
+ * */
 #define DECL_RAISE_I(name, p, ps)                                                   \
   void                                                                              \
   BOOST_PP_CAT (on_, name) (PARAM_LIST (p, ps)) const                               \
@@ -18,6 +32,12 @@ namespace blue_sky {
     BOOST_PP_CAT (name, _signal_)->operator() (CALL_LIST (p, ps));                  \
   }
 
+/**
+ * \brief  Declares functions that added slots to signal
+ * \param  name Signal name
+ * \param  p Tuple with signal parameters
+ * \param  ps Tuple size
+ * */
 #define DECL_ADD_I(name, p, ps)                                                     \
   void                                                                              \
   BOOST_PP_CAT (BOOST_PP_CAT (add_, name), _handler) (                              \
@@ -46,6 +66,12 @@ namespace blue_sky {
       boost::bind (std::mem_fun (handler), t, _1));                                 \
   }
 
+/**
+ * \brief  Declares signal and signal types (boost::signal and boost::function)
+ * \param  name Signal name
+ * \param  p Tuple with signal parameters
+ * \param  ps Tuple size
+ * */
 #define DECL_SIGNAL_I(name, p, ps)                                                  \
   typedef boost::function <void (TYPE_LIST (p, ps))>                                \
     BOOST_PP_CAT (name, _functor_t);                                                \
@@ -54,37 +80,75 @@ namespace blue_sky {
     BOOST_PP_CAT (name, _sp_signal_t);                                              \
   BOOST_PP_CAT (name, _sp_signal_t) BOOST_PP_CAT (name, _signal_);
 
+/**
+ * \brief  Declares signal initialization
+ * \param  name Signal name
+ * \param  p Tuple with signal parameters
+ * \param  ps Tuple size
+ * */
 #define DECL_INIT_SIGNAL_I(name, p, ps)                                             \
   BOOST_PP_CAT (name, _signal_).reset (new BOOST_PP_CAT (name, _signal_t));
 
+/**
+ * \brief  Declares signal disconnection
+ * \param  name Signal name
+ * \param  p Tuple with signal parameters
+ * \param  ps Tuple size
+ * */
 #define DECL_DISCONNECT_SIGNAL_I(name, p, ps)                                       \
   BOOST_PP_CAT (name, _signal_).reset ();
 
+/**
+ * \brief  Declares list of 'raise' functions
+ * \param  See Boost.Preprocessor/BOOST_PP_SEQ_FOR_EACH_I
+ * */
 #define RAISE_I(r, data, i, elem)                                                   \
   DECL_RAISE_I (BOOST_PP_TUPLE_ELEM (3, 0, elem),                                   \
     BOOST_PP_TUPLE_ELEM (3, 1, elem),                                               \
     BOOST_PP_TUPLE_ELEM (3, 2, elem))
 
+/**
+ * \brief  Declares list of 'add' functions
+ * \param  See Boost.Preprocessor/BOOST_PP_SEQ_FOR_EACH_I
+ * */
 #define ADD_I(r, data, i, elem)                                                     \
   DECL_ADD_I (BOOST_PP_TUPLE_ELEM (3, 0, elem),                                     \
     BOOST_PP_TUPLE_ELEM (3, 1, elem),                                               \
     BOOST_PP_TUPLE_ELEM (3, 2, elem))
 
+/**
+ * \brief  Declares list of signals
+ * \param  See Boost.Preprocessor/BOOST_PP_SEQ_FOR_EACH_I
+ * */
 #define SIGNALS_I(r, data, i, elem)                                                 \
   DECL_SIGNAL_I (BOOST_PP_TUPLE_ELEM (3, 0, elem),                                  \
     BOOST_PP_TUPLE_ELEM (3, 1, elem),                                               \
     BOOST_PP_TUPLE_ELEM (3, 2, elem))
 
+/**
+ * \brief  Declares initialization of signal list
+ * \param  See Boost.Preprocessor/BOOST_PP_SEQ_FOR_EACH_I
+ * */
 #define INIT_SIGNAL_I(r, data, i, elem)                                             \
   DECL_INIT_SIGNAL_I (BOOST_PP_TUPLE_ELEM (3, 0, elem),                             \
     BOOST_PP_TUPLE_ELEM (3, 1, elem),                                               \
     BOOST_PP_TUPLE_ELEM (3, 2, elem))
 
+/**
+ * \brief  Declares disconnection of signal list
+ * \param  See Boost.Preprocessor/BOOST_PP_SEQ_FOR_EACH_I
+ * */
 #define DISCONNECT_SIGNAL_I(r, data, i, elem)                                       \
   DECL_DISCONNECT_SIGNAL_I (BOOST_PP_TUPLE_ELEM (3, 0, elem),                       \
     BOOST_PP_TUPLE_ELEM (3, 1, elem),                                               \
     BOOST_PP_TUPLE_ELEM (3, 2, elem))
 
+/**
+ * \brief  Declares event list and util function and classes
+ * \param  owner Name of event list owner
+ * \param  seq List of signals (each 'signal' is a tuple 
+ *             (signal name, params, params number)
+ * */
 #define DECLARE_EVENT_LIST_V2(owner, seq)                                           \
   BOOST_PP_SEQ_FOR_EACH_I (RAISE_I, _, seq)                                         \
   BOOST_PP_SEQ_FOR_EACH_I (SIGNALS_I, _, seq)                                       \
@@ -120,10 +184,17 @@ namespace blue_sky {
   };                                                                                \
   BOOST_PP_CAT (owner, _events_init) BOOST_PP_CAT (owner, _events_init_);
 
+  /**
+   * \class signals_disconnector
+   * \brief Disconnects all signals for owner (holded in child class)
+   * */
   struct signals_disconnector
   {
     virtual ~signals_disconnector () {}
 
+    /**
+     * \brief  Disconnects all signals for owner
+     * */
     virtual void
     disconnect_signals () = 0;
   };
