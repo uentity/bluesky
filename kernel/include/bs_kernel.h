@@ -30,6 +30,8 @@
 #include "memory_manager.h"
 #include "throw_exception.h"
 
+#include "kernel_signals.h"
+
 //#define BS_AUTOLOAD_PLUGINS
 
 /*!
@@ -173,6 +175,12 @@ namespace blue_sky {
     static thread_log &
     get_tlog ();
 
+    void
+    register_disconnector (signals_disconnector *d);
+
+    void
+    unregister_disconnector (signals_disconnector *d);
+
 	private:
 		//! \brief Constructor of kernel
 		kernel();
@@ -190,6 +198,8 @@ namespace blue_sky {
     // don't change line order. never.
 		pimpl_t         pimpl_;
 		memory_manager  memory_manager_;
+
+    std::vector <signals_disconnector *> disconnectors_;
 
 		//kernel initialization routine
 		void init();

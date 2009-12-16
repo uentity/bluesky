@@ -1193,6 +1193,11 @@ kernel::kernel()
 
 kernel::~kernel()
 {
+  for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i)
+    {
+      disconnectors_[i]->disconnect_signals ();
+    }
+
   BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());
   pimpl_->instances_.clear ();
 
@@ -1205,6 +1210,24 @@ kernel::~kernel()
 
 	// WTF?? 
   if(pimpl_.get()) delete pimpl_.get();
+}
+
+void
+kernel::register_disconnector (signals_disconnector *d)
+{
+  disconnectors_.push_back (d);
+}
+void
+kernel::unregister_disconnector (signals_disconnector *d)
+{
+  for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i)
+    {
+      if (disconnectors_[i] == d)
+        {
+          disconnectors_.erase (disconnectors_.begin () + i);
+          break;
+        }
+    }
 }
 
 // kernel::str_dt_ptr kernel::global_dt() const {
