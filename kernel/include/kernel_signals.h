@@ -17,6 +17,8 @@
 #include <boost/signal.hpp>
 #include <boost/bind.hpp>
 
+// Don't include any Boost.Python header in this file
+
 namespace blue_sky {
 
 /**
@@ -67,6 +69,20 @@ namespace blue_sky {
   }
 
 /**
+ * \brief  Declares function that added slots (from python) to signal
+ * \param  name Signal name
+ * \param  p Tuple with signal parameters
+ * \param  ps Tuple size
+ * */
+#define DECL_PY_ADD_I(name, p, ps)                                                  \
+  void                                                                              \
+  BOOST_PP_CAT (BOOST_PP_CAT (py_add_, name), _handler) (                           \
+    const boost::python::object &handler)                                           \
+  {                                                                                 \
+    BOOST_PP_CAT (name, _signal_)->connect (handler);                               \
+  }
+
+/**
  * \brief  Declares signal and signal types (boost::signal and boost::function)
  * \param  name Signal name
  * \param  p Tuple with signal parameters
@@ -99,6 +115,18 @@ namespace blue_sky {
   BOOST_PP_CAT (name, _signal_).reset ();
 
 /**
+ * \brief  Declares export of 'add' function to python
+ * \param  owner Class which owns this signal
+ * \param  name Signal name
+ * \param  p Tuple with signal parameters
+ * \param  ps Tuple size
+ * */
+#define DECL_PY_EXPORT_I(owner, name, p, ps)                                        \
+  class__.def (                                                                     \
+    BOOST_PP_STRINGIZE (BOOST_PP_CAT (BOOST_PP_CAT (add_, name), _handler)),        \
+    &owner::BOOST_PP_CAT (BOOST_PP_CAT (py_add_, name), _handler));
+
+/**
  * \brief  Declares list of 'raise' functions
  * \param  See Boost.Preprocessor/BOOST_PP_SEQ_FOR_EACH_I
  * */
@@ -113,6 +141,15 @@ namespace blue_sky {
  * */
 #define ADD_I(r, data, i, elem)                                                     \
   DECL_ADD_I (BOOST_PP_TUPLE_ELEM (3, 0, elem),                                     \
+    BOOST_PP_TUPLE_ELEM (3, 1, elem),                                               \
+    BOOST_PP_TUPLE_ELEM (3, 2, elem))
+
+/**
+ * \brief  Declares list of python versions of 'add' functions
+ * \param  See Boost.Preprocessor/BOOST_PP_SEQ_FOR_EACH_I
+ * */
+#define PY_ADD_I(r, data, i, elem)                                                  \
+  DECL_PY_ADD_I (BOOST_PP_TUPLE_ELEM (3, 0, elem),                                  \
     BOOST_PP_TUPLE_ELEM (3, 1, elem),                                               \
     BOOST_PP_TUPLE_ELEM (3, 2, elem))
 
@@ -144,12 +181,21 @@ namespace blue_sky {
     BOOST_PP_TUPLE_ELEM (3, 2, elem))
 
 /**
+ * \brief  Declares export of 'add' functions to python
+ * \param  See Boost.Preprocessor/BOOST_PP_SEQ_FOR_EACH_I
+ * */
+#define PY_EXPORT_I(r, data, i, elem)                                               \
+  DECL_PY_EXPORT_I (data, BOOST_PP_TUPLE_ELEM (3, 0, elem),                         \
+    BOOST_PP_TUPLE_ELEM (3, 1, elem),                                               \
+    BOOST_PP_TUPLE_ELEM (3, 2, elem))
+
+/**
  * \brief  Declares event list and util function and classes
  * \param  owner Name of event list owner
  * \param  seq List of signals (each 'signal' is a tuple 
  *             (signal name, params, params number)
  * */
-#define DECLARE_EVENT_LIST_V2(owner, seq)                                           \
+#define DECLARE_EVENT_LIST_V2_IMPL(owner, seq)                                      \
   BOOST_PP_SEQ_FOR_EACH_I (RAISE_I, _, seq)                                         \
   BOOST_PP_SEQ_FOR_EACH_I (SIGNALS_I, _, seq)                                       \
   BOOST_PP_SEQ_FOR_EACH_I (ADD_I, _, seq)                                           \
@@ -183,6 +229,23 @@ namespace blue_sky {
     owner *owner_;                                                                  \
   };                                                                                \
   BOOST_PP_CAT (owner, _events_init) BOOST_PP_CAT (owner, _events_init_);
+
+#ifdef BSPY_EXPORTING_PLUGIN
+#define DECLARE_EVENT_LIST_V2(owner, seq)                                           \
+  DECLARE_EVENT_LIST_V2_IMPL (owner, seq)                                           \
+  BOOST_PP_SEQ_FOR_EACH_I (PY_ADD_I, _, seq)                                        \
+  template <typename class_t>                                                       \
+  static class_t &                                                                  \
+  python_exporter (class_t &class__)                                                \
+  {                                                                                 \
+    BOOST_PP_SEQ_FOR_EACH_I (PY_EXPORT_I, owner, seq)                               \
+    return base_t::python_exporter (class__);                                       \
+  }
+#else
+#define DECLARE_EVENT_LIST_V2(owner, seq)                                           \
+  DECLARE_EVENT_LIST_V2_IMPL (owner, seq)
+#endif
+
 
   /**
    * \class signals_disconnector
