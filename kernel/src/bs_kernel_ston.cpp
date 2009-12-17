@@ -147,10 +147,6 @@ struct wrapper_kernel {
 	}
 
 	~wrapper_kernel() {
-#ifdef _DEBUG
-		BSOUT << kernel_tools::get_backtrace (128) << bs_end;
-#endif
-		k_.get_memory_manager ().print_info ();
 		// signal that it is destroyed
 		kernel_alive = false;
 	}

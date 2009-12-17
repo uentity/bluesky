@@ -1195,12 +1195,14 @@ kernel::~kernel()
 {
   for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i)
     {
-      disconnectors_[i]->disconnect_signals ();
+      if (disconnectors_[i])
+        disconnectors_[i]->disconnect_signals ();
     }
 
   BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());
   pimpl_->instances_.clear ();
 
+  memory_manager_.print_info ();
 	UnloadPlugins();
 
   BS_ASSERT (pimpl_->loaded_plugins_.empty ());
@@ -1224,8 +1226,8 @@ kernel::unregister_disconnector (signals_disconnector *d)
     {
       if (disconnectors_[i] == d)
         {
-          disconnectors_.erase (disconnectors_.begin () + i);
-          break;
+          // Don't remove disconnector from list. Never.
+          disconnectors_[i] = 0;
         }
     }
 }
