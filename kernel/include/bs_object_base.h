@@ -86,6 +86,13 @@ namespace blue_sky {
 		const blue_sky::bs_inode* inode() const;
 		//smart_ptr< blue_sky::bs_inode, true > inode() const;
 
+    template <typename class_t>
+    static class_t &
+    python_exporter (class_t &class__)
+    {
+      return class__;
+    }
+
 	protected:
 		//! Constructor for derived classes - accepts signals range
 		objbase(const bs_messaging::sig_range_t&);
