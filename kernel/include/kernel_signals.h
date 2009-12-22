@@ -12,7 +12,7 @@
 #define BLUE_SKY_KERNEL_SIGNALS_H_
 
 #include "pp_param_list.h"
-#include <boost/preprocessor/cat.hpp>
+#include <boost/preprocessor.hpp>
 #include <boost/function.hpp>
 #include <boost/signal.hpp>
 #include <boost/bind.hpp>
