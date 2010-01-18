@@ -15,26 +15,26 @@
 
 namespace blue_sky {
 
-	struct BS_API priority {
-	  priority (int section = -1, int priority = -1) 
+  struct BS_API priority {
+    priority (int section = -1, int priority = -1) 
       : sect (section)
       , prior (priority) 
     {
     }
 
-		int sect;
+    int sect;
     int prior;
-	};
+  };
 
 namespace log {
 
     //there is error with smart_pointer access... I don't know why.
-	class BS_API bs_stream { //: public bs_refcounter { //!!!!!!!!!!!!!!!!!!!!!!!
-	public:
+  class BS_API bs_stream { //: public bs_refcounter { //!!!!!!!!!!!!!!!!!!!!!!!
+  public:
 
-		typedef std::map <int, int>           sections_t;
-		typedef sections_t::const_iterator    section_iterator_const_t;
-		typedef sections_t::iterator          section_iterator_t;
+    typedef std::map <int, int>           sections_t;
+    typedef sections_t::const_iterator    section_iterator_const_t;
+    typedef sections_t::iterator          section_iterator_t;
 
   public:
 
@@ -80,19 +80,19 @@ namespace log {
 
     void set_priority (const priority &p);
 
-		virtual bool subscribe(bs_channel&);
-		virtual bool unsubscribe(bs_channel&);
-		virtual void write(const std::string&) const = 0; //{}//= 0;//{std::cout << "asdddd" << std::endl;}
-		//virtual void dispose() const;
+    virtual bool subscribe(bs_channel&);
+    virtual bool unsubscribe(bs_channel&);
+    virtual void write(const std::string&) const = 0; //{}//= 0;//{std::cout << "asdddd" << std::endl;}
+    //virtual void dispose() const;
 
-		virtual ~bs_stream() {}
+    virtual ~bs_stream() {}
 
   private:
 
-		sections_t                      sections_; 
+    sections_t                      sections_; 
     std::string                     name_;
 
-	};
+  };
 
 } // namespace log
 } // namespace blue_sky
