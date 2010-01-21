@@ -142,6 +142,13 @@
 #define CALL_LIST_17(tuple_, size_, rsize_) BS_PP_ELEM_NAME (A, size_, rsize_), CALL_LIST_16 (tuple_, size_, BOOST_PP_DEC (rsize_))
 #define CALL_LIST_18(tuple_, size_, rsize_) BS_PP_ELEM_NAME (A, size_, rsize_), CALL_LIST_17 (tuple_, size_, BOOST_PP_DEC (rsize_))
 
+/**
+ * */
+#define PLACEHOLDER_LIST(size_) BOOST_PP_CAT (PLACEHOLDER_LIST_, size_) (1)
+#define PLACEHOLDER_LIST_0(p_) _1
+#define PLACEHOLDER_LIST_1(p_) BOOST_PP_CAT (_, p_)
+#define PLACEHOLDER_LIST_2(p_) BOOST_PP_CAT (_, p_), PLACEHOLDER_LIST_1 (BOOST_PP_INC (p_))
+
 namespace blue_sky {
   enum {
     empty_arg__ = 0,

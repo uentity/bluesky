@@ -16,6 +16,7 @@
 #include <boost/function.hpp>
 #include <boost/signal.hpp>
 #include <boost/bind.hpp>
+#include <boost/mem_fn.hpp>
 
 // Don't include any Boost.Python header in this file
 
@@ -55,7 +56,7 @@ namespace blue_sky {
     )                                                                               \
   {                                                                                 \
     BOOST_PP_CAT (name, _signal_)->connect (                                        \
-      boost::bind (std::mem_fun (handler), t, _1));                                 \
+      boost::bind (std::mem_fun (handler), t, PLACEHOLDER_LIST (ps)));                                 \
   }                                                                                 \
   template <typename BOOST_PP_CAT (name, _T), typename P>                           \
   void                                                                              \
@@ -65,7 +66,7 @@ namespace blue_sky {
     )                                                                               \
   {                                                                                 \
     BOOST_PP_CAT (name, _signal_)->connect (                                        \
-      boost::bind (std::mem_fun (handler), t, _1));                                 \
+      boost::bind (std::mem_fun (handler), t, PLACEHOLDER_LIST (ps)));                                 \
   }
 
 /**
