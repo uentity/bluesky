@@ -142,6 +142,8 @@ const py_holder_iterator &py_holder_iterator::operator =(py_holder_iterator &rit
 }
 
 void py_export_objbase() {
+        class_ <objbase, boost::noncopyable> ("real_objbase", no_init)
+          ;
 	class_<py_objbase , bases<py_bs_messaging> >("objbase", no_init)
 		.def("__iter__", boost::python::iterator< py_objbase >())
 		.def("resolve_type",&py_objbase::bs_resolve_type)

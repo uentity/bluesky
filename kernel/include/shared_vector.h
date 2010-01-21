@@ -947,7 +947,7 @@ namespace blue_sky {
       this->ctor_init__ ();
     }
 
-    shared_vector (size_t n, const value_type &value = value_type (), const allocator_t &allocator = allocator_t ())
+    shared_vector (size_t n, const value_type &value = value_type (), const allocator_t & /*allocator*/ = allocator_t ())
     {
       if (this->is_owner ())
         {

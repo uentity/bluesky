@@ -44,7 +44,7 @@ namespace detail {
   {
     template <typename forward_iterator, typename allocator_t>
     static void
-    destroy (forward_iterator first, forward_iterator last, allocator_t &allocator)
+    destroy (forward_iterator /*first*/, forward_iterator /*last*/, allocator_t & /*allocator*/)
     {
     }
   };
