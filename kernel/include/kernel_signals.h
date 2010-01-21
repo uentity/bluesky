@@ -56,7 +56,7 @@ namespace blue_sky {
     )                                                                               \
   {                                                                                 \
     BOOST_PP_CAT (name, _signal_)->connect (                                        \
-      boost::bind (std::mem_fun (handler), t, PLACEHOLDER_LIST (ps)));                                 \
+      boost::bind (boost::mem_fn (handler), t, PLACEHOLDER_LIST (ps)));                                 \
   }                                                                                 \
   template <typename BOOST_PP_CAT (name, _T), typename P>                           \
   void                                                                              \
@@ -66,7 +66,7 @@ namespace blue_sky {
     )                                                                               \
   {                                                                                 \
     BOOST_PP_CAT (name, _signal_)->connect (                                        \
-      boost::bind (std::mem_fun (handler), t, PLACEHOLDER_LIST (ps)));                                 \
+      boost::bind (boost::mem_fn (handler), t, PLACEHOLDER_LIST (ps)));                                 \
   }
 
 /**
