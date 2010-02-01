@@ -39,6 +39,7 @@
 #endif
 
 #include "boost/graph/depth_first_search.hpp"
+#include "boost/graph/adjacency_list.hpp"
 #include "boost/filesystem/operations.hpp"
 #include "boost/filesystem/exception.hpp"
 #include "boost/filesystem/path.hpp"
@@ -57,13 +58,13 @@
 #include "bs_kernel.h"
 
 using namespace std;
-//using namespace blue_sky;
-//using namespace libconfig;
 using namespace boost;
 
 #define XPN_LOG_INST log::Instance()[XPN_LOG] //!< blue-sky log for error output
 
 namespace blue_sky {
+
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> load_graph;
 
 //!	\brief compares src with string = before + doubt + after.
 bool compare(const char* src , const char* dbt, const char* before, const char* after);
