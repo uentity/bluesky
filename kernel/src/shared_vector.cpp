@@ -4,13 +4,14 @@
  * \author Sergey Miryanov
  * \date 03.11.2009
  * */
-#include "shared_vector.h"
-#include <iostream>
-
 #ifdef BSPY_EXPORTING
+#include <Python.h>
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #endif
+
+#include "shared_vector.h"
+#include <iostream>
 
 #include <boost/array.hpp>
 
