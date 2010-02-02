@@ -4,7 +4,7 @@
  * \author Sergey Miryanov
  * \date 02.11.2009
  * */
-#ifdef BSPY_EXPORTING
+#if defined(BSPY_EXPORTING) && defined(UNIX)
 #include <Python.h>
 #endif
 #include "shared_vector.h"

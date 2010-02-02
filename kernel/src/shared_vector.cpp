@@ -5,7 +5,9 @@
  * \date 03.11.2009
  * */
 #ifdef BSPY_EXPORTING
+#ifdef UNIX
 #include <Python.h>
+#endif
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #endif

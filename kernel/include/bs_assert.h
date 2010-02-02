@@ -9,6 +9,7 @@
 
 #include "bs_common.h"
 #include <boost/lexical_cast.hpp>
+#include <stdio.h>
 
 namespace blue_sky {
 

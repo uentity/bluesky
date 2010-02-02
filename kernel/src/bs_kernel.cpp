@@ -673,12 +673,12 @@ public:
 		//register type in dictionaries
 		if(res.second) {
 			pair< types_dict::const_iterator, bool > res_ref = types_resolver_.insert(*res.first);
-			// dump error
-			BSERR << "BlueSky kernel: type '" << td.stype_
-				<< "' cannot be registered because type with such name already exist" << bs_end;
-
 			if(!res_ref.second) {
 				//probably duplicating type name found
+				// dump error
+				BSERR << "BlueSky kernel: type '" << td.stype_
+					<< "' cannot be registered because type with such name already exist" << bs_end;
+
 				obj_fab_.erase(res.first);
 				if(tp_ref) {
 					if(res_ref.first != types_resolver_.end())
