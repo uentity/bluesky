@@ -673,6 +673,10 @@ public:
 		//register type in dictionaries
 		if(res.second) {
 			pair< types_dict::const_iterator, bool > res_ref = types_resolver_.insert(*res.first);
+			// dump error
+			BSERR << "BlueSky kernel: type '" << td.stype_
+				<< "' cannot be registered because type with such name already exist" << bs_end;
+
 			if(!res_ref.second) {
 				//probably duplicating type name found
 				obj_fab_.erase(res.first);
@@ -703,8 +707,12 @@ public:
 			res = obj_fab_.insert(fab_elem(pd, td));
 			types_resolver_.insert(*res.first);
 			plugin_types_.insert(*res.first);
+			return true;
 		}
 
+		// dump error
+		BSERR << "BlueSky kernel: type '" << td.stype_ << "' cannot be registered because type_info at "
+			<< &td.type().get() << " already exist" << bs_end;
 		return false;
 	}
 
@@ -731,14 +739,15 @@ public:
 			else
 				lock()->register_type(*obj_t.pd_, obj_t.td_, false, &tt_ref);
 			//still nil td means that serious error happened - type cannot be registered
-			if(tt_ref.is_nil())
-        {
+			if(tt_ref.is_nil()) {
 #ifdef BS_EXCEPTION_USE_BOOST_FORMAT
-          throw bs_kernel_exception ("BlueSkt kernel", no_type, boost::format ("Unknown error. Type (%s) cannot be registered.") % obj_t.td_.name ());
+				throw bs_kernel_exception ("BlueSky kernel", no_type,
+						boost::format ("Unknown error. Type (%s) cannot be registered.") % obj_t.td_.name ());
 #else
-          throw bs_kernel_exception ("BlueSkt kernel", no_type, "Unknown error. Type " + obj_t.td_.name () + " cannot be registered.");
+				throw bs_kernel_exception ("BlueSky kernel", no_type,
+						"Unknown error. Type " + obj_t.td_.name () + " cannot be registered.");
 #endif
-        }
+			}
 		}
 		return *tt_ref;
 	}
