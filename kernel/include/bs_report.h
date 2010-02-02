@@ -17,13 +17,10 @@
 #define _BS_REPORTER_H
 
 #include "bs_common.h"
-#include "bs_refcounter.h"
 #include "bs_messaging.h"
 #include "bs_log_stream.h"
 #include "bs_misc.h"
 #include "throw_exception.h"
-
-#include "loki/Singleton.h"
 
 #include <list>
 #include <set>

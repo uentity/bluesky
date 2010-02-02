@@ -19,7 +19,6 @@
 #include "py_bs_exports.h"
 #include "py_object_handler.h"
 
-#include <iostream>
 #include <boost/python/call_method.hpp>
 #include <string>
 

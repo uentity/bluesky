@@ -5,6 +5,7 @@
  * \date 07.07.2009
  * */
 #include "bs_log_scribers.h"
+#include <iostream>
 
 using namespace std;
 

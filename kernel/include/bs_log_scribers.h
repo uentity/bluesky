@@ -8,6 +8,7 @@
 #define BS_LOG_SCRIBERS_H_
 
 #include "bs_log_stream.h"
+#include <fstream>
 
 namespace blue_sky {
 namespace log {

@@ -8,10 +8,6 @@
 #define BS_LOG_STREAM_H_
 
 #include "bs_common.h"
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <iostream>
 
 namespace blue_sky {
 

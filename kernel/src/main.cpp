@@ -22,9 +22,6 @@
 #include "bs_kernel.h"
 #include "bs_report.h"
 
-#include <iostream>
-#include <iomanip>
-
 using namespace blue_sky;
 
 //kernel* g_kernel;

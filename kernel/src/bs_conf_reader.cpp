@@ -3,6 +3,7 @@
 #include "bs_report.h"
 
 #include <sstream>
+#include <fstream>
 
 namespace blue_sky {
 
