@@ -68,7 +68,7 @@ using namespace boost;
 /*-----------------------------------------------------------------------------
  *  BS kernel plugin descriptor
  *-----------------------------------------------------------------------------*/
-BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("Kernel types", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs");
+BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs");
 
 //std::less specialization for plugin_descriptor
 namespace std {
