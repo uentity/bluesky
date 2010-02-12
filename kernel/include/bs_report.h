@@ -301,7 +301,7 @@ namespace blue_sky {
           return locked_channel (it->second, file, line);
         }
 
-      bs_throw_exception (boost::format ("Unknown log name [%s]") % name_);
+      bs_throw_exception (std::string("Unknown log name ") + name_);
     }
 
     void 
