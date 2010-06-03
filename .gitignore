@@ -15,3 +15,11 @@ scons_vars.custom
 *.log
 plugins
 tags
+*.vim
+*.cbp
+*.bmarks
+*.layout
+*.ncb
+*.suo
+*.workspace
+*.depend
