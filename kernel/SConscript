@@ -111,19 +111,29 @@ base_env = custom_env.Clone();
 base_env.AppendUnique(
     CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN', "BS_EXCEPTION_COLLECT_BACKTRACE"],
     CPPPATH = ['#kernel/include', '#kernel/src'],
-    LIBS = ['loki', '${python_name}']
+    LIBS = ['loki']
 );
 if base_env['platform'].startswith('lin') :
     base_env.Append(LIBS = ['dl']);
 
 # define boost lib names to include
-boost_libs = list_suffix(list_prefix(['filesystem', 'regex', 'thread', 'signals', 'python'], 'boost_'), base_env["boost_suffix"]);
-boost_libs_dbg = list_suffix(boost_libs, '-d');
+boost_libnames = ['filesystem', 'regex', 'thread', 'signals'];
 
 # are we building with python support?
 if base_env['py'] == '1' :
-    base_env.AppendUnique(CPPDEFINES = ['BSPY_EXPORTING'], CPPPATH = ['include/python']);
-    kernel_cpp_list += py_kernel_cpp_list;
+	base_env.AppendUnique(
+		CPPDEFINES = ['BSPY_EXPORTING'],
+		CPPPATH = ['include/python'],
+		LIBS = ['${python_name}']
+	);
+	kernel_cpp_list += py_kernel_cpp_list;
+	boost_libnames += ['python'];
+
+# build fully qualified boost lib names
+kernel_boost_libs = list_suffix(list_prefix(boost_libnames, 'boost_'), base_env["boost_suffix"]);
+kernel_boost_libs_dbg = list_suffix(kernel_boost_libs, '-d');
+Export('kernel_boost_libs');
+Export('kernel_boost_libs_dbg');
 
 if (base_env["tlsf"] == "1") :
     base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_TLSF_ALLOCATOR"], LIBS=["tlsf"], CPPPATH=tlsf["cpp_path"], LIBPATH=tlsf["lib_path"])
@@ -154,10 +164,10 @@ base_env.AppendUnique (CPPDEFINES = ["BS_LOG_USE_BUFFER_FORCE=" + str (base_env[
 # finalize env construction
 if build_kind == 'debug' :
     if base_env['platform'].startswith('lin') :
-        base_env.Append(LIBS = boost_libs_dbg);
+        base_env.AppendUnique(LIBS = kernel_boost_libs_dbg);
     lib_name += '_d';
 elif build_kind == 'release' and base_env['platform'].startswith('lin') :
-    base_env.Append(LIBS = boost_libs);
+    base_env.AppendUnique(LIBS = kernel_boost_libs);
 
 # actaully build target
 bs_kernel = base_env.SharedLibrary(target = os.path.join(tar_exe_dir, lib_name), source = [os.path.join('src', x) for x in kernel_cpp_list]);

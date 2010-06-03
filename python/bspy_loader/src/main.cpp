@@ -16,7 +16,6 @@
 #include "bs_common.h"
 #include "bs_report.h"
 #include "bs_kernel.h"
-#include <boost/python/module_init.hpp>
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/stringize.hpp>
 
@@ -104,3 +103,4 @@ BS_C_API_PLUGIN void INIT_FN_NAME() {
 	//load plugins with Python subsystem
 	give_kernel::Instance().LoadPlugins(true);
 }
+
