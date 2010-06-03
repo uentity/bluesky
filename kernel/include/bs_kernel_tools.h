@@ -28,6 +28,8 @@ public:
 	static std::string walk_tree(bool silent = false);
 
 	static std::string print_registered_instances();
+
+  static std::string get_backtrace (int backtrace_depth = 16);
 };
 
 }	// blue_sky namespace

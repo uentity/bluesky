@@ -22,6 +22,12 @@
 #ifndef _BS_COMMON_H
 #define _BS_COMMON_H
 
+#if PYTHON_VERSION > 25
+#ifdef BSPY_EXPORTING
+#include <Python.h>
+#endif
+#endif
+
 #include "setup_common_api.h"
 
 //setup default plugin api
@@ -40,11 +46,14 @@
 #include "bs_fwd.h"
 #include "smart_ptr.h"
 #include "bs_type_info.h"
+#include "bs_assert.h"
 
 #include "loki/TypeManip.h"
 //#include "loki/LokiTypeInfo.h"
 
-#include "boost/noncopyable.hpp"
+#include <boost/noncopyable.hpp>
+
+#include "declare_error_codes.h"
 
 #define TO_STR(s) #s //!< To string convertion macro
 
@@ -54,31 +63,19 @@ namespace blue_sky
 	//define noncopyable interface
 	typedef boost::noncopyable bs_noncopyable;
 
-#if 1
-	 /*!
-		 \brief Enum of blue-sky error codes.
-
-		 This is necessary for blue_sky::bs_exception class.
-	 */
-	typedef enum
-	{
-		 no_error = 0, //!< no error
-		 user_defined, //!< user-defined error
-		 unknown_error, //!< unknown error
-		 system_error, //!< system error
-
-		/*boost errors*/
-		 wrong_path, //!< boost::path error, wrong path
-		 no_plugins, //!< no plugins in directory
-
-		 no_library, //!< no library (for boost::graph)
-		 no_type, //!< no type for create object/command
-
-		 out_of_range, //!< out of range (for bs_log)
-		 notpermitted_operation, //!< not permitted operation
-		 boost_error //!< boost-defined error
-	} error_code;
-#endif
+  DECLARE_ERROR_CODES (
+    ((no_error,                 "no_error"))
+    ((user_defined,             "user_defined"))
+    ((unknown_error,            "unknown_error"))
+    ((system_error,             "system_error"))
+    ((wrong_path,               "wrong_path"))
+    ((no_plugins,               "no_plugins"))
+    ((no_library,               "no_library"))
+    ((no_type,                  "no_type"))
+    ((out_of_range,             "out_of_range"))
+    ((not_permited_operation,   "not_permited_operation"))
+    ((boost_error,              "boost_error"))
+  );
 
 	//forward declaration of kernel
 	//class kernel;
@@ -103,6 +100,10 @@ namespace blue_sky
 
 		//! ctor for searching in containers
 		plugin_descriptor(const char* name);
+
+#ifdef _DEBUG
+    ~plugin_descriptor ();
+#endif
 
 		//! standard ctor for using in plugins
 		plugin_descriptor(const BS_TYPE_INFO& plugin_tag, const char* name, const char* version, const char* short_descr,
@@ -149,6 +150,20 @@ namespace blue_sky
 
 }	//end of blue_sky namespace
 
+#define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT_STATIC(name, version, short_descr, long_descr, py_namespace)   \
+  namespace {                                                                                         \
+    class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_                                                   \
+    {                                                                                                 \
+    };                                                                                                \
+  }                                                                                                   \
+static const blue_sky::plugin_descriptor* bs_get_plugin_descriptor()                                  \
+{                                                                                                     \
+  static blue_sky::plugin_descriptor *plugin_info_ = new blue_sky::plugin_descriptor (                \
+    BS_GET_TI (_bs_this_plugin_tag_),                                                                 \
+    name, version, short_descr, long_descr, py_namespace);                                            \
+  return plugin_info_;                                                                                \
+}
+
 /*!
 	\brief Plugin descriptor macro.
 
@@ -159,17 +174,25 @@ namespace blue_sky
 	BLUE_SKY_PLUGIN_DESCRIPTOR_EXT allows you to set Python namespace (scope) name for all classes
 	exported to Python.
 
+  \param tag = tag for class
 	\param name = name of the plugin
 	\param version = plugin version
 	\param short_descr = short description of the plugin
 	\param long_descr = long description of the plugin
 */
-#define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, short_descr, long_descr, py_namespace) \
-namespace { class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_{}; \
-static blue_sky::plugin_descriptor plugin_info(BS_GET_TI(_bs_this_plugin_tag_), name, version, \
-	short_descr, long_descr, py_namespace); } \
-BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() \
-{ return &plugin_info; }
+#define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, short_descr, long_descr, py_namespace)          \
+  namespace {                                                                                         \
+    class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_                                                   \
+    {                                                                                                 \
+    };                                                                                                \
+  }                                                                                                   \
+BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor()                         \
+{                                                                                                     \
+  static blue_sky::plugin_descriptor *plugin_info_ = new blue_sky::plugin_descriptor (                \
+    BS_GET_TI (_bs_this_plugin_tag_),                                                                 \
+    name, version, short_descr, long_descr, py_namespace);                                            \
+  return plugin_info_;                                                                                \
+}
 
 #define BLUE_SKY_PLUGIN_DESCRIPTOR(name, version, short_descr, long_descr) \
 BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, short_descr, long_descr, "")

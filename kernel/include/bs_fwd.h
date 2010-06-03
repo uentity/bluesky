@@ -63,7 +63,7 @@ namespace blue_sky {
 	//log
 	class bs_log;
 	class bs_channel;
-	class bs_stream;
+	//class bs_stream;
 	//class thread_log;
 
 	//exception

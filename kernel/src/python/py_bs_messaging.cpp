@@ -19,9 +19,10 @@
 #include "py_bs_exports.h"
 #include "py_object_handler.h"
 
-#include <iostream>
 #include <boost/python/call_method.hpp>
 #include <string>
+
+#include "print_python_exception.h"
 
 using namespace boost::python;
 namespace bp = boost::python;
@@ -37,9 +38,13 @@ void python_slot::execute(const sp_mobj&, int sig, const sp_obj&) const {
 			//std::cerr << "Function execute does not exists, or is not correct!" << std::endl;
 			BSERROR << "Function execute does not exists, or is not correct!" << bs_end;
 	}
-	catch(...) {
+  catch (error_already_set const &) {
+    BSERROR << "Error occured in 'execute' function, try to retrieve message..." << bs_end;
+    detail::print_python_exception ();
+  }
+	catch (...) {
 		//std::cerr << "There are some memory leaks!" << std::endl;
-		BSERROR << "There are some memory leaks!" << bs_end;
+		BSERROR << "Unhandled exception occured in 'execute' function." << bs_end;
 	}
 }
 

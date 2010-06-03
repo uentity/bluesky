@@ -134,16 +134,16 @@ typedef bs_castpol_val< BS_IMPLICIT_CAST > bs_implicit_cast;
 Taken from boost documentation.
 */
 struct null_deleter_unsafe {
-	void operator()(void const *) const
+	void operator()(void *) const
 	{}
 };
 
-struct usual_deleter_unsafe {
-	void operator()(void const *p) const;
+struct BS_API usual_deleter_unsafe {
+	void operator()(void *p) const;
 };
 
-struct array_deleter_unsafe {
-	void operator()(void const *p) const;
+struct BS_API array_deleter_unsafe {
+	void operator()(void *p) const;
 };
 
 template< class T >
@@ -176,8 +176,8 @@ struct bs_obj_deleter {
 	}
 };
 
-struct bs_obj_deleter_unsafe {
-	void operator()(void const* p) const;
+struct BS_API bs_obj_deleter_unsafe {
+	void operator()(void * p) const;
 };
 
 //! \namespace bs_private
@@ -488,12 +488,15 @@ public:
 	/*!
 	\brief Constructor from simple pointer with disjoint mutex.
 	*/
-	bs_locker(pointer_t lp, bs_mutex& m)
-		: p_(const_cast< pure_pointer_t >(lp))
 #ifndef BS_DISABLE_MT_LOCKS
-		  , lobj_(m)
-#endif
+	bs_locker(pointer_t lp, bs_mutex& m)
+		: p_(const_cast< pure_pointer_t >(lp)), lobj_(m)
 	{}
+#else
+	bs_locker(pointer_t lp, bs_mutex& )
+		: p_(const_cast< pure_pointer_t >(lp))
+	{}
+#endif
 
 	pure_pointer_t operator->() const {
 		return p_;
@@ -1503,7 +1506,7 @@ public:
 
 	/*!
 	\brief Templated Constructor from simple pointer.
-	\param lp - any s5imple pointer. Default casting policy is used to determine if R can be casted to T
+	\param lp - any simple pointer. Default casting policy is used to determine if R can be casted to T
 	*/
 	template< class R >
 	/*explicit */smart_ptr(R* lp) : base_t(lp)
@@ -1593,7 +1596,7 @@ public:
 	}
 
 	/*!
-	\brief Assignment from smart_ptr of any blue-sky using default casting policy
+	\brief Assignment from smart_ptr of any blue-sky type using default casting policy
 	*/
 	template< class R >
 	this_t& operator=(const smart_ptr< R, true >& lp) throw() {
@@ -1618,7 +1621,8 @@ public:
 	\return number of references
 	*/
 	long refs() const {
-		if(this->p_) this->p_->refs();
+		if(this->p_) 
+      return this->p_->refs();
 		else return 0;
 	}
 
@@ -1737,7 +1741,7 @@ bool inline operator <(const T* lp, const bs_private::smart_ptr_base< R >& rp) {
 	return (lp < rp.get());
 }
 
-#ifdef BSPY_EXPORTING
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
 // HACK! allow boost::python to obtain pure pointer via forced const_cast
 // NOTE! this will break all locking rules in Python
 // TODO: replace this with better solution

@@ -31,7 +31,7 @@ namespace blue_sky {
  *-----------------------------------------------------------------------------*/
 
 /// @brief Base class of all BlueSky arrays with Python numpy support
-/// Expected that underlying container is std::vector-like, i.e. 
+/// Expected that underlying container is std::vector-like, i.e.
 /// all elements are stored in continuos memory segment
 template< class T >
 class BS_API bs_arrbase : public objbase {
@@ -52,14 +52,14 @@ public:
 	/// Forward call to ss(key)
 	/// @param key item key
 	/// 
-	/// @return modifyable reference to element
+	/// @return modifiable reference to element
 	virtual reference operator[](const key_type& key) = 0;
 
-	/// @brief Items access function (r/w) - syntax sugar for acessing via pointer
+	/// @brief Items access function (r/w) - syntax sugar for accessing via pointer
 	///
 	/// @param key item key
 	///
-	/// @return modifyable reference to element
+	/// @return modifiable reference to element
 	reference ss(const key_type& key) {
 		return operator[](key);
 	}
@@ -68,14 +68,14 @@ public:
 	/// Forward call to ss(key)
 	/// @param key item key
 	/// 
-	/// @return modifyable reference to element
+	/// @return modifiable reference to element
 	virtual const_reference operator[](const key_type& key) const = 0;
 
-	/// @brief Items access function (r) - syntax sugar for acessing via pointer
+	/// @brief Items access function (r) - syntax sugar for accessing via pointer
 	///
 	/// @param key item key
 	///
-	/// @return const refernce to element
+	/// @return const reference to element
 	const_reference ss(const key_type& key) const {
 		return operator[](key);
 	}

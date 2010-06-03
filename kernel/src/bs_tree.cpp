@@ -232,7 +232,7 @@ struct bs_leaf {
 		bs_mutex::scoped_lock guard(*link_.mutex());
 		is_persistent_ = persistent;
 	}
-	const bool is_persistent() const { return is_persistent_; }
+	bool is_persistent() const { return is_persistent_; }
 
 	//leafs comparison predicates
 	//by link name

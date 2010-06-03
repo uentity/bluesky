@@ -225,7 +225,7 @@ void bs_signal::init(int signal_code) const {
 	if(signal_code > 0)
 		lp->signal_code_ = signal_code;
 	else
-		throw bs_exception("bs_signal::init", no_error, "Wrong signal code given");
+		throw bs_kernel_exception ("bs_signal::init", no_error, "Wrong signal code given");
 }
 
 //bool bs_signal::sender_binded() const {

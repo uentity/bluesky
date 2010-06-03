@@ -51,7 +51,9 @@ asserter::ask_user () const
 		<< cond_s
 		<< "' file:'" << file
 		<< "',line:" << line
-		<< ". What do you want to do: [k]ill,[d]ebug,[i]gnore,ignore [a]ll? ";
+		<< ". What do you want to do: [k]ill,[d]ebug,[i]gnore,ignore [a]ll? "
+    << "Values: \r\n" << (var_list.empty () ? "" : var_list.c_str ())
+    ;
 	char return_code;
 	std::cin >> return_code;
 

@@ -35,9 +35,11 @@
 
 #ifdef UNIX
 #include <errno.h>
+#include <dlfcn.h>
 #endif
 
 #include "boost/graph/depth_first_search.hpp"
+#include "boost/graph/adjacency_list.hpp"
 #include "boost/filesystem/operations.hpp"
 #include "boost/filesystem/exception.hpp"
 #include "boost/filesystem/path.hpp"
@@ -56,13 +58,13 @@
 #include "bs_kernel.h"
 
 using namespace std;
-//using namespace blue_sky;
-//using namespace libconfig;
 using namespace boost;
 
 #define XPN_LOG_INST log::Instance()[XPN_LOG] //!< blue-sky log for error output
 
 namespace blue_sky {
+
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> load_graph;
 
 //!	\brief compares src with string = before + doubt + after.
 bool compare(const char* src , const char* dbt, const char* before, const char* after);
@@ -138,7 +140,8 @@ bool compare(const char* src , const char* dbt, const char* before, const char* 
 }
 
 //! \return string of chars, contains current time
-const char * gettime()
+std::string 
+gettime()
 {
 	time_t cur_time;
 	char * cur_time_str = NULL;
@@ -506,8 +509,8 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 
 		cr.lock()->read_file(cfg_file);
 		std::string msg = lp[i] + " (";
-		int len = cr.lock()->get_length();
-		for (int b = 0; b < len; ++b)
+		size_t len = cr.lock()->get_length();
+		for (size_t b = 0; b < len; ++b)
 		{
 			if (b != 0)
 				msg += ", ";
@@ -628,9 +631,13 @@ void graph_to_list(vector<int> &ll, const load_graph &g)
 
 	std::sort (dfs.begin(),dfs.end());
 
-	for (int i = 0; i < dfs.size (); ++i)
-		BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") ";
+#ifdef _DEBUG
+	for (size_t i = 0; i < dfs.size (); ++i)
+    {
+		  BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") " << bs_line;
+    }
 	BSOUT << bs_end;
+#endif
 
 	ll.clear();
 	for(int i = 0; i < (int)dfs.size(); ++i)
@@ -659,10 +666,27 @@ std::string system_message(int err_code) {
 	str = str.substr(0, str.find('\n'));
 	str = str.substr(0, str.find('\r'));
 #else
-	str = ::strerror(err_code);
+  str = ::strerror(err_code);
 #endif
 	return str;
 }
+
+std::string
+dynamic_lib_error_message ()
+{
+#ifdef _WIN32
+  return system_message (GetLastError ());
+#else
+  const char *msg_ = dlerror ();
+  if (!msg_)
+    {
+      return std::string ("NO ERROR");
+    }
+
+  return std::string (msg_);
+#endif
+}
+
 
 string last_system_message() {
 	int err_code;
@@ -675,3 +699,4 @@ string last_system_message() {
 }
 
 }	//end of namespace blue_sky
+

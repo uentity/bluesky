@@ -36,9 +36,9 @@ public:
 	smart_ptr<bs_stream> spstream;
 };*/
 
-class BS_API stream_wrapper : public bs_stream {
+class BS_API stream_wrapper : public log::bs_stream {
 public:
-	stream_wrapper(const boost::python::object &src) : obj(src) {}
+	stream_wrapper(const std::string &name, const boost::python::object &src) : bs_stream (name), obj(src) {}
 
 	void write(const std::string &str) const;
 
@@ -48,7 +48,7 @@ private:
 
 class BS_API py_stream {
 public:
-	py_stream(const boost::python::object &src) : spstream(new stream_wrapper(src)) {}
+	py_stream(const std::string &name, const boost::python::object &src) : spstream(new stream_wrapper(name, src)) {}
 
 //private:
 	sp_stream spstream;
@@ -57,7 +57,6 @@ public:
 class BS_API py_bs_channel {
 	friend class py_bs_log;
 public:
-	py_bs_channel();
 	py_bs_channel(const std::string&);
 	py_bs_channel(const sp_channel&);
 

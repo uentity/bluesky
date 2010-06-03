@@ -37,7 +37,7 @@ private:
 
 typedef singleton< bs_cfg_p > cfg;
 
-struct bs_config {
+struct BS_API bs_config {
 	bs_cfg_p::vstr_t operator [] (const char *e);
 };
 

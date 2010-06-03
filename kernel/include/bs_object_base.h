@@ -85,14 +85,23 @@ namespace blue_sky {
 		/*!
 		\brief Access to corresponding inode object
 		*/
-		smart_ptr< blue_sky::bs_inode, true > inode() const;
+		const blue_sky::bs_inode* inode() const;
+		//smart_ptr< blue_sky::bs_inode, true > inode() const;
+
+    template <typename class_t>
+    static class_t &
+    python_exporter (class_t &class__)
+    {
+      return class__;
+    }
 
 	protected:
 		//! Constructor for derived classes - accepts signals range
 		objbase(const bs_messaging::sig_range_t&);
 
 		//associated inode
-		smart_ptr< blue_sky::bs_inode, true > inode_;
+		const blue_sky::bs_inode* inode_;
+		//smart_ptr< blue_sky::bs_inode, true > inode_;
 
 		//! swap function needed to provide assignment ability
 		void swap(objbase& rhs);

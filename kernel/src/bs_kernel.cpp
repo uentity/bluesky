@@ -26,6 +26,7 @@
 #include "bs_prop_base.h"
 #include "bs_tree.h"
 #include "bs_report.h"
+#include "bs_log_scribers.h"
 
 #include <stdio.h>
 //#include <iostream>
@@ -57,20 +58,17 @@
 //Loki
 //#include "loki/AssocVector.h"
 //#include "loki/Factory.h"
+#include "loki/Singleton.h"
 
 using namespace std;
 using namespace boost;
-using namespace boost::filesystem;
-//using namespace blue_sky;
 
-#define KERNEL_VERSION "0.1" //!< version of blue-sky kernel
+#define KERNEL_VERSION "0.9" //!< version of blue-sky kernel
 
-#define COUT_LOG_INST log::Instance()[COUT_LOG] //!< blue-sky log for simple cout output
-#define XPN_LOG_INST log::Instance()[XPN_LOG] //!< blue-sky log for errors output
-#define MAIN_LOG_INST log::Instance()[MAIN_LOG] //!< blue-sky log for every output
-
-//export specific BlueSky kernel's plugin_descriptor
-BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", "1.0RC4", "Plugin tag for BlueSky kernel", "", "bs")
+/*-----------------------------------------------------------------------------
+ *  BS kernel plugin descriptor
+ *-----------------------------------------------------------------------------*/
+BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs");
 
 //std::less specialization for plugin_descriptor
 namespace std {
@@ -83,14 +81,85 @@ namespace std {
 	}
 }
 
-//all implementation contained in blue_sky namespace
-namespace blue_sky {
+// hidden implementation stuff
+namespace {
 
-type_tuple::type_tuple(const plugin_descriptor& pd, const type_descriptor& td)
-	: pd_(pd), td_(td)
-{}
+using namespace blue_sky;
+using namespace boost::python;
+using namespace boost::python::detail;
+/*-----------------------------------------------------------------------------
+ *  Global implementation details
+ *-----------------------------------------------------------------------------*/
 
-//---------------helper structures--------------------------------------------------------------------
+// tags for kernel & runtime types plugin_descriptor
+struct __kernel_types_pd_tag__ {};
+struct __runtime_types_pd_tag__ {};
+
+	//namespace blue_sky {
+//namespace private_ {
+//
+//namespace kernel_types {
+//  BLUE_SKY_PLUGIN_DESCRIPTOR_EXT ("BlueSky kernel", "1.0RC4", "Plugin tag for BlueSky kernel", "", "bs")
+//} // namespace kernel_types
+//
+//namespace runtime_types {
+//  BLUE_SKY_PLUGIN_DESCRIPTOR_EXT_STATIC ("Runtime types", "0.1", "Plugin tag for runtime types", "", "")
+//} // namespace runtime_types
+//
+//} // namespace private_
+//} // namespace blue_sky
+
+/*-----------------------------------------------------------------------------
+ *  Python-related helpers to insert BS plugins under specified Python namespaces
+ *-----------------------------------------------------------------------------*/
+
+//dumb struct to create new Python scope
+struct py_scope_plug {};
+
+void bspy_init_plugin(const string& parent_scope, const string& nested_scope, void(*init_function)()) {
+	//the following code is originaly taken from boost::python::detail::init_module
+	//and slightly modified to allow scope changing BEFORE plugin's python subsystem is initialized
+	static PyMethodDef initial_methods[] = { { 0, 0, 0, 0 } };
+	// Create the BS kernel module & scope	
+	static PyObject* m = Py_InitModule(parent_scope.c_str(), initial_methods);
+	static scope current_module(object(((borrowed_reference_t*)m)));
+	if(!m) {
+		bs_throw_exception (boost::format ("Py_InitModule: Can't create BS kernel module in namespace %s")
+				% parent_scope);
+	}
+
+	// create plugin's module & scope
+	std::string nested_namespace = parent_scope + "." + nested_scope;
+	PyObject *nested_module = Py_InitModule (nested_namespace.c_str (), initial_methods);
+	if (!nested_module) {
+		bs_throw_exception (boost::format ("Py_InitModule: Can't create plugin module in namespace %s") % nested_namespace);
+	}
+	scope nested(object (((borrowed_reference_t *)nested_module)));
+	current_module.attr(nested_scope.c_str ()) = nested;
+
+	handle_exception(init_function);
+}
+
+string extract_root_name(const string& full_name) {
+	//extract user-friendly lib name from full name
+	string pyl_name = full_name;
+	//cut path
+	string::size_type pos = pyl_name.rfind('/');
+	if(pos != string::npos) pyl_name = pyl_name.substr(pos + 1, string::npos);
+	pos = pyl_name.rfind('\\');
+	if(pos != string::npos) pyl_name = pyl_name.substr(pos + 1, string::npos);
+	//cut extension
+	pyl_name = pyl_name.substr(0, pyl_name.find('.'));
+	//cut "lib" prefix if exists
+	if(pyl_name.compare(0, 3, string("lib")) == 0)
+		pyl_name = pyl_name.substr(3, string::npos);
+
+	return pyl_name;
+}
+
+/*-----------------------------------------------------------------------------
+ *  Shared library descriptor
+ *-----------------------------------------------------------------------------*/
 /*!
 	\struct lib
 	\brief Necessary for dynamic libraries handlers
@@ -115,6 +184,11 @@ struct lib_descriptor
 	#else
 		handle_ = LoadLibrary(LPCSTR(fname));
 	#endif
+    if (!handle_)
+      {
+        throw bs_dynamic_lib_exception ("LoadPlugin");
+      }
+
 		return (bool)handle_;
 	}
 
@@ -124,7 +198,10 @@ struct lib_descriptor
 	#ifdef UNIX
 			dlclose(handle_);
 	#elif defined(_WIN32)
-			FreeLibrary(handle_);
+			if (!FreeLibrary(handle_))
+        {
+          throw bs_dynamic_lib_exception ("Can't unload library");
+        }
 	#endif
 		}
 		handle_ = NULL;
@@ -213,6 +290,10 @@ bool operator ==(const lib_descriptor& left, const lib_descriptor& right) {
 	return left.fname_ == right.fname_;
 }
 
+/*-----------------------------------------------------------------------------
+ *  helper wrapper for storing objects in kernel dictionary
+ *  designed to have specific valid nill element
+ *-----------------------------------------------------------------------------*/
 template< class T >
 struct elem_ptr {
 	typedef T elem_t;
@@ -220,6 +301,8 @@ struct elem_ptr {
 	elem_ptr() : p_(&nil_el) {}
 
 	elem_ptr(const T& el) : p_(&el) {}
+
+  elem_ptr (const T *el) : p_ (el) {}
 
 	elem_ptr& operator =(const T& el) {
 		p_ = &el;
@@ -247,7 +330,12 @@ private:
 };
 //alias
 typedef elem_ptr< plugin_descriptor > pd_ptr;
+template< > const plugin_descriptor pd_ptr::nil_el = plugin_descriptor();
 
+/*-----------------------------------------------------------------------------
+ *  main type factory element
+ *  contains pair of plugin_descriptor and type_descriptor wrapped by elem_ptr
+ *-----------------------------------------------------------------------------*/
 //typedef type_tuple fab_elem;
 struct fab_elem {
 	// nil ctor
@@ -287,8 +375,7 @@ struct fab_elem {
 //alias
 typedef elem_ptr< fab_elem > fe_ptr;
 
-//static nil elements for elem_ptrs
-template< > const plugin_descriptor pd_ptr::nil_el = plugin_descriptor();
+//static nil elements for fab_elem
 template< > const fab_elem fe_ptr::nil_el = fab_elem();
 
 //pd_ptrs comparison by name
@@ -333,7 +420,34 @@ struct sp_sig_comp {
 	}
 };
 
-//----------------------kernel_impl----------------------------------------------------------------------------
+} 	// end if hidden namespace
+
+
+/*-----------------------------------------------------------------------------
+ *  blue_sky namespace related implementation details
+ *-----------------------------------------------------------------------------*/
+namespace blue_sky {
+
+using namespace std;
+using namespace boost;
+using namespace boost::filesystem;
+
+type_tuple::type_tuple(const plugin_descriptor& pd, const type_descriptor& td)
+	: pd_(pd), td_(td)
+{}
+
+// define default value for unmanaged parameter to create_object
+bool kernel::unmanaged_def_val() {
+#ifdef BS_CREATE_UNMANAGED_OBJECTS
+	return true;
+#else
+	return false;
+#endif
+}
+
+/*-----------------------------------------------------------------------------
+ *  kernel_impl class definition
+ *-----------------------------------------------------------------------------*/
 /*!
 	\class kernel::kernel_impl
 	\ingroup kernel_group
@@ -402,16 +516,15 @@ public:
 	// at last a storage itself
 	sig_storage_t sig_storage_;
 
-	//! plugin descriptor tag fot kernel types
-	static plugin_descriptor& kernel_pd_;
-	//! plugin descriptor tag for runtime types
-	static plugin_descriptor runtime_pd_;
+	
+	const plugin_descriptor& kernel_pd_;       //! plugin descriptor tag fot kernel types
+	const plugin_descriptor runtime_pd_;      //! plugin descriptor tag for runtime types
 
 	//last error message stored here
 	string last_err_;
 
 	string lib_dir_; //!< Current library loading directory
-	list< lload > cft_; //!< list of depth-search graph of loading order
+	std::list< lload > cft_; //!< list of depth-search graph of loading order
 
 	//! thread pool of workers
 	worker_thread_pool wtp_;
@@ -422,9 +535,10 @@ public:
 /*-----------------------------------------------------------------------------
  * kernel_impl ctor
  *-----------------------------------------------------------------------------*/
-
 	//constructor
 	kernel_impl()
+		: kernel_pd_(*bs_get_plugin_descriptor())
+		, runtime_pd_(BS_GET_TI(__runtime_types_pd_tag__), "Runtime types", KERNEL_VERSION, "BlueSky runtime types tag", "", "bs")
 	{
 		//register inner plugin_descriptors in dictionary
 		pl_dict_.insert(kernel_pd_);
@@ -443,15 +557,14 @@ public:
 		//register_kernel_type(bs_signal::bs_type());
 	}
 
-	//Myers Singleton for kernel_impl
-	//static kernel_impl& self() {
-	//	static kernel_impl ki;
-	//	return ki;
-	//}
-
 	~kernel_impl() {
-		string s = "~kernel_impl called";
-		cout << s << endl;
+		//string s = "~kernel_impl called";
+		//cout << s << endl;
+	}
+
+	// access to kernel_impl instance for local clients
+	static const kernel_impl& instance() {
+		return *BS_KERNEL.pimpl_;
 	}
 
 	//kernel initialization routine
@@ -514,8 +627,8 @@ public:
 
 		//if object is dangling, ie it's inode has zero hard links,
 		//delete the inode (remove reference to obj)
-		if(obj->inode_ && obj->inode_->links_count() == 0)
-			obj.lock()->inode_.release();
+		//if(obj->inode_ && obj->inode_->links_count() == 0)
+		//	obj.lock()->inode_.release();
 
 		//go through chain of type_descriptors up to objbase
 		type_descriptor td = obj->bs_resolve_type();
@@ -616,7 +729,7 @@ public:
 		return (pd != kernel_pd_ && pd != runtime_pd_);
 	}
 
-	bool register_type(const plugin_descriptor& pd, const type_descriptor& td, bool inner_type = false,
+	bool register_type(const plugin_descriptor& pd, const type_descriptor& td, bool /*inner_type */= false,
 		fe_ptr* tp_ref = NULL)
 	{
 		if(td.type().is_nil()) return false;
@@ -641,6 +754,10 @@ public:
 			pair< types_dict::const_iterator, bool > res_ref = types_resolver_.insert(*res.first);
 			if(!res_ref.second) {
 				//probably duplicating type name found
+				// dump error
+				BSERR << "BlueSky kernel: type '" << td.stype_
+					<< "' cannot be registered because type with such name already exist" << bs_end;
+
 				obj_fab_.erase(res.first);
 				if(tp_ref) {
 					if(res_ref.first != types_resolver_.end())
@@ -669,8 +786,12 @@ public:
 			res = obj_fab_.insert(fab_elem(pd, td));
 			types_resolver_.insert(*res.first);
 			plugin_types_.insert(*res.first);
+			return true;
 		}
 
+		// dump error
+		BSERR << "BlueSky kernel: type '" << td.stype_ << "' cannot be registered because type_info at "
+			<< &td.type().get() << " already exist" << bs_end;
 		return false;
 	}
 
@@ -697,8 +818,15 @@ public:
 			else
 				lock()->register_type(*obj_t.pd_, obj_t.td_, false, &tt_ref);
 			//still nil td means that serious error happened - type cannot be registered
-			if(tt_ref.is_nil())
-				throw bs_exception("BlueSky kernel", no_type, "Unknown error happened. Type cannot be registered");
+			if(tt_ref.is_nil()) {
+#ifdef BS_EXCEPTION_USE_BOOST_FORMAT
+				throw bs_kernel_exception ("BlueSky kernel", no_type,
+						boost::format ("Unknown error. Type (%s) cannot be registered.") % obj_t.td_.name ());
+#else
+				throw bs_kernel_exception ("BlueSky kernel", no_type,
+						"Unknown error. Type " + obj_t.td_.name () + " cannot be registered.");
+#endif
+			}
 		}
 		return *tt_ref;
 	}
@@ -719,9 +847,13 @@ public:
 	}
 
 	sp_obj create_object_copy(const sp_obj& src, bool unmanaged) {
-		if(!src) throw bs_exception("BlueSky kernel", no_error, "Source object for copying is not defined");
+		if(!src) {
+			throw bs_kernel_exception ("BlueSky kernel", no_error, "Source object for copying is not defined");
+		}
+
 		BS_TYPE_COPY_FUN cpyfn = *demand_type(src->bs_resolve_type()).td_.copy_fun_;
-		if(!cpyfn) return NULL;
+		BS_ERROR (cpyfn, "kernel::create_object_copy: copy_fun is null");
+
 		// invoke copy creation function and make a smrt_ptr reference to new object
 		sp_obj res((*cpyfn)(src), bs_dynamic_cast());
 		if(res) {
@@ -770,8 +902,10 @@ public:
 		//ensure that given type is registered
 		fe_ptr tp;
 		register_rt_type(obj_t, &tp);
-		if(tp.is_nil()) throw bs_exception("BlueSky Kernel", blue_sky::no_type,
-			"Cannot create str_data_table for unknown type");
+		if(tp.is_nil()) 
+      {
+        throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
+      }
 
 		//create or return data_table for it
 		smart_ptr< str_data_table >& p_tbl = pert_str_tbl_[tp];
@@ -783,8 +917,10 @@ public:
 		//ensure that given type is registered
 		fe_ptr tp;
 		register_rt_type(obj_t, &tp);
-		if(tp.is_nil()) throw bs_exception("BlueSky Kernel", blue_sky::no_type,
-			"Cannot create str_data_table for unknown type");
+		if(tp.is_nil()) 
+      {
+        throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
+      }
 
 		//create or return data_table for it
 		smart_ptr< idx_data_table >& p_tbl = pert_idx_tbl_[tp];
@@ -833,7 +969,7 @@ public:
 		typename cont_t::const_iterator i = m.find(id);
 		if (i != m.end())
 			return (*i);
-		throw bs_exception("BlueSky kernel", blue_sky::no_type, err_msg, false);
+		throw bs_kernel_exception ("BlueSky kernel", blue_sky::no_type, err_msg);
 	}
 
 /*-----------------------------------------------------------------------------
@@ -879,24 +1015,14 @@ public:
 		sm.erase(signal_code);
 		return true;
 	}
-
 };	//end of kernel_impl declaration
-
-namespace {
-	//tags for runtime types
-	class _bs_runtime_types_tag_ {};
-	//class _bs_kernel_types_tag_ {};
-}
 
 //kernel_impl guard
 bs_mutex kernel::kernel_impl::guard_;
-//descriptors for kernel & runtime types
-plugin_descriptor& kernel::kernel_impl::kernel_pd_(plugin_info);
-//plugin_descriptor kernel::kernel_impl::kernel_pd_(BS_GET_TI(bs_private::_bs_kernel_types_tag_), "BlueSky kernel",
-//												  "0.1", "Plugin tag for BlueSky kernel");
-plugin_descriptor kernel::kernel_impl::runtime_pd_(BS_GET_TI(_bs_runtime_types_tag_), "Runtime types",
-												   "0.1", "Plugin tag for runtime types");
 
+/*-----------------------------------------------------------------------------
+ *  some kernel_impl fcn imlementation
+ *-----------------------------------------------------------------------------*/
 void kernel::kernel_impl::error_processor(const blue_sky::error_code& e, const char* lib_dir) const
 {
 	if(e != blue_sky::no_error)
@@ -908,65 +1034,6 @@ void kernel::kernel_impl::error_processor(const blue_sky::error_code& e, const c
 			BSERROR << "No plugins found in " << lib_dir << bs_end;
 	}
 }
-
-namespace {
-//some global functions in hidden namespace
-using namespace boost::python;
-using namespace boost::python::detail;
-
-//dumb struct to create new Python scope
-struct py_scope_plug {};
-
-////the following code is originaly taken from boost::python::detail::init_module
-////and slightly modified to allow scope changing BEFORE plugin's python subsystem is initialized
-PyMethodDef initial_methods[] = { { 0, 0, 0, 0 } };
-
-void bspy_init_plugin(const string& nested_scope, void(*init_function)())
-{
-    static PyObject* m
-        = Py_InitModule(const_cast< char* >(plugin_info.py_namespace_.c_str()), initial_methods);
-	// Create the current module scope
-	static scope current_module(object(((borrowed_reference_t*)m)));
-	static object exp_scope_plug = class_< py_scope_plug >("bs_scope");
-
-    if (m != 0)
-    {
-        // Create the current module scope
-//        object m_obj(((borrowed_reference_t*)m));
-//        scope current_module(m_obj);
-
-        //make nested scope
-		current_module.attr(nested_scope.c_str()) = exp_scope_plug();
-		boost::python::scope outer = //exp_scope_plug();
-			object(current_module.attr(nested_scope.c_str()));
-			//object(current_module.attr(nested_scope.c_str()));
-			//boost::python::object(nested_scope);
-			//boost::python::class_< py_scope_plug >(nested_scope.c_str());
-
-
-
-        handle_exception(init_function);
-    }
-}
-
-string extract_root_name(const string& full_name) {
-	//extract user-friendly lib name from full name
-	string pyl_name = full_name;
-	//cut path
-	string::size_type pos = pyl_name.rfind('/');
-	if(pos != string::npos) pyl_name = pyl_name.substr(pos + 1, string::npos);
-	pos = pyl_name.rfind('\\');
-	if(pos != string::npos) pyl_name = pyl_name.substr(pos + 1, string::npos);
-	//cut extension
-	pyl_name = pyl_name.substr(0, pyl_name.find('.'));
-	//cut "lib" prefix if exists
-	if(pyl_name.compare(0, 3, string("lib")) == 0)
-		pyl_name = pyl_name.substr(3, string::npos);
-
-	return pyl_name;
-}
-
-}	//end of hidden namespace
 
 error_code kernel::kernel_impl::load_plugin(const string& fname, const string& version, bool init_py_subsyst)
 {
@@ -993,21 +1060,15 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 	try {
 		//load library
 		lib.load(fname.c_str());
-		if(!lib.handle_)
-			throw bs_exception("LoadPlugins", blue_sky::system_error, lib.lib_sys_msg().c_str());
-		//xpn_log << "LoadLibrary: library loaded" << blue_sky::endl;
 
 		//check for plugin descriptor presence
 		lib.load_sym("bs_get_plugin_descriptor", bs_plugin_descriptor);
 		if(!bs_plugin_descriptor) {
-			msg = lib.fname_ + " is not a BlueSky plugin (bs_get_plugin_descriptor wasn't found)";
-			throw bs_exception("LoadPlugins", msg.c_str());
+			throw bs_exception ("LoadPlugins", lib.fname_ + " is not a BlueSky plugin (bs_get_plugin_descriptor wasn't found)");
 		}
 		//retrieve descriptor from plugin
 		if(!(p_descr = dynamic_cast< plugin_descriptor* >(bs_plugin_descriptor()))) {
-			//pointer to plugin descriptor is empty
-			msg = "No plugin descriptor found in module " + lib.fname_;
-			throw bs_exception("LoadPlugins", msg.c_str());
+			throw bs_exception ("LoadPlugins", "No plugin descriptor found in module " + lib.fname_);
 		}
 		//check if loaded lib is really a blue-sky kernel
 		if(*p_descr == kernel_pd_)
@@ -1055,20 +1116,23 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 				}
 
 				//init python subsystem
-				bspy_init_plugin(p_descr->py_namespace_, init_py_fn);
-				py_scope = plugin_info.py_namespace_ + "." + p_descr->py_namespace_;
+				//const plugin_descriptor* pd = blue_sky::private_::kernel_types::bs_get_plugin_descriptor ();
+				py_scope = kernel_pd_.py_namespace_ + "." + p_descr->py_namespace_;
+				bspy_init_plugin(kernel_pd_.py_namespace_, p_descr->py_namespace_, init_py_fn);
 				//boost::python::detail::init_module(py_scope.c_str(), init_py_fn);
 				//BSERROR << "LoadPlugins: Error during initialization of Python sybsystem in plugin " << lib.fname_ << bs_end;
 			}
 		}
 
 		//finally everything ok now
-		BSOUT << "BlueSky plugin " << lib.fname_.c_str() << " loaded";
+		BSOUT << "BlueSky plugin " << lib.fname_.c_str() << " loaded" << bs_line;
 		if(py_scope.size())
-			BSOUT << ", Python subsystem initialized (namespace " << py_scope << ")";
+			BSOUT << ", Python subsystem initialized (namespace " << py_scope << ")" << bs_line;
 		BSOUT << bs_end;
 	}
 	catch(const bs_exception& ex) {
+		// print error information
+		BSOUT << ex.what() << bs_end;
 		//unload library
 		if(p_descr)
 			unload_plugin(*p_descr);
@@ -1077,12 +1141,12 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 		return blue_sky::no_library;
 	}
 	catch(const std::exception& ex) {
-		BSERROR << "LoadPlugins: " << ex.what();
+		BSERROR << "LoadPlugins: " << ex.what() << bs_end;
 		return blue_sky::system_error;
 	}
 	catch(...) {
 		//something really serious happened
-		BSERROR << "Unknown error happened during plugins loading. Terminating.";
+		BSERROR << "Unknown error happened during plugins loading. Terminating." << bs_end;
 		terminate();
 	}
 
@@ -1110,10 +1174,11 @@ blue_sky::error_code kernel::kernel_impl::load_plugins(bool init_py_subsyst) {
 		lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
 		//init kernel's py subsyst
 		if(init_py) {
-			boost::python::detail::init_module(plugin_info.py_namespace_.c_str(), init_py);
+			//const plugin_descriptor *pd = blue_sky::private_::kernel_types::bs_get_plugin_descriptor ();
+			boost::python::detail::init_module(kernel_pd_.py_namespace_.c_str(), init_py);
 			//create bs_scope exporting
-			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace ";
-			BSOUT << plugin_info.py_namespace_ << bs_end;
+			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace "
+				<< kernel_pd_.py_namespace_ << bs_end;
 		}
 		else {
 			BSERROR << "Python subsystem wasn't found in BlueSky kernel" << bs_end;
@@ -1134,19 +1199,23 @@ blue_sky::error_code kernel::kernel_impl::load_plugins(bool init_py_subsyst) {
 	return blue_sky::no_error;
 }
 
-//===================================== kernel implementation ==========================================================
+//===============================================================================================
+/*-----------------------------------------------------------------------------
+ *  kernel implementation
+ *-----------------------------------------------------------------------------*/
 void kernel::test() const
 {
   //log::Instance()["cout1"].echo("this message for exception",-1);
 
 	cout << "kernel.test entered" << std::endl;
-  try{
+  try
+  {
 	  path("~");
   }
   catch(const boost::filesystem::filesystem_error& e)
-    {
-      throw bs_exception("path",blue_sky::boost_error,e.what());
-    }
+  {
+    throw bs_kernel_exception ("path", blue_sky::boost_error, e.what());
+  }
 }
 
 kernel::kernel()
@@ -1158,15 +1227,54 @@ kernel::kernel()
 
 kernel::~kernel()
 {
+  for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i)
+    {
+      if (disconnectors_[i])
+        disconnectors_[i]->disconnect_signals ();
+    }
+
+  BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());
+  pimpl_->instances_.clear ();
+
+  memory_manager_.print_info ();
 	UnloadPlugins();
-	if(pimpl_.get()) delete pimpl_.get();
+
+  BS_ASSERT (pimpl_->loaded_plugins_.empty ());
+  BS_ASSERT (pimpl_->pert_str_tbl_.empty ());
+  BS_ASSERT (pimpl_->pert_idx_tbl_.empty ());
+  BS_ASSERT (pimpl_->sig_storage_.empty ()) (pimpl_->sig_storage_.size ());
+
+	// WTF?? 
+  if(pimpl_.get()) delete pimpl_.get();
+}
+
+void
+kernel::register_disconnector (signals_disconnector *d)
+{
+  disconnectors_.push_back (d);
+}
+void
+kernel::unregister_disconnector (signals_disconnector *d)
+{
+  for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i)
+    {
+      if (disconnectors_[i] == d)
+        {
+          // Don't remove disconnector from list. Never.
+          disconnectors_[i] = 0;
+        }
+    }
 }
 
 // kernel::str_dt_ptr kernel::global_dt() const {
 // 	return str_dt_ptr(&pimpl_->data_tbl_, pimpl_->data_tbl_.mutex());
 // }
 
-void kernel::init() {
+void kernel::init() 
+{
+  //detail::bs_log_holder::Instance ().register_signals ();
+  //detail::thread_log_holder::Instance ().register_signals ();
+
 	pimpl_.lock()->init();
 }
 
@@ -1263,7 +1371,7 @@ sp_storage kernel::create_storage(const std::string &filename, const std::string
 		new_storage = create_object(find_type(format).td_);
 		new_storage.lock()->open(filename, flags);
 	}
-	catch(const bs_exception& ex) {
+	catch(const bs_exception& /*ex*/) {
 		// if no proper storage found
 		new_storage = create_object(empty_storage::bs_type());
 	}
@@ -1325,3 +1433,4 @@ bool kernel::rem_signal(const BS_TYPE_INFO& obj_t, int signal_code) const {
 }
 
 }	//end of blue_sky namespace
+

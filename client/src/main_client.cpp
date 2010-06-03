@@ -40,12 +40,6 @@
 #include "py_bs_tree.h"
 #endif
 
-//#ifdef UNIX
-//#include "python2.5/Python.h"
-//#else
-//#include "Python.h"
-//#endif
-
 #include "boost/type_traits.hpp"
 #include "boost/thread.hpp"
 
@@ -155,9 +149,6 @@ namespace blue_sky {
 BLUE_SKY_PLUGIN_DESCRIPTOR("bs_client", "1.0.0", "", "");
 BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (int, str_val_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (bool, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, vector_traits));
 BS_TYPE_IMPL_T_MEM(str_val_table, int);
 }
 
@@ -342,6 +333,8 @@ struct dummy_changer {
 		for(long i = 0; i < how_many_; ++i) {
 			//select random dummy object
 			bs_objinst_holder::const_iterator p_inst = dummy::bs_inst_begin();
+			if(p_inst == dummy::bs_inst_end()) continue;
+
 			std::advance(p_inst, randUB(dummy::bs_inst_cnt()));
 
 			//randomly change dummy's internal value
@@ -832,22 +825,21 @@ main (int argc, char *argv[])
 	for(int i = 0; i < 100; ++i) rand();
 	srand(rand());*/
 
-//try {
 try {
 		//cout << "LoadPlugins is to be called..." << endl;
 		k.LoadPlugins();
 
         //test_python_thread_pool();
 
-		k.register_type(plugin_info, dummy::bs_type());
+		k.register_type(*bs_get_plugin_descriptor(), dummy::bs_type());
 		sp_dummy d = BS_KERNEL.create_object("bs_dummy");
 
 		kernel_tools::print_loaded_types();
 		fill_dummy_node(100);
 		cout << kernel_tools::walk_tree();
 
-		mt_op< dummy_changer >(50, true);
-		mt_op< dummy_renamer >(50, true);
+		//mt_op< dummy_changer >(50, true);
+		//mt_op< dummy_renamer >(50, true);
 
 		//fill_dummy_node(100);
 		//print_tree();
@@ -873,7 +865,6 @@ try {
 		c.lock()->test();
 
 		test_objects();
-		//test_objects();
 
 		//test_plugins();
 
@@ -892,17 +883,6 @@ try {
 		cout << kernel_tools::print_loaded_types();
 		cout << kernel_tools::print_registered_instances();
 		//print_dummy_node(bs_node::custom_idx);
-//	}
-//	catch(bs_exception ex) {
-//		cout << "BlueSky exception: " << ex.what() << endl;
-//	}
-//	catch(std::exception ex) {
-//		cout << "std exception: " << ex.what() << endl;
-//	}
-//	catch(...) {
-//		cout << "unknown error!" << endl;
-//	}
-//
 	}
 	catch(bs_exception ex) {
 		cout << "BlueSky exception: " << ex.what() << endl;

@@ -23,105 +23,210 @@
 //
 #include "bs_kernel.h"
 #include "thread_pool.h"
+#include "bs_report.h"
+#include "bs_log_scribers.h"
+#include "bs_kernel_tools.h"
 
 //#define LOKI_CLASS_LEVEL_THREADING
 #include "loki/Singleton.h"
 
 using namespace Loki;
+using namespace std;
 
-namespace blue_sky {
+namespace blue_sky { namespace bs_private {
 
-	namespace bs_private {
+static bool kernel_alive = false;
 
-		struct wrapper_kernel {
+/*-----------------------------------------------------------------------------
+ *  Specific logging system wrappers
+ *-----------------------------------------------------------------------------*/
+struct bs_log_wrapper : public bs_log
+{
+	bs_log_wrapper ()
+	{
+		if (kernel_alive)
+		{
+			register_signals ();
+		}
 
-			 kernel k_;
+		this->add_channel (sp_channel (new bs_channel (OUT_LOG)));
+		this->add_channel (sp_channel (new bs_channel (ERR_LOG)));
 
-//#ifdef BS_AUTOLOAD_PLUGINS
-			 kernel& (wrapper_kernel::*ref_fun_)();
+		char *c_dir = NULL;
+		if (!(c_dir = getenv("BS_KERNEL_DIR")))
+			c_dir = (char *)".";
 
-			 //constructor
-			 wrapper_kernel()
-				 : ref_fun_(&wrapper_kernel::initial_kernel_getter)
-			 {}
+		this->get_locked (OUT_LOG, __FILE__, __LINE__).get_channel ()->attach(sp_stream(new log::detail::cout_scriber ("COUT")));
+		this->get_locked (OUT_LOG, __FILE__, __LINE__).get_channel ()->attach(sp_stream(new log::detail::file_scriber ("FILE", string(c_dir) + string("/blue_sky.log"), ios::out|ios::app)));
+		this->get_locked (ERR_LOG, __FILE__, __LINE__).get_channel ()->attach(sp_stream(new log::detail::cout_scriber ("COUT")));
+		this->get_locked (ERR_LOG, __FILE__, __LINE__).get_channel ()->attach(sp_stream(new log::detail::file_scriber ("FILE", string(c_dir) + string("/errors.log"), ios::out|ios::app)));
 
-			 //normal getter - just returns kernel reference
-			 kernel& usual_kernel_getter() {
-				 return k_;
-			 }
+		this->get_locked (OUT_LOG, __FILE__, __LINE__) << output_time;
+		this->get_locked (ERR_LOG, __FILE__, __LINE__) << output_time;
+	}
 
-			 //when kernel reference is obtained for the first time - load plugins
-			 kernel& initial_kernel_getter() {
-				 //first switch to usual getter to avoid infinite constructor recursion during load_plugins()
-				 ref_fun_ = &wrapper_kernel::usual_kernel_getter;
-				 //initialize kernel
-				 k_.init();
+	//static bool &
+	//kernel_dead ()
+	//{
+	//	static bool kernel_dead_ = false;
+	//	return kernel_dead_;
+	//}
+	bs_log & 
+	get_log () 
+	{
+		return *this;
+	}
+
+	void
+	register_signals ()
+	{
+		this->add_signal (BS_SIGNAL_RANGE (bs_log));
+	}
+};
+
+struct thread_log_wrapper : public thread_log
+{
+	thread_log_wrapper ()
+	{
+	}
+
+	thread_log &
+	get_log ()
+	{
+		return *this;
+	}
+
+	void
+	register_signals ()
+	{
+	}
+	//static bool &
+	//kernel_dead ()
+	//{
+	//	static bool kernel_dead_ = false;
+	//	return kernel_dead_;
+	//}
+};
+
+/// @brief Wrapper allowing to do some initialization on first give_kernel()::Instance() call
+/// just after the kernel class is created
+struct wrapper_kernel {
+	kernel k_;
+
+	kernel& (wrapper_kernel::*ref_fun_)();
+
+	// constructor
+	wrapper_kernel()
+		: ref_fun_(&wrapper_kernel::initial_kernel_getter)
+	{
+		kernel_alive = true;
+	}
+
+	// normal getter - just returns kernel reference
+	kernel& usual_kernel_getter() {
+		return k_;
+	}
+
+	// when kernel reference is obtained for the first time
+	kernel& initial_kernel_getter() {
+		// first switch to usual getter to avoid infinite constructor recursion during load_plugins()
+		ref_fun_ = &wrapper_kernel::usual_kernel_getter;
+		// initialize kernel
+		k_.init();
 
 #ifdef BS_AUTOLOAD_PLUGINS
-				 //load plugins
-				 k_.LoadPlugins();
+		// load plugins
+		k_.LoadPlugins();
 #endif
-				 //return reference
-				 return k_;
-			 }
-
-			 kernel& k_ref() {
-				return (this->*ref_fun_)();
-			 }
-
-// 			 kernel& k_ref() {
-// 				 return k_;
-// 			 }
-		};
-
-	}	// namespace bs_private
-
-	//kernel itself is fully multithreaded so we can use simple singleton
-	//typedef SingletonHolder< bs_private::wrapper_kernel > kernel_holder;
-
-	//! standard multithreaded kernel singleton
-	//typedef SingletonHolder< bs_private::wrapper_kernel, CreateUsingNew,
-	//	DefaultLifetime, ClassLevelLockable > kernel_holder;
-
-	//kernel singletone - master, fabs die after kernel dies
-	typedef SingletonHolder< bs_private::wrapper_kernel, CreateUsingNew,
-		FollowIntoDeath::With< DefaultLifetime >::AsMasterLifetime > kernel_holder;
-
-	template< >
-	BS_API kernel& singleton< kernel >::Instance()
-	{
-		//cout << "give_kernel.Instance() entered" << endl;
-		return kernel_holder::Instance().k_ref();
+		// return reference
+		return k_;
 	}
 
-	//! thread pool singleton
-	typedef SingletonHolder< blue_sky::worker_thread_pool, CreateUsingNew,
-		FollowIntoDeath::AfterMaster< kernel_holder >::IsDestroyed > wtp_holder;
-
-	typedef singleton< worker_thread_pool > give_wtp;
-
-	template< >
-	worker_thread_pool& singleton< worker_thread_pool >::Instance() {
-		return wtp_holder::Instance();
+	kernel& k_ref() {
+		return (this->*ref_fun_)();
 	}
+
+	~wrapper_kernel() {
+		// signal that it is destroyed
+		kernel_alive = false;
+	}
+};
+
+typedef SingletonHolder < bs_log_wrapper, CreateUsingNew, PhoenixSingleton >      bs_log_holder;
+typedef SingletonHolder < thread_log_wrapper, CreateUsingNew, PhoenixSingleton >  thread_log_holder;
+
+}	// namespace bs_private
+
+
+/*-----------------------------------------------------------------------------
+ *  kernel signleton instantiation
+ *-----------------------------------------------------------------------------*/
+//! multithreaded kernel singleton - disables
+//typedef SingletonHolder< bs_private::wrapper_kernel, CreateUsingNew,
+//	DefaultLifetime, ClassLevelLockable > kernel_holder;
+
+// kernel itself is fully multithreaded so we can use simple singleton
+// typedef SingletonHolder< bs_private::wrapper_kernel > kernel_holder;
+
+//kernel singletone - master, fabs die after kernel dies
+typedef SingletonHolder< bs_private::wrapper_kernel, CreateUsingNew,
+	FollowIntoDeath::With< DefaultLifetime >::AsMasterLifetime > kernel_holder;
+
+template< >
+BS_API kernel& singleton< kernel >::Instance()
+{
+	//cout << "give_kernel.Instance() entered" << endl;
+	return kernel_holder::Instance().k_ref();
+}
+
+//! thread pool singleton
+typedef SingletonHolder< blue_sky::worker_thread_pool, CreateUsingNew,
+	FollowIntoDeath::AfterMaster< kernel_holder >::IsDestroyed > wtp_holder;
+
+typedef singleton< worker_thread_pool > give_wtp;
+
+template< >
+worker_thread_pool& singleton< worker_thread_pool >::Instance() {
+	return wtp_holder::Instance();
+}
 
 //	void kernel::add_task(const blue_sky::sp_com& task)
 //	{
 //		give_wtp::Instance().add_command(task);
 //	}
 
-	//----------------------factories--------------------------------------
-	//! Loki object factory type
-	//typedef Factory< objbase, BS_TYPE_OBJ, LOKI_TYPELIST_1(bs_type_ctor_param) > obj_factory;
-	//typedef Factory< objbase, BS_TYPE_OBJ, LOKI_TYPELIST_1(bs_type_ctor_param) > com_factory;
 
-	//cause kernel is a singletone, fabs can be made kernel_impl members
-	//now make multi-threaded singletones from fabs
-	//typedef SingletonHolder< obj_factory, CreateUsingNew, FollowIntoDeath::AfterMaster< kernel_holder >::IsDestroyed,
-	//		   ClassLevelLockable > obj_fab_holder;
-	//typedef SingletonHolder< obj_factory_int, CreateUsingNew, FollowIntoDeath::AfterMaster< kernel_holder >::IsDestroyed,
-	//		   ClassLevelLockable > obj_fab_holder_int;
-	//typedef SingletonHolder< com_factory, CreateUsingNew, FollowIntoDeath::AfterMaster< kernel_holder >::IsDestroyed,
-	//		   ClassLevelLockable > com_fab_holder;
+/*-----------------------------------------------------------------------------
+ *  log singletons instantiation
+ *-----------------------------------------------------------------------------*/
+typedef singleton <bs_log>      bs_log_singleton;
+typedef singleton <thread_log>  thread_log_singleton;
 
+template <> 
+	bs_log & 
+singleton <bs_log>::Instance() 
+{
+	return bs_private::bs_log_holder::Instance().get_log ();
 }
+
+template <>
+	thread_log &
+singleton <thread_log>::Instance ()
+{
+	return bs_private::thread_log_holder::Instance ().get_log ();
+}
+
+	bs_log &
+kernel::get_log ()
+{
+	return bs_log_singleton::Instance ();
+}
+
+	thread_log &
+kernel::get_tlog ()
+{
+	return thread_log_singleton::Instance ();
+}
+
+}	// namespace blue_sky
+

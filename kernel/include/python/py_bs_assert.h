@@ -39,7 +39,10 @@ public:
 		: disable_python_call_on_success (true)
 	{}
 
-	virtual ~py_assert_factory () {}
+	virtual ~py_assert_factory () 
+  {
+    bs_assert::asserter::set_factory (0);
+  }
 
 	virtual bs_assert::asserter *make (bool cond, const char *file, int line, const char *cond_str);
 
@@ -48,7 +51,7 @@ public:
 		disable_python_call_on_success = d;
 	}
 
-	py_assert_factory_setter *make_python (bool cond, const char *file, int line, const char *cond_str)
+	py_assert_factory_setter *make_python (bool /*cond*/, const char * /*file*/, int /*line*/, const char * /*cond_str*/)
 	{
 		return new py_assert_factory_setter ();
 	}

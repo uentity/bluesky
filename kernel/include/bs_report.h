@@ -16,318 +16,331 @@
 #ifndef _BS_REPORTER_H
 #define _BS_REPORTER_H
 
+#include "bs_common.h"
+#include "bs_messaging.h"
+#include "bs_log_stream.h"
+#include "bs_misc.h"
+#include "throw_exception.h"
+
 #include <list>
 #include <set>
 #include <map>
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <iostream>
-#include "bs_common.h"
-#include "bs_refcounter.h"
-#include "bs_object_base.h"
-
-#include "loki/Singleton.h"
-
-//#include <boost/thread/condition_variable.hpp>
 
 namespace blue_sky {
-
-	//typedef enum {
-	//	OUT_LOG, //!< output to "$(BS_KERNEL_DIR)/blue_sky.log" file
-	//	ERR_LOG, //!< output to "(BS_KERNEL_DIR)/errors.log" file
-	//} jours;
 
 #define OUT_LOG "out"
 #define ERR_LOG "err"
 
-	struct BS_API priority {
-	  priority(int v = -1,int p = -1) : sect(v),prior(p) {}
-		int sect,prior;
-	};
+  class BS_API bs_channel : public bs_refcounter {
+    friend class bs_log;
+  public:
+    typedef smart_ptr< bs_channel, true > sp_channel;
 
-    //there is error with smart_pointer access... I don't know why.
-	class BS_API bs_stream { //: public bs_refcounter { //!!!!!!!!!!!!!!!!!!!!!!!
-	public:
-		virtual bool subscribe(bs_channel&);
-		virtual bool unsubscribe(bs_channel&);
-		virtual void write(const std::string&) const = 0; //{}//= 0;//{std::cout << "asdddd" << std::endl;}
-		//virtual void dispose() const;
+    typedef smart_ptr <log::bs_stream>    sp_stream_t;
+    typedef std::vector <sp_stream_t>     stream_list_t;
+    typedef stream_list_t::iterator       stream_iterator_t;
 
-		virtual ~bs_stream() {}
-	};
+    typedef sp_channel (*functor_t) (const sp_channel &);
 
-	class BS_API bs_channel : public bs_refcounter {
-		friend class bs_log;
-		friend struct channel_comp_names;
-	public:
-		typedef smart_ptr< bs_channel, true > sp_channel;
-		typedef smart_ptr< bs_stream > sp_stream;
-		typedef std::list< sp_stream > sp_scr_list;
-		typedef std::map<int, int> msect;
-		typedef msect::const_iterator msect_const_iterator;
-		typedef msect::iterator msect_iterator;
+  public:
+    //! ctors
+    //bs_channel();
+    bs_channel(const std::string&);
 
-		bool attach(const sp_stream&);
-		bool detach(const sp_stream&);
+    //! copy ctor
+    bs_channel(const bs_channel&);
+    bs_channel(const bs_channel &src, const std::string &tname);
 
-		template <class T> sp_channel operator<<(const T &data_) {
-			if (can_output) {
-				//if (&data_)
-				//	*(buf_.lock()) << data_;
-				//else
-				//	*buf_.lock() << "(nil)";
-				*(buf_.lock()) << data_;
-				if (!wait_end)
-					send_to_subscribers();
-			}
-			return sp_channel(this);
-		}
+    ~bs_channel() {}
 
-		bs_channel &add_section(int);
-		bs_channel &rem_section(int);
-		bs_channel &set_priority(priority);
-		void set_can_output(bool);
+    //! Assignment operator
+    const bs_channel &operator=(const bs_channel&);
 
-		sp_channel operator<<(priority);
+    bool attach(const sp_stream_t &);
+    bool detach(const sp_stream_t &);
 
-		sp_channel operator<<(sp_channel(*)(const sp_channel&));
+    bs_channel &add_section (int section, int level);
+    bs_channel &rem_section (int section);
+    bs_channel &set_priority (const priority &p);
 
-		//friend struct channel_comp_names;
-		friend bool operator == (const bs_channel &lc, const bs_channel &rc);
-		friend bool operator == (const bs_channel &lc, const std::string &rstr);
-		friend bool operator < (const bs_channel &lc, const bs_channel &rc);
-		friend bool operator < (const bs_channel &lc, const std::string &rstr);
+    void set_output_time();
+    void set_prefix(const std::string&);
 
-		~bs_channel() {}
+    std::string get_name() const {return name;}
+    sp_stream_t get_stream (const std::string &name) const;
 
-		void send_to_subscribers();
+    void dispose() const;
 
-    //protected:
-		//! ctors
-		bs_channel();
-		bs_channel(const std::string&);
+  protected:
+    bool                            output_time;
+    bool                            wait_end;
+    std::string                     name;
+    //std::ostringstream              buf_;
+    std::string                     prefix;
 
-		//! copy ctor
-		bs_channel(const bs_channel&);
-		bs_channel(const bs_channel &src, const std::string &tname);
-
-		//! Assignment operator
-		const bs_channel &operator=(const bs_channel&);
-
-		void set_output_time();
-		void set_wait_end();
-		bool outputs_time() const;
-		bool waits_end() const;
-
-		void set_prefix(const std::string&);
-
-		std::string get_name() const {return name;}
-
-		void dispose() const;
-
-	protected:
-		std::map<int,int> msects; //priority_pair rpair;
-		bool output_time, wait_end, can_output;
-		static int counter;
-		std::string name;
-		smart_ptr<std::ostringstream> buf_;
-		//st_smart_ptr<std::ostringstream> buf_;
-		sp_scr_list scribes;
-		std::string prefix;
+    stream_list_t                   output_streams_;
 
     friend struct locked_channel;
-	};
-	typedef bs_channel::sp_channel sp_channel;
-	typedef bs_channel::sp_stream sp_stream;
+  };
 
-	template<class T>
-	sp_channel operator<<(const sp_channel &ch, const T &what) {
-		return *(ch.lock()) << what;
-	}
+  typedef bs_channel::sp_channel  sp_channel;
+  typedef bs_channel::sp_stream_t sp_stream;
+  typedef lsmart_ptr< sp_channel > lsp_channel;
 
-	BS_API sp_channel operator<<(const sp_channel &ch, sp_channel(*what)(const sp_channel&));
+  //template<class T>
+  //sp_channel operator<<(const sp_channel &ch, const T &what) {
+  //  return *(ch.lock()) << what;
+  //}
 
-	struct channel_comp_names {
-		bool operator()(const smart_ptr< bs_channel > &lhs, const smart_ptr< bs_channel/*, true*/ > &rhs) const {
-			return (lhs->get_name() < rhs->get_name());
-		}
-	};
+  //BS_API sp_channel operator<<(const sp_channel &ch, sp_channel(*what)(const sp_channel&));
 
-  struct BS_API locked_channel
+  struct proxy_log_end {};
+  struct proxy_log_line {};
+  struct proxy_log_output_time {};
+  inline void bs_end (const proxy_log_end &)
   {
-    locked_channel (const sp_channel &ch)
-    : ch_ (ch)
-    , locked_buf_ (ch_->buf_)
-    , buf_ (*locked_buf_)
-    {
+  }
 
+  inline void bs_line (const proxy_log_line &)
+  {
+  }
+
+  inline void output_time (const proxy_log_output_time &)
+  {
+  }
+
+  template <typename log_t, typename proxy_t, typename what_t>
+  struct proxy_log
+  {
+    proxy_log (log_t &log, proxy_t &proxy, const what_t &what)
+      : log_ (log)
+      , proxy_ (proxy)
+      , what_ (what)
+      , finished_ (false)
+    {
     }
 
-    void
-    bs_end ();
-
-    template <typename T>
-    void
-    output (const T &what)
+    ~proxy_log ()
     {
-      if (ch_->can_output)
+      if (!finished_)
         {
-          //if (&what)
-            buf_ << what;
-          //else
-            //buf_ << "(nil)";
+          log_.log_output_not_finished ();
         }
     }
 
+    inline std::string
+    what () const
+    {
+      return proxy_.what () + detail::get_str (what_);
+    }
 
     template <typename T>
-    locked_channel &operator << (const T &what)
+    inline proxy_log <log_t, proxy_log <log_t, proxy_t, what_t>, T>
+    operator << (const T &w)
     {
-        output (what);
-        return *this;
+      finished_ = true;
+      return proxy_log <log_t, proxy_log <log_t, proxy_t, what_t>, T> (log_, *this, w);
     }
 
-    locked_channel &operator<< (locked_channel &(*fun) (locked_channel &));
-
-    inline locked_channel &operator<< (const priority &)
+    inline void
+    operator << (void (*) (const proxy_log_end &))
     {
-        return *this;
+      finished_ = true;
+      log_.output (*this, true);
     }
 
+    inline void
+    operator << (void (*) (const proxy_log_line &))
+    {
+      finished_ = true;
+      log_.output (*this, false);
+    }
 
-    lsmart_ptr <sp_channel> ch_;
-    lsmart_ptr <smart_ptr <std::ostringstream> > locked_buf_;
-    std::ostringstream &buf_;
+    log_t         &log_;
+    proxy_t       &proxy_;
+    const what_t  &what_;
+    bool          finished_;
+  };
+
+  struct BS_API locked_channel
+  {
+    locked_channel (const sp_channel &ch, const char *file, int line)
+    : ch_ (ch)
+    , file_ (file)
+    , line_ (line)
+    , section_ (-1)
+    , level_ (-1)
+    {
+    }
+
+    inline std::string
+    bs_end (std::string msg) const
+    {
+      if (ch_->output_time && msg.length())
+        {
+          std::string open_ = "[";
+          std::string close_ = "]: ";
+
+          msg = open_ + gettime () + close_ + ch_->prefix + msg + "\n";
+        }
+      else
+        msg = msg + "\n";
+
+      return msg;
+    }
+
+    inline locked_channel &
+    operator () (int section, int level)
+    {
+      section_ = section;
+      level_ = level;
+
+      return *this;
+    }
+
+    template <typename T>
+    inline proxy_log <locked_channel, locked_channel, T>
+    operator << (const T &what)
+    {
+      return proxy_log <locked_channel, locked_channel, T> (*this, *this, what);
+    }
+
+    inline locked_channel &
+    operator << (void (*) (const proxy_log_output_time &))
+    {
+      ch_->set_output_time ();
+      return *this;
+    }
+
+    inline void
+    operator << (void (*) (const proxy_log_end &))
+    {
+      output (*this);
+    }
+
+    inline lsp_channel
+    get_channel () const
+    {
+      return ch_;
+    }
+
+    inline locked_channel &
+    set_priority (int section, int level)
+    {
+      ch_->set_priority (priority (section, level));
+      return *this;
+    }
+
+    inline const char *
+    what () const
+    {
+      return "";
+    }
+
+    template <typename proxy_t>
+    inline void
+    output (const proxy_t &w, bool is_end = true)
+    {
+      for (size_t i = 0, cnt = ch_->output_streams_.size (); i < cnt; ++i)
+        {
+          const bs_channel::sp_stream_t &stream = ch_->output_streams_[i];
+          if (stream->check_section (section_, level_))
+            {
+              if (is_end)
+                stream->write (bs_end (w.what ()));
+              else
+                stream->write (w.what ());
+            }
+        }
+    }
+
+    inline void
+    log_output_not_finished ()
+    {
+      for (size_t i = 0, cnt = ch_->output_streams_.size (); i < cnt; ++i)
+        {
+          const bs_channel::sp_stream_t &stream = ch_->output_streams_[i];
+          stream->write (bs_end ("INVALID OUTPUT TO LOG: FILE (" + std::string (file_) + "), LINE (" + detail::get_str (line_) + ")"));
+        }
+    }
+
+  private:
+    lsp_channel         ch_;
+    const char          *file_;
+    int                 line_;
+    int                 section_;
+    int                 level_;
   };
 
 
-	class BS_API bs_log : public bs_messaging {
-		friend struct bs_private::log_wrapper;
-		friend class thread_log;
-		friend class std::map<int,bs_log>;
-	public:
-		typedef std::set< sp_channel , channel_comp_names > schannel;
-		typedef schannel::iterator schan_iter;
-		typedef schannel::const_iterator schan_iter_const;
+  class BS_API bs_log : public bs_messaging 
+  {
+  public:
+    typedef std::map <std::string, sp_channel>  channel_map_t;
+    typedef channel_map_t::iterator             channel_iterator_t;
+    typedef channel_map_t::const_iterator       channel_iterator_const_t;
 
-		BLUE_SKY_SIGNALS_DECL_BEGIN(bs_messaging)
-			log_channel_added,
-			log_channel_removed,
-		BLUE_SKY_SIGNALS_DECL_END
+    BLUE_SKY_SIGNALS_DECL_BEGIN(bs_messaging)
+      log_channel_added,
+      log_channel_removed,
+    BLUE_SKY_SIGNALS_DECL_END
 
-		sp_channel add_channel(const sp_channel&);
-		bool rem_channel(const std::string&);
+  public:
+    sp_channel 
+    add_channel(const sp_channel&);
 
-		const sp_channel& operator[](const std::string &name_) const;
-    locked_channel get_locked (const std::string &channel_name);
+    bool 
+    rem_channel(const std::string&);
 
-		std::list< std::string > channel_list() const;
+    locked_channel 
+    get_locked (const std::string &name_, const char *file, int line) const
+    {
+      channel_iterator_const_t it = channel_map_.find(name_);
+      if (it != channel_map_.end()) 
+        {
+          return locked_channel (it->second, file, line);
+        }
 
-		void dispose() const;
+      bs_throw_exception (std::string("Unknown log name ") + name_);
+    }
 
-		virtual ~bs_log() {}
-		bs_log(const bs_log &src);
-	protected:
-		//bs_log(const bs_messaging::sig_range_t&);
-	private:
-		bs_log(); // : objbase() {}
-		//BLUE_SKY_TYPE_DECL_T(bs_log)
+    void 
+    dispose() const;
 
-		schannel schan;
-	};
+    virtual ~bs_log() {}
+    bs_log();
 
-	class BS_API cout_scriber : public bs_stream {
-	public:
-		void write(const std::string &str) const;
-	};
+  private:
+    channel_map_t channel_map_;
+  };
 
-	class BS_API file_scriber : public bs_stream {
-	public:
-		typedef smart_ptr< std::fstream > sp_fstream;
 
-		file_scriber() {}
-	  file_scriber(const file_scriber &src) : bs_stream() { *this = src; }
+  //BS_API sp_channel
+  //wait_end(const sp_channel&);
+  
+  inline bool operator == (const bs_channel &lc, const bs_channel &rc) {
+    return (lc.get_name () == rc.get_name ());
+  }
 
-		file_scriber(const std::string &filename, std::ios_base::openmode mode);
-		//~file_scriber();
-		void write(const std::string &str) const;
+  inline bool operator < (const bs_channel &lc, const bs_channel &rc) {
+    return (lc.get_name () < rc.get_name ());
+  }
 
-		file_scriber &operator=(const file_scriber &src) {
-			file = src.file;
-			return *this;
-		}
+  inline bool operator == (const bs_channel &lc, const std::string &rc_name) {
+    return (lc.get_name () == rc_name);
+  }
 
-	private:
-		sp_fstream file;
-	};
+  inline bool operator < (const bs_channel &lc, const std::string &rc_name) {
+    return (lc.get_name () < rc_name);
+  }
 
-	class BS_API thread_log {
-		friend struct bs_private::thread_log_wrapper;
-	public:
-		typedef smart_ptr<bs_log>               sp_log;
-		typedef std::map<int, sp_log>           mlog;
-		typedef smart_ptr<mlog>                 sp_mlog;
-		typedef mlog::const_iterator            const_iterator;
-		typedef mlog::iterator                  iterator;
+} // namespace blue_sky
 
-		/*BLUE_SKY_SIGNALS_DECL_BEGIN(thread_log)
-			log_channel_added,
-			log_channel_removed,
-			log_stream_added,
-			log_stream_removed,
-		BLUE_SKY_SIGNALS_DECL_END*/
+#include "bs_report_thread.h"
 
-		sp_channel add_log_channel(const std::string&);
-		sp_channel add_log_channel(const sp_channel&);
-		bool add_log_stream(const std::string&,const sp_stream&);
-		bool rem_log_channel(const std::string&);
-		bool rem_log_stream(const std::string&,const sp_stream&);
-
-		void kill();
-
-		const sp_channel &operator[](const std::string&);
-
-	private:
-		thread_log();
-		//thread_log(const thread_log&);
-
-		sp_mlog logs;
-	};
-
-	typedef singleton< bs_log > give_log;
-	typedef singleton< thread_log > give_tlog;
-
-	BS_API sp_channel bs_end(const sp_channel&);
-  BS_API locked_channel &bs_end (locked_channel &ch);
-
-	BS_API sp_channel output_time(const sp_channel&);
-
-	BS_API sp_channel wait_end(const sp_channel&);
-
-	BS_API sp_channel bs_lock(const sp_channel&);
-
-	//BS_API const bs_channel &unlock(const bs_channel&);
-
-	inline bool operator == (const bs_channel &lc, const bs_channel &rc) {
-		return (lc.name == rc.name);
-	}
-
-	inline bool operator < (const bs_channel &lc, const bs_channel &rc) {
-		return (lc.name < rc.name);
-	}
-
-	inline bool operator == (const bs_channel &lc, const std::string &rc_name) {
-		return (lc.name == rc_name);
-	}
-
-	inline bool operator < (const bs_channel &lc, const std::string &rc_name) {
-		return (lc.name < rc_name);
-	}
-
-}
-
-#define BSOUT blue_sky::give_log::Instance()[OUT_LOG]
-#define BSERROR blue_sky::give_log::Instance()[ERR_LOG]
+#define BSOUT   kernel::get_log ().get_locked (OUT_LOG, __FILE__, __LINE__)
+#define BSERR   kernel::get_log ().get_locked (ERR_LOG, __FILE__, __LINE__)
+#define BSERROR BSERR
 
 #endif // _BS_REPORTER_H
+

@@ -23,7 +23,6 @@
 
 #include "bs_common.h"
 #include <list>
-#include "boost/graph/adjacency_list.hpp"
 
 namespace blue_sky {
 
@@ -57,23 +56,12 @@ void remove_excess (std::list <T*> *l)
 }
 
 //misc functions
-//BS_C_API void my_sprintf(std::string& buf, const char* fmt, ...);
 BS_C_API void DumpV(const ul_vec& v, const char* pFname = NULL);
 
 //! Type of loading plugin pair. first: plugin's path, second: plugin's version
 typedef std::pair<std::string,std::string> lload;
 //! type of vector of plugin pairs
 typedef std::vector<lload> v_lload;
-//! boost graph type
-//typedef boost::adjacency_list<> load_graph;
-typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> load_graph;
-/*
-struct lload
-{
-  std::string name;
-  std::string ver;
-};
-*/
 
  //! \brief get the ordered list of blue-sky libraries pathes
 BS_C_API void get_lib_list(std::list<lload> & //!< list of loading
@@ -83,12 +71,18 @@ BS_C_API int version_comparator(const char * //!< left version
 								 , const char * //!< right version
 								 );
 //! \brief get time function
-BS_API const char * gettime();
+BS_API std::string gettime();
 
 BS_API blue_sky::error_code search_files(std::vector<std::string> &res, const char * what, const char * lib_dir);
 
 BS_API std::string system_message(int err_code);
 BS_API std::string last_system_message();
+
+/**
+ * \brief return dynamic lib error message
+ * */
+BS_API std::string dynamic_lib_error_message ();
+
 
 }	//end of blue_sky namespace
 

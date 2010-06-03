@@ -3,10 +3,10 @@
 #include "bs_exception.h"
 #include "bs_tree.h"
 #include "bs_misc.h"
+#include "bs_kernel.h"
 
 #include <boost/regex.hpp>
 
-#include <iostream>
 #include <sstream>
 #include <fstream>
 
@@ -236,7 +236,7 @@ namespace blue_sky {
 		return cfg_holder::Instance().cfg_ref();
 	}
 
-	BS_API bs_cfg_p::vstr_t
+	bs_cfg_p::vstr_t
 	bs_config::operator [] (const char *e) {
 		return cfg::Instance ()[e];
 	}

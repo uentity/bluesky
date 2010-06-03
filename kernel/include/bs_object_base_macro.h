@@ -58,15 +58,12 @@ T(const T &x);
 /*!
 \brief Very common implementations of functions for working with static list of instances for templated type.
 */
-#define BS_COMMON_IMPL_EXT_(prefix, T, is_decl)                                            \
-BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator                      \
-BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::) \
-bs_inst_begin() { return BS_KERNEL.objinst_begin(bs_type()); }                             \
-BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator                      \
-BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::) \
-bs_inst_end() { return BS_KERNEL.objinst_end(bs_type()); }                                 \
-BOOST_PP_SEQ_ENUM(prefix) ulong                                                            \
-BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_IIF(is_decl, BOOST_PP_EMPTY(), ::) \
+#define BS_COMMON_IMPL_EXT_(prefix, T, is_decl)                                                    \
+BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator BS_FMT_TYPE_SPEC(T, is_decl) \
+bs_inst_begin() { return BS_KERNEL.objinst_begin(bs_type()); }                                     \
+BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator BS_FMT_TYPE_SPEC(T, is_decl) \
+bs_inst_end() { return BS_KERNEL.objinst_end(bs_type()); }                                         \
+BOOST_PP_SEQ_ENUM(prefix) ulong BS_FMT_TYPE_SPEC(T, is_decl)                                       \
 bs_inst_cnt() { return BS_KERNEL.objinst_cnt(bs_type()); }
 
 #define BS_COMMON_DECL_T_MEM(T)                \
@@ -79,7 +76,7 @@ T(const T&);
 *	This macro is included by BLUE_SKY_TYPE_IMPL*
 */
 #define BS_COMMON_IMPL(T) \
-BS_COMMON_IMPL_EXT_((), (T), 0)
+BS_COMMON_IMPL_EXT_(BS_SEQ_NIL(), (T), 0)
 
 /*!
 \brief Very common implementations of functions for working with static list of instances for templated type specialization.

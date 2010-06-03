@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(LIBCONFIG_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
-				PreprocessorDefinitions="_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING;BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
+				PreprocessorDefinitions="_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING;BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;BS_CREATE_UNMANAGED_OBJECTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				SmallerTypeCheck="true"
@@ -54,6 +54,7 @@
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="4"
+				ShowIncludes="false"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -66,10 +67,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="loki_D.lib libconfig++.lib python25.lib psapi.lib"
+				AdditionalDependencies="loki_D.lib python25.lib psapi.lib"
 				OutputFile="$(ProjectDir)/../exe/debug/$(ProjectName)_d.dll"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(LIBCONFIG_PATH)/debug&quot;;&quot;D:\_zerg\Temp\Python-2.5.2\Python-2.5.2\PCbuild8\win32debug&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
+				AdditionalLibraryDirectories="&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
 				GenerateManifest="true"
 				IgnoreDefaultLibraryNames="python25_d.lib"
 				GenerateDebugInformation="true"
@@ -127,8 +128,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(STLPORT_PATH_)/stlport&quot;;&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(LIBCONFIG_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
-				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__"
+				AdditionalIncludeDirectories="&quot;$(STLPORT_PATH_)/stlport&quot;;&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
+				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="true"
 				FloatingPointExceptions="true"
@@ -151,10 +152,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="loki.lib libconfig++.lib python25.lib psapi.lib"
+				AdditionalDependencies="loki.lib python25.lib psapi.lib"
 				OutputFile="$(ProjectDir)/../exe/release/$(ProjectName).dll"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;$(STLPORT_PATH_)/lib&quot;;&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(LIBCONFIG_PATH)/release&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
+				AdditionalLibraryDirectories="&quot;$(STLPORT_PATH_)/lib&quot;;&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
 				GenerateManifest="true"
 				IgnoreDefaultLibraryNames="python25_d.lib"
 				GenerateDebugInformation="false"
@@ -297,10 +298,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_config_parser.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\src\bs_exception.cpp"
 				>
 			</File>
@@ -310,10 +307,6 @@
 			</File>
 			<File
 				RelativePath=".\src\bs_kernel_ston.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\bs_link.cpp"
 				>
 			</File>
 			<File
@@ -333,23 +326,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_report.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\src\bs_shell.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_tree.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\src\bs_type_info.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\main.cpp"
 				>
 			</File>
 			<File
@@ -379,18 +360,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\bs_conf_reader.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\bs_conf_reader.h"
-				>
-			</File>
-			<File
-				RelativePath=".\include\bs_config_parser.h"
-				>
-			</File>
-			<File
 				RelativePath=".\include\bs_conversion.h"
 				>
 			</File>
@@ -408,10 +377,6 @@
 			</File>
 			<File
 				RelativePath=".\include\bs_kernel.h"
-				>
-			</File>
-			<File
-				RelativePath=".\include\bs_link.h"
 				>
 			</File>
 			<File
@@ -439,6 +404,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\include\bs_object_base_macro.h"
+				>
+			</File>
+			<File
 				RelativePath=".\include\bs_obsolete.h"
 				>
 			</File>
@@ -455,19 +424,15 @@
 				>
 			</File>
 			<File
-				RelativePath=".\include\bs_report.h"
-				>
-			</File>
-			<File
 				RelativePath=".\include\bs_shell.h"
 				>
 			</File>
 			<File
-				RelativePath=".\include\bs_tree.h"
+				RelativePath=".\include\bs_type_info.h"
 				>
 			</File>
 			<File
-				RelativePath=".\include\bs_type_info.h"
+				RelativePath=".\include\bs_type_macro.h"
 				>
 			</File>
 			<File
@@ -555,22 +520,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_link.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\include\python\py_bs_link.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\python\py_bs_log.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\python\py_bs_log.h"
-				>
-			</File>
-			<File
 				RelativePath=".\src\python\py_bs_messaging.cpp"
 				>
 			</File>
@@ -583,7 +532,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_object_base.h"
+				RelativePath=".\include\python\py_bs_object_base.h"
 				>
 			</File>
 			<File
@@ -591,15 +540,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_shell.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\python\py_bs_tree.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\python\py_bs_tree.h"
+				RelativePath=".\include\python\py_bs_shell.h"
 				>
 			</File>
 			<File
@@ -607,6 +548,226 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="memory manager"
+			>
+			<File
+				RelativePath=".\include\allocator_interface.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\backtrace_tools_unix.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\backtrace_tools_win.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\hoard_allocator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\memory_manager.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions="BS_BACKTRACE_LEN=48;BS_BOS_CORE_COLLECT_BACKTRACE_"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PreprocessorDefinitions="BS_BACKTRACE_LEN=48;BS_BOS_CORE_COLLECT_BACKTRACE_"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\include\memory_manager.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\std_allocator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\tlsf_allocator.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="assert"
+			>
+			<File
+				RelativePath=".\src\bs_assert.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_assert.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_bs_assert.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\python\py_bs_assert.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="config"
+			>
+			<File
+				RelativePath=".\src\bs_conf_reader.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\bs_conf_reader.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\bs_config_parser.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_config_parser.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="tools"
+			>
+			<File
+				RelativePath=".\src\bs_kernel_tools.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_kernel_tools.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\pp_param_list.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="tree"
+			>
+			<File
+				RelativePath=".\src\bs_link.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_link.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\bs_tree.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_tree.h"
+				>
+			</File>
+			<Filter
+				Name="python"
+				>
+				<File
+					RelativePath=".\src\python\py_bs_link.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\python\py_bs_link.h"
+					>
+				</File>
+				<File
+					RelativePath=".\src\python\py_bs_tree.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\python\py_bs_tree.h"
+					>
+				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="log"
+			>
+			<File
+				RelativePath=".\src\bs_log_scribers.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_log_scribers.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_log_stream.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\bs_report.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_report.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_bs_log.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\python\py_bs_log.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="arrays"
+			>
+			<File
+				RelativePath=".\include\aligned_allocator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\array_ext.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\shared_array.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\shared_array_allocator.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\shared_array_allocator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\shared_array_detail.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\shared_vector.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\shared_vector.h"
+				>
+			</File>
+		</Filter>
+		<File
+			RelativePath=".\src\main.cpp"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

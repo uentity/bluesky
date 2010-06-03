@@ -45,6 +45,8 @@ namespace blue_sky {
 	BLUE_SKY_TYPE_STD_COPY_T(str_data_table);
 	BLUE_SKY_TYPE_STD_COPY_T(idx_data_table);
 
+	// data-table related exports
+
 	BLUE_SKY_TYPE_IMPL_T_EXT(2, (data_table< bs_map, str_val_traits >), 1, (objbase), "str_data_table",
 		"Table of values of mixed types addressed by string key", "", false);
 	BLUE_SKY_TYPE_IMPL_T_EXT(2, (data_table< bs_array, vector_traits >), 1, (objbase), "idx_data_table",

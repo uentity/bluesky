@@ -16,6 +16,12 @@
 #include "bs_kernel_tools.h"
 #include "bs_shell.h"
 
+#ifdef _WIN32
+#include "backtrace_tools_win.h"
+#else
+#include "backtrace_tools_unix.h"
+#endif
+
 #include <sstream>
 
 using namespace std;
@@ -137,5 +143,35 @@ std::string kernel_tools::print_registered_instances() {
 	outs << "} end of BlueSky registered instances list" << endl;
 	outs << "------------------------------------------------------------------------" << endl;
 	return outs.str();
+}
+
+std::string
+kernel_tools::get_backtrace (int backtrace_depth)
+{
+  static const size_t max_backtrace_len = 1024;
+  void *backtrace[max_backtrace_len];
+
+  int len = tools::get_backtrace (backtrace, backtrace_depth);
+  if (len)
+    {
+      std::string callstack = "\nCall stack: ";
+      char **backtrace_names = tools::get_backtrace_names (backtrace, len);
+      for (int i = 0; i < len; ++i)
+        {
+          if (backtrace_names[i] && strlen (backtrace_names[i]))
+            {
+              callstack += (boost::format ("\n\t%d: %s") % i % backtrace_names[i]).str ();
+            }
+          else
+            {
+              callstack += (boost::format ("\n\t%d: <invalid entry>") % i).str ();
+            }
+        }
+
+      free (backtrace_names);
+      return callstack;
+    }
+
+  return "No call stack";
 }
 

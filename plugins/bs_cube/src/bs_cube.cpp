@@ -28,11 +28,11 @@ bs_cube::bs_cube(bs_type_ctor_param)
 	: bs_refcounter(), objbase()
 //: bs_node(sp_obj(this))
 {
-	bs_log &l = give_log::Instance();
+	bs_log &l = BS_KERNEL.get_log();
 	logname << "cube_test_channel" << this;
 	BSOUT << "Try to create log with name " << logname.str() << bs_end;
 	l.add_channel(sp_channel(new bs_channel(logname.str())));
-	(*l[logname.str()].lock()) << std::string("Cube created!") << bs_end;
+	//l[logname.str()] << std::string("Cube created!") << bs_end;
 }
 
 bs_cube::bs_cube(const bs_cube& src)
@@ -57,9 +57,9 @@ void bs_cube::test()
 
 	std::cout << "bs_cube::test called" << std::endl;
 	var_ = 0;
-	bs_log &l = give_log::Instance();
-	(*l[logname.str()].lock()) << std::string("Cube log destroing!") << bs_end;
-	l.rem_channel(logname.str());	
+	bs_log &l = BS_KERNEL.get_log();
+	//l[logname.str()] << std::string("Cube log destroing!") << bs_end;
+	l.rem_channel(logname.str());
 }
 
 cube_command::cube_command(bs_type_ctor_param)
