@@ -19,6 +19,17 @@
  * \author uentity
  */
 
+#ifdef BSPY_EXPORTING
+#include <Python.h>
+//boost::python
+#include <boost/python/module_init.hpp>
+#include <boost/python/scope.hpp>
+#include <boost/python/class.hpp>
+#include <boost/python/str.hpp>
+#include <boost/python/exec.hpp>
+#include <boost/python/import.hpp>
+#endif
+
 #include "bs_kernel.h"
 #include "bs_misc.h"
 #include "bs_exception.h"
@@ -47,18 +58,11 @@
 #include "boost/filesystem/exception.hpp"
 #include "boost/filesystem/path.hpp"
 #include "boost/pool/pool_alloc.hpp"
-//boost::python
-#include "boost/python/module_init.hpp"
-#include "boost/python/scope.hpp"
-#include "boost/python/class.hpp"
-#include "boost/python/str.hpp"
-#include "boost/python/exec.hpp"
-#include "boost/python/import.hpp"
 
 //Loki
 //#include "loki/AssocVector.h"
 //#include "loki/Factory.h"
-#include "loki/Singleton.h"
+//#include "loki/Singleton.h"
 
 using namespace std;
 using namespace boost;
@@ -83,13 +87,10 @@ namespace std {
 
 // hidden implementation stuff
 namespace {
-
-using namespace blue_sky;
-using namespace boost::python;
-using namespace boost::python::detail;
 /*-----------------------------------------------------------------------------
  *  Global implementation details
  *-----------------------------------------------------------------------------*/
+using namespace blue_sky;
 
 // tags for kernel & runtime types plugin_descriptor
 struct __kernel_types_pd_tag__ {};
@@ -113,6 +114,10 @@ struct __runtime_types_pd_tag__ {};
  *  Python-related helpers to insert BS plugins under specified Python namespaces
  *-----------------------------------------------------------------------------*/
 
+#ifdef BSPY_EXPORTING
+using namespace boost::python;
+using namespace boost::python::detail;
+
 //dumb struct to create new Python scope
 struct py_scope_plug {};
 
@@ -124,7 +129,7 @@ void bspy_init_plugin(const string& parent_scope, const string& nested_scope, vo
 	static PyObject* m = Py_InitModule(parent_scope.c_str(), initial_methods);
 	static scope current_module(object(((borrowed_reference_t*)m)));
 	if(!m) {
-		bs_throw_exception (boost::format ("Py_InitModule: Can't create BS kernel module in namespace %s")
+		bs_throw_exception (boost::format ("bspy_init_plugin: Can't create BS kernel module in namespace %s")
 				% parent_scope);
 	}
 
@@ -132,7 +137,7 @@ void bspy_init_plugin(const string& parent_scope, const string& nested_scope, vo
 	std::string nested_namespace = parent_scope + "." + nested_scope;
 	PyObject *nested_module = Py_InitModule (nested_namespace.c_str (), initial_methods);
 	if (!nested_module) {
-		bs_throw_exception (boost::format ("Py_InitModule: Can't create plugin module in namespace %s") % nested_namespace);
+		bs_throw_exception (boost::format ("bspy_init_plugin: Can't create plugin module in namespace %s") % nested_namespace);
 	}
 	scope nested(object (((borrowed_reference_t *)nested_module)));
 	current_module.attr(nested_scope.c_str ()) = nested;
@@ -156,6 +161,7 @@ string extract_root_name(const string& full_name) {
 
 	return pyl_name;
 }
+#endif
 
 /*-----------------------------------------------------------------------------
  *  Shared library descriptor
@@ -179,11 +185,11 @@ struct lib_descriptor
 
 	bool load(const char* fname) {
 		fname_ = fname;
-	#ifdef UNIX
+#ifdef UNIX
 		handle_ = dlopen(fname, RTLD_GLOBAL | RTLD_NOW);
-	#else
+#else
 		handle_ = LoadLibrary(LPCSTR(fname));
-	#endif
+#endif
     if (!handle_)
       {
         throw bs_dynamic_lib_exception ("LoadPlugin");
@@ -302,7 +308,7 @@ struct elem_ptr {
 
 	elem_ptr(const T& el) : p_(&el) {}
 
-  elem_ptr (const T *el) : p_ (el) {}
+	elem_ptr (const T *el) : p_ (el) {}
 
 	elem_ptr& operator =(const T& el) {
 		p_ = &el;
@@ -1041,7 +1047,6 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 	lib_descriptor lib; //temp DLL-pointer
 	BS_REGISTER_PLUGIN bs_register_plugin; //pointer to fun_register (from temp opened DLL)
 	BS_GET_PLUGIN_DESCRIPTOR bs_plugin_descriptor;
-	bs_init_py_fn init_py_fn;
 
 	//message formatter
 	string msg;
@@ -1100,8 +1105,10 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 			throw bs_exception("LoadPlugins", msg.c_str());
 		}
 
+#ifdef BSPY_EXPORTING
 		//init Python subsystem if asked for
 		if(init_py_subsyst) {
+			bs_init_py_fn init_py_fn;
 			lib.load_sym("bs_init_py_subsystem", init_py_fn);
 			if(!init_py_fn)
 				BSERROR << "LoadPlugins: Python subsystem wasn't found in plugin " << lib.fname_ << bs_end;
@@ -1123,6 +1130,10 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 				//BSERROR << "LoadPlugins: Error during initialization of Python sybsystem in plugin " << lib.fname_ << bs_end;
 			}
 		}
+#else
+		// supress warning
+		(void)init_py_subsyst;
+#endif
 
 		//finally everything ok now
 		BSOUT << "BlueSky plugin " << lib.fname_.c_str() << " loaded" << bs_line;
@@ -1165,7 +1176,7 @@ blue_sky::error_code kernel::kernel_impl::load_plugins(bool init_py_subsyst) {
 	//get order of plugins loading
 	get_lib_list(cft_);
 
-	//PyObject* bspy_module = NULL;
+#ifdef BSPY_EXPORTING
 	if(init_py_subsyst) {
 		//initialize Python module for kernel (from boost::python::detail::init_module
 		//bspy_module	= Py_InitModule(const_cast<char*>(plugin_info.py_namespace_.c_str()), initial_methods);
@@ -1185,6 +1196,7 @@ blue_sky::error_code kernel::kernel_impl::load_plugins(bool init_py_subsyst) {
 			init_py_subsyst = false;
 		}
 	}
+#endif
 
 	ulong lib_cnt = 0;
 	for(std::list< lload >::const_iterator i = cft_.begin(); i != cft_.end(); ++i) {
