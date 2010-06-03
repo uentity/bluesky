@@ -815,7 +815,7 @@ try {
 
         //test_python_thread_pool();
 
-		k.register_type(plugin_info, dummy::bs_type());
+		k.register_type(*bs_get_plugin_descriptor(), dummy::bs_type());
 		sp_dummy d = BS_KERNEL.create_object("bs_dummy");
 
 		kernel_tools::print_loaded_types();
