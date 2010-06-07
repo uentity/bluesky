@@ -29,18 +29,6 @@ namespace blue_sky { namespace python {
 using namespace boost;
 using namespace boost::python;
 
-//void py_export_common();
-void py_export_typed();
-void py_export_combase();
-void py_export_kernel();
-void py_export_abstract_storage();
-void py_export_link();
-void py_export_log();
-void py_export_messaging();
-void py_export_objbase();
-void py_export_shell();
-void py_export_tree();
-
 }}
 
 #endif // PY_BS_EXPORTS_H_

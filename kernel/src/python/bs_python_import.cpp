@@ -25,6 +25,19 @@
 
 namespace blue_sky { namespace python {
 
+// forward definition on exporting functions
+//void py_export_common();
+void py_export_typed();
+void py_export_combase();
+void py_export_kernel();
+void py_export_abstract_storage();
+void py_export_link();
+void py_export_log();
+void py_export_messaging();
+void py_export_objbase();
+void py_export_shell();
+void py_export_tree();
+
 BLUE_SKY_INIT_PY_FUN
 {
 	register_exception_translator<bs_exception>(&exception_translator);
@@ -38,13 +51,13 @@ BLUE_SKY_INIT_PY_FUN
 		.def(self == self)
 		.def(self != self);
 
-  py_export_vectors ();
+	py_export_vectors ();
 
 	class_< std::list<std::string> >("list_string")
 		.def("__iter__", boost::python::iterator< std::list<std::string> >());
 
-  python::py_export_error_codes ();
-  python::py_export_assert ();
+	python::py_export_error_codes ();
+	python::py_export_assert ();
 
 	//export the rest stuff
 	py_export_messaging();
