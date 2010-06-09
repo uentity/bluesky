@@ -32,7 +32,10 @@ else :
 
 # are we building with python support
 if base_env['py'] == '1' :
-	base_env.AppendUnique(CPPPATH = ['#kernel/include/python']);
+	base_env.AppendUnique(
+		CPPPATH = ['#kernel/include/python'],
+		LIBS = ['${python_name}']
+	);
 
 # build target
 client = base_env.Program(target = os.path.join(tar_exe_dir, exe_name), source = Glob(os.path.join('src', '*.cpp'), True, True));
