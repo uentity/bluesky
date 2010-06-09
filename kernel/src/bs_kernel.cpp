@@ -451,6 +451,11 @@ bool kernel::unmanaged_def_val() {
 #endif
 }
 
+// forward declaration of function that register kernel types
+typedef kernel::types_enum (*reg_kernel_types_f)();
+kernel::types_enum register_bs_array();
+kernel::types_enum register_data_table();
+
 /*-----------------------------------------------------------------------------
  *  kernel_impl class definition
  *-----------------------------------------------------------------------------*/
@@ -543,29 +548,40 @@ public:
  *-----------------------------------------------------------------------------*/
 	//constructor
 	kernel_impl()
-		: kernel_pd_(*bs_get_plugin_descriptor())
+		: kernel_pd_(BS_GET_TI(__kernel_types_pd_tag__), "Kernel types", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs")
 		, runtime_pd_(BS_GET_TI(__runtime_types_pd_tag__), "Runtime types", KERNEL_VERSION, "BlueSky runtime types tag", "", "bs")
 	{
 		//register inner plugin_descriptors in dictionary
 		pl_dict_.insert(kernel_pd_);
 		pl_dict_.insert(runtime_pd_);
 		//register str_data_table object
-		register_kernel_type(str_data_table::bs_type());
+		//register_kernel_type(str_data_table::bs_type());
 		//register idx_data_table object
-		register_kernel_type(idx_data_table::bs_type());
+		//register_kernel_type(idx_data_table::bs_type());
 
 		register_kernel_type(empty_storage::bs_type());
-		//get_lib_list(cft_);
-		//cleanup dictionaries
-		//clean_plugins();
 
-		//register BlueSky signal type
-		//register_kernel_type(bs_signal::bs_type());
+		bool res = true;
+		res &= register_kernel_types(register_bs_array);
+		res &= register_kernel_types(register_data_table);
+		if(!res) {
+			BSERR << "Warning! Some kernel types wasn't registered" << bs_line;
+		}
 	}
 
 	~kernel_impl() {
 		//string s = "~kernel_impl called";
 		//cout << s << endl;
+	}
+
+	// call types enumerator and register each returned type as kernel
+	bool register_kernel_types(reg_kernel_types_f f) {
+		// invoke f to get enum
+		types_enum types = f();
+		bool res = true;
+		for(types_enum::const_iterator t = types.begin(), end = types.end(); t != end; ++t)
+			res &= register_kernel_type(*t);
+		return res;
 	}
 
 	// access to kernel_impl instance for local clients
@@ -1237,27 +1253,26 @@ kernel::kernel()
 	//log::Instance().init_logs();
 }
 
-kernel::~kernel()
-{
-  for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i)
-    {
-      if (disconnectors_[i])
-        disconnectors_[i]->disconnect_signals ();
-    }
+kernel::~kernel() {
+	for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i) {
+		if (disconnectors_[i])
+			disconnectors_[i]->disconnect_signals ();
+	}
 
-  BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());
-  pimpl_->instances_.clear ();
+	// why assert?
+	//BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());
+	pimpl_->instances_.clear ();
 
-  memory_manager_.print_info ();
+	memory_manager_.print_info ();
 	UnloadPlugins();
 
-  BS_ASSERT (pimpl_->loaded_plugins_.empty ());
-  BS_ASSERT (pimpl_->pert_str_tbl_.empty ());
-  BS_ASSERT (pimpl_->pert_idx_tbl_.empty ());
-  BS_ASSERT (pimpl_->sig_storage_.empty ()) (pimpl_->sig_storage_.size ());
+	//BS_ASSERT (pimpl_->loaded_plugins_.empty ());
+	//BS_ASSERT (pimpl_->pert_str_tbl_.empty ());
+	//BS_ASSERT (pimpl_->pert_idx_tbl_.empty ());
+	//BS_ASSERT (pimpl_->sig_storage_.empty ()) (pimpl_->sig_storage_.size ());
 
 	// WTF?? 
-  if(pimpl_.get()) delete pimpl_.get();
+	if(pimpl_.get()) delete pimpl_.get();
 }
 
 void

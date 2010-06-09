@@ -57,36 +57,27 @@ namespace blue_sky {
 	BLUE_SKY_TYPE_IMPL_T(data_table< bs_array >, objbase, "idx_data_table",
 		"Table of values of mixed types addressed by index", "");
 
-	BS_TYPE_IMPL_T_MEM(str_val_table, std::string)
-	BS_TYPE_IMPL_T_MEM(str_val_table, sp_obj)
+	BS_TYPE_IMPL_T_MEM(str_val_table, std::string);
+	BS_TYPE_IMPL_T_MEM(str_val_table, sp_obj);
+
+	kernel::types_enum register_bs_array() {
+		kernel::types_enum te;
+		te.push_back(bs_array< float >::bs_type());
+		te.push_back(bs_array< double >::bs_type());
+		te.push_back(bs_array< int >::bs_type());
+		te.push_back(bs_array< ulong >::bs_type());
+		te.push_back(bs_array< unsigned char >::bs_type());
+		te.push_back(bs_array< std::string >::bs_type());
+		return te;
+	}
+
+	kernel::types_enum register_data_table() {
+		kernel::types_enum te;
+		te.push_back(data_table< str_val_table >::bs_type());
+		te.push_back(data_table< bs_array >::bs_type());
+		te.push_back(str_val_table< std::string >::bs_type());
+		te.push_back(str_val_table< sp_obj >::bs_type());
+		return te;
+	}
 }
-
-//using namespace blue_sky;
-
-//template class str_val_table< int >;
-//template class str_val_table< float >;
-//template class str_val_table< double >;
-//template class str_val_table< bool >;
-//template class str_val_table< std::string >;
-//#if !defined(_WIN32) && !defined(_MSC_VER)
-//template class str_val_table< objbase >;
-//template class str_val_table< combase >;
-//#else
-//template class str_val_table< smart_ptr< objbase, true > >;
-//template class str_val_table< smart_ptr< combase, true > >;
-//#endif
-
-
-// template class bs_array< int >;
-// template class bs_array< float >;
-// template class bs_array< double >;
-// template class bs_array< bool >;
-// template class bs_array< std::string >;
-// #if !defined(_WIN32) && !defined(_MSC_VER)
-// template class bs_array< objbase >;
-// template class bs_array< combase >;
-// #else
-// template class bs_array< smart_ptr< objbase, true > >;
-// template class bs_array< smart_ptr< combase, true > >;
-// #endif
 
