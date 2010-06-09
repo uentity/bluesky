@@ -818,7 +818,7 @@ try {
 		k.register_type(*bs_get_plugin_descriptor(), dummy::bs_type());
 		sp_dummy d = BS_KERNEL.create_object("bs_dummy");
 
-		kernel_tools::print_loaded_types();
+		cout << kernel_tools::print_loaded_types();
 		fill_dummy_node(100);
 		cout << kernel_tools::walk_tree();
 
