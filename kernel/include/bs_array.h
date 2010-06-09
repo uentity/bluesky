@@ -25,7 +25,7 @@ namespace blue_sky {
  *-----------------------------------------------------------------------------*/
 /// @brief traits for arrays with std::vector container
 template< class T >
-struct vector_traits : public std::vector< T > {
+struct BS_API vector_traits : public std::vector< T > {
 	typedef std::vector< T > container;
 	typedef typename container::value_type value_type;
 	//! type of key - index
@@ -52,6 +52,7 @@ class BS_API bs_array : public bs_arrbase< T >, public cont_traits< T >::contain
 public:
 	typedef bs_arrbase< T > arrbase_t;
 	typedef cont_traits< T > cont_traits_t;
+	typedef typename cont_traits_t::container base_t;
 
 	// inherited from bs_arrbase class
 	//! type of value
@@ -66,12 +67,19 @@ public:
 	// inherited from cont_traits
 	//! type of vector of values
 	typedef typename cont_traits_t::container container;
-	//! type of iterator
+	//! iterators
 	typedef typename cont_traits_t::iterator iterator;
-	//! type of const iterator
 	typedef typename cont_traits_t::const_iterator const_iterator;
+	//! type of reverse iterators
+	typedef typename cont_traits_t::reverse_iterator reverse_iterator;
+	typedef typename cont_traits_t::const_reverse_iterator const_reverse_iterator;
 
-	using container::insert;
+	//using container::insert;
+
+	// copy construct from container
+	bs_array(const base_t& rhs)
+		: base_t(rhs)
+	{}
 
 	/// @brief Obtain array size
 	/// Overloads bs_arrbase method
@@ -84,7 +92,7 @@ public:
 	/// Overloads bs_arrbase method
 	/// @param key --- item key
 	///
-	/// @return modifyable refernce to element
+	/// @return modifyable reference to element
 	reference operator[](const key_type& key) {
 		return container::operator[](key);
 	}
@@ -108,19 +116,19 @@ public:
 		return container::at(key);
 	}
 
-	/*!
-	  \brief Add item method.
+	///*!
+	//  \brief Add item method.
 
-	  Insert after key-index object.
-	  \param key - key object
-	  \param value - value object
-	  \return such as std::vector
-	  */
-	bool insert(const key_type& key, const value_type& value) {
-		if(key > size()) return false;
-		container::insert(container::begin() + key, value);
-		return true;
-	}
+	//  Insert after key-index object.
+	//  \param key - key object
+	//  \param value - value object
+	//  \return such as std::vector
+	//  */
+	//bool insert(const key_type& key, const value_type& value) {
+	//	if(key > size()) return false;
+	//	container::insert(container::begin() + key, value);
+	//	return true;
+	//}
 
 	/*!
 	  \brief Add item method.
@@ -142,6 +150,7 @@ public:
 		container::erase(container::begin() + key);
 	}
 
+protected:
 	//creation and copy functions definitions
 	BLUE_SKY_TYPE_STD_CREATE_T_MEM(bs_array);
 	BLUE_SKY_TYPE_STD_COPY_T_MEM(bs_array);

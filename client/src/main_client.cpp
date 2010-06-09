@@ -525,7 +525,7 @@ void test_props()
 
 	smart_ptr< idx_data_table > psi = k.create_object(idx_data_table::bs_type());
 	psi.lock()->insert<double>(12);
-	psi.lock()->insert<int>(10, 2);
+	psi.lock()->insert<int>(10);
 
 	//str_val_table< objbase > ot;
 	//ot.add_item("test_object", k.create_object(dummy::type()));
@@ -796,11 +796,11 @@ void test_array() {
 	smart_ptr< real_array_t > sp_astr = k.create_object(str_array_t::bs_type());
 
 	// fill arrays with random values
-	insert_iterator< real_array_t > ii(*sp_areal.lock(), sp_areal.lock()->begin());
-	for(ulong i = 0; i < 100; ++i) {
-		*ii = double(rand()) / RAND_MAX;
-		++ii;
-	}
+	//insert_iterator< real_array_t > ii(*sp_areal.lock(), sp_areal.lock()->begin());
+	//for(ulong i = 0; i < 100; ++i) {
+	//	*ii = double(rand()) / RAND_MAX;
+	//	++ii;
+	//}
 	// print array contents
 	cout << "Real array contents:" << endl;
 	for(real_array_t::const_iterator p = sp_areal->begin(), end = sp_areal->end(); p != end; ++p)
