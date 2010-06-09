@@ -1,15 +1,15 @@
 // This file is part of BlueSky
-// 
+//
 // BlueSky is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
 // as published by the Free Software Foundation; either version 3
 // of the License, or (at your option) any later version.
-// 
+//
 // BlueSky is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
@@ -69,11 +69,6 @@ using namespace boost;
 
 #define KERNEL_VERSION "0.9" //!< version of blue-sky kernel
 
-/*-----------------------------------------------------------------------------
- *  BS kernel plugin descriptor
- *-----------------------------------------------------------------------------*/
-BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs");
-
 //std::less specialization for plugin_descriptor
 namespace std {
 	template< >
@@ -125,7 +120,7 @@ void bspy_init_plugin(const string& parent_scope, const string& nested_scope, vo
 	//the following code is originaly taken from boost::python::detail::init_module
 	//and slightly modified to allow scope changing BEFORE plugin's python subsystem is initialized
 	static PyMethodDef initial_methods[] = { { 0, 0, 0, 0 } };
-	// Create the BS kernel module & scope	
+	// Create the BS kernel module & scope
 	static PyObject* m = Py_InitModule(parent_scope.c_str(), initial_methods);
 	static scope current_module(object(((borrowed_reference_t*)m)));
 	if(!m) {
@@ -527,8 +522,8 @@ public:
 	// at last a storage itself
 	sig_storage_t sig_storage_;
 
-	
-	const plugin_descriptor& kernel_pd_;       //! plugin descriptor tag fot kernel types
+
+	const plugin_descriptor kernel_pd_;       //! plugin descriptor tag fot kernel types
 	const plugin_descriptor runtime_pd_;      //! plugin descriptor tag for runtime types
 
 	//last error message stored here
@@ -748,7 +743,7 @@ public:
 
 
 	bool is_inner_pd(const plugin_descriptor& pd) {
-		return (pd != kernel_pd_ && pd != runtime_pd_);
+		return (pd == kernel_pd_ || pd == runtime_pd_);
 	}
 
 	bool register_type(const plugin_descriptor& pd, const type_descriptor& td, bool /*inner_type */= false,
@@ -924,7 +919,7 @@ public:
 		//ensure that given type is registered
 		fe_ptr tp;
 		register_rt_type(obj_t, &tp);
-		if(tp.is_nil()) 
+		if(tp.is_nil())
       {
         throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
       }
@@ -939,7 +934,7 @@ public:
 		//ensure that given type is registered
 		fe_ptr tp;
 		register_rt_type(obj_t, &tp);
-		if(tp.is_nil()) 
+		if(tp.is_nil())
       {
         throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
       }
@@ -1271,7 +1266,7 @@ kernel::~kernel() {
 	//BS_ASSERT (pimpl_->pert_idx_tbl_.empty ());
 	//BS_ASSERT (pimpl_->sig_storage_.empty ()) (pimpl_->sig_storage_.size ());
 
-	// WTF?? 
+	// WTF??
 	if(pimpl_.get()) delete pimpl_.get();
 }
 
@@ -1297,7 +1292,7 @@ kernel::unregister_disconnector (signals_disconnector *d)
 // 	return str_dt_ptr(&pimpl_->data_tbl_, pimpl_->data_tbl_.mutex());
 // }
 
-void kernel::init() 
+void kernel::init()
 {
   //detail::bs_log_holder::Instance ().register_signals ();
   //detail::thread_log_holder::Instance ().register_signals ();
