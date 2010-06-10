@@ -51,6 +51,13 @@ namespace blue_sky {
 		"Table of values of mixed types addressed by string key", "", false);
 	BLUE_SKY_TYPE_IMPL_T_EXT(2, (data_table< bs_array, vector_traits >), 1, (objbase), "idx_data_table",
 		"Table of values of mixed types addressed by index", "", false);
+
+	kernel::types_enum register_data_table() {
+		kernel::types_enum te;
+		te.push_back(data_table< bs_map, str_val_traits >::bs_type());
+		te.push_back(data_table< bs_array, vector_traits >::bs_type());
+		return te;
+	}
 }
 
 //using namespace blue_sky;
