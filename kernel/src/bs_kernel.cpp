@@ -1,15 +1,15 @@
 // This file is part of BlueSky
-// 
+//
 // BlueSky is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
 // as published by the Free Software Foundation; either version 3
 // of the License, or (at your option) any later version.
-// 
+//
 // BlueSky is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
@@ -69,11 +69,6 @@ using namespace boost;
 
 #define KERNEL_VERSION "0.9" //!< version of blue-sky kernel
 
-/*-----------------------------------------------------------------------------
- *  BS kernel plugin descriptor
- *-----------------------------------------------------------------------------*/
-BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs");
-
 //std::less specialization for plugin_descriptor
 namespace std {
 	template< >
@@ -125,7 +120,7 @@ void bspy_init_plugin(const string& parent_scope, const string& nested_scope, vo
 	//the following code is originaly taken from boost::python::detail::init_module
 	//and slightly modified to allow scope changing BEFORE plugin's python subsystem is initialized
 	static PyMethodDef initial_methods[] = { { 0, 0, 0, 0 } };
-	// Create the BS kernel module & scope	
+	// Create the BS kernel module & scope
 	static PyObject* m = Py_InitModule(parent_scope.c_str(), initial_methods);
 	static scope current_module(object(((borrowed_reference_t*)m)));
 	if(!m) {
@@ -451,6 +446,11 @@ bool kernel::unmanaged_def_val() {
 #endif
 }
 
+// forward declaration of function that register kernel types
+typedef kernel::types_enum (*reg_kernel_types_f)();
+kernel::types_enum register_bs_array();
+kernel::types_enum register_data_table();
+
 /*-----------------------------------------------------------------------------
  *  kernel_impl class definition
  *-----------------------------------------------------------------------------*/
@@ -522,8 +522,8 @@ public:
 	// at last a storage itself
 	sig_storage_t sig_storage_;
 
-	
-	const plugin_descriptor& kernel_pd_;       //! plugin descriptor tag fot kernel types
+
+	const plugin_descriptor kernel_pd_;       //! plugin descriptor tag fot kernel types
 	const plugin_descriptor runtime_pd_;      //! plugin descriptor tag for runtime types
 
 	//last error message stored here
@@ -543,29 +543,40 @@ public:
  *-----------------------------------------------------------------------------*/
 	//constructor
 	kernel_impl()
-		: kernel_pd_(*bs_get_plugin_descriptor())
+		: kernel_pd_(BS_GET_TI(__kernel_types_pd_tag__), "Kernel types", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs")
 		, runtime_pd_(BS_GET_TI(__runtime_types_pd_tag__), "Runtime types", KERNEL_VERSION, "BlueSky runtime types tag", "", "bs")
 	{
 		//register inner plugin_descriptors in dictionary
 		pl_dict_.insert(kernel_pd_);
 		pl_dict_.insert(runtime_pd_);
 		//register str_data_table object
-		register_kernel_type(str_data_table::bs_type());
+		//register_kernel_type(str_data_table::bs_type());
 		//register idx_data_table object
-		register_kernel_type(idx_data_table::bs_type());
+		//register_kernel_type(idx_data_table::bs_type());
 
 		register_kernel_type(empty_storage::bs_type());
-		//get_lib_list(cft_);
-		//cleanup dictionaries
-		//clean_plugins();
 
-		//register BlueSky signal type
-		//register_kernel_type(bs_signal::bs_type());
+		bool res = true;
+		res &= register_kernel_types(register_bs_array);
+		res &= register_kernel_types(register_data_table);
+		if(!res) {
+			BSERR << "Warning! Some kernel types wasn't registered" << bs_line;
+		}
 	}
 
 	~kernel_impl() {
 		//string s = "~kernel_impl called";
 		//cout << s << endl;
+	}
+
+	// call types enumerator and register each returned type as kernel
+	bool register_kernel_types(reg_kernel_types_f f) {
+		// invoke f to get enum
+		types_enum types = f();
+		bool res = true;
+		for(types_enum::const_iterator t = types.begin(), end = types.end(); t != end; ++t)
+			res &= register_kernel_type(*t);
+		return res;
 	}
 
 	// access to kernel_impl instance for local clients
@@ -732,7 +743,7 @@ public:
 
 
 	bool is_inner_pd(const plugin_descriptor& pd) {
-		return (pd != kernel_pd_ && pd != runtime_pd_);
+		return (pd == kernel_pd_ || pd == runtime_pd_);
 	}
 
 	bool register_type(const plugin_descriptor& pd, const type_descriptor& td, bool /*inner_type */= false,
@@ -908,7 +919,7 @@ public:
 		//ensure that given type is registered
 		fe_ptr tp;
 		register_rt_type(obj_t, &tp);
-		if(tp.is_nil()) 
+		if(tp.is_nil())
       {
         throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
       }
@@ -923,7 +934,7 @@ public:
 		//ensure that given type is registered
 		fe_ptr tp;
 		register_rt_type(obj_t, &tp);
-		if(tp.is_nil()) 
+		if(tp.is_nil())
       {
         throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
       }
@@ -1237,27 +1248,26 @@ kernel::kernel()
 	//log::Instance().init_logs();
 }
 
-kernel::~kernel()
-{
-  for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i)
-    {
-      if (disconnectors_[i])
-        disconnectors_[i]->disconnect_signals ();
-    }
+kernel::~kernel() {
+	for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i) {
+		if (disconnectors_[i])
+			disconnectors_[i]->disconnect_signals ();
+	}
 
-  BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());
-  pimpl_->instances_.clear ();
+	// why assert?
+	//BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());
+	pimpl_->instances_.clear ();
 
-  memory_manager_.print_info ();
+	memory_manager_.print_info ();
 	UnloadPlugins();
 
-  BS_ASSERT (pimpl_->loaded_plugins_.empty ());
-  BS_ASSERT (pimpl_->pert_str_tbl_.empty ());
-  BS_ASSERT (pimpl_->pert_idx_tbl_.empty ());
-  BS_ASSERT (pimpl_->sig_storage_.empty ()) (pimpl_->sig_storage_.size ());
+	//BS_ASSERT (pimpl_->loaded_plugins_.empty ());
+	//BS_ASSERT (pimpl_->pert_str_tbl_.empty ());
+	//BS_ASSERT (pimpl_->pert_idx_tbl_.empty ());
+	//BS_ASSERT (pimpl_->sig_storage_.empty ()) (pimpl_->sig_storage_.size ());
 
-	// WTF?? 
-  if(pimpl_.get()) delete pimpl_.get();
+	// WTF??
+	if(pimpl_.get()) delete pimpl_.get();
 }
 
 void
@@ -1282,7 +1292,7 @@ kernel::unregister_disconnector (signals_disconnector *d)
 // 	return str_dt_ptr(&pimpl_->data_tbl_, pimpl_->data_tbl_.mutex());
 // }
 
-void kernel::init() 
+void kernel::init()
 {
   //detail::bs_log_holder::Instance ().register_signals ();
   //detail::thread_log_holder::Instance ().register_signals ();
