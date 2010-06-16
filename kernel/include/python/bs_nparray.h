@@ -78,10 +78,10 @@ protected:
 	{}
 
 	void swap(this_t& rhs) {
-		//std::swap(*this, rhs);
-		this_t tmp(rhs);
-		rhs = *this;
-		*this = tmp;
+		numpy_array_t::swap(rhs);
+		//this_t tmp(rhs);
+		//rhs = *this;
+		//*this = tmp;
 	}
 
 	BLUE_SKY_TYPE_DECL_T(bs_nparray);
