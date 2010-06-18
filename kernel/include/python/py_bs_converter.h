@@ -33,26 +33,13 @@ public:
 	typedef typename conv_traits::type target_type;
 
 	static void construct(PyObject* py_obj, converter::rvalue_from_python_stage1_data* data) {
-		//construct_< conv_traits::create_type >(py_obj, data);
-		using namespace boost::python;
-
-		typedef converter::rvalue_from_python_storage< typename conv_traits::type > storage_t;
-		storage_t* the_storage = reinterpret_cast< storage_t* >(data);
-		void* memory_chunk = the_storage->storage.bytes;
-
-		// convert PyObject -> boost::python::object
-		object bpy_obj(handle<>(borrowed(py_obj)));
-
-		// create object using placement new
-		conv_traits::create_type(memory_chunk, bpy_obj);
-		//create_f(memory_chunk, bpy_obj);
-		data->convertible = memory_chunk;
+		construct_(py_obj, data, conv_traits::create_type);
 	}
 
-	//template< class original_t >
-	//static void construct_indirect(PyObject* py_obj, converter::rvalue_from_python_stage1_data* data) {
-	//	construct_< conv_traits::create_type_indirect< original_t > >(py_obj, data);
-	//}
+	template< class original_t >
+	static void construct_indirect(PyObject* py_obj, converter::rvalue_from_python_stage1_data* data) {
+		construct_(py_obj, data, conv_traits::template create_type_indirect< original_t >);
+	}
 
 	static void* is_convertible(PyObject* py_obj) {
 		if(conv_traits::is_convertible(py_obj))
@@ -70,14 +57,15 @@ public:
 				);
 	}
 
-	//template< class original_t >
-	//static void register_from_py_indirect() {
-	//	using namespace boost::python;
-	//	converter::registry::push_back(
-	//			  &is_convertible
-	//			, &construct_indirect< original_t >
-	//			, type_id< typename conv_traits::type >() );
-	//}
+	template< class original_t >
+	static void register_from_py_indirect() {
+		using namespace boost::python;
+		converter::registry::push_back(
+				  &is_convertible
+				, &construct_indirect< original_t >
+				, type_id< target_type >()
+				);
+	}
 
 	//---- to python converters (if type wasn't exported already)
 	struct to_python
@@ -87,26 +75,26 @@ public:
 		}
 	};
 
-	//template< class original_t >
-	//struct to_python_indirect
-	//{
-	//	static PyObject* convert(original_t const &v) {
-	//		return conv_traits::template to_python_indirect< original_t >(v);
-	//	}
-	//};
+	template< class original_t >
+	struct to_python_indirect
+	{
+		static PyObject* convert(original_t const &v) {
+			return conv_traits::template to_python_indirect< original_t >(v);
+		}
+	};
 
 	static void register_to_py() {
 		boost::python::to_python_converter< target_type, to_python >();
 	}
 
-	//template< class original_t >
-	//static void register_to_py() {
-	//	boost::python::to_python_converter< typename conv_traits::type, to_python_indirect< original_t > >();
-	//}
+	template< class original_t >
+	static void register_to_py_indirect() {
+		boost::python::to_python_converter< target_type, to_python_indirect< original_t > >();
+	}
 
 private:
 	template< class create_f >
-	static void construct_(PyObject* py_obj, converter::rvalue_from_python_stage1_data* data) {
+	static void construct_(PyObject* py_obj, converter::rvalue_from_python_stage1_data* data, create_f create_type) {
 		using namespace boost::python;
 
 		typedef converter::rvalue_from_python_storage< typename conv_traits::type > storage_t;
@@ -117,8 +105,7 @@ private:
 		object bpy_obj(handle<>(borrowed(py_obj)));
 
 		// create object using placement new
-		//conv_traits::create_type(memory_chunk, bpy_obj);
-		create_f(memory_chunk, bpy_obj);
+		create_type(memory_chunk, bpy_obj);
 		data->convertible = memory_chunk;
 	}
 };
