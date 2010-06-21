@@ -65,7 +65,7 @@ public:
 	typedef typename arrbase_t::key_type key_type;
 
 	// inherited from cont_traits
-	//! type of vector of values
+	//! container
 	typedef typename cont_traits_t::container container;
 	//! iterators
 	typedef typename cont_traits_t::iterator iterator;
@@ -116,27 +116,12 @@ public:
 		return container::at(key);
 	}
 
-	///*!
-	//  \brief Add item method.
-
-	//  Insert after key-index object.
-	//  \param key - key object
-	//  \param value - value object
-	//  \return such as std::vector
-	//  */
 	//bool insert(const key_type& key, const value_type& value) {
 	//	if(key > size()) return false;
 	//	container::insert(container::begin() + key, value);
 	//	return true;
 	//}
 
-	/*!
-	  \brief Add item method.
-
-	  Push back insert method.
-	  \param value - value object
-	  \return such as std::map
-	  */
 	bool insert(const value_type& value) {
 		container::push_back(value);
 		return true;
@@ -150,12 +135,16 @@ public:
 		container::erase(container::begin() + key);
 	}
 
+	void resize(size_type new_size) {
+		container::resize(new_size);
+	}
+
 protected:
 	//creation and copy functions definitions
 	BLUE_SKY_TYPE_STD_CREATE_T_MEM(bs_array);
 	BLUE_SKY_TYPE_STD_COPY_T_MEM(bs_array);
 
-	BLUE_SKY_TYPE_DECL_T_MEM(bs_array, objbase, "bs_array",
+	BLUE_SKY_TYPE_DECL_T_MEM(bs_array, bs_arrbase< T >, "bs_array",
 		"Array of values of the same type indexed by integral type", "");
 };
 

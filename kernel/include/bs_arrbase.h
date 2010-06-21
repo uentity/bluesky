@@ -36,6 +36,9 @@ namespace blue_sky {
 template< class T >
 class BS_API bs_arrbase : public objbase {
 public:
+	typedef bs_arrbase< T > this_t;
+	typedef smart_ptr < this_t, true > sp_arrbase;
+
 	typedef T value_type;
 	typedef ulong size_type;
 	typedef size_type key_type;
@@ -79,6 +82,10 @@ public:
 	const_reference ss(const key_type& key) const {
 		return operator[](key);
 	}
+
+	virtual void resize(size_type new_size) = 0;
+
+	//virtual sp_arrbase clone() const = 0;
 
 	/// @brief empty destructor
 	virtual ~bs_arrbase() {};
