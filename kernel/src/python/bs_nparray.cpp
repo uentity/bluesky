@@ -46,13 +46,14 @@ kernel::types_enum register_nparray() {
 namespace python {
 
 // bs_nparray test function
-template< class T >
-smart_ptr< bs_nparray< T > > test_nparray(smart_ptr< bs_nparray< T > > a, smart_ptr< bs_nparray< T > > b) {
+template< class inp_array_t, class ret_array_t >
+smart_ptr< ret_array_t > test_nparray(smart_ptr< inp_array_t > a, smart_ptr< inp_array_t > b) {
 	ulong sz = std::min(a->size(), b->size());
-	smart_ptr< bs_nparray< T > > res = BS_KERNEL.create_object(bs_nparray< T >::bs_type());
+	smart_ptr< ret_array_t > res = BS_KERNEL.create_object(ret_array_t::bs_type());
 	res->resize(sz);
 	for(ulong i = 0; i < sz; ++i)
 		(*res)[i] = (*a)[i] + (*b)[i];
+	//res->insert(1.);
 	return res;
 }
 
@@ -105,15 +106,68 @@ struct bspy_nparray_traits {
 	}
 
 	static PyObject* to_python(type const& v) {
-		return bp::handle<>(v->handle()).release();
+		return bp::handle< >(v->handle()).release();
 	}
 
+	// safe implicit conversions that copies data buffers
+	template< class varray_t >
+	struct indirect_copy_traits {
+		typedef smart_ptr< nparray_t > sp_nparray_t;
+		//typedef bs_array< T, vector_traits > varray_t;
+		typedef smart_ptr< varray_t > type;
+
+		// safe implicit conversions that copies data buffers
+		static void create_type(void* memory_chunk, const bp::object& py_obj) {
+			// create empty array and init it with Python array
+			sp_nparray_t sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
+			sp_array.lock()->init(handle<>(bp::borrowed(py_obj.ptr())));
+			// copy data to destination array
+			type sp_resarray = BS_KERNEL.create_object(varray_t::bs_type());
+			sp_resarray->resize(sp_array->size());
+			std::copy(sp_array->begin(), sp_array->end(), sp_resarray.lock()->begin());
+			new(memory_chunk) type(sp_resarray);
+		}
+
+		static PyObject* to_python(type const& v) {
+			// original_t is a smart_ptr to array with different traits
+			// create empty array and init it with copied data from v
+			sp_nparray_t sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
+			sp_array.lock()->init(v->size());
+			std::copy(v->begin(), v->end(), sp_array.lock()->begin());
+			return bp::handle< >(sp_array->handle()).release();
+		}
+	
+		static bool is_convertible(PyObject* py_obj) {
+			return bspy_nparray_traits< T >::is_convertible(py_obj);
+		}
+	};
+
+	// register all converters
 	static void register_converters() {
 		typedef bspy_nparray_traits< T > this_t;
 		typedef bspy_converter< this_t > converter_t;
+		typedef bs_array< T, vector_traits > varray_t;
+		typedef smart_ptr< varray_t > sp_varray_t;
+		typedef bspy_converter< indirect_copy_traits< varray_t > > copy_converter_t;
 
+		// register main conversions
+		// NOTE: main should go before copy conversions
+		// 'cause otherwise indirect_copy_traits::create_type will be called
+		// when input paramter of type bs_arrbase< T > is encountered
 		converter_t::register_from_py();
 		converter_t::register_to_py();
+		// register smart_ptr conversions to bases
+		bp::implicitly_convertible< type, smart_ptr< typename nparray_t::base_t > >();
+		bp::implicitly_convertible< type, smart_ptr< bs_arrbase< T > > >();
+		bp::implicitly_convertible< type, smart_ptr< objbase > >();
+
+		// register implicit copy conversions
+		copy_converter_t::register_from_py();
+		copy_converter_t::register_to_py();
+		// register smart_ptr conversions to bases
+		bp::implicitly_convertible< sp_varray_t, smart_ptr< bs_arrbase< T > > >();
+		bp::implicitly_convertible< sp_varray_t, smart_ptr< objbase > >();
+
 	}
 };
 
@@ -135,9 +189,12 @@ void py_export_nparray() {
 	bspy_nparray_traits< float >::register_converters();
 	bspy_nparray_traits< double >::register_converters();
 
-	def("test_nparray_i", &test_nparray< int >);
-	def("test_nparray_f", &test_nparray< float >);
-	def("test_nparray_d", &test_nparray< double >);
+	def("test_nparray_i", &test_nparray< bs_nparray< int >, bs_array< int, vector_traits > >);
+	def("test_nparray_f", &test_nparray< bs_nparray< float >, bs_array< float, vector_traits > >);
+	def("test_nparray_d", &test_nparray< bs_arrbase< double >, bs_array< double, vector_traits > >);
+	//def("test_nparray_d", &test_nparray< bs_array< double, vector_traits >, bs_array< double, vector_traits > >);
+	//def("test_nparray_d", &test_nparray< bs_nparray< double >, bs_array< double, vector_traits > >);
+	//def("test_nparray_d", &test_nparray< double, bs_arrbase >);
 }
 
 }}
