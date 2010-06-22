@@ -36,9 +36,9 @@ public:
 		construct_(py_obj, data, conv_traits::create_type);
 	}
 
-	template< class original_t >
+	template< class result_t >
 	static void construct_indirect(PyObject* py_obj, converter::rvalue_from_python_stage1_data* data) {
-		construct_(py_obj, data, conv_traits::template create_type_indirect< original_t >);
+		construct_(py_obj, data, conv_traits::template create_type_indirect< result_t >);
 	}
 
 	static void* is_convertible(PyObject* py_obj) {
@@ -51,20 +51,20 @@ public:
 	static void register_from_py() {
 		namespace bp = boost::python;
 		bp::converter::registry::push_back(
-				  &is_convertible
-				, &construct
-				, bp::type_id< target_type >()
-				);
+			  &is_convertible
+			, &construct
+			, bp::type_id< target_type >()
+			);
 	}
 
 	template< class original_t >
 	static void register_from_py_indirect() {
 		using namespace boost::python;
 		converter::registry::push_back(
-				  &is_convertible
-				, &construct_indirect< original_t >
-				, type_id< target_type >()
-				);
+			  &is_convertible
+			, &construct_indirect< original_t >
+			, type_id< target_type >()
+			);
 	}
 
 	//---- to python converters (if type wasn't exported already)

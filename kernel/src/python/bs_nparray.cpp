@@ -146,7 +146,7 @@ struct bspy_nparray_traits {
 	static void register_converters() {
 		typedef bspy_nparray_traits< T > this_t;
 		typedef bspy_converter< this_t > converter_t;
-		typedef bs_array< T, vector_traits > varray_t;
+		typedef bs_array< T > varray_t;
 		typedef smart_ptr< varray_t > sp_varray_t;
 		typedef bspy_converter< indirect_copy_traits< varray_t > > copy_converter_t;
 
@@ -189,9 +189,9 @@ void py_export_nparray() {
 	bspy_nparray_traits< float >::register_converters();
 	bspy_nparray_traits< double >::register_converters();
 
-	def("test_nparray_i", &test_nparray< bs_nparray< int >, bs_array< int, vector_traits > >);
-	def("test_nparray_f", &test_nparray< bs_nparray< float >, bs_array< float, vector_traits > >);
-	def("test_nparray_d", &test_nparray< bs_arrbase< double >, bs_array< double, vector_traits > >);
+	def("test_nparray_i", &test_nparray< bs_nparray< int >, bs_array< int > >);
+	def("test_nparray_f", &test_nparray< bs_nparray< float >, bs_array< float > >);
+	def("test_nparray_d", &test_nparray< bs_arrbase< double >, bs_array< double > >);
 	//def("test_nparray_d", &test_nparray< bs_array< double, vector_traits >, bs_array< double, vector_traits > >);
 	//def("test_nparray_d", &test_nparray< bs_nparray< double >, bs_array< double, vector_traits > >);
 	//def("test_nparray_d", &test_nparray< double, bs_arrbase >);

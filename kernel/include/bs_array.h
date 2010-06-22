@@ -17,36 +17,50 @@
 #define _BS_ARRAY_H_
 
 #include "bs_arrbase.h"
+#include "shared_vector.h"
 #include <vector>
 
 namespace blue_sky {
-/*-----------------------------------------------------------------------------
- *  bs_array class
- *-----------------------------------------------------------------------------*/
-/// @brief traits for arrays with std::vector container
-template< class T >
-struct BS_API vector_traits : public std::vector< T > {
-	typedef std::vector< T > container;
+
+namespace bs_private {
+
+template< class vector_t >
+struct traits_impl {
+	typedef vector_t container;
 	typedef typename container::value_type value_type;
-	//! type of key - index
+
 	typedef typename container::size_type size_type;
 	typedef typename container::size_type key_type;
-	//! type of iterator
+
 	typedef typename container::iterator iterator;
-	//! type of const iterator
+	typedef typename container::reverse_iterator reverse_iterator;
 	typedef typename container::const_iterator const_iterator;
-	//references
+	typedef typename container::const_reverse_iterator const_reverse_iterator;
+
 	typedef typename container::reference reference;
 	typedef typename container::const_reference const_reference;
 };
 
+}
+
+/// @brief traits for arrays with std::vector container
+template< class T >
+struct BS_API vector_traits : public bs_private::traits_impl< std::vector< T > > {};
+
+/// @brief traits for arrays with shared_vector container
+template< class T >
+struct BS_API shared_vector_traits : public bs_private::traits_impl< shared_vector< T > > {};
+
+/*-----------------------------------------------------------------------------
+ *  bs_array class
+ *-----------------------------------------------------------------------------*/
 /// @brief Contains array of key-value pairs with integral key (index)
 ///
 /// bs_array expects std::vector-like syntax of container in traits
 /// template params:
 ///           T -- type of array elements
 /// cont_traits -- specifies underlying container
-template< class T, template< class > class cont_traits >
+template< class T, template< class > class cont_traits = shared_vector_traits >
 class BS_API bs_array : public bs_arrbase< T >, public cont_traits< T >::container //, public cont_traits< T >
 {
 public:

@@ -19,12 +19,18 @@
 using namespace std;
 
 namespace blue_sky {
-
+// bs_array
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, vector_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, vector_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, vector_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, vector_traits));
 
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, shared_vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, shared_vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, shared_vector_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, shared_vector_traits));
+
+// bs_map
 BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (int, str_val_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (float, str_val_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (double, str_val_traits));
@@ -34,10 +40,14 @@ BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (sp_obj, str_val_traits));
 kernel::types_enum register_bs_array() {
 	kernel::types_enum te;
 	te.push_back(bs_array< int, vector_traits >::bs_type());
-	te.push_back(bs_array< int, vector_traits >::bs_type());
 	te.push_back(bs_array< float, vector_traits >::bs_type());
 	te.push_back(bs_array< double, vector_traits >::bs_type());
 	te.push_back(bs_array< std::string, vector_traits >::bs_type());
+
+	te.push_back(bs_array< int, shared_vector_traits >::bs_type());
+	te.push_back(bs_array< float, shared_vector_traits >::bs_type());
+	te.push_back(bs_array< double, shared_vector_traits >::bs_type());
+	te.push_back(bs_array< std::string, shared_vector_traits >::bs_type());
 
 	te.push_back(bs_map< int, str_val_traits >::bs_type());
 	te.push_back(bs_map< float, str_val_traits >::bs_type());
