@@ -17,12 +17,6 @@
 #define _BS_ARRBASE_H_
 
 #include "bs_common.h"
-#include "bs_object_base.h"
-#include "bs_kernel.h"
-//#include <iterator>
-
-// DEBUG
-//#include <iostream>
 
 namespace blue_sky {
 
@@ -34,7 +28,7 @@ namespace blue_sky {
 /// Expected that underlying container is std::vector-like, i.e.
 /// all elements are stored in continuos memory segment
 template< class T >
-class BS_API bs_arrbase : public objbase {
+class BS_API bs_arrbase : virtual public bs_refcounter {
 public:
 	typedef bs_arrbase< T > this_t;
 	typedef smart_ptr < this_t, true > sp_arrbase;
@@ -90,23 +84,58 @@ public:
 	/// @brief empty destructor
 	virtual ~bs_arrbase() {};
 
-	BS_COMMON_DECL_T_MEM(bs_arrbase);
-	BS_LOCK_THIS_DECL(bs_arrbase);
+	//BS_COMMON_DECL_T_MEM(bs_arrbase);
+	//BS_LOCK_THIS_DECL(bs_arrbase);
 
 	//BLUE_SKY_TYPE_DECL_T_MEM(bs_arrbase, objbase, "bs_arrbase",
 	//	"Base class for BlueSky continuous array of values of the same type indexed by integral type", "");
 };
 
-template< class T >
-bs_arrbase< T >::bs_arrbase(bs_type_ctor_param param)
-	: bs_refcounter(), objbase(param)
-{}
+//template< class T >
+//bs_arrbase< T >::bs_arrbase(bs_type_ctor_param param)
+//	: bs_refcounter(), objbase(param)
+//{}
+//
+//// copy ctor
+//template< class T >
+//bs_arrbase< T >::bs_arrbase(const bs_arrbase& a)
+//	: bs_refcounter(), objbase(a)
+//{}
 
-// copy ctor
+/*-----------------------------------------------------------------------------
+ *  bs_vecbase -- base class of BlueSky vectors
+ *-----------------------------------------------------------------------------*/
+// difference from arrbase is insert and erase operations
 template< class T >
-bs_arrbase< T >::bs_arrbase(const bs_arrbase& a)
-	: bs_refcounter(), objbase(a)
-{}
+class BS_API bs_vecbase : public bs_arrbase< T > {
+public:
+	typedef bs_arrbase< T > arrbase_t;
+	typedef typename arrbase_t::key_type key_type;
+	typedef typename arrbase_t::value_type value_type;
+
+	virtual bool insert(const key_type& key, const value_type& value) = 0;
+	virtual bool insert(const value_type& value) = 0;
+	virtual void erase(const key_type& key) = 0;
+
+	/// @brief empty destructor
+	virtual ~bs_vecbase() {};
+
+	//using arrbase_t::bs_type;
+
+	//BS_COMMON_DECL_T_MEM(bs_vecbase);
+	//BS_LOCK_THIS_DECL(bs_vecbase);
+};
+
+//template< class T >
+//bs_vecbase< T >::bs_vecbase(bs_type_ctor_param param)
+//	: bs_refcounter(), arrbase_t(param)
+//{}
+//
+//// copy ctor
+//template< class T >
+//bs_vecbase< T >::bs_vecbase(const bs_vecbase& a)
+//	: bs_refcounter(), arrbase_t(a)
+//{}
 
 }	// namespace blue-sky
 #endif	// file guard

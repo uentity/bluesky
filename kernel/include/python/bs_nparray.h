@@ -24,47 +24,35 @@ namespace blue_sky {
 
 /// @brief traits for arrays with pyublas::numpy_array container
 template< class T >
-struct BS_API numpy_array_traits {
-	typedef pyublas::numpy_array< T > container;
-	typedef typename container::value_type value_type;
-	//! type of key - index
-	typedef typename container::size_type size_type;
-	typedef typename container::size_type key_type;
-	//! type of iterator
-	typedef typename container::iterator iterator;
-	typedef typename container::const_iterator const_iterator;
-	typedef typename container::reverse_iterator reverse_iterator;
-	typedef typename container::const_reverse_iterator const_reverse_iterator;
-	//references
-	typedef typename container::reference reference;
-	typedef typename container::const_reference const_reference;
-};
+struct BS_API numpy_array_traits : public bs_private::arrbase_traits_impl< T, pyublas::numpy_array< T > >
+{};
 
 template< class T >
 class BS_API bs_nparray : public bs_array< T, numpy_array_traits > {
 public:
 	typedef numpy_array_traits< T > traits_t;
-	typedef bs_array< T, numpy_array_traits > base_t;
+	typedef bs_array< T, numpy_array_traits > bs_array_t;
 	typedef bs_nparray< T > this_t;
 	typedef typename traits_t::container numpy_array_t;
-	typedef typename traits_t::size_type size_type;
-	typedef typename traits_t::value_type value_type;
+	typedef typename traits_t::container container;
+	typedef typename bs_array_t::size_type size_type;
+	typedef typename bs_array_t::value_type value_type;
 
 	// constructors via init
 	void init(size_type n) {
-		this_t(base_t(numpy_array_t(n))).swap(*this);
+		this_t(numpy_array_t(n)).swap(*this);
 	}
 
 	void init(int ndim_, const npy_intp* dims_) {
-		this_t(base_t(numpy_array_t(ndim_, dims_))).swap(*this);
+		this_t(numpy_array_t(ndim_, dims_)).swap(*this);
 	}
 
 	void init(size_type n, const value_type& v) {
-		this_t(base_t(numpy_array_t(n, v))).swap(*this);
+		this_t(numpy_array_t(n, v)).swap(*this);
 	}
 
 	void init(const boost::python::handle<> &obj) {
-		this_t(base_t(numpy_array_t(obj))).swap(*this);
+		this_t(numpy_array_t(obj)).swap(*this);
 	}
 
 	void test() {
@@ -73,8 +61,8 @@ public:
 
 protected:
 	// copy construct from base class
-	bs_nparray(const base_t& rhs)
-		: base_t(rhs)
+	bs_nparray(const bs_array_t& rhs)
+		: bs_array_t(rhs)
 	{}
 
 	void swap(this_t& rhs) {
@@ -95,7 +83,7 @@ bs_nparray< T >::bs_nparray(bs_type_ctor_param param)
 // copy ctor
 template< class T >
 bs_nparray< T >::bs_nparray(const bs_nparray& v)
-	: bs_refcounter(), base_t(v)
+	: bs_refcounter(), bs_array_t(v)
 {}
 
 typedef bs_nparray< int > bs_nparray_i;

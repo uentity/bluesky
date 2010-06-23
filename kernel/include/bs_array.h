@@ -24,32 +24,66 @@ namespace blue_sky {
 
 namespace bs_private {
 
-template< class vector_t >
-struct traits_impl {
+template< class T, class array_t >
+struct BS_API arrbase_traits_impl : public bs_arrbase< T >, public array_t {
+	typedef array_t container;
+	typedef bs_arrbase< T > arrbase;
+	typedef arrbase_traits_impl< T, array_t > bs_array_base;
+
+	// default ctor
+	arrbase_traits_impl() {}
+
+	// ctor for constructing from container copy
+	arrbase_traits_impl(const container& c) : container(c) {}
+};
+
+template< class T, class vector_t >
+struct BS_API vecbase_traits_impl : public bs_vecbase< T >, public vector_t {
 	typedef vector_t container;
-	typedef typename container::value_type value_type;
+	typedef bs_vecbase< T > arrbase;
+	typedef vecbase_traits_impl< T, vector_t > bs_array_base;
 
-	typedef typename container::size_type size_type;
-	typedef typename container::size_type key_type;
+	// inherited from bs_arrbase class
+	typedef typename arrbase::value_type value_type;
+	typedef typename arrbase::key_type key_type;
 
-	typedef typename container::iterator iterator;
-	typedef typename container::reverse_iterator reverse_iterator;
-	typedef typename container::const_iterator const_iterator;
-	typedef typename container::const_reverse_iterator const_reverse_iterator;
+	// default ctor
+	vecbase_traits_impl() {}
 
-	typedef typename container::reference reference;
-	typedef typename container::const_reference const_reference;
+	// ctor from vector copy
+	vecbase_traits_impl(const container& c) : container(c) {}
+
+	using container::size;
+
+	bool insert(const key_type& key, const value_type& value) {
+		if(key > size()) return false;
+		container::insert(container::begin() + key, value);
+		return true;
+	}
+
+	bool insert(const value_type& value) {
+		container::push_back(value);
+		return true;
+	}
+
+	void erase(const key_type& key)	{
+		container::erase(container::begin() + key);
+	}
 };
 
 }
 
 /// @brief traits for arrays with std::vector container
 template< class T >
-struct BS_API vector_traits : public bs_private::traits_impl< std::vector< T > > {};
+struct BS_API vector_traits : public bs_private::vecbase_traits_impl< T, std::vector< T > > {};
+
+/// @brief traits for arrays with shared_array container
+template< class T >
+struct BS_API shared_array_traits : public bs_private::arrbase_traits_impl< T, private_::shared_array< T > > {};
 
 /// @brief traits for arrays with shared_vector container
 template< class T >
-struct BS_API shared_vector_traits : public bs_private::traits_impl< shared_vector< T > > {};
+struct BS_API shared_vector_traits : public bs_private::vecbase_traits_impl< T, shared_vector< T > > {};
 
 /*-----------------------------------------------------------------------------
  *  bs_array class
@@ -61,39 +95,39 @@ struct BS_API shared_vector_traits : public bs_private::traits_impl< shared_vect
 ///           T -- type of array elements
 /// cont_traits -- specifies underlying container
 template< class T, template< class > class cont_traits = shared_vector_traits >
-class BS_API bs_array : public bs_arrbase< T >, public cont_traits< T >::container //, public cont_traits< T >
+class BS_API bs_array : public objbase, public cont_traits< T >::bs_array_base
 {
 public:
-	typedef bs_arrbase< T > arrbase_t;
 	typedef cont_traits< T > cont_traits_t;
-	typedef typename cont_traits_t::container base_t;
+	typedef typename cont_traits_t::arrbase arrbase_t;
+	typedef typename cont_traits_t::container container;
+	typedef typename cont_traits_t::bs_array_base base_t;
+	typedef bs_array< T, cont_traits > this_t;
 
 	// inherited from bs_arrbase class
-	//! type of value
 	typedef typename arrbase_t::value_type value_type;
-	//references
 	typedef typename arrbase_t::reference reference;
 	typedef typename arrbase_t::const_reference const_reference;
-	//! type of key - index
 	typedef typename arrbase_t::size_type size_type;
 	typedef typename arrbase_t::key_type key_type;
 
 	// inherited from cont_traits
-	//! container
-	typedef typename cont_traits_t::container container;
-	//! iterators
-	typedef typename cont_traits_t::iterator iterator;
-	typedef typename cont_traits_t::const_iterator const_iterator;
-	//! type of reverse iterators
-	typedef typename cont_traits_t::reverse_iterator reverse_iterator;
-	typedef typename cont_traits_t::const_reverse_iterator const_reverse_iterator;
+	//typedef typename cont_traits_t::iterator iterator;
+	//typedef typename cont_traits_t::const_iterator const_iterator;
+	//typedef typename cont_traits_t::reverse_iterator reverse_iterator;
+	//typedef typename cont_traits_t::const_reverse_iterator const_reverse_iterator;
 
 	//using container::insert;
 
 	// copy construct from container
-	bs_array(const base_t& rhs)
-		: base_t(rhs)
+	bs_array(const container& c)
+		: base_t(c)
 	{}
+
+	// init methods are indirect constructors
+	void init(size_type sz, const value_type& v = value_type()) {
+		this_t(sz, v).swap(*this);
+	}
 
 	/// @brief Obtain array size
 	/// Overloads bs_arrbase method
@@ -120,58 +154,28 @@ public:
 		return container::operator[](key);
 	}
 
-	// returns only existing elements
-	// throws otherwise
-	reference at(const key_type& key) {
-		return container::at(key);
-	}
-
-	const_reference at(const key_type& key) const {
-		return container::at(key);
-	}
-
-	//bool insert(const key_type& key, const value_type& value) {
-	//	if(key > size()) return false;
-	//	container::insert(container::begin() + key, value);
-	//	return true;
-	//}
-
-	bool insert(const value_type& value) {
-		container::push_back(value);
-		return true;
-	}
-
-	/*!
-	  \brief Remove item method.
-	  \param key - key object
-	  */
-	void erase(const key_type& key)	{
-		container::erase(container::begin() + key);
-	}
-
 	void resize(size_type new_size) {
 		container::resize(new_size);
 	}
 
-protected:
 	//creation and copy functions definitions
 	BLUE_SKY_TYPE_STD_CREATE_T_MEM(bs_array);
 	BLUE_SKY_TYPE_STD_COPY_T_MEM(bs_array);
 
-	BLUE_SKY_TYPE_DECL_T_MEM(bs_array, bs_arrbase< T >, "bs_array",
+	BLUE_SKY_TYPE_DECL_T_MEM(bs_array, objbase, "bs_array",
 		"Array of values of the same type indexed by integral type", "");
 };
 
 // default bs_array ctor implementation
 template< class T, template< class > class cont_traits >
 bs_array< T, cont_traits >::bs_array(bs_type_ctor_param param)
-: bs_refcounter(), arrbase_t(param)
+: bs_refcounter() //, base_t(param)
 {}
 
 // default bs_array copy ctor implementation
 template< class T, template< class > class cont_traits >
 bs_array< T, cont_traits >::bs_array(const bs_array< T, cont_traits >& src)
-: bs_refcounter(), arrbase_t(src), container(src)
+: bs_refcounter(), objbase(src), base_t(src)
 {}
 
 }	// end of blue_sky namespace

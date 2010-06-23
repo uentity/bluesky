@@ -31,9 +31,9 @@ BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, numpy_array_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, numpy_array_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, numpy_array_traits));
 
-BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray< int >, bs_nparray< int >::base_t, "BS numpy int array");
-BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray< float >, bs_nparray< float >::base_t, "BS numpy float array");
-BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray< double >, bs_nparray< double >::base_t, "BS numpy double array");
+BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray< int >, bs_nparray< int >::bs_array_t, "BS numpy int array");
+BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray< float >, bs_nparray< float >::bs_array_t, "BS numpy float array");
+BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray< double >, bs_nparray< double >::bs_array_t, "BS numpy double array");
 
 kernel::types_enum register_nparray() {
 	kernel::types_enum te;
@@ -145,7 +145,9 @@ struct bspy_nparray_traits {
 	// register all converters
 	static void register_converters() {
 		typedef bspy_nparray_traits< T > this_t;
+		typedef typename nparray_t::arrbase arrbase_t;
 		typedef bspy_converter< this_t > converter_t;
+
 		typedef bs_array< T > varray_t;
 		typedef smart_ptr< varray_t > sp_varray_t;
 		typedef bspy_converter< indirect_copy_traits< varray_t > > copy_converter_t;
@@ -157,15 +159,15 @@ struct bspy_nparray_traits {
 		converter_t::register_from_py();
 		converter_t::register_to_py();
 		// register smart_ptr conversions to bases
-		bp::implicitly_convertible< type, smart_ptr< typename nparray_t::base_t > >();
-		bp::implicitly_convertible< type, smart_ptr< bs_arrbase< T > > >();
+		bp::implicitly_convertible< type, smart_ptr< typename nparray_t::bs_array_t > >();
+		bp::implicitly_convertible< type, smart_ptr< typename nparray_t::arrbase > >();
 		bp::implicitly_convertible< type, smart_ptr< objbase > >();
 
 		// register implicit copy conversions
 		copy_converter_t::register_from_py();
 		copy_converter_t::register_to_py();
 		// register smart_ptr conversions to bases
-		bp::implicitly_convertible< sp_varray_t, smart_ptr< bs_arrbase< T > > >();
+		bp::implicitly_convertible< sp_varray_t, smart_ptr< typename varray_t::arrbase > >();
 		bp::implicitly_convertible< sp_varray_t, smart_ptr< objbase > >();
 
 	}
@@ -174,7 +176,7 @@ struct bspy_nparray_traits {
 }
 
 void py_export_nparray() {
-	//class_< bs_nparray< int >, bases< bs_nparray< int >::base_t >, smart_ptr< bs_nparray< int > >, boost::noncopyable >
+	//class_< bs_nparray< int >, bases< bs_nparray< int >::bs_array_t >, smart_ptr< bs_nparray< int > >, boost::noncopyable >
 	//class_< bs_nparray< int >, smart_ptr< bs_nparray< int > >, boost::noncopyable >
 	//	("nparray_i", no_init)
 	//	.def("__init__", make_constructor(create_bs_type< bs_nparray< int > >))
@@ -182,7 +184,7 @@ void py_export_nparray() {
 	//	;
 	//register_smart_ptr< bs_nparray< int > >();
 	//auto_reg_smart_ptr< bs_nparray< int > >();
-	//auto_reg_smart_ptr< bs_nparray< int >, bs_nparray< int >::base_t >();
+	//auto_reg_smart_ptr< bs_nparray< int >, bs_nparray< int >::bs_array_t >();
 
 	// instead of exporting bs_nparray export converters to/from python objects
 	bspy_nparray_traits< int >::register_converters();
