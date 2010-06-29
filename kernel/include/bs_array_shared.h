@@ -80,7 +80,7 @@ public:
 		if (this->is_owner ())
 			ctor_dispatch_ (first, last);
 		else
-			bs_throw_exception ("Error: bs_array_shared not owns data");
+			bs_throw_exception ("Error: bs_array_shared doesn't own data");
 	}
 
 	void init(size_type n, pointer data) {
@@ -95,7 +95,14 @@ public:
 				insert_fill_ (this->end(), new_size - this->size(), v);
 		}
 		else
-			bs_throw_exception ("Error: shared_vector not owns data");
+			bs_throw_exception ("Error: bs_array_shared doesn't own data");
+	}
+
+	void clear () {
+		if (this->is_owner ())
+			erase_at_end_ (this->size ());
+		else
+			bs_throw_exception ("Error: bs_array_shared doesn't own data");
 	}
 
 	void swap(bs_array_shared& arr) {

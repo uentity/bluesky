@@ -120,9 +120,11 @@ class BS_API bs_array : public objbase, public cont_traits< T >::bs_array_base
 public:
 	typedef cont_traits< T > cont_traits_t;
 	typedef typename cont_traits_t::arrbase arrbase_t;
+	typedef typename arrbase_t::sp_arrbase sp_arrbase;
 	typedef typename cont_traits_t::container container;
 	typedef typename cont_traits_t::bs_array_base base_t;
 	typedef bs_array< T, cont_traits > this_t;
+	typedef smart_ptr< this_t, true > sp_array;
 
 	// inherited from bs_arrbase class
 	typedef typename arrbase_t::value_type value_type;
@@ -136,8 +138,6 @@ public:
 	//typedef typename cont_traits_t::const_iterator const_iterator;
 	//typedef typename cont_traits_t::reverse_iterator reverse_iterator;
 	//typedef typename cont_traits_t::const_reverse_iterator const_reverse_iterator;
-
-	//using container::insert;
 
 	// copy construct from container
 	bs_array(const container& c)
@@ -183,9 +183,37 @@ public:
 		container::resize(new_size);
 	}
 
+	//void clear() {
+	//	container::clear();
+	//}
+
+	// make array with copied data
+	sp_arrbase clone() const {
+		sp_array clon_ = BS_KERNEL.create_object(bs_resolve_type());
+		clon_->resize(size());
+		std::copy(this->begin(), this->end(), clon_->begin());
+		return clon_;
+	}
+
 	void swap(bs_array& arr) {
 		objbase::swap(arr);
 		base_t::swap(arr);
+	}
+
+	template< class R, template< class > class r_traits >
+	bs_array& operator=(const bs_array< R, r_traits >& rhs) {
+		size_type n = rhs.size();
+		if(n && this->begin() != rhs.begin()) {
+			if(size() != n) resize(n);
+			std::copy(rhs.begin(), rhs.end(), this->begin());
+		}
+		return *this;
+	}
+
+	template< class R >
+	bs_array& operator=(const bs_arrbase< R >& rhs) {
+		this->assign(rhs);
+		return *this;
 	}
 
 protected:

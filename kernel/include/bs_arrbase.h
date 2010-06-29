@@ -79,7 +79,32 @@ public:
 
 	virtual void resize(size_type new_size) = 0;
 
-	//virtual sp_arrbase clone() const = 0;
+	virtual void clear() {
+		resize(0);
+	}
+
+	// make array with copied data
+	virtual sp_arrbase clone() const = 0;
+
+	// assign for different type array
+	template< class R >
+	void assign(const bs_arrbase< R >& rhs) {
+		size_type n = rhs.size();
+		if(n) {
+			if(size() != n) resize(n);
+			T* dst = &ss(0);
+			R const* src = &rhs[0];
+			if(src != dst)
+				std::copy(src, src + n, dst);
+		}
+	}
+
+	// operator= via assign
+	template< class R >
+	bs_arrbase& operator=(const bs_arrbase< R >& rhs) {
+		assign(rhs);
+		return *this;
+	}
 
 	/// @brief empty destructor
 	virtual ~bs_arrbase() {};
