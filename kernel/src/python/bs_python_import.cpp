@@ -37,7 +37,7 @@ void py_export_messaging();
 void py_export_objbase();
 void py_export_shell();
 void py_export_tree();
-void py_export_nparray();
+void py_export_bs_array();
 
 BLUE_SKY_INIT_PY_FUN
 {
@@ -71,7 +71,7 @@ BLUE_SKY_INIT_PY_FUN
 	py_export_log();
 	py_export_shell();
 	py_export_tree();
-	py_export_nparray();
+	py_export_bs_array();
 }
 
 }}

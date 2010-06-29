@@ -455,9 +455,6 @@ bool kernel::unmanaged_def_val() {
 typedef kernel::types_enum (*reg_kernel_types_f)();
 kernel::types_enum register_bs_array();
 kernel::types_enum register_data_table();
-#ifdef BSPY_EXPORTING
-kernel::types_enum register_nparray();
-#endif
 /*-----------------------------------------------------------------------------
  *  kernel_impl class definition
  *-----------------------------------------------------------------------------*/
@@ -566,9 +563,6 @@ public:
 		bool res = true;
 		res &= register_kernel_types(register_bs_array);
 		res &= register_kernel_types(register_data_table);
-#ifdef BSPY_EXPORTING
-		res &= register_kernel_types(register_nparray);
-#endif
 		if(!res) {
 			BSERR << "Warning! Some kernel types wasn't registered" << bs_line;
 		}
