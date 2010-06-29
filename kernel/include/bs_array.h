@@ -17,6 +17,7 @@
 #define _BS_ARRAY_H_
 
 #include "bs_arrbase.h"
+#include "bs_array_shared.h"
 #include "shared_vector.h"
 #include <vector>
 
@@ -34,7 +35,7 @@ struct BS_API arrbase_traits_impl : public bs_arrbase< T >, public array_t {
 	arrbase_traits_impl() {}
 
 	// ctor for constructing from container copy
-	arrbase_traits_impl(const container& c) : container(c) {}
+	arrbase_traits_impl(const container& c) : array_t(c) {}
 };
 
 template< class T, class vector_t >
@@ -51,7 +52,7 @@ struct BS_API vecbase_traits_impl : public bs_vecbase< T >, public vector_t {
 	vecbase_traits_impl() {}
 
 	// ctor from vector copy
-	vecbase_traits_impl(const container& c) : container(c) {}
+	vecbase_traits_impl(const container& c) : vector_t(c) {}
 
 	using container::size;
 
@@ -79,7 +80,7 @@ struct BS_API vector_traits : public bs_private::vecbase_traits_impl< T, std::ve
 
 /// @brief traits for arrays with shared_array container
 template< class T >
-struct BS_API shared_array_traits : public bs_private::arrbase_traits_impl< T, private_::shared_array< T > > {};
+struct BS_API shared_array_traits : public bs_private::arrbase_traits_impl< T, bs_array_shared< T > > {};
 
 /// @brief traits for arrays with shared_vector container
 template< class T >
@@ -94,7 +95,7 @@ struct BS_API shared_vector_traits : public bs_private::vecbase_traits_impl< T, 
 /// template params:
 ///           T -- type of array elements
 /// cont_traits -- specifies underlying container
-template< class T, template< class > class cont_traits = shared_vector_traits >
+template< class T, template< class > class cont_traits = shared_array_traits >
 class BS_API bs_array : public objbase, public cont_traits< T >::bs_array_base
 {
 public:
@@ -124,9 +125,14 @@ public:
 		: base_t(c)
 	{}
 
+	// ctor via init
+	void init(const container& c) {
+		this_t(c).swap(*this);
+	}
+
 	// init methods are indirect constructors
 	void init(size_type sz, const value_type& v = value_type()) {
-		this_t(sz, v).swap(*this);
+		this_t(container(sz, v)).swap(*this);
 	}
 
 	/// @brief Obtain array size
@@ -158,6 +164,12 @@ public:
 		container::resize(new_size);
 	}
 
+	void swap(bs_array& arr) {
+		objbase::swap(arr);
+		base_t::swap(arr);
+	}
+
+protected:
 	//creation and copy functions definitions
 	BLUE_SKY_TYPE_STD_CREATE_T_MEM(bs_array);
 	BLUE_SKY_TYPE_STD_COPY_T_MEM(bs_array);

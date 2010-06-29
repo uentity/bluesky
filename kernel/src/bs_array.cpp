@@ -25,6 +25,11 @@ BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, vector_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, vector_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, vector_traits));
 
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, shared_array_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, shared_array_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, shared_array_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, shared_array_traits));
+
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, shared_vector_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, shared_vector_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, shared_vector_traits));
@@ -43,6 +48,11 @@ kernel::types_enum register_bs_array() {
 	te.push_back(bs_array< float, vector_traits >::bs_type());
 	te.push_back(bs_array< double, vector_traits >::bs_type());
 	te.push_back(bs_array< std::string, vector_traits >::bs_type());
+
+	te.push_back(bs_array< int, shared_array_traits >::bs_type());
+	te.push_back(bs_array< float, shared_array_traits >::bs_type());
+	te.push_back(bs_array< double, shared_array_traits >::bs_type());
+	te.push_back(bs_array< std::string, shared_array_traits >::bs_type());
 
 	te.push_back(bs_array< int, shared_vector_traits >::bs_type());
 	te.push_back(bs_array< float, shared_vector_traits >::bs_type());
