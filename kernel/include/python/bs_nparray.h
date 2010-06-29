@@ -22,10 +22,10 @@
 
 namespace blue_sky {
 
-/// @brief traits for arrays with pyublas::numpy_array container
-template< class T >
-struct BS_API numpy_array_traits : public bs_private::arrbase_traits_impl< T, pyublas::numpy_array< T > >
-{};
+///// @brief traits for arrays with pyublas::numpy_array container
+//template< class T >
+//struct BS_API numpy_array_traits : public bs_private::arrbase_traits_impl< T, pyublas::numpy_array< T > >
+//{};
 
 template< class T >
 class BS_API bs_nparray : public bs_array< T, numpy_array_traits > {

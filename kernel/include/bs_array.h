@@ -20,6 +20,10 @@
 #include "bs_array_shared.h"
 #include "shared_vector.h"
 #include <vector>
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+#include <pyublas/numpy.hpp>
+//#include "python/bs_nparray.h"
+#endif
 
 namespace blue_sky {
 
@@ -86,6 +90,13 @@ struct BS_API shared_array_traits : public bs_private::arrbase_traits_impl< T, b
 template< class T >
 struct BS_API shared_vector_traits : public bs_private::vecbase_traits_impl< T, shared_vector< T > > {};
 
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+/// @brief traits for arrays with pyublas::numpy_array container
+template< class T >
+struct BS_API numpy_array_traits : public bs_private::arrbase_traits_impl< T, pyublas::numpy_array< T > >
+{};
+#endif
+
 /*-----------------------------------------------------------------------------
  *  bs_array class
  *-----------------------------------------------------------------------------*/
@@ -95,7 +106,15 @@ struct BS_API shared_vector_traits : public bs_private::vecbase_traits_impl< T, 
 /// template params:
 ///           T -- type of array elements
 /// cont_traits -- specifies underlying container
-template< class T, template< class > class cont_traits = shared_array_traits >
+template<
+	class T,
+	template< class > class cont_traits = 
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+	numpy_array_traits
+#else
+	shared_array_traits
+#endif
+	>
 class BS_API bs_array : public objbase, public cont_traits< T >::bs_array_base
 {
 public:
