@@ -50,6 +50,9 @@ template< class inp_array_t, class ret_array_t >
 smart_ptr< ret_array_t > test_nparray(smart_ptr< inp_array_t > a, smart_ptr< inp_array_t > b) {
 	ulong sz = std::min(a->size(), b->size());
 	smart_ptr< ret_array_t > res = BS_KERNEL.create_object(ret_array_t::bs_type());
+	*res = *a;
+	res->assign(*a);
+	res = a->clone();
 	res->resize(sz);
 	for(ulong i = 0; i < sz; ++i)
 		(*res)[i] = (*a)[i] + (*b)[i];
