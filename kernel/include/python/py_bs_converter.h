@@ -32,12 +32,12 @@ class bspy_converter {
 public:
 	typedef typename conv_traits::type target_type;
 
-	static void construct(PyObject* py_obj, converter::rvalue_from_python_stage1_data* data) {
+	static void construct(PyObject* py_obj, boost::python::converter::rvalue_from_python_stage1_data* data) {
 		construct_(py_obj, data, conv_traits::create_type);
 	}
 
 	template< class result_t >
-	static void construct_indirect(PyObject* py_obj, converter::rvalue_from_python_stage1_data* data) {
+	static void construct_indirect(PyObject* py_obj, boost::python::converter::rvalue_from_python_stage1_data* data) {
 		construct_(py_obj, data, conv_traits::template create_type_indirect< result_t >);
 	}
 
@@ -94,7 +94,7 @@ public:
 
 private:
 	template< class create_f >
-	static void construct_(PyObject* py_obj, converter::rvalue_from_python_stage1_data* data, create_f create_type) {
+	static void construct_(PyObject* py_obj, boost::python::converter::rvalue_from_python_stage1_data* data, create_f create_type) {
 		using namespace boost::python;
 
 		typedef converter::rvalue_from_python_storage< typename conv_traits::type > storage_t;
