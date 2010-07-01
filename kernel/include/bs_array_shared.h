@@ -16,177 +16,191 @@
 #ifndef BS_ARRAY_SHARED_529LXCQA
 #define BS_ARRAY_SHARED_529LXCQA
 
-#include "shared_array.h"
+#include "bs_common.h"
 
 namespace blue_sky {
 
-// bs_array_shared = shared_array + some nessessary ctors and methods
-template< class T >
-class bs_array_shared : public private_::shared_array< T > {
+// wrap array around smart_ptr< std::vector< T > >
+template< class container_t >
+class bs_array_shared {
 public:
-	typedef private_::shared_array< T > base_t;
-	typedef bs_array_shared< T > this_t;
+	typedef container_t container;
+	typedef st_smart_ptr< container > sp_container;
+
+	typedef typename container::value_type             value_type;
+	typedef typename container::pointer                pointer;
+	typedef typename container::const_pointer          const_pointer;
+	typedef typename container::reference              reference;
+	typedef typename container::const_reference        const_reference;
+	typedef typename container::iterator               iterator;
+	typedef typename container::const_iterator         const_iterator;
+	typedef typename container::reverse_iterator       reverse_iterator;
+	typedef typename container::const_reverse_iterator const_reverse_iterator;
+	typedef typename container::size_type              size_type;
+	typedef typename container::difference_type        difference_type;
+	typedef typename container::allocator_type         allocator_type;
+
+	// ctora
+	bs_array_shared()
+		: data_(new container)
+	{}
+
+	bs_array_shared(size_type n, const value_type& v = value_type())
+		: data_(new container(n, v))
+	{}
+
+	template< class input_iterator >
+	bs_array_shared(input_iterator start, input_iterator finish)
+		: data_(new container(start, finish))
+	{}
+
+	// std copy ctor is fine and make a reference to data_
+
+	iterator begin() {
+		return data_->begin();
+	}
+	iterator end() {
+		return data_->end();
+	}
+
+	const_iterator begin() const {
+		return data_->begin();
+	}
+	const_iterator end() const {
+		return data_->end();
+	}
+
+	reverse_iterator rbegin() {
+		return data_->rbegin();
+	}
+	reverse_iterator rend() {
+		return data_->rend();
+	}
+
+	const_reverse_iterator rbegin() const {
+		return data_->rbegin();
+	}
+	const_reverse_iterator rend() const {
+		return data_->rend();
+	}
+
+	size_type size() const {
+		return data_->size();
+	}
+
+	reference operator[](size_type n) {
+		return data_->operator[](n);
+	}
+	const_reference operator[](size_type n) const {
+		return data_->operator[](n);
+	}
+
+	bs_array_shared& operator=(const bs_array_shared& rhs) {
+		*data_ = *rhs.data_;
+		return *this;
+	}
+
+	reference front() {
+		return data_->front();
+	}
+	const_reference front() const {
+		return data_->front();
+	}
+
+	reference back() {
+		return data_->back();
+	}
+	const_reference back() const {
+		return data_->back();
+	}
+
+	void swap(bs_array_shared& rhs) {
+		std::swap(data_, rhs.data_);
+	}
+
+	void resize(size_type n, const value_type& v = value_type()) {
+		data_->resize(n, v);
+	}
+
+	template< class r_container >
+	friend bool operator==(const bs_array_shared& lhs, const bs_array_shared< r_container >& rhs) {
+		return *lhs.data_ == *rhs.data_;
+	}
+
+	template< class r_container >
+	friend bool operator<(const bs_array_shared& lhs, const bs_array_shared< r_container >& rhs) {
+		return *lhs.data_ < *rhs.data_;
+	}
+
+	// explicitly make array copy
+	bs_array_shared clone() const {
+		bs_array_shared t(begin(), end());
+		return t;
+	}
+
+protected:
+	sp_container data_;
+};
+
+template< class container_t >
+class bs_vector_shared : public bs_array_shared< container_t > {
+public:
+	typedef bs_array_shared< container_t > base_t;
 
 	typedef typename base_t::value_type value_type;
-	typedef typename base_t::reference reference;
-	typedef typename base_t::const_reference const_reference;
-	typedef typename std::allocator <T>::pointer pointer;
 	typedef typename base_t::size_type size_type;
-
 	typedef typename base_t::iterator iterator;
-	typedef typename base_t::const_iterator const_iterator;
-
-	using base_t::allocator_;
-
+	using base_t::data_;
 	using base_t::begin;
 	using base_t::end;
 
-	// ctors
-	bs_array_shared() {}
-	// copy ctor
-	bs_array_shared(const bs_array_shared& a)
-		: base_t(a)
+	// ctora
+	bs_vector_shared() {}
+
+	bs_vector_shared(size_type n, const value_type& v = value_type())
+		: base_t(n, v)
 	{}
 
-	bs_array_shared(size_type n, const value_type& v = value_type()) {
-		//const size_type new_capacity = 1 + std::max(size_type(1), n);
-		if(n) {
-			pointer new_memory = allocator_.allocate (n);
-			std::fill_n(new_memory, n, v);
+	template< class input_iterator >
+	bs_vector_shared(input_iterator start, input_iterator finish)
+		: base_t(start, finish)
+	{}
 
-			this->array_      = new_memory;
-			this->array_end_  = new_memory + n;
-			this->capacity_   = n;
-			//this->capacity_   = new_capacity;
-
-			BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
-			change_owner (new_memory, new_memory + n, n);
-		}
+	void push_back(const value_type& v) {
+		data_->push_back(v);
 	}
 
-	// save reference to passed data pointer, but not own it
-	// means that data won't be freed!
-	bs_array_shared(size_type n, pointer data) {
-		// TODO: is that right? -- seems ok
-		this->capacity_   = n;
-		if(n) {
-			this->array_      = data;
-			this->array_end_  = data + n;
-		}
+	void pop_back(const value_type& v) {
+		data_->pop_back(v);
+	}
+
+	iterator insert(iterator pos, const value_type& v) {
+		return data_->insert(pos, v);
+	}
+	void insert(iterator pos, size_type n, const value_type& v) {
+		data_->insert(pos, n, v);
 	}
 
 	template< class input_iterator >
-	bs_array_shared(input_iterator first, input_iterator last) {
-		if (this->is_owner ())
-			ctor_dispatch_ (first, last);
-		else
-			bs_throw_exception ("Error: bs_array_shared doesn't own data");
+	void insert(iterator pos, input_iterator start, input_iterator finish) {
+		data_->insert(pos, start, finish);
 	}
 
-	void init(size_type n, pointer data) {
-		bs_array_shared(n, data).swap(*this);
+	iterator erase(iterator pos) {
+		return data_->erase(pos);
+	}
+	iterator erase(iterator start, iterator finish) {
+		return data_->erase(start, finish);
 	}
 
-	void resize(size_type new_size, const value_type& v = value_type()) {
-		if (this->is_owner ()) {
-			if (new_size < this->size())
-				erase_at_end_ (this->size () - new_size);
-			else
-				insert_fill_ (this->end(), new_size - this->size(), v);
-		}
-		else
-			bs_throw_exception ("Error: bs_array_shared doesn't own data");
+	void clear() {
+		data_->clear();
 	}
 
-	void clear () {
-		if (this->is_owner ())
-			erase_at_end_ (this->size ());
-		else
-			bs_throw_exception ("Error: bs_array_shared doesn't own data");
-	}
-
-	void swap(bs_array_shared& arr) {
-		base_t::swap(arr);
-	}
-
-private:
-	template <typename forward_iterator>
-	void ctor_dispatch_ (forward_iterator first, forward_iterator last) {
-		const size_type n = std::distance (first, last);
-		//size_type new_capacity = 1 + std::max(1, n);
-		if(n) {
-			pointer new_memory = allocator_.allocate (n);
-			pointer new_finish = std::copy(first, last, new_memory);
-
-			this->array_      = new_memory;
-			this->array_end_  = new_finish;
-			this->capacity_   = n;
-
-			BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
-			change_owner (new_memory, new_finish, n);
-		}
-	}
-
-	void erase_at_end_ (size_type n) {
-		destroy (this->end () - n, this->end ());
-		this->change_owner (this->end () - n);
-	}
-
-	template < typename forward_iterator >
-	void destroy(forward_iterator first, forward_iterator last) {
-		for (; first != last; ++first)
-			allocator_.destroy (&*first);
-	}
-
-	void insert_fill_(iterator pos, size_type n, const value_type &value) {
-		if(!n) return;
-		if ((this->capacity () - this->size ()) >= n) {
-			size_type elems_after = this->end () - pos;
-			pointer old_finish = this->array_end_;
-
-			if (elems_after > n) {
-				std::copy(old_finish - n, old_finish, old_finish);
-				std::copy_backward (pos, old_finish - n, old_finish);
-				std::fill (pos, pos + n, value);
-
-				this->change_owner (this->end () + n);
-			}
-			else {
-				std::fill_n(old_finish, n - elems_after, value);
-				this->array_end_ += n - elems_after;
-				std::copy(pos, old_finish, this->end ());
-				this->array_end_ += elems_after;
-				std::fill (pos, old_finish, value);
-
-				this->change_owner (this->end ());
-			}
-		}
-		else {
-			BS_ASSERT (this->is_owner ());
-			const size_type new_capacity = std::max(this->size(), n);
-			pointer new_memory = allocator_.allocate (new_capacity);
-			pointer new_finish = new_memory;
-
-			new_finish = insert_fill_copy_a(pos, n, value, new_memory);
-
-			destroy (this->begin (), this->end ());
-			// deallocate
-			if(this->begin())
-				allocator_.deallocate(this->begin(), this->capacity());
-			this->change_owner (new_memory, new_finish, new_capacity);
-		}
-	}
-
-	T* insert_fill_copy_a (
-			T *pos, size_type n, const T &value,
-			T *new_memory)
-	{
-		T *new_finish = std::copy(begin (), pos, new_memory);
-		std::fill_n(new_finish, n, value);
-		new_finish += n;
-		new_finish = std::copy(pos, end(), new_finish);
-
-		return new_finish;
+	// explicitly make array copy
+	bs_vector_shared clone() const {
+		bs_vector_shared t(begin(), end());
+		return t;
 	}
 };
 
