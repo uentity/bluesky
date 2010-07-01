@@ -84,11 +84,11 @@ struct BS_API vector_traits : public bs_private::vecbase_traits_impl< T, std::ve
 
 /// @brief traits for arrays with shared_array container
 template< class T >
-struct BS_API shared_array_traits : public bs_private::arrbase_traits_impl< T, bs_array_shared< T > > {};
+struct BS_API shared_array_traits : public bs_private::arrbase_traits_impl< T, bs_array_shared< std::vector< T > > > {};
 
 /// @brief traits for arrays with shared_vector container
 template< class T >
-struct BS_API shared_vector_traits : public bs_private::vecbase_traits_impl< T, shared_vector< T > > {};
+struct BS_API shared_vector_traits : public bs_private::vecbase_traits_impl< T, bs_vector_shared< std::vector< T > > > {};
 
 #if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
 /// @brief traits for arrays with pyublas::numpy_array container
