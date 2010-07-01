@@ -184,7 +184,7 @@ public:
 	template< class R, template< class > class r_traits >
 	bs_array& operator=(const bs_array< R, r_traits >& rhs) {
 		size_type n = rhs.size();
-		if(n && this->begin() != rhs.begin()) {
+		if(n && &(*this)[0] != &rhs[0]) {
 			if(size() != n) resize(n);
 			std::copy(rhs.begin(), rhs.end(), this->begin());
 		}
@@ -193,7 +193,7 @@ public:
 
 	template< class R >
 	bs_array& operator=(const bs_arrbase< R >& rhs) {
-		this->assign(rhs);
+		arrbase_t::assign(rhs);
 		return *this;
 	}
 
