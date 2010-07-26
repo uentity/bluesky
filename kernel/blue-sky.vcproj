@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;;&quot;$(NUMPY_PATH)/include&quot;"
 				PreprocessorDefinitions="_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING;BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;BS_CREATE_UNMANAGED_OBJECTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -67,12 +67,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="loki_D.lib python25.lib psapi.lib"
+				AdditionalDependencies="loki_D.lib python26.lib psapi.lib"
 				OutputFile="$(ProjectDir)/../exe/debug/$(ProjectName)_d.dll"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
 				GenerateManifest="true"
-				IgnoreDefaultLibraryNames="python25_d.lib"
+				IgnoreDefaultLibraryNames="python26_d.lib"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/$(ProjectName).pdb"
 				SubSystem="0"
@@ -215,7 +215,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)/src&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(LIBCONFIG_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)/src&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(LIBCONFIG_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;;&quot;$(NUMPY_PATH)/include&quot;"
 				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="true"
@@ -239,7 +239,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="loki.lib libconfig++.lib python25.lib psapi.lib"
+				AdditionalDependencies="loki.lib libconfig++.lib python26.lib psapi.lib"
 				OutputFile="../exe/release/$(ProjectName).dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(LIBCONFIG_PATH)/release&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
