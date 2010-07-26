@@ -128,7 +128,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(STLPORT_PATH_)/stlport&quot;;&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;"
+				AdditionalIncludeDirectories="&quot;$(STLPORT_PATH_)/stlport&quot;;&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;;&quot;$(NUMPY_PATH)/include&quot;"
 				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="true"
@@ -152,12 +152,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="loki.lib python25.lib psapi.lib"
+				AdditionalDependencies="loki.lib python26.lib psapi.lib"
 				OutputFile="$(ProjectDir)/../exe/release/$(ProjectName).dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(STLPORT_PATH_)/lib&quot;;&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
 				GenerateManifest="true"
-				IgnoreDefaultLibraryNames="python25_d.lib"
+				IgnoreDefaultLibraryNames="python26_d.lib"
 				GenerateDebugInformation="false"
 				ProgramDatabaseFile="$(OutDir)/$(ProjectName).pdb"
 				SubSystem="0"
@@ -492,11 +492,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\include\python\pyublas\numpy.hpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\python\py_bs_abstract_storage.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\include\python\py_bs_abstract_storage.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_bs_array.cpp"
 				>
 			</File>
 			<File
@@ -545,6 +553,10 @@
 			</File>
 			<File
 				RelativePath=".\src\python\py_bs_typed.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\python\pyublas\python_helpers.hpp"
 				>
 			</File>
 		</Filter>
@@ -737,6 +749,22 @@
 			</File>
 			<File
 				RelativePath=".\include\array_ext.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\bs_array.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_array.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_array_shared.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_arrbase.h"
 				>
 			</File>
 			<File
