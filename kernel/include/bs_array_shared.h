@@ -22,7 +22,7 @@ namespace blue_sky {
 
 // wrap array around smart_ptr< std::vector< T > >
 template< class container_t >
-class bs_array_shared {
+class BS_API bs_array_shared {
 public:
 	typedef container_t container;
 	typedef st_smart_ptr< container > sp_container;
@@ -143,7 +143,7 @@ protected:
 };
 
 template< class container_t >
-class bs_vector_shared : public bs_array_shared< container_t > {
+class BS_API bs_vector_shared : public bs_array_shared< container_t > {
 public:
 	typedef bs_array_shared< container_t > base_t;
 

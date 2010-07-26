@@ -125,6 +125,10 @@ public:
 		: base_t(c)
 	{}
 
+	void dispose() const {
+		objbase::dispose();
+	}
+
 	// ctor via init
 	void init(const container& c) {
 		this_t(c).swap(*this);
