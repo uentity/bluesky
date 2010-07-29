@@ -67,12 +67,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="loki_D.lib python26.lib psapi.lib"
+				AdditionalDependencies="loki_D.lib psapi.lib"
 				OutputFile="$(ProjectDir)/../exe/debug/$(ProjectName)_d.dll"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
 				GenerateManifest="true"
-				IgnoreDefaultLibraryNames="python26_d.lib"
+				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/$(ProjectName).pdb"
 				SubSystem="0"
@@ -152,12 +152,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="loki.lib python25.lib psapi.lib"
+				AdditionalDependencies="loki.lib psapi.lib"
 				OutputFile="$(ProjectDir)/../exe/release/$(ProjectName).dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(STLPORT_PATH_)/lib&quot;;&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
 				GenerateManifest="true"
-				IgnoreDefaultLibraryNames="python25_d.lib"
+				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="false"
 				ProgramDatabaseFile="$(OutDir)/$(ProjectName).pdb"
 				SubSystem="0"
@@ -239,7 +239,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="loki.lib libconfig++.lib python26.lib psapi.lib"
+				AdditionalDependencies="loki.lib psapi.lib"
 				OutputFile="../exe/release/$(ProjectName).dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(BOOST_PATH)/lib&quot;;&quot;$(LOKI_PATH)/lib&quot;;&quot;$(LIBCONFIG_PATH)/release&quot;;&quot;$(PYTHON_PATH)/libs&quot;"
