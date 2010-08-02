@@ -7,34 +7,34 @@ def list_prefix(in_list, what) :
     return [what + x for x in in_list];
 
 def add_suffix (x, suffix) :
-    if (len (x) == 0) :
-        return x
-    else :
-        return x + suffix
+	if (len (x) == 0) :
+		return x
+	else :
+		return x + suffix
 
 class files :
-    def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"]) :
-        def super_glob (inc = Split ("."), excludes = []) :
-            file_list = []
-            for e in ext :
-        	for p in inc :
-            	    file_list.extend ([str (x) for x in Glob (os.path.join (p, e))])
+	def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"]) :
+		def super_glob (inc = Split ("."), excludes = []) :
+			file_list = []
+			for e in ext :
+				for p in inc :
+					file_list.extend ([str (x) for x in Glob (os.path.join (p, e))])
 
-            for f in excludes :
-                if (f in file_list) :
-                    file_list.remove (f)
+			for f in excludes :
+				if (f in file_list) :
+					file_list.remove (f)
 
-            file_list.sort ()
-            return file_list
+			file_list.sort ()
+			return file_list
 
-        self.root = ""
-        for p in root :
-            if (p <> ".") :
-                self.root = os.path.join (self.root, p)
+		self.root = ""
+		for p in root :
+			if (p <> ".") :
+				self.root = os.path.join (self.root, p)
 
-        sources = super_glob ([os.path.join (self.root, "src")], [str (Glob (os.path.join (self.root, "src", ex))[0]) for ex in excludes])
+		sources = super_glob ([os.path.join (self.root, "src")], [str (Glob (os.path.join (self.root, "src", ex))[0]) for ex in excludes])
 
-        self.sources = [os.path.join ("src", os.path.split (x)[1]) for x in sources]
+		self.sources = [os.path.join ("src", os.path.split (x)[1]) for x in sources]
 
 def bs_common_defines(custom_env) :
 	custom_env.AppendUnique(CPPDEFINES = ["BS_EXPORTING_PLUGIN"]);
@@ -46,4 +46,126 @@ Export ("list_suffix")
 Export ("add_suffix")
 Export ("files")
 Export ("bs_common_defines")
+
+#---------------- configure
+def CheckBoostVersion(context, version):
+	# Boost versions are in format major.minor.subminor
+	v_arr = version.split(".")
+	version_n = 0
+	if len(v_arr) > 0:
+		version_n += int(v_arr[0])*100000
+	if len(v_arr) > 1:
+		version_n += int(v_arr[1])*100
+	if len(v_arr) > 2:
+		version_n += int(v_arr[2])
+
+	context.Message('Checking for Boost version >= %s... ' % (version))
+	ret = context.TryCompile("""
+	#include <boost/version.hpp>
+	#if BOOST_VERSION < %d
+	#error Installed boost is too old!
+	#endif
+	int main()
+	{
+		return 0;
+	}
+	""" % version_n, '.cpp')
+	context.Result(ret)
+	return ret
+
+def FindBoostLibrary(conf, lib, path, postfix = ''):
+	# look for boost libraries
+	conf.Message('Looking for library {0}{1}... '.format(lib, postfix))
+	#for path in pathes:
+	 # direct form: e.g. libboost_iostreams.so
+	files = glob.glob(os.path.join(path, 'lib{0}{1}.so'.format(lib, postfix)));
+	if len(files) > 0 :
+		conf.Result('yes');
+		return files[0];
+	# check things like libboost_iostreams-gcc.so
+	files = glob.glob(os.path.join(path, 'lib{0}-*{1}.so'.format(lib, postfix)));
+	#print files;
+	# if there are more than one, choose the first one
+	# FIXME: choose the best one.
+	if len(files) > 0:
+		# get xxx-gcc from /usr/local/lib/libboost_xxx-gcc.a
+		conf.Result('yes');
+		#print files[0].split(os.sep);
+		#print files[0].split(os.sep)[-1];
+		#print files[0].split(os.sep)[-1][3:-3];
+		#return files[0].split(os.sep)[-1][3:-3];
+		return files[0].split(os.sep)[-1][3:-3];
+	# nothing is found
+	conf.Result('no');
+	return '';
+
+def CheckBoost(conf) :
+	# define boost lib names to include
+	boost_libnames = list_prefix(['filesystem', 'regex', 'thread', 'signals'], 'boost_');
+	if (conf.env['py'] == '1') :
+		boost_libnames += ['boost_python'];
+		conf.env.AppendUnique(LIBS = ['${python_name}']);
+
+	#conf.Message('Checking Boost headers and libs for building BlueSky...');
+	# if BOOST_PATH env variable present, it overrides system path check
+	if 'BOOST_PATH' in os.environ :
+		print "BOOST_PATH found!";
+		print "Assume Boost headers in $BOOST_PATH, libraries in $BOOST_PATH/lib";
+		boost_libpath = os.path.join(os.environ['BOOST_PATH'], 'lib');
+		conf.env.AppendUnique(
+			CPPPATH = [os.environ['BOOST_PATH']],
+			LIBPATH = [boost_libpath],
+			RPATH = [boost_libpath]
+		);
+
+		# find full lib name based on path
+		conf.AddTest('FindBoostLibrary', FindBoostLibrary);
+		postfix = '';
+		if 'debug' in conf.env['build_kinds'] :
+			postfix = '-d';
+
+		for i in range(len(boost_libnames)) :
+			lib_fname = conf.FindBoostLibrary(boost_libnames[i], boost_libpath, postfix);
+			if len(lib_fname) > 0 :
+				print boost_libnames[i] + ' -> ' + lib_fname;
+				boost_libnames[i] = lib_fname;
+			else :
+				print "Warning! " + libname + " wasn't found in " + boost_libpath;
+
+	# check Boost version
+	conf.AddTest('CheckBoostVersion', CheckBoostVersion);
+	if not conf.CheckBoostVersion('1.37') :
+		print 'Boost version >= 1.37 required to build BlueSky!'
+		Exit(1);
+
+	# check Boost libraries
+	for libname in boost_libnames :
+		if not conf.CheckLib(libname, language='C++') :
+			print libname + ' library is required to build BlueSky!'
+			Exit(1);
+	return boost_libnames;
+
+def CheckLoki(conf) :
+	if 'LOKI_PATH' in os.environ :
+		print "LOKI_PATH found!";
+		print "Assume Loki headers in $LOKI_PATH/include, libraries in $LOKI_PATH/lib";
+		loki_libpath = os.path.join(os.environ['LOKI_PATH'], 'lib');
+		conf.env.AppendUnique(
+			CPPPATH = [os.path.join(os.environ['LOKI_PATH'], 'include')]
+			#, LIBPATH = [loki_libpath],
+			#, RPATH = [loki_libpath]
+		);
+
+	# Check headers
+	if not conf.CheckCXXHeader('loki/TypeManip.h') :
+		print "loki/TypeManip.h required to build BlueSky";
+		Exit(1);
+	if not conf.CheckCXXHeader('loki/Singleton.h') :
+		print "loki/Singleton.h required to build BlueSky";
+		Exit(1);
+	#conf.CheckLib('loki');
+
+Export("CheckBoost");
+Export("CheckLoki");
+
 
