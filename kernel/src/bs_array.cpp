@@ -37,6 +37,7 @@ BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, shared_vector_traits));
 
 #ifdef BSPY_EXPORTING
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, numpy_array_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, numpy_array_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, numpy_array_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, numpy_array_traits));
 #endif
