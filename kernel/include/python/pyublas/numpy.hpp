@@ -238,11 +238,11 @@ namespace pyublas
       { return PyArray_NDIM(m_numpy_array.get()); }
       const npy_intp *dims() const 
       { return PyArray_DIMS(m_numpy_array.get()); }
-      const npy_intp dim(npy_intp i) const 
+      npy_intp dim(npy_intp i) const 
       { return PyArray_DIM(m_numpy_array.get(), i); }
       const npy_intp *strides() const 
       { return PyArray_STRIDES(m_numpy_array.get()); }
-      const npy_intp stride(npy_intp i) const 
+      npy_intp stride(npy_intp i) const 
       { return PyArray_STRIDE(m_numpy_array.get(), i); }
 
       npy_intp itemsize() const
