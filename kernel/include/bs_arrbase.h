@@ -86,6 +86,11 @@ public:
 	// make array with copied data
 	virtual sp_arrbase clone() const = 0;
 
+	virtual void assign(const value_type& v) {
+		for(size_type i = 0; i < size(); ++i)
+			ss(i) = v;
+	}
+
 	// assign for different type array
 	template< class R >
 	void assign(const bs_arrbase< R >& rhs) {
@@ -161,6 +166,59 @@ public:
 //bs_vecbase< T >::bs_vecbase(const bs_vecbase& a)
 //	: bs_refcounter(), arrbase_t(a)
 //{}
+
+namespace bs_private {
+
+template< class T, class array_t >
+struct BS_API arrbase_traits_impl : public bs_arrbase< T >, public array_t {
+	typedef array_t container;
+	typedef bs_arrbase< T > arrbase;
+	typedef arrbase_traits_impl< T, array_t > bs_array_base;
+
+	typedef typename arrbase::value_type value_type;
+
+	// default ctor
+	arrbase_traits_impl() {}
+
+	// ctor for constructing from container copy
+	arrbase_traits_impl(const container& c) : array_t(c) {}
+};
+
+template< class T, class vector_t >
+struct BS_API vecbase_traits_impl : public bs_vecbase< T >, public vector_t {
+	typedef vector_t container;
+	typedef bs_vecbase< T > arrbase;
+	typedef vecbase_traits_impl< T, vector_t > bs_array_base;
+
+	// inherited from bs_arrbase class
+	typedef typename arrbase::value_type value_type;
+	typedef typename arrbase::key_type key_type;
+
+	// default ctor
+	vecbase_traits_impl() {}
+
+	// ctor from vector copy
+	vecbase_traits_impl(const container& c) : vector_t(c) {}
+
+	using container::size;
+
+	bool insert(const key_type& key, const value_type& value) {
+		if(key > size()) return false;
+		container::insert(container::begin() + key, value);
+		return true;
+	}
+
+	bool insert(const value_type& value) {
+		container::push_back(value);
+		return true;
+	}
+
+	void erase(const key_type& key)	{
+		container::erase(container::begin() + key);
+	}
+};
+
+}
 
 }	// namespace blue-sky
 #endif	// file guard
