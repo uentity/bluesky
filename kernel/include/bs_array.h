@@ -23,68 +23,9 @@
 
 namespace blue_sky {
 
-namespace bs_private {
-
-template< class T, class array_t >
-struct BS_API arrbase_traits_impl : public bs_arrbase< T >, public array_t {
-	typedef array_t container;
-	typedef bs_arrbase< T > arrbase;
-	typedef arrbase_traits_impl< T, array_t > bs_array_base;
-
-	// default ctor
-	arrbase_traits_impl() {}
-
-	// ctor for constructing from container copy
-	arrbase_traits_impl(const container& c) : array_t(c) {}
-};
-
-template< class T, class vector_t >
-struct BS_API vecbase_traits_impl : public bs_vecbase< T >, public vector_t {
-	typedef vector_t container;
-	typedef bs_vecbase< T > arrbase;
-	typedef vecbase_traits_impl< T, vector_t > bs_array_base;
-
-	// inherited from bs_arrbase class
-	typedef typename arrbase::value_type value_type;
-	typedef typename arrbase::key_type key_type;
-
-	// default ctor
-	vecbase_traits_impl() {}
-
-	// ctor from vector copy
-	vecbase_traits_impl(const container& c) : vector_t(c) {}
-
-	using container::size;
-
-	bool insert(const key_type& key, const value_type& value) {
-		if(key > size()) return false;
-		container::insert(container::begin() + key, value);
-		return true;
-	}
-
-	bool insert(const value_type& value) {
-		container::push_back(value);
-		return true;
-	}
-
-	void erase(const key_type& key)	{
-		container::erase(container::begin() + key);
-	}
-};
-
-}
-
 /// @brief traits for arrays with std::vector container
 template< class T >
 struct BS_API vector_traits : public bs_private::vecbase_traits_impl< T, std::vector< T > > {};
-
-/// @brief traits for arrays with shared_array container
-template< class T >
-struct BS_API shared_array_traits : public bs_private::arrbase_traits_impl< T, bs_array_shared< std::vector< T > > > {};
-
-/// @brief traits for arrays with shared_vector container
-template< class T >
-struct BS_API shared_vector_traits : public bs_private::vecbase_traits_impl< T, bs_vector_shared< std::vector< T > > > {};
 
 /*-----------------------------------------------------------------------------
  *  bs_array class

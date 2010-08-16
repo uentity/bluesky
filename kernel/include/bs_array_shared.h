@@ -17,6 +17,7 @@
 #define BS_ARRAY_SHARED_529LXCQA
 
 #include "bs_common.h"
+#include "bs_arrbase.h"
 
 namespace blue_sky {
 
@@ -138,6 +139,10 @@ public:
 		return t;
 	}
 
+	void assign(const value_type& v) {
+		std::fill(begin(), end(), v);
+	}
+
 protected:
 	sp_container data_;
 };
@@ -204,6 +209,39 @@ public:
 	}
 };
 
-} 	// eof blue_sky
+namespace bs_private {
+
+template< class traits_impl >
+struct BS_API sarray_traits_impl : public traits_impl {
+	typedef typename traits_impl::value_type value_type;
+	typedef typename traits_impl::container container;
+
+	void assign(const value_type& v) {
+		container::assign(v);
+	}
+};
+
+}
+
+/// @brief traits for arrays with shared_array container
+template< class T >
+struct BS_API shared_array_traits : public bs_private::sarray_traits_impl<
+                                        bs_private::arrbase_traits_impl<
+                                            T, bs_array_shared< std::vector< T > >
+                                        >
+                                    >
+{};
+
+/// @brief traits for arrays with shared_vector container
+template< class T >
+struct BS_API shared_vector_traits : public bs_private::sarray_traits_impl<
+                                         bs_private::vecbase_traits_impl<
+                                            T, bs_vector_shared< std::vector< T > >
+                                         >
+                                     >
+{};
+
+
+}   // eof blue_sky
 
 #endif /* end of include guard: BS_ARRAY_SHARED_529LXCQA */
