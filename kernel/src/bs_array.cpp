@@ -13,6 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
+#if defined(BSPY_EXPORTING) && defined(UNIX)
+// supress gcc warnings
+#include "Python.h"
+#endif
 #include "bs_array.h"
 #include "bs_map.h"
 

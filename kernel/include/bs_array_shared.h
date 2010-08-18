@@ -215,6 +215,7 @@ template< class traits_impl >
 struct BS_API sarray_traits_impl : public traits_impl {
 	typedef typename traits_impl::value_type value_type;
 	typedef typename traits_impl::container container;
+	typedef sarray_traits_impl< traits_impl > bs_array_base;
 
 	void assign(const value_type& v) {
 		container::assign(v);
