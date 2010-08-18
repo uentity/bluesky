@@ -787,13 +787,21 @@ void test_ondelete() {
 
 void test_array() {
 	cout << "-----------------------------bs_array test------------------------------" << endl;
-	typedef bs_array< double, vector_traits > real_array_t;
-	typedef bs_array< int, vector_traits > int_array_t;
-	typedef bs_array< string, vector_traits > str_array_t;
+	typedef bs_array< double > real_array_t;
+	typedef bs_array< int > int_array_t;
+	typedef bs_array< string, shared_vector_traits > str_array_t;
 	// create arrays
 	smart_ptr< real_array_t > sp_areal = k.create_object(real_array_t::bs_type());
-	smart_ptr< real_array_t > sp_aint = k.create_object(int_array_t::bs_type());
-	smart_ptr< real_array_t > sp_astr = k.create_object(str_array_t::bs_type());
+	smart_ptr< int_array_t > sp_aint = k.create_object(int_array_t::bs_type());
+	smart_ptr< str_array_t > sp_astr = k.create_object(str_array_t::bs_type());
+
+	// fill array with equal values
+	sp_areal->resize(10);
+	sp_areal->assign(-1);
+	sp_aint->resize(10);
+	sp_aint->assign(10);
+	sp_astr->resize(10);
+	sp_astr->assign("hello");
 
 	// fill arrays with random values
 	//insert_iterator< real_array_t > ii(*sp_areal.lock(), sp_areal.lock()->begin());
