@@ -158,7 +158,7 @@ custom_vars.Add(PathVariable('custom_script', 'Specify filename of custom build 
 	'scons_env.custom', PathVariable.PathAccept));
 
 # create custom environment
-custom_env = Environment(variables = custom_vars);
+custom_env = Environment(variables = custom_vars, ENV=os.environ);
 Export('custom_vars', 'custom_env');
 
 def custom_proc_call() :
