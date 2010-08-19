@@ -153,7 +153,7 @@ protected:
 
 // default bs_array ctor implementation
 template< class T, template< class > class cont_traits >
-bs_array< T, cont_traits >::bs_array(bs_type_ctor_param param)
+bs_array< T, cont_traits >::bs_array(bs_type_ctor_param /* param */)
 : bs_refcounter() //, base_t(param)
 {}
 
