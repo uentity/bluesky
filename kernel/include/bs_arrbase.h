@@ -45,6 +45,10 @@ public:
 	/// @return number of elements contained in array
 	virtual size_type size() const = 0;
 
+	virtual bool empty() const {
+		return (size() == 0);
+	}
+
 	/// @brief Subscripting operator
 	/// Forward call to ss(key)
 	/// @param key item key
