@@ -718,6 +718,9 @@ public:
 		}
 		//}
 
+		// assign parent
+		leaf.link_->set_parent(self_);
+
 		//fire signal that leaf was added
 		if(self_ && emit_signal)
 			self_->fire_signal(bs_node::leaf_added, l);
@@ -771,6 +774,8 @@ public:
 		//if(dying->is_persistent()) return false;
 		//stop tracking leaf's object
 		dying->unsubscribe(bs_link::data_changed, lt_);
+		// forget parent
+		dying->set_parent(NULL);
 
 		//physically delete leaf
 		erase_leaf(pos, tag);
@@ -1087,7 +1092,7 @@ public:
 
 	//default ctor
 	//template< class index_t >
-	ni_impl(index_type idx_t = custom_idx) {
+	ni_impl(index_type idx_t = name_idx) {
 		//pos_ = new iter_backend_impl< idx_traits< index_t >::tag >;
 		switch(idx_t) {
 			default:
@@ -1105,7 +1110,7 @@ public:
 
 	//construct using node
 	//template< class index_t >
-	ni_impl(const bs_node& d, index_type idx_t = custom_idx, initial_pos where = pos_begin) {
+	ni_impl(const bs_node& d, index_type idx_t = name_idx, initial_pos where = pos_begin) {
 		//pos_ = new iter_backend_impl< idx_traits< index_t >::tag >(d.pimpl_);
 		switch(idx_t) {
 			default:
@@ -1285,6 +1290,14 @@ bool bs_node::n_iterator::is_persistent() const {
 void bs_node::n_iterator::set_persistence(bool persistent) const {
 	pimpl_->leaf()->set_persistence(persistent);
 }
+
+sp_node bs_node::n_iterator::container() const {
+	const bs_node::node_impl* p_nimpl = pimpl_->pos_->nimpl();
+	if(p_nimpl)
+		return p_nimpl->self_;
+	else return NULL;
+}
+
 //===================================== bs_node  implementation ========================================================
 
 //destructor

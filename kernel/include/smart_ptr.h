@@ -94,11 +94,11 @@
 */
 
 #ifndef BS_DEF_CAST_POLICY
-#ifdef UNIX
-#define BS_DEF_CAST_POLICY bs_static_cast
-#else
+//#ifdef UNIX
+//#define BS_DEF_CAST_POLICY bs_static_cast
+//#else
 #define BS_DEF_CAST_POLICY bs_semi_dynamic_cast
-#endif
+//#endif
 #endif
 
 namespace blue_sky {

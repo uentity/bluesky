@@ -600,6 +600,7 @@ public:
 		root_ = bs_link::create(bs_node::create_node(), "/");
 		//create system subdirectories of root
 		lsmart_ptr< sp_node > lp_root(root_->node());
+		root_->set_parent(lp_root);
 		//hidden .system dir
 		lp_root->insert(bs_node::create_node(), ".system", true);
 		//etc dir

@@ -91,17 +91,17 @@ namespace blue_sky
 		// type_info::operator== return type is int in some VC libraries
 	{ return (lhs.get() == rhs.get()) != 0; }
 
-	inline bool operator<(const bs_type_info& lhs, const bs_type_info& rhs)
-	{ return lhs.before(rhs); }
-
 	inline bool operator!=(const bs_type_info& lhs, const bs_type_info& rhs)
 	{ return !(lhs == rhs); }
 
-	inline bool operator>(const bs_type_info& lhs, const bs_type_info& rhs)
-	{ return rhs < lhs; }
+	inline bool operator<(const bs_type_info& lhs, const bs_type_info& rhs)
+	{ return lhs.before(rhs); }
 
 	inline bool operator<=(const bs_type_info& lhs, const bs_type_info& rhs)
-	{ return !(lhs > rhs); }
+	{ return (lhs < rhs || lhs == rhs); }
+
+	inline bool operator>(const bs_type_info& lhs, const bs_type_info& rhs)
+	{ return !(rhs <= lhs); }
 
 	inline bool operator>=(const bs_type_info& lhs, const bs_type_info& rhs)
 	{ return !(lhs < rhs); }

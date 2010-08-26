@@ -9,50 +9,56 @@ def list_suffix(in_list, what) :
 
 # setup list of source files to compile
 kernel_cpp_list = Split("""
-    bs_abstract_storage.cpp
+	bs_abstract_storage.cpp
 	bs_array.cpp
-    bs_assert.cpp
-    bs_command.cpp
-    bs_common.cpp
-    bs_conf_reader.cpp
-    bs_config_parser.cpp
-    bs_exception.cpp
-    bs_kernel.cpp
-    bs_kernel_ston.cpp
-    bs_kernel_tools.cpp
-    bs_link.cpp
-    bs_messaging.cpp
-    bs_misc.cpp
-    bs_object_base.cpp
-    bs_prop_base.cpp
-    bs_report.cpp
-    bs_shell.cpp
-    bs_tree.cpp
-    bs_type_info.cpp
-    main.cpp
-    smart_ptr.cpp
-    thread_pool.cpp
-    memory_manager.cpp
-    bs_log_scribers.cpp
-    shared_array_allocator.cpp
-    shared_vector.cpp
+	bs_assert.cpp
+	bs_command.cpp
+	bs_common.cpp
+	bs_conf_reader.cpp
+	bs_config_parser.cpp
+	bs_exception.cpp
+	bs_kernel.cpp
+	bs_kernel_ston.cpp
+	bs_kernel_tools.cpp
+	bs_link.cpp
+	bs_messaging.cpp
+	bs_misc.cpp
+	bs_object_base.cpp
+	bs_prop_base.cpp
+	bs_report.cpp
+	bs_shell.cpp
+	bs_tree.cpp
+	bs_type_info.cpp
+	main.cpp
+	smart_ptr.cpp
+	thread_pool.cpp
+	memory_manager.cpp
+	bs_log_scribers.cpp
+	shared_array_allocator.cpp
+	shared_vector.cpp
 """);
 
 py_kernel_cpp_list = [os.path.join('python', x) for x in Split("""
 	bs_nparray.cpp
-    bs_import_common.cpp
-    bs_python_import.cpp
-    py_bs_abstract_storage.cpp
-    py_bs_assert.cpp
-    py_bs_command.cpp
-    py_bs_kernel.cpp
-    py_bs_link.cpp
-    py_bs_log.cpp
-    py_bs_messaging.cpp
-    py_bs_object_base.cpp
-    py_bs_shell.cpp
-    py_bs_tree.cpp
-    py_bs_typed.cpp 
+	bs_import_common.cpp
+	bs_python_import.cpp
+	py_bs_abstract_storage.cpp
+	py_bs_assert.cpp
+	py_bs_command.cpp
+	py_bs_kernel.cpp
+	py_bs_link.cpp
+	py_bs_log.cpp
+	py_bs_messaging.cpp
+	py_bs_object_base.cpp
+	py_bs_shell.cpp
+	py_bs_tree.cpp
+	py_bs_typed.cpp
+	py_messaging.cpp
+	py_object_base.cpp
+	py_common.cpp
+	py_link.cpp
+	py_tree.cpp
+	py_kernel.cpp
 """)];
 
 #full_kernel_cpp_list = kernel_cpp_list + py_kernel_cpp_list;

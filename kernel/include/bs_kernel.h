@@ -55,6 +55,10 @@ namespace blue_sky {
 
 	//type tuple - contains type information coupled with plugin information
 	struct type_tuple {
+		// typedefs to look like std::pair
+		typedef plugin_descriptor first_type;
+		typedef type_descriptor second_type;
+
 		plugin_descriptor pd_;
 		type_descriptor td_;
 
