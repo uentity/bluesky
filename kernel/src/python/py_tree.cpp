@@ -29,29 +29,19 @@ using namespace boost::python;
 
 namespace {
 using namespace std;
-// objbase wrapper
-class sort_traits_pyw : public bs_node::sort_traits, public wrapper< bs_node::sort_traits > {
+
+// sort_traits wrapper
+class sort_traits_pyw :
+	public bs_node::sort_traits,
+	public wrapper< bs_node::sort_traits >
+{
 public:
 	const char* sort_name() const {
-		if(override f = this->get_override("sort_name"))
-			return f();
-		else
-			return bs_node::sort_traits::sort_name();
-	}
-
-	const char* default_sort_name() const {
-		return bs_node::sort_traits::sort_name();
+		return this->get_override("sort_name")();
 	}
 
 	key_ptr key_generator(const sp_link& l) const {
-		if(override f = this->get_override("key_generator"))
-			return f(l);
-		else
-			return bs_node::sort_traits::key_generator(l);
-	}
-
-	key_ptr default_key_generator(const sp_link& l) const {
-		return bs_node::sort_traits::key_generator(l);
+		return this->get_override("key_generator")();
 	}
 
 	bool accepts(const sp_link& l) const {
@@ -61,7 +51,7 @@ public:
 			return bs_node::sort_traits::accepts(l);
 	}
 
-	bool default_accepts(const sp_link& l) const {
+	bool def_accepts(const sp_link& l) const {
 		return bs_node::sort_traits::accepts(l);
 	}
 
@@ -72,11 +62,42 @@ public:
 			return bs_node::sort_traits::accept_types();
 	}
 
-	types_v default_accept_types() const {
+	types_v def_accept_types() const {
 		return bs_node::sort_traits::accept_types();
 	}
 };
 
+// sort_traits wrapper
+class restrict_types_pyw :
+	public bs_node::restrict_types,
+	public wrapper< bs_node::restrict_types >
+{
+public:
+	const char* sort_name() const {
+		return this->get_override("sort_name")();
+	}
+
+	key_ptr key_generator(const sp_link& l) const {
+		if(override f = this->get_override("key_generator"))
+			return f(l);
+		else
+			return bs_node::restrict_types::key_generator(l);
+	}
+
+	key_ptr def_key_generator(const sp_link& l) const {
+		return bs_node::restrict_types::key_generator(l);
+	}
+
+	bool accepts(const sp_link& l) const {
+		return this->get_override("accepts")();
+	}
+
+	types_v accept_types() const {
+		return this->get_override("accept_types")();
+	}
+};
+
+// sort_traits::key_type wrapper
 struct key_type_pyw : public bs_node::sort_traits::key_type,
 	public wrapper< bs_node::sort_traits::key_type >
 {
@@ -170,7 +191,8 @@ void py_bind_tree() {
 	bs_node::n_range (bs_node::*eq_range1)(const bs_node::sort_traits::key_ptr&) const = &bs_node::equal_range;
 	bs_node::n_range (bs_node::*eq_range2)(const sp_link&, bs_node::index_type) const = &bs_node::equal_range;
 	// insert
-	bs_node::insert_ret_t (bs_node::*insert1)(const sp_obj&, const std::string&, bool is_persistent) const = &bs_node::insert;
+	bs_node::insert_ret_t (bs_node::*insert1)(const sp_obj&, const std::string&, bool is_persistent) const =
+		&bs_node::insert;
 	bs_node::insert_ret_t (bs_node::*insert2)(const sp_link&, bool) const = &bs_node::insert;
 	void (bs_node::*insert3)(bs_node::n_iterator, bs_node::n_iterator) const = &bs_node::insert;
 	// erase
@@ -264,15 +286,16 @@ void py_bind_tree() {
 
 	// export sort_traits
 	{
+		//typedef sort_traits_pyw< bs_node::sort_traits > sort_traits_pyw_t;
 		scope srt_traits_scope = class_<
 			sort_traits_pyw,
 			boost::noncopyable
 			>
-		("sort_traits", no_init)
+		("sort_traits")
 			.def("sort_name", pure_virtual(&bs_node::sort_traits::sort_name))
 			.def("key_generator", pure_virtual(&bs_node::sort_traits::key_generator))
-			.def("accepts", pure_virtual(&bs_node::sort_traits::accepts))
-			.def("accept_types", pure_virtual(&bs_node::sort_traits::accept_types))
+			.def("accepts", &bs_node::sort_traits::accepts, &sort_traits_pyw::def_accepts)
+			.def("accept_types", &bs_node::sort_traits::accept_types, &sort_traits_pyw::def_accept_types)
 		;
 
 		class_<
@@ -280,7 +303,7 @@ void py_bind_tree() {
 			st_smart_ptr< key_type_pyw >,
 			boost::noncopyable
 			>
-		("key_type", no_init)
+		("key_type")
 			.def("sort_order", pure_virtual(&bs_node::sort_traits::key_type::sort_order))
 		;
 		// register smart_ptr conversions
@@ -288,12 +311,16 @@ void py_bind_tree() {
 		register_ptr_to_python<  bs_node::sort_traits::key_type::key_ptr >();
 	}
 
+	//typedef sort_traits_pyw< bs_node::restrict_types > restrict_types_pyw_t;
 	class_<
-		bs_node::restrict_types,
+		restrict_types_pyw,
 		bases< bs_node::sort_traits >,
 		boost::noncopyable
 		>
-	("restrict_types", no_init)
+	("restrict_types")
+		.def("key_generator", &bs_node::restrict_types::key_generator, &restrict_types_pyw::def_key_generator)
+		.def("accepts", pure_virtual(&bs_node::restrict_types::accepts))
+		.def("accept_types", pure_virtual(&bs_node::restrict_types::accept_types))
 	;
 
 	// n_iterator binding
