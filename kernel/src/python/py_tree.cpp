@@ -160,7 +160,22 @@ bs_node::n_iterator ss(const bs_node& n, ulong idx) {
 	}
 }
 
-sp_link getitem(const bs_node& n, ulong idx) {
+template< class key_t >
+sp_link getitem(const bs_node& n, key_t key) {
+	bs_node::n_iterator p_obj = n.find(key);
+	if(p_obj == n.end()) {
+		PyErr_SetString(PyExc_IndexError, "No such element");
+		throw_error_already_set();
+	}
+	return p_obj.get();
+}
+
+template< >
+sp_link getitem< ulong >(const bs_node& n, ulong idx) {
+	if(idx >= n.size()) {
+		PyErr_SetString(PyExc_IndexError, "Index out of range");
+		throw_error_already_set();
+	}
 	return ss(n, idx).get();
 }
 
@@ -226,9 +241,9 @@ void py_bind_tree() {
 	("node", no_init)
 		.def("__iter__", &bs_node::begin, begin_overl())
 		.def("__len__", &bs_node::size)
-		.def("__getitem__", find1, find1_overl())
-		.def("__getitem__", &getitem)
-		//.def("__getitem__", &getitem< ulong >)
+		.def("__getitem__", &getitem< ulong >)
+		.def("__getitem__", &getitem< const std::string& >)
+		.def("__getitem__", &getitem< sp_link >)
 		.def("begin", &bs_node::begin, begin_overl())
 		.def("end", &bs_node::end, end_overl())
 		.def("create", &bs_node::create_node)
