@@ -96,24 +96,9 @@ using namespace blue_sky;
 struct __kernel_types_pd_tag__ {};
 struct __runtime_types_pd_tag__ {};
 
-	//namespace blue_sky {
-//namespace private_ {
-//
-//namespace kernel_types {
-//  BLUE_SKY_PLUGIN_DESCRIPTOR_EXT ("BlueSky kernel", "1.0RC4", "Plugin tag for BlueSky kernel", "", "bs")
-//} // namespace kernel_types
-//
-//namespace runtime_types {
-//  BLUE_SKY_PLUGIN_DESCRIPTOR_EXT_STATIC ("Runtime types", "0.1", "Plugin tag for runtime types", "", "")
-//} // namespace runtime_types
-//
-//} // namespace private_
-//} // namespace blue_sky
-
 /*-----------------------------------------------------------------------------
  *  Python-related helpers to insert BS plugins under specified Python namespaces
  *-----------------------------------------------------------------------------*/
-
 #ifdef BSPY_EXPORTING
 using namespace boost::python;
 using namespace boost::python::detail;
@@ -456,6 +441,7 @@ typedef kernel::types_enum (*reg_kernel_types_f)();
 kernel::types_enum register_bs_array();
 kernel::types_enum register_data_table();
 #ifdef BSPY_EXPORTING
+namespace  python { void py_bind_anyobject(); }
 kernel::types_enum register_nparray();
 #endif
 /*-----------------------------------------------------------------------------
@@ -1225,6 +1211,12 @@ blue_sky::error_code kernel::kernel_impl::load_plugins(bool init_py_subsyst) {
 		if(load_plugin(lload(*i).first, lload(*i).second, init_py_subsyst) == blue_sky::no_error)
 			++lib_cnt;
 	} //main loading cycle
+
+#ifdef BSPY_EXPORTING
+	// register converter for any Python object
+	// should be at the end of boost::python registry
+	if(init_py_subsyst) blue_sky::python::py_bind_anyobject();
+#endif
 
 	if (lib_cnt == 0) {
 		BSERROR << "BlueSky: no plugins were loaded" << bs_end;

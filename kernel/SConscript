@@ -59,6 +59,7 @@ py_kernel_cpp_list = [os.path.join('python', x) for x in Split("""
 	py_link.cpp
 	py_tree.cpp
 	py_kernel.cpp
+	py_anyobject.cpp
 """)];
 
 #full_kernel_cpp_list = kernel_cpp_list + py_kernel_cpp_list;
