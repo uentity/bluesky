@@ -215,7 +215,10 @@ template< class traits_impl >
 struct BS_API sarray_traits_impl : public traits_impl {
 	typedef typename traits_impl::value_type value_type;
 	typedef typename traits_impl::container container;
+	typedef typename traits_impl::arrbase arrbase;
 	typedef sarray_traits_impl< traits_impl > bs_array_base;
+
+	using arrbase::assign;
 
 	void assign(const value_type& v) {
 		container::assign(v);
@@ -241,7 +244,6 @@ struct BS_API shared_vector_traits : public bs_private::sarray_traits_impl<
                                          >
                                      >
 {};
-
 
 }   // eof blue_sky
 
