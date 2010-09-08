@@ -146,7 +146,7 @@ public:
 	}
 
 	void erase(const key_type& key) {
-		cont_traits_t::erase(key);
+		container::erase(key);
 	}
 
 private:

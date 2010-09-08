@@ -48,7 +48,7 @@ namespace private_ {
     typedef std::reverse_iterator<iterator> reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    array_ext (T *e = 0, size_t N = 0) 
+    array_ext (T *e = 0, size_type N = 0) 
     : elems (e)
     , N (N)
     , capacity_ (N)
@@ -198,8 +198,8 @@ namespace private_ {
     }
   public:
     T             *elems;
-    size_t        N;
-    size_t        capacity_;
+    size_type        N;
+    size_type        capacity_;
   };
 
   // global swap()
