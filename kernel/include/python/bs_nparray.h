@@ -16,7 +16,7 @@
 #ifndef BS_NPARRAY_5NAYJGRI
 #define BS_NPARRAY_5NAYJGRI
 
-#include <bs_array.h>
+#include "bs_array.h"
 #include <pyublas/numpy.hpp>
 #include <iostream>
 
@@ -24,7 +24,7 @@ namespace blue_sky {
 
 /// @brief traits for arrays with pyublas::numpy_array container
 template< class T >
-struct BS_API numpy_array_traits : public bs_private::arrbase_traits_impl< T, pyublas::numpy_array< T > >
+struct BS_API numpy_array_traits : public bs_arrbase_impl< T, pyublas::numpy_array< T > >
 {};
 
 template< class T >

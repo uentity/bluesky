@@ -52,7 +52,7 @@ smart_ptr< ret_array_t > test_nparray(smart_ptr< inp_array_t > a, smart_ptr< inp
 	smart_ptr< ret_array_t > res = BS_KERNEL.create_object(ret_array_t::bs_type());
 	*res = *a;
 	res->assign(*a);
-	res = a->clone();
+	*res = *a->clone();
 	res->resize(sz);
 	for(ulong i = 0; i < sz; ++i)
 		(*res)[i] = (*a)[i] + (*b)[i];
@@ -86,9 +86,36 @@ static boost::python::object py_create_bs_type(boost::python::object py_obj) {
 	return py_obj;
 }
 
-//---- converter traits for bs_nparray
 using namespace blue_sky;
+using namespace std;
 
+/*-----------------------------------------------------------------
+ * wrapper class to handle Python -> C++ nparray reference conversion
+ *----------------------------------------------------------------*/
+//template< class T >
+//struct nparray_shared : public bs_nparray< T > {
+//	typedef bs_nparray< T > nparray_t;
+//	typedef smart_ptr< nparray_t > sp_nparray_t;
+//	typedef bs_arrbase< T > arrbase_t;
+//	typedef smart_ptr< arrbase_t > sp_arrbase_t;
+//
+//	typedef typename nparray_t::size_type size_type;
+//
+//	nparray_shared(const sp_arrbase_t& sp_data) : base_t(data_), data_(sp_data) {}
+//
+//	base_t clone() const {
+//		sp_nparray_t data_c = BS_KERNEL.create_object(nparray_t::bs_type());
+//		data_c->resize(data_->size());
+//		copy(data_->begin(), data_->end(), data_c->begin());
+//		return base_t(data_c);
+//	}
+//
+//	sp_nparray_t data_;
+//};
+
+/*-----------------------------------------------------------------
+ * bs_nparray <--> Python converter
+ *----------------------------------------------------------------*/
 template< class T >
 struct bspy_nparray_traits {
 	typedef bs_nparray< T > nparray_t;
@@ -139,7 +166,41 @@ struct bspy_nparray_traits {
 			std::copy(v->begin(), v->end(), sp_array.lock()->begin());
 			return bp::handle< >(sp_array->handle()).release();
 		}
-	
+
+		static bool is_convertible(PyObject* py_obj) {
+			return bspy_nparray_traits< T >::is_convertible(py_obj);
+		}
+	};
+
+	// safe implicit conversions that copies data buffers
+	template< class varray_t >
+	struct indirect_ref_traits {
+		typedef smart_ptr< nparray_t > sp_nparray_t;
+		//typedef bs_array< T, vector_traits > varray_t;
+		typedef smart_ptr< varray_t > type;
+
+		// safe implicit conversions that copies data buffers
+		static void create_type(void* memory_chunk, const bp::object& py_obj) {
+			// create empty array and init it with Python array
+			sp_nparray_t sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
+			sp_array.lock()->init(handle<>(bp::borrowed(py_obj.ptr())));
+			// make empty destination array
+			type sp_resarray = BS_KERNEL.create_object(varray_t::bs_type());
+			// fill it with container
+			sp_resarray->init(typename bs_arrbase< T >::sp_arrbase(sp_array));
+			new(memory_chunk) type(sp_resarray);
+		}
+
+		static PyObject* to_python(type const& v) {
+			// The idea here is to construct bs_nparray object based on existing data,
+			// that holds reference to v' bs_arrbase container.
+			// Then replace v's container with newly created nparray and export it to Python.
+			// Lifetime of nparray is controlled from Python and C++ simultaneously.
+			// Call to resize(...) from C++ will be forwarded to nparray and thus handled correctly.
+			// Resize from Python will be prohibited since 2 objects own array at the same time.
+			return indirect_copy_traits< varray_t >::to_python(v);
+		}
+
 		static bool is_convertible(PyObject* py_obj) {
 			return bspy_nparray_traits< T >::is_convertible(py_obj);
 		}
@@ -153,7 +214,7 @@ struct bspy_nparray_traits {
 
 		typedef bs_array< T > varray_t;
 		typedef smart_ptr< varray_t > sp_varray_t;
-		typedef bspy_converter< indirect_copy_traits< varray_t > > copy_converter_t;
+		typedef bspy_converter< indirect_ref_traits< varray_t > > copy_converter_t;
 
 		// register main conversions
 		// NOTE: main should go before copy conversions
@@ -196,7 +257,7 @@ void py_export_nparray() {
 
 	def("test_nparray_i", &test_nparray< bs_nparray< int >, bs_array< int > >);
 	def("test_nparray_f", &test_nparray< bs_nparray< float >, bs_array< float > >);
-	def("test_nparray_d", &test_nparray< bs_arrbase< double >, bs_array< double > >);
+	def("test_nparray_d", &test_nparray< bs_array< double >, bs_array< double > >);
 	//def("test_nparray_d", &test_nparray< bs_array< double, vector_traits >, bs_array< double, vector_traits > >);
 	//def("test_nparray_d", &test_nparray< bs_nparray< double >, bs_array< double, vector_traits > >);
 	//def("test_nparray_d", &test_nparray< double, bs_arrbase >);
