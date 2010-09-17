@@ -150,6 +150,7 @@ BLUE_SKY_PLUGIN_DESCRIPTOR("bs_client", "1.0.0", "", "");
 BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (int, str_val_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (bool, str_val_traits));
 BS_TYPE_IMPL_T_MEM(str_val_table, int);
+//BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::vector< double >, bs_vector_shared));
 }
 
 struct dummy_restricter : public bs_node::restrict_types {
@@ -785,30 +786,68 @@ void test_ondelete() {
 	// after exit fromthis block on_delete signal should fire
 }
 
+
+template< class array_t >
+struct test_array_unit {
+	typedef smart_ptr< array_t > sp_array_t;
+	typedef smart_ptr< typename array_t::arrbase > sp_arrbase_t;
+	typedef typename array_t::value_type value_t;
+
+	test_array_unit(const sp_array_t& a) : a_(a) {}
+
+	sp_array_t test_arrbase(const value_t& v = value_t()) {
+		a_->resize(10);
+		a_->assign(v);
+		sort(a_->begin(), a_->end());
+		sp_array_t a1(a_->clone(), bs_static_cast());
+		a1->assign(*a_);
+		cout << a1->ss(5) << ' ' << (*a1)[6] << endl;
+		return a1;
+	}
+
+	void test_vecbase(const value_t& v = value_t()) {
+		sp_array_t a1 = test_arrbase(v);
+		a1->insert(2, v);
+		a1->insert(v);
+		a1->insert(a1->begin(), v+v);
+		a1->insert(a1->begin(), 7, v+v+v);
+		a1->erase(1);
+		a1->erase(a1->end() - 1);
+		a1->erase(a1->begin(), a1->begin() + 3);
+		a1->push_back(v+v+v+v);
+		a1->pop_back();
+		for(ulong i = 0; i < a1->size(); ++i)
+			cout << (*a1)[i] << ' ';
+		cout << endl;
+		a1->clear();
+	}
+
+	sp_array_t a_;
+};
+
 void test_array() {
 	cout << "-----------------------------bs_array test------------------------------" << endl;
-	typedef bs_array< double > real_array_t;
-	typedef bs_array< int > int_array_t;
-	typedef bs_array< string, shared_vector_traits > str_array_t;
+	typedef bs_array< double, bs_array_shared > real_array_t;
+	typedef bs_array< int, vector_traits > int_array_t;
+	typedef bs_array< string, bs_vector_shared > str_array_t;
+	//typedef bs_array< std::vector< double >, bs_vector_shared > vd_array_t;
+
 	// create arrays
 	smart_ptr< real_array_t > sp_areal = k.create_object(real_array_t::bs_type());
 	smart_ptr< int_array_t > sp_aint = k.create_object(int_array_t::bs_type());
 	smart_ptr< str_array_t > sp_astr = k.create_object(str_array_t::bs_type());
+	//smart_ptr< vd_array_t > sp_avd = k.create_object(vd_array_t::bs_type());
 
 	// fill array with equal values
-	sp_areal->resize(10);
-	sp_areal->assign(-1);
-	sp_aint->resize(10);
-	sp_aint->assign(10);
-	sp_astr->resize(10);
-	sp_astr->assign("hello");
+	test_array_unit< real_array_t > real_u = sp_areal;
+	real_u.test_arrbase(1.5);
 
-	// fill arrays with random values
-	//insert_iterator< real_array_t > ii(*sp_areal.lock(), sp_areal.lock()->begin());
-	//for(ulong i = 0; i < 100; ++i) {
-	//	*ii = double(rand()) / RAND_MAX;
-	//	++ii;
-	//}
+	test_array_unit< int_array_t > int_u = sp_aint;
+	int_u.test_vecbase(10);
+
+	test_array_unit< str_array_t > str_u = sp_astr;
+	str_u.test_vecbase("hello");
+
 	// print array contents
 	cout << "Real array contents:" << endl;
 	for(real_array_t::const_iterator p = sp_areal->begin(), end = sp_areal->end(); p != end; ++p)
