@@ -16,19 +16,21 @@
 #ifndef _BS_ARRAY_H_
 #define _BS_ARRAY_H_
 
-#include "bs_arrbase.h"
+#include "bs_vecbase.h"
 #include "bs_array_shared.h"
-#include "shared_vector.h"
+#include "bs_vector_shared.h"
+#include "bs_kernel.h"
+//#include "shared_vector.h"
 #include <vector>
 
 namespace blue_sky {
 
 /// @brief traits for arrays with std::vector container
 template< class T >
-struct BS_API vector_traits : public bs_private::vecbase_traits_impl< T, std::vector< T > > {};
+struct BS_API vector_traits : public bs_vecbase_impl< T, std::vector< T > > {};
 
 /*-----------------------------------------------------------------------------
- *  bs_array class
+ *  bs_array - BlueSky class to choose arrbase_impl or vecbase_impl for different containers
  *-----------------------------------------------------------------------------*/
 /// @brief Contains array of key-value pairs with integral key (index)
 ///
@@ -36,30 +38,33 @@ struct BS_API vector_traits : public bs_private::vecbase_traits_impl< T, std::ve
 /// template params:
 ///           T -- type of array elements
 /// cont_traits -- specifies underlying container
-template< class T, template< class > class cont_traits = shared_array_traits >
+template< class T, template< class > class cont_traits = bs_array_shared >
 class BS_API bs_array : public objbase, public cont_traits< T >::bs_array_base
 {
 public:
+	// traits
 	typedef cont_traits< T > cont_traits_t;
 	typedef typename cont_traits_t::arrbase arrbase_t;
-	typedef typename arrbase_t::sp_arrbase sp_arrbase;
 	typedef typename cont_traits_t::container container;
 	typedef typename cont_traits_t::bs_array_base base_t;
+
+	typedef typename arrbase_t::sp_arrbase sp_arrbase;
 	typedef bs_array< T, cont_traits > this_t;
 	typedef smart_ptr< this_t, true > sp_array;
 
 	// inherited from bs_arrbase class
 	typedef typename arrbase_t::value_type value_type;
-	typedef typename arrbase_t::reference reference;
-	typedef typename arrbase_t::const_reference const_reference;
 	typedef typename arrbase_t::size_type size_type;
 	typedef typename arrbase_t::key_type key_type;
 
-	// inherited from cont_traits
-	//typedef typename cont_traits_t::iterator iterator;
-	//typedef typename cont_traits_t::const_iterator const_iterator;
-	//typedef typename cont_traits_t::reverse_iterator reverse_iterator;
-	//typedef typename cont_traits_t::const_reverse_iterator const_reverse_iterator;
+	typedef typename arrbase_t::pointer                pointer;
+	typedef typename arrbase_t::reference              reference;
+	typedef typename arrbase_t::const_pointer          const_pointer;
+	typedef typename arrbase_t::const_reference        const_reference;
+	typedef typename arrbase_t::iterator               iterator;
+	typedef typename arrbase_t::const_iterator         const_iterator;
+	typedef typename arrbase_t::reverse_iterator       reverse_iterator;
+	typedef typename arrbase_t::const_reverse_iterator const_reverse_iterator;
 
 	// copy construct from container
 	bs_array(const container& c)
@@ -75,48 +80,19 @@ public:
 		this_t(c).swap(*this);
 	}
 
-	// init methods are indirect constructors
 	void init(size_type sz, const value_type& v = value_type()) {
 		this_t(container(sz, v)).swap(*this);
 	}
 
-	/// @brief Obtain array size
-	/// Overloads bs_arrbase method
-	/// @return number of elements contained in array
-	size_type size() const {
-		return static_cast< size_type >(container::size());
+	template< class input_iterator >
+	void init(input_iterator start, input_iterator finish) {
+		this_t(container(start, finish)).swap(*this);
 	}
-
-	/// @brief Items access operator (r/w)
-	/// Overloads bs_arrbase method
-	/// @param key --- item key
-	///
-	/// @return modifyable reference to element
-	reference operator[](const key_type& key) {
-		return container::operator[](key);
-	}
-
-	/// @brief Items access operator (r)
-	/// Overloads bs_arrbase method
-	/// @param key -- item key
-	///
-	/// @return const refernce to element
-	const_reference operator[](const key_type& key) const {
-		return container::operator[](key);
-	}
-
-	void resize(size_type new_size) {
-		container::resize(new_size);
-	}
-
-	//void clear() {
-	//	container::clear();
-	//}
 
 	// make array with copied data
 	sp_arrbase clone() const {
 		sp_array clon_ = BS_KERNEL.create_object(bs_resolve_type());
-		clon_->resize(size());
+		clon_->resize(this->size());
 		std::copy(this->begin(), this->end(), clon_->begin());
 		return clon_;
 	}
@@ -130,7 +106,7 @@ public:
 	bs_array& operator=(const bs_array< R, r_traits >& rhs) {
 		size_type n = rhs.size();
 		if(n && &(*this)[0] != &rhs[0]) {
-			if(size() != n) resize(n);
+			if(this->size() != n) resize(n);
 			std::copy(rhs.begin(), rhs.end(), this->begin());
 		}
 		return *this;
@@ -138,7 +114,7 @@ public:
 
 	template< class R >
 	bs_array& operator=(const bs_arrbase< R >& rhs) {
-		arrbase_t::assign(rhs);
+		this->assign(rhs);
 		return *this;
 	}
 
@@ -154,7 +130,7 @@ protected:
 // default bs_array ctor implementation
 template< class T, template< class > class cont_traits >
 bs_array< T, cont_traits >::bs_array(bs_type_ctor_param /* param */)
-: bs_refcounter() //, base_t(param)
+: bs_refcounter(), base_t()
 {}
 
 // default bs_array copy ctor implementation

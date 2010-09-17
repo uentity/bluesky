@@ -17,6 +17,7 @@
 #define _BS_ARRBASE_H_
 
 #include "bs_common.h"
+#include <iterator>
 
 namespace blue_sky {
 
@@ -34,11 +35,17 @@ public:
 	typedef smart_ptr < this_t, true > sp_arrbase;
 
 	typedef T value_type;
-	typedef ulong size_type;
+	typedef std::size_t size_type;
 	typedef size_type key_type;
 
-	typedef value_type& reference;
-	typedef const value_type& const_reference;
+	typedef T* pointer;
+	typedef T& reference;
+	typedef T const* const_pointer;
+	typedef T const& const_reference;
+	typedef pointer        iterator;
+	typedef const_pointer  const_iterator;
+	typedef std::reverse_iterator< iterator >             reverse_iterator;
+	typedef std::reverse_iterator< const_iterator > const_reverse_iterator;
 
 	/// @brief Obtain array size
 	///
@@ -87,12 +94,41 @@ public:
 		resize(0);
 	}
 
+	virtual iterator begin() {
+		return &ss(0);
+	}
+	virtual const_iterator begin() const {
+		return &ss(0);
+	}
+
+	virtual iterator end() {
+		return &ss(0) + size();
+	}
+	virtual const_iterator end() const {
+		return &ss(0) + size();
+	}
+
+	virtual reverse_iterator rbegin() {
+		return reverse_iterator(end());
+	}
+	virtual const_reverse_iterator rbegin() const {
+		return const_reverse_iterator(end());
+	}
+
+	virtual reverse_iterator rend() {
+		return reverse_iterator(begin());
+	}
+	virtual const_reverse_iterator rend() const {
+		return const_reverse_iterator(begin());
+	}
+
 	// make array with copied data
 	virtual sp_arrbase clone() const = 0;
 
 	virtual void assign(const value_type& v) {
-		for(size_type i = 0; i < size(); ++i)
-			ss(i) = v;
+		std::fill(begin(), end(), v);
+		//for(size_type i = 0; i < size(); ++i)
+		//	ss(i) = v;
 	}
 
 	// assign for different type array
@@ -117,112 +153,70 @@ public:
 
 	/// @brief empty destructor
 	virtual ~bs_arrbase() {};
-
-	//BS_COMMON_DECL_T_MEM(bs_arrbase);
-	//BS_LOCK_THIS_DECL(bs_arrbase);
-
-	//BLUE_SKY_TYPE_DECL_T_MEM(bs_arrbase, objbase, "bs_arrbase",
-	//	"Base class for BlueSky continuous array of values of the same type indexed by integral type", "");
 };
 
-//template< class T >
-//bs_arrbase< T >::bs_arrbase(bs_type_ctor_param param)
-//	: bs_refcounter(), objbase(param)
-//{}
-//
-//// copy ctor
-//template< class T >
-//bs_arrbase< T >::bs_arrbase(const bs_arrbase& a)
-//	: bs_refcounter(), objbase(a)
-//{}
-
-/*-----------------------------------------------------------------------------
- *  bs_vecbase -- base class of BlueSky vectors
- *-----------------------------------------------------------------------------*/
-// difference from arrbase is insert and erase operations
-template< class T >
-class BS_API bs_vecbase : public bs_arrbase< T > {
-public:
-	typedef bs_arrbase< T > arrbase_t;
-	typedef typename arrbase_t::key_type key_type;
-	typedef typename arrbase_t::value_type value_type;
-
-	virtual bool insert(const key_type& key, const value_type& value) = 0;
-	virtual bool insert(const value_type& value) = 0;
-	virtual void erase(const key_type& key) = 0;
-
-	/// @brief empty destructor
-	virtual ~bs_vecbase() {};
-
-	//using arrbase_t::bs_type;
-
-	//BS_COMMON_DECL_T_MEM(bs_vecbase);
-	//BS_LOCK_THIS_DECL(bs_vecbase);
-};
-
-//template< class T >
-//bs_vecbase< T >::bs_vecbase(bs_type_ctor_param param)
-//	: bs_refcounter(), arrbase_t(param)
-//{}
-//
-//// copy ctor
-//template< class T >
-//bs_vecbase< T >::bs_vecbase(const bs_vecbase& a)
-//	: bs_refcounter(), arrbase_t(a)
-//{}
-
-namespace bs_private {
-
+/*-----------------------------------------------------------------
+ * bs_arrbase_impl = bs_arrbase + custom container (minimum overloads)
+ *----------------------------------------------------------------*/
 template< class T, class array_t >
-struct BS_API arrbase_traits_impl : public bs_arrbase< T >, public array_t {
+class BS_API bs_arrbase_impl : public bs_arrbase< T >, public array_t {
+public:
 	typedef array_t container;
 	typedef bs_arrbase< T > arrbase;
-	typedef arrbase_traits_impl< T, array_t > bs_array_base;
-
-	typedef typename arrbase::value_type value_type;
-
-	// default ctor
-	arrbase_traits_impl() {}
-
-	// ctor for constructing from container copy
-	arrbase_traits_impl(const container& c) : array_t(c) {}
-};
-
-template< class T, class vector_t >
-struct BS_API vecbase_traits_impl : public bs_vecbase< T >, public vector_t {
-	typedef vector_t container;
-	typedef bs_vecbase< T > arrbase;
-	typedef vecbase_traits_impl< T, vector_t > bs_array_base;
+	typedef typename arrbase::sp_arrbase sp_arrbase;
+	typedef bs_arrbase_impl< T, array_t > bs_array_base;
 
 	// inherited from bs_arrbase class
 	typedef typename arrbase::value_type value_type;
 	typedef typename arrbase::key_type key_type;
+	typedef typename arrbase::size_type size_type;
+
+	typedef typename arrbase::pointer                pointer;
+	typedef typename arrbase::reference              reference;
+	typedef typename arrbase::const_pointer          const_pointer;
+	typedef typename arrbase::const_reference        const_reference;
+	typedef typename arrbase::iterator               iterator;
+	typedef typename arrbase::const_iterator         const_iterator;
+	typedef typename arrbase::reverse_iterator       reverse_iterator;
+	typedef typename arrbase::const_reverse_iterator const_reverse_iterator;
+
+	using arrbase::begin;
+	using arrbase::end;
+	using arrbase::rbegin;
+	using arrbase::rend;
+	using arrbase::assign;
+	using arrbase::clear;
 
 	// default ctor
-	vecbase_traits_impl() {}
+	bs_arrbase_impl() {}
 
-	// ctor from vector copy
-	vecbase_traits_impl(const container& c) : vector_t(c) {}
+	// ctor for constructing from container copy
+	bs_arrbase_impl(const container& c) : array_t(c) {}
 
-	using container::size;
-
-	bool insert(const key_type& key, const value_type& value) {
-		if(key > size()) return false;
-		container::insert(container::begin() + key, value);
-		return true;
+	size_type size() const {
+		return static_cast< size_type >(container::size());
 	}
 
-	bool insert(const value_type& value) {
-		container::push_back(value);
-		return true;
+	reference operator[](const key_type& key) {
+		return container::operator[](key);
 	}
 
-	void erase(const key_type& key)	{
-		container::erase(container::begin() + key);
+	const_reference operator[](const key_type& key) const {
+		return container::operator[](key);
+	}
+
+	void resize(size_type new_size) {
+		container::resize(new_size);
+	}
+
+	sp_arrbase clone() const {
+		return new bs_arrbase_impl(*this);
+	}
+
+	void dispose() const {
+		delete this;
 	}
 };
-
-}
 
 }	// namespace blue-sky
 #endif	// file guard
