@@ -18,7 +18,8 @@
 
 #include "bs_array.h"
 #include <pyublas/numpy.hpp>
-#include <iostream>
+#include <boost/python/errors.hpp>
+//#include <iostream>
 
 namespace blue_sky {
 
@@ -37,6 +38,7 @@ public:
 	typedef typename traits_t::container container;
 	typedef typename bs_array_t::size_type size_type;
 	typedef typename bs_array_t::value_type value_type;
+	typedef typename bs_array_t::pointer pointer;
 
 	// constructors via init
 	void init(size_type n) {
@@ -55,22 +57,66 @@ public:
 		this_t(numpy_array_t(obj)).swap(*this);
 	}
 
+	void init(PyObject* obj) {
+		this_t(numpy_array_t(boost::python::handle<>(
+						boost::python::borrowed(obj)
+		))).swap(*this);
+	}
+
+	void init(pointer data, size_type n) {
+		npy_intp dims[] = { n };
+		init(PyArray_SimpleNewFromData(1, dims, pyublas::get_typenum(T()), data));
+	}
+
 	void test() {
 		std::cout << "test" << std::endl;
 	}
+
+	void swap(this_t& rhs) {
+		bs_array_t::swap(rhs);
+	}
+
+	PyObject* to_python() const {
+		// its VERY IMPORTANT to return PyObject* like that
+		// instead of simply handle().get(), because in the latter case
+		// array seems to be deleted immediately after function exit
+		return boost::python::handle<>(this->handle()).release();
+	}
+
+	//// numpy::array implementation just create new array
+	//// so handle resize using std numpy C iface
+	//void resize(size_type new_size) {
+	//	if(new_size == this->size()) return;
+	//	npy_intp new_dims[] = { new_size };
+	//	PyArray_Dims d = { new_dims, 1};
+	//	try {
+	//		boost::python::handle<> new_array = boost::python::handle<>(
+	//			PyArray_Resize((PyArrayObject*)this->handle().get(), &d, 1, NPY_ANYORDER)
+	//		);
+	//		if(new_array.get() && new_array.get() != Py_None)
+	//			init(new_array);
+	//	}
+	//	catch(...) {
+	//		// if resize fails - do nothing
+	//		// boost::python::handle_exception();
+	//	}
+	//}
+
+	//void resize(size_type new_size, value_type init) {
+	//	size_type old_size = 0;
+	//	if(this->handle().get())
+	//		old_size = this->size();
+
+	//	resize(new_size);
+	//	pointer new_data = this->data();
+	//	std::fill(new_data + std::min(old_size, new_size), new_data + new_size, init);
+	//}
 
 protected:
 	// copy construct from base class
 	bs_nparray(const bs_array_t& rhs)
 		: bs_array_t(rhs)
 	{}
-
-	void swap(this_t& rhs) {
-		numpy_array_t::swap(rhs);
-		//this_t tmp(rhs);
-		//rhs = *this;
-		//*this = tmp;
-	}
 
 	BLUE_SKY_TYPE_DECL_T(bs_nparray);
 };
