@@ -53,9 +53,10 @@ smart_ptr< ret_array_t > test_nparray(smart_ptr< inp_array_t > a, smart_ptr< inp
 	*res = *a;
 	res->assign(*a);
 	*res = *a->clone();
-	res->resize(sz);
+	res->resize(sz + 1);
 	for(ulong i = 0; i < sz; ++i)
 		(*res)[i] = (*a)[i] + (*b)[i];
+	(*res)[sz] = 12345;
 	//res->insert(1.);
 	return res;
 }
@@ -63,28 +64,28 @@ smart_ptr< ret_array_t > test_nparray(smart_ptr< inp_array_t > a, smart_ptr< inp
 namespace {
 namespace bp = boost::python;
 
-template< class T >
-static smart_ptr< T > create_bs_type() {
-	typedef smart_ptr< T > sp_t;
-	// assign it with newly created object
-	sp_t sp_obj = BS_KERNEL.create_object(T::bs_type());
-	if(!sp_obj)
-		bs_throw_exception("Can't create an instance of " + T::bs_type().stype_);
-	return sp_obj;
-}
-
-template< class T >
-static boost::python::object py_create_bs_type(boost::python::object py_obj) {
-	typedef smart_ptr< T > sp_t;
-	// extract smart_ptr embedded into python object
-	sp_t& sp_obj = extract< sp_t& > (py_obj);
-	if(!sp_obj)
-		bs_throw_exception("Can't extract smart_ptr< " + T::bs_type().stype_ + " > from Python object");
-
-	// assign it with newly created object
-	sp_obj = create_bs_type< T >();
-	return py_obj;
-}
+//template< class T >
+//static smart_ptr< T > create_bs_type() {
+//	typedef smart_ptr< T > sp_t;
+//	// assign it with newly created object
+//	sp_t sp_obj = BS_KERNEL.create_object(T::bs_type());
+//	if(!sp_obj)
+//		bs_throw_exception("Can't create an instance of " + T::bs_type().stype_);
+//	return sp_obj;
+//}
+//
+//template< class T >
+//static boost::python::object py_create_bs_type(boost::python::object py_obj) {
+//	typedef smart_ptr< T > sp_t;
+//	// extract smart_ptr embedded into python object
+//	sp_t& sp_obj = extract< sp_t& > (py_obj);
+//	if(!sp_obj)
+//		bs_throw_exception("Can't extract smart_ptr< " + T::bs_type().stype_ + " > from Python object");
+//
+//	// assign it with newly created object
+//	sp_obj = create_bs_type< T >();
+//	return py_obj;
+//}
 
 using namespace blue_sky;
 using namespace std;
@@ -92,26 +93,50 @@ using namespace std;
 /*-----------------------------------------------------------------
  * wrapper class to handle Python -> C++ nparray reference conversion
  *----------------------------------------------------------------*/
-//template< class T >
-//struct nparray_shared : public bs_nparray< T > {
-//	typedef bs_nparray< T > nparray_t;
-//	typedef smart_ptr< nparray_t > sp_nparray_t;
-//	typedef bs_arrbase< T > arrbase_t;
-//	typedef smart_ptr< arrbase_t > sp_arrbase_t;
-//
-//	typedef typename nparray_t::size_type size_type;
-//
-//	nparray_shared(const sp_arrbase_t& sp_data) : base_t(data_), data_(sp_data) {}
-//
-//	base_t clone() const {
-//		sp_nparray_t data_c = BS_KERNEL.create_object(nparray_t::bs_type());
-//		data_c->resize(data_->size());
-//		copy(data_->begin(), data_->end(), data_c->begin());
-//		return base_t(data_c);
-//	}
-//
-//	sp_nparray_t data_;
-//};
+template< class T >
+struct nparray_shared : public bs_nparray< T > {
+	typedef bs_nparray< T > nparray_t;
+	typedef smart_ptr< nparray_t > sp_nparray_t;
+	typedef typename nparray_t::numpy_array_t numpy_array_t;
+
+	typedef bs_arrbase< T > arrbase_t;
+	typedef typename arrbase_t::sp_arrbase sp_arrbase;
+
+	typedef typename nparray_t::size_type size_type;
+	//typedef py_arrbase_handle< T > handle_t;
+
+	nparray_shared(const sp_arrbase& sp_data)
+		//: data_(sp_data)
+	{
+
+		//// create arrbase handle to tie lifetime of sp_data and array creates
+		//handle_t* h = PyObject_New(handle_t, handle_t::py_type());
+		//if(h && (PyObject*)h != Py_None) {
+		//	// store reference to passed container
+		//	h->data_ = sp_data;
+		//	PyArray_BASE(this->handle().get()) = (PyObject*)h;
+		//}
+	}
+
+	static void on_array_delete(void* raw_data, void* p_refcnt) {
+		const bs_refcounter* data_rc = static_cast< const bs_refcounter* >(p_refcnt);
+		data_rc->del_ref();
+	}
+
+	void resize(size_type new_size) {
+		// call pyublas::numpy_array implementation
+		// results in creating new array with copied data
+		// c++ array instance will point to brand new data
+		// sync with Python array is lost here
+		numpy_array_t::resize(new_size);
+	}
+
+	//sp_arrbase clone() const {
+	//	return new nparray_shared(data_);
+	//}
+
+	//sp_arrbase_t data_;
+};
 
 /*-----------------------------------------------------------------
  * bs_nparray <--> Python converter
@@ -124,7 +149,7 @@ struct bspy_nparray_traits {
 	static void create_type(void* memory_chunk, const bp::object& py_obj) {
 		// create empty array and init it with Python array
 		type sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
-		sp_array.lock()->init(handle<>(bp::borrowed(py_obj.ptr())));
+		sp_array.lock()->init(py_obj.ptr());
 		new(memory_chunk) type(sp_array);
 	}
 
@@ -136,7 +161,7 @@ struct bspy_nparray_traits {
 	}
 
 	static PyObject* to_python(type const& v) {
-		return bp::handle< >(v->handle()).release();
+		return v->to_python();
 	}
 
 	// safe implicit conversions that copies data buffers
@@ -150,7 +175,7 @@ struct bspy_nparray_traits {
 		static void create_type(void* memory_chunk, const bp::object& py_obj) {
 			// create empty array and init it with Python array
 			sp_nparray_t sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
-			sp_array.lock()->init(handle<>(bp::borrowed(py_obj.ptr())));
+			sp_array.lock()->init(py_obj.ptr());
 			// copy data to destination array
 			type sp_resarray = BS_KERNEL.create_object(varray_t::bs_type());
 			sp_resarray->resize(sp_array->size());
@@ -164,7 +189,7 @@ struct bspy_nparray_traits {
 			sp_nparray_t sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
 			sp_array.lock()->init(v->size());
 			std::copy(v->begin(), v->end(), sp_array.lock()->begin());
-			return bp::handle< >(sp_array->handle()).release();
+			return sp_array->to_python();
 		}
 
 		static bool is_convertible(PyObject* py_obj) {
@@ -179,11 +204,11 @@ struct bspy_nparray_traits {
 		//typedef bs_array< T, vector_traits > varray_t;
 		typedef smart_ptr< varray_t > type;
 
-		// safe implicit conversions that copies data buffers
+		// safe implicit conversions that reference passed data
 		static void create_type(void* memory_chunk, const bp::object& py_obj) {
 			// create empty array and init it with Python array
 			sp_nparray_t sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
-			sp_array.lock()->init(handle<>(bp::borrowed(py_obj.ptr())));
+			sp_array.lock()->init(py_obj.ptr());
 			// make empty destination array
 			type sp_resarray = BS_KERNEL.create_object(varray_t::bs_type());
 			// fill it with container
@@ -192,13 +217,32 @@ struct bspy_nparray_traits {
 		}
 
 		static PyObject* to_python(type const& v) {
-			// The idea here is to construct bs_nparray object based on existing data,
-			// that holds reference to v' bs_arrbase container.
-			// Then replace v's container with newly created nparray and export it to Python.
-			// Lifetime of nparray is controlled from Python and C++ simultaneously.
-			// Call to resize(...) from C++ will be forwarded to nparray and thus handled correctly.
-			// Resize from Python will be prohibited since 2 objects own array at the same time.
-			return indirect_copy_traits< varray_t >::to_python(v);
+			// convert opaque ptr to data into Python object
+			// then explicitly increment refcounter of sp_data
+			// and pass ptr to refcounter as *desc argument of
+			// desctructor function that will explicitly decrement refcounter
+			const bs_refcounter* data_rc = static_cast< const bs_refcounter* >(v->get_container().get());
+			data_rc->add_ref();
+			PyObject* opaque_ptr = PyCObject_FromVoidPtr((void*)data_rc, on_array_delete);
+
+			// build numpy array around raw data
+			sp_nparray_t proxy = BS_KERNEL.create_object(nparray_t::bs_type());
+			proxy->init(v->begin(), v->size());
+
+			// set array's BASE to opaque_ptr to correctly free resourses
+			PyArray_BASE(proxy->handle().get()) = opaque_ptr;
+
+			// switch v's container to proxy
+			// old container is controlled by proxy
+			// via opaque_ptr
+			v.lock()->init_inplace(proxy);
+
+			return proxy->to_python();
+		}
+
+		static void on_array_delete(void* p_refcnt) {
+			const bs_refcounter* data_rc = static_cast< const bs_refcounter* >(p_refcnt);
+			data_rc->del_ref();
 		}
 
 		static bool is_convertible(PyObject* py_obj) {
@@ -214,7 +258,7 @@ struct bspy_nparray_traits {
 
 		typedef bs_array< T > varray_t;
 		typedef smart_ptr< varray_t > sp_varray_t;
-		typedef bspy_converter< indirect_ref_traits< varray_t > > copy_converter_t;
+		typedef bspy_converter< indirect_ref_traits< varray_t > > array_converter_t;
 
 		// register main conversions
 		// NOTE: main should go before copy conversions
@@ -228,12 +272,11 @@ struct bspy_nparray_traits {
 		bp::implicitly_convertible< type, smart_ptr< objbase > >();
 
 		// register implicit copy conversions
-		copy_converter_t::register_from_py();
-		copy_converter_t::register_to_py();
+		array_converter_t::register_from_py();
+		array_converter_t::register_to_py();
 		// register smart_ptr conversions to bases
 		bp::implicitly_convertible< sp_varray_t, smart_ptr< typename varray_t::arrbase > >();
 		bp::implicitly_convertible< sp_varray_t, smart_ptr< objbase > >();
-
 	}
 };
 
