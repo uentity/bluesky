@@ -52,10 +52,8 @@ public:
 	typedef pointer        iterator;
 	typedef const_pointer  const_iterator;
 
-	typedef std::reverse_iterator< iterator >             reverse_iterator;
+	typedef std::reverse_iterator< iterator >       reverse_iterator;
 	typedef std::reverse_iterator< const_iterator > const_reverse_iterator;
-	//typedef std::reverse_iterator< iterator, T, reference, difference_type >             reverse_iterator;
-	//typedef std::reverse_iterator< const_iterator, T, const_reference, difference_type > const_reverse_iterator;
 
 	template< class container >
 	void init(Loki::Type2Type< container >, size_type n = 0, const value_type& v = value_type()) {
@@ -124,18 +122,21 @@ public:
 	//	init< container >(start, finish);
 	//}
 
-	// ctors, array doesn't own data
+	// array doesn't own data
 	bs_array_shared(pointer data, size_type n)
 		: buf_holder_(NULL), data_(data), size_(n)
 	{}
 
-	bs_array_shared(const container& c)
-		: buf_holder_(c)
-	{
-		if(buf_holder_) {
+	// can be called in any time to switch container
+	virtual void init_inplace(const container& c) {
+		if((buf_holder_ = c)) {
 			if((size_ = buf_holder_->size()))
 				data_ = &buf_holder_->ss(0);
 		}
+	}
+
+	bs_array_shared(const container& c) {
+		init_inplace(c);
 	}
 
 	// std copy ctor is fine and make a reference to data_
@@ -207,7 +208,7 @@ public:
 	}
 
 	void resize(size_type n) {
-		if(buf_holder_) {
+		if(buf_holder_ && n != size_) {
 			buf_holder_->resize(n);
 			if((size_ = buf_holder_->size()))
 				data_ = &buf_holder_->ss(0);
@@ -235,6 +236,11 @@ public:
 		delete this;
 	}
 
+	// access to container
+	container get_container() const {
+		return buf_holder_;
+	}
+
 	//void assign(const value_type& v) {
 	//	std::fill(begin(), end(), v);
 	//}
@@ -247,42 +253,6 @@ protected:
 	pointer data_;
 	size_type size_;
 };
-
-//namespace bs_private {
-//
-//template< class traits_impl >
-//struct BS_API sarray_traits_impl : public traits_impl {
-//	typedef typename traits_impl::value_type value_type;
-//	typedef typename traits_impl::container container;
-//	typedef typename traits_impl::arrbase arrbase;
-//	typedef sarray_traits_impl< traits_impl > bs_array_base;
-//
-//	using arrbase::assign;
-//
-//	void assign(const value_type& v) {
-//		container::assign(v);
-//	}
-//};
-//
-//}
-//
-///// @brief traits for arrays with shared_array container
-//template< class T >
-//struct BS_API shared_array_traits : public bs_private::sarray_traits_impl<
-//                                        bs_private::arrbase_traits_impl<
-//                                            T, bs_array_shared< T >
-//                                        >
-//                                    >
-//{};
-//
-///// @brief traits for arrays with shared_vector container
-//template< class T >
-//struct BS_API shared_vector_traits : public bs_private::sarray_traits_impl<
-//                                         bs_private::vecbase_traits_impl<
-//                                            T, bs_vector_shared< T >
-//                                         >
-//                                     >
-//{};
 
 }   // eof blue_sky
 

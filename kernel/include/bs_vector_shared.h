@@ -92,8 +92,15 @@ public:
 		: base_t(c)
 	{
 		assert(buf_holder_);
-		pvec_ = const_cast< vecbase_t* >(static_cast< const vecbase_t* >((const container*)buf_holder_.get()));
+		pvec_ = const_cast< vecbase_t* >(dynamic_cast< const vecbase_t* >((const container*)buf_holder_.get()));
 		BS_ERROR(pvec_, "Container passed to bs_vector_shared ctor doesn't have vector iface");
+	}
+
+	void init_inplace(const container& c) {
+		assert(c.get());
+		pvec_ = const_cast< vecbase_t* >(dynamic_cast< const vecbase_t* >((const container*)c.get()));
+		BS_ERROR(pvec_, "Container passed to bs_vector_shared ctor doesn't have vector iface");
+		base_t::init_inplace(c);
 	}
 
 	void push_back(const value_type& v) {

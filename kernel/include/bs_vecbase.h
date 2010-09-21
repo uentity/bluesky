@@ -130,6 +130,10 @@ public:
 		return new bs_vecbase_impl(*this);
 	}
 
+	void swap(bs_vecbase_impl& rhs) {
+		base_t::swap(rhs);
+	}
+
 private:
 	inline typename container::iterator ptr2iter(const iterator& pos) {
 		return container::begin() + (pos - this->begin());

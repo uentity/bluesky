@@ -216,6 +216,10 @@ public:
 	void dispose() const {
 		delete this;
 	}
+
+	void swap(bs_arrbase_impl& rhs) {
+		container::swap(rhs);
+	}
 };
 
 }	// namespace blue-sky
