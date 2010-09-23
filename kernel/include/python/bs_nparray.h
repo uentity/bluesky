@@ -23,118 +23,132 @@
 
 namespace blue_sky {
 
-/// @brief traits for arrays with pyublas::numpy_array container
-template< class T >
-struct BS_API numpy_array_traits : public bs_arrbase_impl< T, pyublas::numpy_array< T > >
-{};
+///// @brief traits for arrays with pyublas::numpy_array container
+//template< class T >
+//struct BS_API numpy_array_traits : public bs_arrbase_impl< T, pyublas::numpy_array< T > >
+//{};
 
 template< class T >
-class BS_API bs_nparray : public bs_array< T, numpy_array_traits > {
+class BS_API bs_nparray : public bs_arrbase_impl< T, pyublas::numpy_array< T > > {
 public:
-	typedef numpy_array_traits< T > traits_t;
-	typedef bs_array< T, numpy_array_traits > bs_array_t;
 	typedef bs_nparray< T > this_t;
-	typedef typename traits_t::container numpy_array_t;
-	typedef typename traits_t::container container;
-	typedef typename bs_array_t::size_type size_type;
-	typedef typename bs_array_t::value_type value_type;
-	typedef typename bs_array_t::pointer pointer;
+	typedef pyublas::numpy_array< T > numpy_array_t;
+	typedef bs_arrbase_impl< T, pyublas::numpy_array< T > > base_t;
+
+	// traits for bs_array
+	typedef numpy_array_t container;
+	typedef bs_arrbase< T > arrbase;
+	typedef this_t bs_array_base;
+
+	typedef typename arrbase::sp_arrbase sp_arrbase;
+	typedef typename arrbase::size_type size_type;
+	typedef typename arrbase::value_type value_type;
+	typedef typename arrbase::pointer pointer;
+
+	// ctors needed by bs_array
+	bs_nparray() {}
+	bs_nparray(const container& c) : base_t(c) {}
+	// std copy stor is fine
 
 	// constructors via init
-	void init(size_type n) {
-		this_t(numpy_array_t(n)).swap(*this);
+	bs_nparray(size_type n)
+		: base_t(numpy_array_t(n))
+	{}
+
+	bs_nparray(int ndim_, const npy_intp* dims_)
+		: base_t(numpy_array_t(ndim_, dims_))
+	{}
+
+	bs_nparray(size_type n, const value_type& v)
+		: base_t(numpy_array_t(n, v))
+	{}
+
+	bs_nparray(const boost::python::handle<> &obj)
+		: base_t(numpy_array_t(obj))
+	{}
+
+	// assume borrowed object, i.e. increment it's refcounter first
+	bs_nparray(PyObject* obj)
+		: base_t(numpy_array_t(
+			boost::python::handle<>(boost::python::borrowed(obj))
+		))
+	{}
+
+	bs_nparray(pointer data, size_type n) {
+		npy_intp sz[] = { n };
+		this_t(base_t(numpy_array_t(1, sz, data))).swap(*this);
 	}
 
-	void init(int ndim_, const npy_intp* dims_) {
-		this_t(numpy_array_t(ndim_, dims_)).swap(*this);
-	}
-
-	void init(size_type n, const value_type& v) {
-		this_t(numpy_array_t(n, v)).swap(*this);
-	}
-
-	void init(const boost::python::handle<> &obj) {
-		this_t(numpy_array_t(obj)).swap(*this);
-	}
-
-	void init(PyObject* obj) {
-		this_t(numpy_array_t(boost::python::handle<>(
-						boost::python::borrowed(obj)
-		))).swap(*this);
-	}
-
-	void init(pointer data, size_type n) {
-		npy_intp dims[] = { n };
-		init(PyArray_SimpleNewFromData(1, dims, pyublas::get_typenum(T()), data));
-	}
-
-	void test() {
-		std::cout << "test" << std::endl;
+	sp_arrbase clone() const {
+		return new bs_nparray(this->copy());
 	}
 
 	void swap(this_t& rhs) {
-		bs_array_t::swap(rhs);
+		base_t::swap(rhs);
 	}
 
 	PyObject* to_python() const {
-		// its VERY IMPORTANT to return PyObject* like that
-		// instead of simply handle().get(), because in the latter case
-		// array seems to be deleted immediately after function exit
-		return boost::python::handle<>(this->handle()).release();
+		return base_t::to_python().release();
 	}
 
-	//// numpy::array implementation just create new array
-	//// so handle resize using std numpy C iface
-	//void resize(size_type new_size) {
-	//	if(new_size == this->size()) return;
-	//	npy_intp new_dims[] = { new_size };
-	//	PyArray_Dims d = { new_dims, 1};
-	//	try {
-	//		boost::python::handle<> new_array = boost::python::handle<>(
-	//			PyArray_Resize((PyArrayObject*)this->handle().get(), &d, 1, NPY_ANYORDER)
-	//		);
-	//		if(new_array.get() && new_array.get() != Py_None)
-	//			init(new_array);
-	//	}
-	//	catch(...) {
-	//		// if resize fails - do nothing
-	//		// boost::python::handle_exception();
-	//	}
-	//}
+	// numpy::array implementation just create new array
+	// so handle resize using std numpy C iface
+	void resize(size_type new_size) {
+		// test if no array was created yet
+		if(this->handle().get() == Py_None)
+			numpy_array_t::resize(new_size);
+		if(new_size == this->size()) return;
 
-	//void resize(size_type new_size, value_type init) {
-	//	size_type old_size = 0;
-	//	if(this->handle().get())
-	//		old_size = this->size();
+		// native resize
+		npy_intp new_dims[] = { new_size };
+		PyArray_Dims d = { new_dims, 1};
+		try {
+			boost::python::handle<> new_array = boost::python::handle<>(
+				PyArray_Resize((PyArrayObject*)this->handle().get(), &d, 1, NPY_ANYORDER)
+			);
+			if(new_array.get() && new_array.get() != Py_None && new_array.get() != this->handle().get())
+				this_t(new_array).swap(*this);
+		}
+		catch(const boost::python::error_already_set& e){
+			// if resize fails - do nothing
+			PyErr_Print();
+		}
+	}
 
-	//	resize(new_size);
-	//	pointer new_data = this->data();
-	//	std::fill(new_data + std::min(old_size, new_size), new_data + new_size, init);
-	//}
+	void resize(size_type new_size, value_type init) {
+		size_type old_size = 0;
+		if(this->handle().get())
+			old_size = this->size();
 
-protected:
-	// copy construct from base class
-	bs_nparray(const bs_array_t& rhs)
-		: bs_array_t(rhs)
-	{}
+		resize(new_size);
+		pointer new_data = this->data();
+		std::fill(new_data + std::min(old_size, new_size), new_data + new_size, init);
+	}
 
-	BLUE_SKY_TYPE_DECL_T(bs_nparray);
+//protected:
+//	// copy construct from base class
+//	bs_nparray(const bs_array_t& rhs)
+//		: bs_array_t(rhs)
+//	{}
+//
+//	BLUE_SKY_TYPE_DECL_T(bs_nparray);
 };
 
-// default ctor
-template< class T >
-bs_nparray< T >::bs_nparray(bs_type_ctor_param param)
-{}
+//// default ctor
+//template< class T >
+//bs_nparray< T >::bs_nparray(bs_type_ctor_param param)
+//{}
+//
+//// copy ctor
+//template< class T >
+//bs_nparray< T >::bs_nparray(const bs_nparray& v)
+//	: bs_refcounter(), bs_array_t(v)
+//{}
 
-// copy ctor
-template< class T >
-bs_nparray< T >::bs_nparray(const bs_nparray& v)
-	: bs_refcounter(), bs_array_t(v)
-{}
-
-typedef bs_nparray< int > bs_nparray_i;
-typedef bs_nparray< float > bs_nparray_f;
-typedef bs_nparray< double > bs_nparray_d;
+// usefull typedefs
+typedef bs_array< int, bs_nparray > bs_nparray_i;
+typedef bs_array< float, bs_nparray > bs_nparray_f;
+typedef bs_array< double, bs_nparray > bs_nparray_d;
 
 } 	// eof blue_sky namespace
 

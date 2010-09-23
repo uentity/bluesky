@@ -23,23 +23,23 @@
 
 namespace blue_sky {
 
-BLUE_SKY_TYPE_STD_CREATE_T_DEF(bs_nparray, (class));
-BLUE_SKY_TYPE_STD_COPY_T_DEF(bs_nparray, (class));
+//BLUE_SKY_TYPE_STD_CREATE_T_DEF(bs_nparray, (class));
+//BLUE_SKY_TYPE_STD_COPY_T_DEF(bs_nparray, (class));
 
-// for base class
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, numpy_array_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, numpy_array_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, numpy_array_traits));
+// bs_array< T, bs_nparray > instantiations
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_nparray));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_nparray));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_nparray));
 
-BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray< int >, bs_nparray< int >::bs_array_t, "BS numpy int array");
-BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray< float >, bs_nparray< float >::bs_array_t, "BS numpy float array");
-BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray< double >, bs_nparray< double >::bs_array_t, "BS numpy double array");
+//BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray_i, objbase, "BS numpy int array");
+//BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray_f, objbase, "BS numpy float array");
+//BLUE_SKY_TYPE_IMPL_T_SHORT(bs_nparray_d, objbase, "BS numpy double array");
 
 kernel::types_enum register_nparray() {
 	kernel::types_enum te;
-	te.push_back(bs_nparray< int >::bs_type());
-	te.push_back(bs_nparray< float >::bs_type());
-	te.push_back(bs_nparray< double >::bs_type());
+	te.push_back(bs_nparray_i::bs_type());
+	te.push_back(bs_nparray_f::bs_type());
+	te.push_back(bs_nparray_d::bs_type());
 	return te;
 }
 
@@ -48,15 +48,20 @@ namespace python {
 // bs_nparray test function
 template< class inp_array_t, class ret_array_t >
 smart_ptr< ret_array_t > test_nparray(smart_ptr< inp_array_t > a, smart_ptr< inp_array_t > b) {
+	// a little test on nparray resize
+	smart_ptr< bs_nparray_d > tmp = BS_KERNEL.create_object(bs_nparray_d::bs_type());
+	tmp->resize(10);
+	tmp->resize(11);
+
 	ulong sz = std::min(a->size(), b->size());
 	smart_ptr< ret_array_t > res = BS_KERNEL.create_object(ret_array_t::bs_type());
 	*res = *a;
 	res->assign(*a);
-	*res = *a->clone();
+	//*res = *a->clone();
 	res->resize(sz + 1);
 	for(ulong i = 0; i < sz; ++i)
 		(*res)[i] = (*a)[i] + (*b)[i];
-	(*res)[sz] = 12345;
+	(*res)[res->size() - 1] = 12345;
 	//res->insert(1.);
 	return res;
 }
@@ -143,24 +148,26 @@ struct nparray_shared : public bs_nparray< T > {
  *----------------------------------------------------------------*/
 template< class T >
 struct bspy_nparray_traits {
-	typedef bs_nparray< T > nparray_t;
+	typedef bs_array< T, bs_nparray > nparray_t;
+	typedef bs_nparray< T > cont_t;
 	typedef smart_ptr< nparray_t > type;
 
 	static void create_type(void* memory_chunk, const bp::object& py_obj) {
 		// create empty array and init it with Python array
 		type sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
-		sp_array.lock()->init(py_obj.ptr());
+		sp_array.lock()->init(cont_t(py_obj.ptr()));
 		new(memory_chunk) type(sp_array);
 	}
 
 	static bool is_convertible(PyObject* py_obj) {
-		if(!PyArray_Check(py_obj) || !pyublas::is_storage_compatible< T >(py_obj)) {
-			return false;
+		if(PyArray_Check(py_obj) && pyublas::is_storage_compatible< T >(py_obj)) {
+			return true;
 		}
-		return true;
+		return false;
 	}
 
 	static PyObject* to_python(type const& v) {
+		//return v->handle().get();
 		return v->to_python();
 	}
 
@@ -175,7 +182,7 @@ struct bspy_nparray_traits {
 		static void create_type(void* memory_chunk, const bp::object& py_obj) {
 			// create empty array and init it with Python array
 			sp_nparray_t sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
-			sp_array.lock()->init(py_obj.ptr());
+			sp_array.lock()->init(cont_t(py_obj.ptr()));
 			// copy data to destination array
 			type sp_resarray = BS_KERNEL.create_object(varray_t::bs_type());
 			sp_resarray->resize(sp_array->size());
@@ -184,7 +191,6 @@ struct bspy_nparray_traits {
 		}
 
 		static PyObject* to_python(type const& v) {
-			// original_t is a smart_ptr to array with different traits
 			// create empty array and init it with copied data from v
 			sp_nparray_t sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
 			sp_array.lock()->init(v->size());
@@ -206,13 +212,13 @@ struct bspy_nparray_traits {
 
 		// safe implicit conversions that reference passed data
 		static void create_type(void* memory_chunk, const bp::object& py_obj) {
-			// create empty array and init it with Python array
+			// create proxy nparray and init it with Python array
 			sp_nparray_t sp_array = BS_KERNEL.create_object(nparray_t::bs_type());
-			sp_array.lock()->init(py_obj.ptr());
+			sp_array.lock()->init(cont_t(py_obj.ptr()));
 			// make empty destination array
 			type sp_resarray = BS_KERNEL.create_object(varray_t::bs_type());
-			// fill it with container
-			sp_resarray->init(typename bs_arrbase< T >::sp_arrbase(sp_array));
+			// set it's container to newly created proxy
+			sp_resarray->init_inplace(sp_array);
 			new(memory_chunk) type(sp_resarray);
 		}
 
@@ -227,7 +233,7 @@ struct bspy_nparray_traits {
 
 			// build numpy array around raw data
 			sp_nparray_t proxy = BS_KERNEL.create_object(nparray_t::bs_type());
-			proxy->init(v->begin(), v->size());
+			proxy->init(cont_t(v->begin(), v->size()));
 
 			// set array's BASE to opaque_ptr to correctly free resourses
 			PyArray_BASE(proxy->handle().get()) = opaque_ptr;
@@ -267,7 +273,7 @@ struct bspy_nparray_traits {
 		converter_t::register_from_py();
 		converter_t::register_to_py();
 		// register smart_ptr conversions to bases
-		bp::implicitly_convertible< type, smart_ptr< typename nparray_t::bs_array_t > >();
+		//bp::implicitly_convertible< type, smart_ptr< typename nparray_t::bs_array_t > >();
 		bp::implicitly_convertible< type, smart_ptr< typename nparray_t::arrbase > >();
 		bp::implicitly_convertible< type, smart_ptr< objbase > >();
 
@@ -283,24 +289,15 @@ struct bspy_nparray_traits {
 }
 
 void py_export_nparray() {
-	//class_< bs_nparray< int >, bases< bs_nparray< int >::bs_array_t >, smart_ptr< bs_nparray< int > >, boost::noncopyable >
-	//class_< bs_nparray< int >, smart_ptr< bs_nparray< int > >, boost::noncopyable >
-	//	("nparray_i", no_init)
-	//	.def("__init__", make_constructor(create_bs_type< bs_nparray< int > >))
-	//	.def("test", &bs_nparray< int >::test)
-	//	;
-	//register_smart_ptr< bs_nparray< int > >();
-	//auto_reg_smart_ptr< bs_nparray< int > >();
-	//auto_reg_smart_ptr< bs_nparray< int >, bs_nparray< int >::bs_array_t >();
-
-	// instead of exporting bs_nparray export converters to/from python objects
+	// export converters
 	bspy_nparray_traits< int >::register_converters();
 	bspy_nparray_traits< float >::register_converters();
 	bspy_nparray_traits< double >::register_converters();
 
-	def("test_nparray_i", &test_nparray< bs_nparray< int >, bs_array< int > >);
-	def("test_nparray_f", &test_nparray< bs_nparray< float >, bs_array< float > >);
-	def("test_nparray_d", &test_nparray< bs_array< double >, bs_array< double > >);
+	// export test functions
+	def("test_nparray_i", &test_nparray< bs_nparray_i, bs_array< int > >);
+	def("test_nparray_f", &test_nparray< bs_nparray_f, bs_array< float > >);
+	def("test_nparray_d", &test_nparray< bs_nparray_d, bs_array< double > >);
 	//def("test_nparray_d", &test_nparray< bs_array< double, vector_traits >, bs_array< double, vector_traits > >);
 	//def("test_nparray_d", &test_nparray< bs_nparray< double >, bs_array< double, vector_traits > >);
 	//def("test_nparray_d", &test_nparray< double, bs_arrbase >);

@@ -105,10 +105,9 @@ public:
 	template< class R, template< class > class r_traits >
 	bs_array& operator=(const bs_array< R, r_traits >& rhs) {
 		size_type n = rhs.size();
-		if(this->begin() != rhs.begin()) {
-			if(this->size() != n) resize(n);
+		if(this->size() != n) resize(n);
+		if(this->size() && n && this->begin() != rhs.begin())
 			std::copy(rhs.begin(), rhs.end(), this->begin());
-		}
 		return *this;
 	}
 
