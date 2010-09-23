@@ -37,41 +37,64 @@ void py_export_messaging();
 void py_export_objbase();
 void py_export_shell();
 void py_export_tree();
-void py_export_bs_array();
+void py_export_nparray();
+
+
+void py_bind_messaging();
+void py_bind_objbase();
+void py_bind_common();
+void py_bind_link();
+void py_bind_tree();
+void py_bind_kernel();
+
+namespace {
+struct deprecated_tag {};
+}
 
 BLUE_SKY_INIT_PY_FUN
 {
 	register_exception_translator<bs_exception>(&exception_translator);
 
-	class_< plugin_descriptor >("plugin_descriptor", no_init)
-		.add_property("name_", &plugin_descriptor::name_)
-		.add_property("version_", &plugin_descriptor::version_)
-		.add_property("short_descr_", &plugin_descriptor::short_descr_)
-		.add_property("long_descr_", &plugin_descriptor::long_descr_)
-		.def(self < self)
-		.def(self == self)
-		.def(self != self);
+	//class_< plugin_descriptor >("plugin_descriptor", no_init)
+	//	.add_property("name_", &plugin_descriptor::name_)
+	//	.add_property("version_", &plugin_descriptor::version_)
+	//	.add_property("short_descr_", &plugin_descriptor::short_descr_)
+	//	.add_property("long_descr_", &plugin_descriptor::long_descr_)
+	//	.def(self < self)
+	//	.def(self == self)
+	//	.def(self != self);
+
+	//class_< std::list<std::string> >("list_string")
+	//	.def("__iter__", boost::python::iterator< std::list<std::string> >());
 
 	py_export_vectors ();
-
-	class_< std::list<std::string> >("list_string")
-		.def("__iter__", boost::python::iterator< std::list<std::string> >());
-
 	python::py_export_error_codes ();
 	python::py_export_assert ();
 
-	//export the rest stuff
-	py_export_messaging();
-	py_export_objbase();
-	py_export_typed();
-	py_export_combase();
-	py_export_kernel();
-	py_export_abstract_storage();
-	py_export_link();
-	py_export_log();
-	py_export_shell();
-	py_export_tree();
-	py_export_bs_array();
+	// export the rest stuff
+	// do it under 'deprecated' namespace
+	{
+		scope deprecated = class_< deprecated_tag, boost::noncopyable >("deprecated", no_init);
+		py_export_messaging();
+		py_export_objbase();
+		py_export_typed();
+		py_export_combase();
+		py_export_kernel();
+		py_export_abstract_storage();
+		py_export_link();
+		py_export_log();
+		py_export_shell();
+		py_export_tree();
+	}
+	py_export_nparray();
+
+	// new exporting system
+	py_bind_common();
+	py_bind_messaging();
+	py_bind_objbase();
+	py_bind_link();
+	py_bind_tree();
+	py_bind_kernel();
 }
 
 }}

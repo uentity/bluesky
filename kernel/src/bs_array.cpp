@@ -29,22 +29,15 @@ BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, vector_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, vector_traits));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, vector_traits));
 
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, shared_array_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, shared_array_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, shared_array_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, shared_array_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_array_shared));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_array_shared));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_array_shared));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_array_shared));
 
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, shared_vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, shared_vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, shared_vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, shared_vector_traits));
-
-#ifdef BSPY_EXPORTING
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, numpy_array_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, numpy_array_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, numpy_array_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, numpy_array_traits));
-#endif
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_vector_shared));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_vector_shared));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_vector_shared));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_vector_shared));
 
 // bs_map
 BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (int, str_val_traits));
@@ -60,21 +53,15 @@ kernel::types_enum register_bs_array() {
 	te.push_back(bs_array< double, vector_traits >::bs_type());
 	te.push_back(bs_array< std::string, vector_traits >::bs_type());
 
-	te.push_back(bs_array< int, shared_array_traits >::bs_type());
-	te.push_back(bs_array< float, shared_array_traits >::bs_type());
-	te.push_back(bs_array< double, shared_array_traits >::bs_type());
-	te.push_back(bs_array< std::string, shared_array_traits >::bs_type());
+	te.push_back(bs_array< int, bs_array_shared >::bs_type());
+	te.push_back(bs_array< float, bs_array_shared >::bs_type());
+	te.push_back(bs_array< double, bs_array_shared >::bs_type());
+	te.push_back(bs_array< std::string, bs_array_shared >::bs_type());
 
-	te.push_back(bs_array< int, shared_vector_traits >::bs_type());
-	te.push_back(bs_array< float, shared_vector_traits >::bs_type());
-	te.push_back(bs_array< double, shared_vector_traits >::bs_type());
-	te.push_back(bs_array< std::string, shared_vector_traits >::bs_type());
-
-#ifdef BSPY_EXPORTING
-	te.push_back(bs_array< int, numpy_array_traits >::bs_type());
-	te.push_back(bs_array< float, numpy_array_traits >::bs_type());
-	te.push_back(bs_array< double, numpy_array_traits >::bs_type());
-#endif
+	te.push_back(bs_array< int, bs_vector_shared >::bs_type());
+	te.push_back(bs_array< float, bs_vector_shared >::bs_type());
+	te.push_back(bs_array< double, bs_vector_shared >::bs_type());
+	te.push_back(bs_array< std::string, bs_vector_shared >::bs_type());
 
 	te.push_back(bs_map< int, str_val_traits >::bs_type());
 	te.push_back(bs_map< float, str_val_traits >::bs_type());

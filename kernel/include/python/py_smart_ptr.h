@@ -20,6 +20,8 @@
 /// when it holds pointer to const T
 
 #include <smart_ptr.h>
+#include <boost/python/implicit.hpp>
+#include <boost/python/register_ptr_to_python.hpp>
 
 namespace boost { namespace python {
 
@@ -34,9 +36,22 @@ struct pointee< blue_sky::smart_ptr< T, true > > {
 	typedef T type;
 };
 
+template < class T >
+struct pointee< blue_sky::st_smart_ptr< T > > {
+	typedef T type;
+};
+
 }} // eof namespace boost::python
 
-namespace blue_sky { namespace python {
+namespace blue_sky {
+
+// get_pointer needed to export smart_ptr to Python
+template< class T >
+T* get_pointer(blue_sky::st_smart_ptr< T > const & p) {
+	return p.get();
+}
+
+namespace python {
 using namespace Loki;
 
 /// @brief register smart_ptr to given object type + implicit conversion to objbase

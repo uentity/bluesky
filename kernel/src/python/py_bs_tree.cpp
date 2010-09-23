@@ -285,12 +285,12 @@ void py_export_tree() {
 
 	def("create_node",&py_bs_node::create_node);
 
-	enum_<bs_node::signal_codes>("node_signal_codes")
-		.value("leaf_added",bs_node::leaf_added)
-		.value("leaf_deleted",bs_node::leaf_deleted)
-		.value("leaf_moved",bs_node::leaf_moved)
-		.value("leaf_renamed",bs_node::leaf_renamed)
-		.export_values();
+	//enum_<bs_node::signal_codes>("node_signal_codes")
+	//	.value("leaf_added",bs_node::leaf_added)
+	//	.value("leaf_deleted",bs_node::leaf_deleted)
+	//	.value("leaf_moved",bs_node::leaf_moved)
+	//	.value("leaf_renamed",bs_node::leaf_renamed)
+	//	.export_values();
 }
 
 }	//end of namespace blue_sky::python

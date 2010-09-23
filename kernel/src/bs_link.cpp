@@ -23,29 +23,6 @@
 using namespace std;
 
 namespace blue_sky {
-//namespace {
-//} //end of hidden namespace
-
-////------------------------- unlock listener ---------------------------------
-//class bs_inode::obj_listener : public bs_slot {
-//public:
-//	obj_listener(const bs_inode& i) : i_(i) {}
-//
-//	void execute(const sp_mobj&, int, const sp_obj&) const {
-//		//forward unlock signal to node
-//		//DEBUG
-//		//cout << "obj_listener at " << this << ": link " << l_.name() << " data_changed signal to be fired" << endl;
-//
-//		//lock inode first
-//		bs_mutex::scoped_lock lk(i_.mutex());
-//		//broadcast unlock message to all related hard links
-//		for(bs_inode::l_list::const_iterator pl = i_.hl_begin(); pl != i_.hl_end(); ++pl)
-//			(*pl)->fire_signal(bs_link::data_changed, NULL);
-//	}
-//
-//	const bs_inode& i_;
-//};
-
 //======================== inode implementation ================================================
 bs_inode::bs_inode(const sp_obj& obj)
 : obj_(obj)
@@ -116,6 +93,7 @@ void bs_inode::disconnect_link(const sp_link& l) {
 	if(links_.empty()) {
 		//all hard links to inode is deleted and object is dangling
 		//delete it from kernel
+		obj_.lock()->inode_ = NULL;
 		obj_->bs_free_this();
 	}
 }
@@ -148,6 +126,7 @@ public:
 	//unlock signal forwarder
 	sp_slot ol_;
 	bool is_listening_;
+	bs_node* parent_;
 
 
 	link_impl(const std::string& name)
@@ -210,15 +189,29 @@ class bs_link::hl_impl : public link_impl
 private:
 	//main task of this class is to connect to inode on construction and disconnect on desctruction
 	struct inode_tracker : public bs_refcounter {
-		inode_tracker(const bs_link* pl) : plink_(pl) {
-			//impl->self_ = pl;
-			if(pl->inode())
-				pl->inode().lock()->connect_link(pl);
+		inode_tracker(const sp_obj& obj) {
+			if(obj) {
+				// if object doesn't have an inode then create one
+				inode_ = obj->inode();
+				if(!inode_) {
+					inode_ = new blue_sky::bs_inode(obj);
+					obj.lock()->inode_ = inode_;
+				}
+			}
+		}
+
+		void set_owner(const bs_link* plink) {
+			if(plink) {
+				plink_ = plink;
+				// track this hard link
+				if(inode_)
+					inode_.lock()->connect_link(plink);
+			}
 		}
 
 		~inode_tracker() {
-			if(plink_->inode())
-				plink_->inode().lock()->disconnect_link(plink_);
+			if(inode_)
+				inode_.lock()->disconnect_link(plink_);
 		}
 
 		void dispose() const {
@@ -226,56 +219,33 @@ private:
 		}
 
 		const bs_link* plink_;
+		sp_inode inode_;
 	};
 
-	smart_ptr< inode_tracker > it_;
+	st_smart_ptr< inode_tracker > it_;
 
 public:
 	//member variables
-	sp_inode inode_;
+	//sp_inode inode_;
 
-	hl_impl(const string& name, const sp_obj& obj = NULL)
-		: link_impl(name) //, is_listening_(false)
-	{
-		if(obj) {
-			//if object doesn't have an inode then create one
-			if(!obj->inode_) {
-				inode_ = new blue_sky::bs_inode(obj);
-				obj.lock()->inode_ = inode_;
-				//obj.lock()->inode_ = new blue_sky::bs_inode(obj);
-			}
-			else
-				inode_ = obj->inode();
-			//set_inode(obj->inode());
-		}
-	}
+	hl_impl(const string& name, const sp_obj& obj)
+		: link_impl(name), it_(new inode_tracker(obj))
+	{}
 
 	hl_impl(const hl_impl& impl)
-		: link_impl(impl.name()), inode_(impl.inode_) //, is_listening_(false)
-	{
-		//set_inode(impl.inode());
-	}
+		: link_impl(impl.name()), it_(new inode_tracker(impl.inode()->data()))
+	{}
 
 	void set_owner(const bs_link* l, bool start_listening = false) {
 		// call parent
 		link_impl::set_owner(l, start_listening);
 		// track inode's hard link's list
-		it_ = new inode_tracker(l);
+		it_->set_owner(l);
 	}
 
 	sp_inode inode() const {
-		return inode_;
+		return it_->inode_;
 	}
-
-	//void set_inode(const sp_inode& i) {
-	//	//bool listen_status = is_listening_;
-	//	stop_listening();
-	//	//switch inode
-	//	if(!i)
-	//		inode_ = NULL;
-	//	else
-	//		inode_ = i;
-	//}
 
 	~hl_impl() {}
 };
@@ -287,28 +257,12 @@ public:
 
 	sl_impl(const sp_link& link, const string& name)
 		: link_impl(name), link_(link)
-	{
-		set_link(link);
-	}
+	{}
 
 	sp_inode inode() const {
 		if(link_)
 			return link_->inode();
 		else return NULL;
-	}
-
-	void set_link(const sp_link& l) {
-		//bool listen_status = is_listening_;
-		stop_listening();
-		//switch inode
-		if(!l) {
-			//reset pimpl
-			link_ = NULL;
-			//return;
-		}
-		else {
-			link_ = l;
-		}
 	}
 
 	~sl_impl() {};
@@ -491,6 +445,14 @@ bool bs_link::unsubscribe(int signal_code, const sp_slot& handler) const {
 		pimpl_.lock()->stop_listening();
 	}
 	return res;
+}
+
+void bs_link::set_parent(const sp_node& parent) const {
+	pimpl_.lock()->parent_ = parent;
+}
+
+sp_node bs_link::parent() const {
+	return pimpl_->parent_;
 }
 
 BLUE_SKY_TYPE_STD_CREATE(bs_link)

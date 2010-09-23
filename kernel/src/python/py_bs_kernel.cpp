@@ -107,20 +107,6 @@ py_bs_link py_kernel::bs_root() const {
 
 //BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(kernel_tools_overloads, walk_tree, 1, 1);
 
-class py_kernel_tools {
-public:
-	static void print_loaded_types() {
-		cout << kernel_tools::print_loaded_types();
-	}
-
-	static void walk_tree() {
-		cout << kernel_tools::walk_tree();
-	}
-
-	static void print_registered_instances() {
-		cout << kernel_tools::print_registered_instances();
-	}
-};
 
 void py_export_kernel() {
 	class_<py_kernel>("kernel")
@@ -143,29 +129,20 @@ void py_export_kernel() {
 		.def("bs_root",&py_kernel::bs_root)
 		;
 
-	class_< kernel::plugins_enum >("vector_plugins_enum")
-		.def(vector_indexing_suite< kernel::plugins_enum >());
+	//class_< kernel::plugins_enum >("vector_plugins_enum")
+	//	.def(vector_indexing_suite< kernel::plugins_enum >());
 
-	class_< kernel::types_enum >("vector_types_enum")
-		.def(vector_indexing_suite< kernel::types_enum >());
+	//class_< kernel::types_enum >("vector_types_enum")
+	//	.def(vector_indexing_suite< kernel::types_enum >());
 
-	class_< type_tuple >("type_tuple", init <const plugin_descriptor&, const type_descriptor&>())
-		.add_property("pd",&type_tuple::pd_)
-		.add_property("td",&type_tuple::td_)
-		.def(self == self)
-		.def(self != self);
+	//class_< type_tuple >("type_tuple", init <const plugin_descriptor&, const type_descriptor&>())
+	//	.add_property("pd",&type_tuple::pd_)
+	//	.add_property("td",&type_tuple::td_)
+	//	.def(self == self)
+	//	.def(self != self);
 
-	class_< std::vector< type_tuple > >("vector_type_tuple")
-		.def(vector_indexing_suite< std::vector< type_tuple > >());
-
-	class_< py_kernel_tools >("kernel_tools", no_init)
-		.def("print_loaded_types", &py_kernel_tools::print_loaded_types)
-		.def("walk_tree", &py_kernel_tools::walk_tree)
-		.def("print_registered_instances", &py_kernel_tools::print_registered_instances)
-		.staticmethod("print_loaded_types")
-		.staticmethod("walk_tree")
-		.staticmethod("print_registered_instances")
-		;
+	//class_< std::vector< type_tuple > >("vector_type_tuple")
+	//	.def(vector_indexing_suite< std::vector< type_tuple > >());
 }
 
 }	//namespace blue_sky::python

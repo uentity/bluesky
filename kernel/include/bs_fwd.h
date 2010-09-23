@@ -71,6 +71,9 @@ namespace blue_sky {
 
 	//data_table
 	template< class> class bs_arrbase;
+	template< class> class bs_vecbase;
+	template< class> class bs_array_shared;
+	template< class> class bs_vector_shared;
 	template< class, template< class > class > class bs_array;
 	template< class, template< class > class > class bs_map;
 	// traits
