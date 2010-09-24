@@ -19,6 +19,7 @@
 #include "bs_common.h"
 #include "bs_object_base.h"
 #include "bs_command.h"
+#include "bs_fwd.h"
 #include <time.h>
 
 namespace blue_sky {
@@ -145,6 +146,9 @@ public:
 	//generates link that points to nothing only for searching purposes
 	static sp_link dumb_link(const std::string name);
 
+	// acees to link's container
+	virtual sp_node parent() const;
+
 	//comparison operator
 	//bool operator==(const bs_link& l) const;
 
@@ -179,8 +183,11 @@ private:
 	//copies creation is prohibited - use clone() instead
 	//bs_link(const bs_link& l);
 
-	//renamer for bs_node
+	// renamer for bs_node
 	virtual void rename(const std::string& new_name) const;
+
+	// set parent for bs_node
+	virtual void set_parent(const sp_node& parent) const;
 
 	BLUE_SKY_TYPE_DECL(bs_link)
 };
