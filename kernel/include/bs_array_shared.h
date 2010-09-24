@@ -111,16 +111,10 @@ public:
 		return new bs_array_shared(n, v, Loki::Type2Type< container >());
 	}
 
-	// more convinient factory functions - no need to use Loki::Type2Type
 	template< class container, class input_iterator >
 	static sp_array_shared create(input_iterator start, input_iterator finish) {
 		return new bs_array_shared(start, finish, Loki::Type2Type< container >());
 	}
-
-	//template< class container, class input_iterator >
-	//bs_array_shared(input_iterator start, input_iterator finish) {
-	//	init< container >(start, finish);
-	//}
 
 	// array doesn't own data
 	bs_array_shared(pointer data, size_type n)
@@ -240,10 +234,6 @@ public:
 	container get_container() const {
 		return buf_holder_;
 	}
-
-	//void assign(const value_type& v) {
-	//	std::fill(begin(), end(), v);
-	//}
 
 protected:
 	// if shared array owns buffer here's real buffer handler

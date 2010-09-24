@@ -127,28 +127,15 @@ public:
 
 	virtual void assign(const value_type& v) {
 		std::fill(begin(), end(), v);
-		//for(size_type i = 0; i < size(); ++i)
-		//	ss(i) = v;
 	}
 
 	// assign for different type array
 	template< class R >
 	void assign(const bs_arrbase< R >& rhs) {
 		size_type n = rhs.size();
-		if(n) {
-			if(size() != n) resize(n);
-			T* dst = &ss(0);
-			R const* src = &rhs[0];
-			if(src != dst)
-				std::copy(src, src + n, dst);
-		}
-	}
-
-	// operator= via assign
-	template< class R >
-	bs_arrbase& operator=(const bs_arrbase< R >& rhs) {
-		assign(rhs);
-		return *this;
+		if(this->size() != n) this->resize(n);
+		if(this->size() && this->begin() != rhs.begin())
+			std::copy(rhs.begin(), rhs.begin() + std::min(n, this->size()), this->begin());
 	}
 
 	/// @brief empty destructor
