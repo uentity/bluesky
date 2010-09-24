@@ -29,6 +29,7 @@
 #include "bs_report.h"
 #include "bs_tree.h"
 #include "bs_shell.h"
+#include "bs_array.h"
 #include "bs_kernel_tools.h"
 
 #ifdef BSPY_EXPORTING_PLUGIN
@@ -38,12 +39,6 @@
 #include "py_bs_messaging.h"
 #include "py_bs_tree.h"
 #endif
-
-//#ifdef UNIX
-//#include "python2.5/Python.h"
-//#else
-//#include "Python.h"
-//#endif
 
 #include "boost/type_traits.hpp"
 #include "boost/thread.hpp"
@@ -152,11 +147,10 @@ BLUE_SKY_TYPE_IMPL_NOCOPY(dummy_node, objbase, "bs_dummy_node", "", "")
 
 namespace blue_sky {
 BLUE_SKY_PLUGIN_DESCRIPTOR("bs_client", "1.0.0", "", "");
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (int, str_val_traits));
+BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (bool, str_val_traits));
 BS_TYPE_IMPL_T_MEM(str_val_table, int);
-BS_TYPE_IMPL_T_MEM(str_val_table, bool);
-//BS_TYPE_IMPL_T_MEM(bs_array, double);
-//BS_TYPE_IMPL_T_MEM(bs_array, int);
-//BS_TYPE_IMPL_T_MEM(bs_array, std::string);
+//BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::vector< double >, bs_vector_shared));
 }
 
 struct dummy_restricter : public bs_node::restrict_types {
@@ -514,10 +508,10 @@ void test_props()
 	//smart_ptr< str_val_table<int> > p_b(&b);
 
 	smart_ptr< data_table<> > ps = k.create_object(data_table<>::bs_type());
-	ps.lock()->add_item<int>("test", 10);
-	ps.lock()->add_item<bool>("bool_test", true);
-	ps.lock()->add_item<bool>("test", false);
-	ps.lock()->add_item<int>("test", 12);
+	ps.lock()->insert<int>("test", 10);
+	ps.lock()->insert<bool>("bool_test", true);
+	ps.lock()->insert<bool>("test", false);
+	ps.lock()->insert<int>("test", 12);
 
 	//assignment
 	cout << ps->at< int >("test") << endl;
@@ -531,8 +525,8 @@ void test_props()
 	//b = ps.lock()->get_val_table< int >();
 
 	smart_ptr< idx_data_table > psi = k.create_object(idx_data_table::bs_type());
-	psi.lock()->add_item<double>(12);
-	psi.lock()->add_item<int>(10, 2);
+	psi.lock()->insert<double>(12);
+	psi.lock()->insert<int>(10);
 
 	//str_val_table< objbase > ot;
 	//ot.add_item("test_object", k.create_object(dummy::type()));
@@ -541,10 +535,10 @@ void test_props()
 	//bs_guardian< int > c_guard(c);
 	//k.global_dt().lock()->add_item<int>("test", 10);
 
-	k.pert_idx_dt(dummy::bs_type()).lock()->add_item< string >("hello");
-	k.pert_idx_dt(dummy::bs_type()).lock()->add_item< string >("test");
-	smart_ptr< bs_array< string > > my_tbl = k.pert_idx_dt(dummy::bs_type()).lock()->table< string >();
-	my_tbl.lock()->add_item("test1");
+	k.pert_idx_dt(dummy::bs_type()).lock()->insert< string >("hello");
+	k.pert_idx_dt(dummy::bs_type()).lock()->insert< string >("test");
+	smart_ptr< bs_array< string, vector_traits > > my_tbl = k.pert_idx_dt(dummy::bs_type()).lock()->table< string >();
+	my_tbl.lock()->insert("test1");
 	string s = (*my_tbl)[1];
 	s = my_tbl->at(0);
 	cout << "------------------------------------------------------------------------" << endl;
@@ -792,6 +786,75 @@ void test_ondelete() {
 	// after exit fromthis block on_delete signal should fire
 }
 
+
+template< class array_t >
+struct test_array_unit {
+	typedef smart_ptr< array_t > sp_array_t;
+	typedef smart_ptr< typename array_t::arrbase > sp_arrbase_t;
+	typedef typename array_t::value_type value_t;
+
+	test_array_unit(const sp_array_t& a) : a_(a) {}
+
+	sp_array_t test_arrbase(const value_t& v = value_t()) {
+		a_->resize(10);
+		a_->assign(v);
+		sort(a_->begin(), a_->end());
+		sp_array_t a1(a_->clone(), bs_static_cast());
+		a1->assign(*a_);
+		cout << a1->ss(5) << ' ' << (*a1)[6] << endl;
+		return a1;
+	}
+
+	void test_vecbase(const value_t& v = value_t()) {
+		sp_array_t a1 = test_arrbase(v);
+		a1->insert(2, v);
+		a1->insert(v);
+		a1->insert(a1->begin(), v+v);
+		a1->insert(a1->begin(), 7, v+v+v);
+		a1->erase(1);
+		a1->erase(a1->end() - 1);
+		a1->erase(a1->begin(), a1->begin() + 3);
+		a1->push_back(v+v+v+v);
+		a1->pop_back();
+		for(ulong i = 0; i < a1->size(); ++i)
+			cout << (*a1)[i] << ' ';
+		cout << endl;
+		a1->clear();
+	}
+
+	sp_array_t a_;
+};
+
+void test_array() {
+	cout << "-----------------------------bs_array test------------------------------" << endl;
+	typedef bs_array< double, bs_array_shared > real_array_t;
+	typedef bs_array< int, vector_traits > int_array_t;
+	typedef bs_array< string, bs_vector_shared > str_array_t;
+	//typedef bs_array< std::vector< double >, bs_vector_shared > vd_array_t;
+
+	// create arrays
+	smart_ptr< real_array_t > sp_areal = k.create_object(real_array_t::bs_type());
+	smart_ptr< int_array_t > sp_aint = k.create_object(int_array_t::bs_type());
+	smart_ptr< str_array_t > sp_astr = k.create_object(str_array_t::bs_type());
+	//smart_ptr< vd_array_t > sp_avd = k.create_object(vd_array_t::bs_type());
+
+	// fill array with equal values
+	test_array_unit< real_array_t > real_u = sp_areal;
+	real_u.test_arrbase(1.5);
+
+	test_array_unit< int_array_t > int_u = sp_aint;
+	int_u.test_vecbase(10);
+
+	test_array_unit< str_array_t > str_u = sp_astr;
+	str_u.test_vecbase("hello");
+
+	// print array contents
+	cout << "Real array contents:" << endl;
+	for(real_array_t::const_iterator p = sp_areal->begin(), end = sp_areal->end(); p != end; ++p)
+		cout << *p << ' ';
+	cout << endl << "------------------------------------------------------------------------" << endl;
+}
+
 /*!
  * \brief main function
  *
@@ -822,16 +885,21 @@ try {
 		fill_dummy_node(100);
 		cout << kernel_tools::walk_tree();
 
-		mt_op< dummy_changer >(50, true);
-		mt_op< dummy_renamer >(50, true);
+		//mt_op< dummy_changer >(50, true);
+		//mt_op< dummy_renamer >(50, true);
 
-		//dummy_changer(50)();
+		//fill_dummy_node(100);
+		//print_tree();
+		//mt_op< dummy_renamer >(50, true);
 
 		//mt_op< dummy_changer >(50, true);
 		//mt_op< dummy_renamer >(50, true);
-		//dummy_renamer(50)();
+		////dummy_changer(50)();
+		//mt_op< dummy_changer >(50, true);
+		//mt_op< dummy_renamer >(50, true);
+		////dummy_renamer(50)();
 
-		//block until all tasks are done
+		////block until all tasks are done
 		cout << "Waiting until all changes are made..." << endl;
 		k.wait_tq_empty();
 		cout << "Ok, node fully updated" << endl;
@@ -852,7 +920,8 @@ try {
 		//test_mt();
 		//print_dummy_node(bs_node::custom_idx);
 
-		test_ondelete();
+		test_array();
+		//test_ondelete();
 
 #ifdef USE_TBB_LIB
 		//tbb_test_mt();

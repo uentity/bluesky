@@ -21,6 +21,7 @@
 #include <set>
 
 #include "bs_type_macro.h"
+#include "boost/preprocessor/seq/for_each.hpp"
 
 namespace blue_sky {
 

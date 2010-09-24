@@ -132,6 +132,13 @@ BS_TYPE_IMPL_T(T, #T, short_descr, "")
 BS_TYPE_IMPL_T_NOCOPY(T, #T, short_descr, "")
 
 //------------------- templated implementation II - creates definition of bs_type --------------------------------------
+#define _OP(r, data, x) x
+#define BS_TYPE_IMPL_T_EXT_MEM(T, spec_tup_size, spec_tup) \
+template< > BS_API_PLUGIN blue_sky::type_descriptor \
+T< BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(spec_tup_size, spec_tup)) >::bs_type() \
+{ return td_maker(std::string("_") + BOOST_PP_STRINGIZE(BOOST_PP_SEQ_FOR_EACH(_OP, _, BOOST_PP_TUPLE_TO_SEQ(spec_tup_size, spec_tup)))); }
+		//BOOST_PP_STRINGIZE(BOOST_PP_SEQ_CAT(BOOST_PP_TUPLE_TO_SEQ(spec_tup_size, spec_tup)))); }
+
 #define BS_TYPE_IMPL_T_MEM(T, spec_type)                          \
 template< > BS_API_PLUGIN blue_sky::type_descriptor T< spec_type >::bs_type() { \
     return td_maker(std::string("_") + #spec_type); }

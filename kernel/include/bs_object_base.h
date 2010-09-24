@@ -29,6 +29,8 @@
 
 #include "bs_object_base_macro.h"
 
+
+
 namespace blue_sky {
 /*!
  * \brief object_base ... short description ...

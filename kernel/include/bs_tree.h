@@ -136,6 +136,8 @@ public:
 		sp_obj data() const;
 		bool is_persistent() const;
 		void set_persistence(bool persistent) const;
+		// back reference to parent node
+		sp_node container() const;
 	};
 
 	typedef std::reverse_iterator< n_iterator > rn_iterator;

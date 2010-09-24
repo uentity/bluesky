@@ -94,11 +94,11 @@
 */
 
 #ifndef BS_DEF_CAST_POLICY
-#ifdef UNIX
-#define BS_DEF_CAST_POLICY bs_static_cast
-#else
+//#ifdef UNIX
+//#define BS_DEF_CAST_POLICY bs_static_cast
+//#else
 #define BS_DEF_CAST_POLICY bs_semi_dynamic_cast
-#endif
+//#endif
 #endif
 
 namespace blue_sky {
@@ -414,24 +414,128 @@ namespace bs_private {
 	};
 
 	struct deleter_base {
-		//null deleter policy used by default
-		virtual void dispose(void const*) const
-		{};
+		// null deleter policy used by default
+		virtual void dispose(void const*) const {
+			delete this;
+		};
 
-		//virtual dtor
-		virtual ~deleter_base() {};
+		// virtual dtor -- assume that deleter created with new
+		virtual ~deleter_base() {}
 	};
 
 	template< class D >
 	struct deleter_adaptor : public deleter_base {
-		deleter_adaptor(const D& d) : d_(d) {}
+		deleter_adaptor(const D& d = D()) : d_(d) {}
 
 		void dispose(void const* p) const {
 			d_(p);
+			delete this;
 		}
 
 	private:
 		const D d_;
+	};
+
+	// refcounter around simple ptr - delete holded ptr on dispose
+	template< class T >
+	class bs_refcounter_sp : public bs_refcounter {
+	public:
+		typedef T* pointer_t;
+
+		explicit bs_refcounter_sp(pointer_t p) 
+			: bs_refcounter(1), p_(p)
+		{}
+
+		void dispose() const {
+			usual_deleter< T >()(p_);
+			delete this;
+		}
+
+		 pointer_t get() const {
+			return p_;
+		}
+
+	private:
+		pointer_t p_;
+	};
+
+	// same as above, but with custom deleter
+	template< class T, class D >
+	class bs_refcounter_spd : public bs_refcounter {
+	public:
+		typedef T* pointer_t;
+
+		explicit bs_refcounter_spd(pointer_t p, D d) 
+			: bs_refcounter(1), p_(p), d_(d)
+		{}
+
+		 void dispose() const {
+			d_(p_);
+			delete this;
+		 }
+
+		 pointer_t get() const {
+			 return p_;
+		 }
+
+	private:
+		pointer_t p_;
+		D d_;
+	};
+
+	// refcounter around simple ptr - auto inc ref in copy ctor, dec ref in dtor
+	// can be used like boost::shared_count
+	template< class T >
+	class bs_refcounter_ptr {
+	public:
+		typedef T* pointer_t;
+
+		explicit bs_refcounter_ptr(pointer_t p)
+			: rc_(new bs_refcounter_sp< T >(p))
+		{}
+
+		template< class D >
+		explicit bs_refcounter_ptr(pointer_t p, D d)
+			: rc_(new bs_refcounter_spd< T, D >(p, d))
+		{}
+
+		bs_refcounter_ptr(const bs_refcounter_ptr& lhs)
+			: rc_(lhs.rc_)
+		{
+			if(rc_)
+				rc_->add_ref();
+		}
+
+		// dtor
+		~bs_refcounter_ptr() {
+			if(rc_)
+				rc_->del_ref();
+		}
+
+		void swap(bs_refcounter_ptr& lhs) {
+			std::swap(rc_, lhs.rc_);
+		}
+
+		bs_refcounter_ptr& operator=(const bs_refcounter_ptr& lhs) {
+			if(rc_ != lhs.rc_)
+				bs_refcounter_ptr(lhs).swap(*this);
+			return *this;
+		}
+
+		bs_refcounter* operator->() const {
+			return rc_;
+		}
+
+		ulong use_count() const {
+			return rc_ != 0 ? rc_->refs() : 0;
+		}
+
+		friend inline bool operator==(const bs_refcounter_ptr& a, const bs_refcounter_ptr& b) {
+			return a.rc_ == b.rc_;
+		}
+
+	private:
+		bs_refcounter* rc_;
 	};
 
 	//function that fires unlock signal
@@ -463,14 +567,18 @@ on stack by compiler.
 For manual object locking use lsmart_ptr constructed from smart_ptr.
 */
 template< class T >
-class bs_locker {
+class bs_locker : public bs_private::smart_ptr_base< typename boost::remove_const< T >::type > {
 	typedef bs_locker< T > this_t;
-	typedef typename boost::add_const< T >::type pointed_t; //!< pointed type is always constant
-	typedef typename boost::remove_const< T >::type pure_pointed_t; //!< non-constant pointed type
-	typedef pointed_t* pointer_t; //!< same for pointers
-	typedef pure_pointed_t* pure_pointer_t;
-	typedef pointed_t& ref_t; //!< and at last for references
-	typedef pure_pointed_t& pure_ref_t;
+	typedef typename boost::remove_const< T >::type pointed_t;
+	typedef typename boost::add_const< T >::type const_pointed_t;
+	typedef bs_private::smart_ptr_base< pointed_t > base_t;
+
+	typedef pointed_t* pointer_t;
+	typedef const_pointed_t* const_pointer_t;
+	typedef pointed_t& ref_t;
+	typedef const_pointed_t& const_ref_t;
+
+	using base_t::p_;
 
 public:
 	/*!
@@ -479,8 +587,8 @@ public:
 	Made public in order to be used by objbase.
 	\param lp - pointer to const object
 	*/
-	bs_locker(pointer_t lp)
-		: p_(const_cast< pure_pointer_t >(lp))
+	bs_locker(const_pointer_t lp)
+		: base_t(const_cast< pointer_t >(lp))
 #ifndef BS_DISABLE_MT_LOCKS
 		  , lobj_(lp->mutex())
 #endif
@@ -489,32 +597,16 @@ public:
 	\brief Constructor from simple pointer with disjoint mutex.
 	*/
 #ifndef BS_DISABLE_MT_LOCKS
-	bs_locker(pointer_t lp, bs_mutex& m)
-		: p_(const_cast< pure_pointer_t >(lp)), lobj_(m)
+	bs_locker(const_pointer_t lp, bs_mutex& m)
+		: base_t(const_cast< pointer_t >(lp)), lobj_(m)
 	{}
 #else
-	bs_locker(pointer_t lp, bs_mutex& )
-		: p_(const_cast< pure_pointer_t >(lp))
+	bs_locker(const_pointer_t lp, bs_mutex&)
+		: base_t(const_cast< pointer_t >(lp))
 	{}
 #endif
 
-	pure_pointer_t operator->() const {
-		return p_;
-	}
-
-	operator pure_pointer_t() const {
-		return p_;
-	}
-
-	pure_pointer_t get() const {
-		return p_;
-	}
-
-	pure_ref_t operator *() const {
-		return (*p_);
-	}
-
-	operator pure_ref_t() const {
+	operator ref_t() const {
 		return (*p_);
 	}
 
@@ -525,10 +617,9 @@ public:
 	\param r - reference to const object
 	\return nonconst reference to pointed type.
 	*/
-	pure_ref_t operator =(ref_t r) const {
+	ref_t operator =(const_ref_t r) const {
 		*p_ = r;
 		return *p_;
-		//return const_cast< this_t& >(*this);
 	}
 
 	//dtor
@@ -547,8 +638,6 @@ public:
 	bs_locker(const bs_locker&);
 
 private:
-	pure_pointer_t p_; //!< inner pointer
-	//holder_t p_;
 #ifndef BS_DISABLE_MT_LOCKS
 	//! type of locker object used in mutex
 	typename bs_mutex::scoped_lock lobj_;
@@ -594,9 +683,10 @@ public:
 	Locks pointed object.
 	\param lp - multithreaded smart pointer
 	*/
-	explicit lsmart_ptr(const SP& lp) : base_t(lp), guard_(lp.mutex())
+	explicit lsmart_ptr(const SP& lp)
+		: base_t(lp), guard_(lp.mutex())
 #ifndef BS_DISABLE_MT_LOCKS
-										, lobj_(*lp.mutex())
+		, lobj_(*lp.mutex())
 #endif
 	{}
 
@@ -605,16 +695,18 @@ public:
 	Use supplied external mutex to lock on. This ctor can be used with signlethreaded smart pointers.
 	\param lp - smart pointer
 	*/
-	explicit lsmart_ptr(const SP& lp, const bs_mutex& m) : base_t(lp), guard_(&m)
+	explicit lsmart_ptr(const SP& lp, const bs_mutex& m)
+		: base_t(lp), guard_(&m)
 #ifndef BS_DISABLE_MT_LOCKS
-														   , lobj_(m)
+		, lobj_(m)
 #endif
 	{}
 
 	//! copy ctor accuires another lock
-	lsmart_ptr(const this_t& lp) : base_t(lp), guard_(lp.guard_)
+	lsmart_ptr(const this_t& lp)
+		: base_t(lp), guard_(lp.guard_)
 #ifndef BS_DISABLE_MT_LOCKS
-								   , lobj_(*lp.guard_)
+		, lobj_(*lp.guard_)
 #endif
 	{}
 
@@ -772,7 +864,7 @@ public:
 	\param mut - outer mutex used for access synchronization
 	*/
 	mt_ptr(pointer_t lp, bs_mutex& mut)
-		: base_t(lp), mut_(&mut)
+		: base_t(lp), mut_(&mut), d_(new bs_private::deleter_base())
 	{}
 
 	/*!
@@ -785,20 +877,21 @@ public:
 
 	template< class R, bs_cast_policy cast_t >
 	mt_ptr(R* lp, bs_mutex& mut, bs_castpol_val< cast_t > cast = BS_DEF_CAST_POLICY())
-		: base_t(lp, cast), mut_(&mut)
+		: base_t(lp, cast), mut_(&mut), d_(new bs_private::deleter_base())
 	{}
 
 	/*!
 	\brief Templated constructor from mt_ptr to castable type
+	Doesn't take ownership of object holded by lp
 	*/
 	template< class R >
 	mt_ptr(const mt_ptr< R >& lp)
-		: base_t(lp), mut_(lp.mut_)
+		: base_t(lp), mut_(lp.mut_), d_(new bs_private::deleter_base())
 	{}
 
 	template< class R, bs_cast_policy cast_t >
 	mt_ptr(const mt_ptr< R >& lp, bs_castpol_val< cast_t > cast)
-		: base_t(lp, cast), mut_(lp.mut_)
+		: base_t(lp, cast), mut_(lp.mut_), d_(new bs_private::deleter_base())
 	{}
 
 	/*!
@@ -807,19 +900,20 @@ public:
 	template< class R >
 	mt_ptr(const smart_ptr< R, true >& lp)
 		: base_t(lp), mut_(*lp.mutex()), 
-		d_(bs_private::deleter_adaptor< bs_obj_deleter< pointed_t> >(bs_obj_deleter< pointed_t >()))
+		d_(new bs_private::deleter_adaptor< bs_obj_deleter< pointed_t> >())
 	{
 		if(lp) lp->add_ref();
 	}
 
 	~mt_ptr() {
-		d_.dispose(this->p_);
+		if(this->p_) d_->dispose(this->p_);
 	}
 
 	/*!
 	\brief Release inner pointer, making this empty (=NULL).
 	*/
 	void release() {
+		if(this->p_) d_->dispose(this->p_);
 		this->p_ = NULL;
 	}
 
@@ -880,6 +974,7 @@ public:
 	void swap(this_t& lp) {
 		std::swap(this->p_, lp.p_);
 		std::swap(mut_, lp.mut_);
+		std::swap(d_, lp.d_);
 	}
 
 private:
@@ -892,7 +987,7 @@ private:
 	//mutex
 	mutable bs_mutex* mut_;
 	//deleter
-	bs_private::deleter_base d_;
+	bs_private::deleter_base* d_;
 };
 
 //----------------------------------------------------------------------------------------------------
@@ -912,99 +1007,6 @@ public:
 	typedef typename base_t::pointed_t pointed_t;
 	typedef typename base_t::pointer_t pointer_t;
 	typedef typename base_t::ref_t ref_t;
-
-	// refcounter implementations
-	class bs_refcounter_sp : public bs_refcounter {
-	public:
-		explicit bs_refcounter_sp(pointer_t p) 
-			: bs_refcounter(1), p_(p)
-		{}
-
-		 void dispose() const {
-			usual_deleter< pointed_t >()(p_);
-			delete this;
-		}
-
-		 pointer_t get() const {
-			return p_;
-		}
-
-	private:
-		pointer_t p_;
-	};
-
-	// same as above + custom deleter
-	template< class D >
-	class bs_refcounter_spd : public bs_refcounter {
-	public:
-		explicit bs_refcounter_spd(pointer_t p, D d) 
-			: bs_refcounter(1), p_(p), d_(d)
-		{}
-
-		 void dispose() const {
-			d_(p_);
-			delete this;
-		 }
-
-		 pointer_t get() const {
-			 return p_;
-		 }
-
-	private:
-		pointer_t p_;
-		D d_;
-	};
-
-	// pointer for bs_refcnt - inc ref in copy ctor, dec ref in dtor
-	class bs_refcounter_ptr {
-	public:
-		explicit bs_refcounter_ptr(pointer_t p)
-			: rc_(new bs_refcounter_sp(p))
-		{}
-
-		template< class D >
-		explicit bs_refcounter_ptr(pointer_t p, D d)
-			: rc_(new bs_refcounter_spd< D >(p, d))
-		{}
-
-		bs_refcounter_ptr(const bs_refcounter_ptr& lhs)
-			: rc_(lhs.rc_)
-		{
-			if(rc_)
-				rc_->add_ref();
-		}
-
-		// dtor
-		~bs_refcounter_ptr() {
-			if(rc_)
-				rc_->del_ref();
-		}
-
-		void swap(bs_refcounter_ptr& lhs) {
-			std::swap(rc_, lhs.rc_);
-		}
-
-		bs_refcounter_ptr& operator=(const bs_refcounter_ptr& lhs) {
-			if(rc_ != lhs.rc_)
-				bs_refcounter_ptr(lhs).swap(*this);
-			return *this;
-		}
-
-		bs_refcounter* operator->() const {
-			return rc_;
-		}
-
-		ulong use_count() const {
-			return rc_ != 0 ? rc_->refs() : 0;
-		}
-
-		friend inline bool operator==(const bs_refcounter_ptr& a, const bs_refcounter_ptr& b) {
-			return a.rc_ == b.rc_;
-		}
-
-	private:
-		bs_refcounter* rc_;
-	};
 
 	//typedef bs_refcounter_ptr refcounter_ptr_t;
 	typedef boost::detail::shared_count refcounter_ptr_t;

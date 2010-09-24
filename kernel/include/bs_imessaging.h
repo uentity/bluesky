@@ -43,14 +43,9 @@ public:
 	virtual ulong num_slots(int signal_code) const = 0;
 	virtual bool fire_signal(int signal_code, const sp_obj& param) const = 0;
 	virtual std::vector< int > get_signal_list() const = 0;
-
-protected:
-
-	//signals list manipulation
-	virtual bool add_signal(int signal_code) = 0;
-	virtual bool remove_signal(int signal_code) = 0;
 };
 
 }	//end of blue_sky namespace
 
 #endif
+
