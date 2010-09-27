@@ -179,6 +179,11 @@ sp_link getitem< ulong >(const bs_node& n, ulong idx) {
 	return ss(n, idx).get();
 }
 
+template< class key_t >
+ulong delitem(const bs_node& n, key_t key) {
+	return n.erase(key);
+}
+
 } 	// eof hidden namespace
 
 // bs_node def argument substitution
@@ -231,7 +236,7 @@ void py_bind_tree() {
 	bs_node::n_iterator::difference_type (*offset2)(const bs_node&, const std::string&) = &offset;
 	bs_node::n_iterator::difference_type (*offset3)(const bs_node&, sp_link) = &offset;
 
-	// bs_inode binding
+	// bs_node binding
 	scope node_scope = class_<
 		bs_node,
 		smart_ptr< bs_node >,
@@ -244,6 +249,9 @@ void py_bind_tree() {
 		.def("__getitem__", &getitem< ulong >)
 		.def("__getitem__", &getitem< const std::string& >)
 		.def("__getitem__", &getitem< sp_link >)
+		.def("__delitem__", &delitem< sp_link >)
+		.def("__delitem__", &delitem< sp_obj >)
+		.def("__delitem__", &delitem< const std::string& >)
 		.def("begin", &bs_node::begin, begin_overl())
 		.def("end", &bs_node::end, end_overl())
 		.def("create", &bs_node::create_node)
