@@ -484,7 +484,15 @@
 				>
 			</File>
 			<File
-				RelativePath=".\include\python\bs_import_common.h"
+				RelativePath=".\src\python\bs_import_common.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\bs_nparray.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\python\bs_nparray.h"
 				>
 			</File>
 			<File
@@ -496,6 +504,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\python\print_python_exception.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_anyobject.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\python\py_bs_abstract_storage.cpp"
 				>
 			</File>
@@ -504,15 +520,19 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_array.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\src\python\py_bs_command.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\include\python\py_bs_command.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\python\py_bs_converter.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_bs_exports.h"
 				>
 			</File>
 			<File
@@ -532,7 +552,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\python\py_bs_messaging.h"
+				RelativePath=".\include\python\py_bs_messaging.h"
 				>
 			</File>
 			<File
@@ -553,6 +573,42 @@
 			</File>
 			<File
 				RelativePath=".\src\python\py_bs_typed.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_common.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_kernel.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_link.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\python\py_list_converter.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_messaging.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_object_base.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\include\python\py_pair_converter.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\python\py_smart_ptr.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\python\py_tree.cpp"
 				>
 			</File>
 			<File
@@ -765,6 +821,14 @@
 			</File>
 			<File
 				RelativePath=".\include\bs_arrbase.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_vecbase.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\bs_vector_shared.h"
 				>
 			</File>
 			<File
