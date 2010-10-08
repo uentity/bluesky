@@ -198,7 +198,7 @@ void py_bind_common() {
 	class_< bs_refcounter_pyw, boost::noncopyable >("refcounter")
 		.def("add_ref", &bs_refcounter::add_ref, &bs_refcounter_pyw::def_add_ref)
 		.def("del_ref", &bs_refcounter::del_ref, &bs_refcounter_pyw::def_del_ref)
-		.def_readonly("refs", &bs_refcounter::refs)
+		.add_property("refs", &bs_refcounter::refs)
 		.def("dispose", pure_virtual(&bs_refcounter::dispose))
 	;
 }

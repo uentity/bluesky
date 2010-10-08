@@ -346,11 +346,11 @@ void py_bind_tree() {
 		.def("__iter__", &reflect_pyobj, return_internal_reference< >())
 		.def("next", &n_iter_next)
 		.def("swap", &bs_node::n_iterator::swap)
-		.def_readonly("index_id", &bs_node::n_iterator::index_id)
+		.add_property("index_id", &bs_node::n_iterator::index_id)
 		.def("get", &bs_node::n_iterator::get)
-		.def_readonly("link", &bs_node::n_iterator::get)
-		.def_readonly("inode", &bs_node::n_iterator::inode)
-		.def_readonly("data", &bs_node::n_iterator::data)
+		.add_property("link", &bs_node::n_iterator::get)
+		.add_property("inode", &bs_node::n_iterator::inode)
+		.add_property("data", &bs_node::n_iterator::data)
 		.add_property("persistent", &bs_node::n_iterator::is_persistent,
 				&bs_node::n_iterator::set_persistence)
 		// operators

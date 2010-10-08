@@ -109,7 +109,7 @@ void py_bind_kernel() {
 			.def("add_task", &kernel::add_task)
 			.def("is_tq_empty", &kernel::is_tq_empty)
 			.def("wait_tq_empty", &kernel::wait_tq_empty)
-			.def_readonly("tree_root_link", &kernel::bs_root)
+			.add_property("tree_root_link", &kernel::bs_root)
 			.def("reg_signal", &kernel::reg_signal)
 			.def("rem_signal", &kernel::rem_signal)
 			//.def("get_memory_manager", &kernel::get_memory_manager)

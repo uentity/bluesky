@@ -101,15 +101,15 @@ void py_bind_link() {
 		boost::noncopyable
 		>
 	("inode", no_init)
-		.def_readonly("data", &bs_inode::data)
-		.def_readonly("size", &bs_inode::size)
-		.def_readonly("uid", &bs_inode::uid)
-		.def_readonly("gid", &bs_inode::gid)
-		.def_readonly("mode", &bs_inode::mode)
-		.def_readonly("mtime", &bs_inode::mtime)
+		.add_property("size", &bs_inode::size)
+		.add_property("uid", &bs_inode::uid)
+		.add_property("gid", &bs_inode::gid)
+		.add_property("mode", &bs_inode::mode)
+		.add_property("mtime", &bs_inode::mtime)
 		.def("links_begin", &bs_inode::links_begin)
 		.def("links_end", &bs_inode::links_end)
-		.def_readonly("links_count", &bs_inode::links_count)
+		.add_property("links_count", &bs_inode::links_count)
+		.add_property("data", &bs_inode::data)
 		;
 
 	// bs_link binding
@@ -126,11 +126,11 @@ void py_bind_link() {
 		.def("bs_type", &bs_link::bs_type)
 		.staticmethod("bs_type")
 		.def("bs_resolve_type", &bs_link::bs_resolve_type)
-		.def_readonly("inode", &bs_link::inode)
-		.def_readonly("data", &bs_link::data)
+		.add_property("inode", &bs_link::inode)
+		.add_property("data", &bs_link::data)
 		.def("name", &bs_link::name, &bs_link_pyw::default_name)
 		.def("is_node", &bs_link::is_node, &bs_link_pyw::default_is_node)
-		.def_readonly("node", &bs_link::node)
+		.add_property("node", &bs_link::node)
 		.def("is_hard_link", &bs_link::is_hard_link)
 		.def("link_type_id", &bs_link::link_type_id, &bs_link_pyw::default_link_type_id)
 		.def("clone", &bs_link::clone, &bs_link_pyw::default_clone)
