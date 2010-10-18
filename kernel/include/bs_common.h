@@ -24,7 +24,7 @@
 
 #if PYTHON_VERSION > 25
 #ifdef BSPY_EXPORTING
-#include <Python.h>
+#include <boost/python/detail/wrap_python.hpp>
 #endif
 #endif
 

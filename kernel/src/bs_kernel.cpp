@@ -20,7 +20,7 @@
  */
 
 #ifdef BSPY_EXPORTING
-#include <Python.h>
+#include <boost/python/detail/wrap_python.hpp>
 //boost::python
 #include <boost/python/module_init.hpp>
 #include <boost/python/scope.hpp>

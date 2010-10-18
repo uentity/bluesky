@@ -15,7 +15,7 @@
 
 #if defined(BSPY_EXPORTING) && defined(UNIX)
 // supress gcc warnings
-#include "Python.h"
+#include <boost/python/detail/wrap_python.hpp>
 #endif
 #include "bs_array.h"
 #include "bs_map.h"

@@ -5,7 +5,7 @@
  * \date 02.11.2009
  * */
 #if defined(BSPY_EXPORTING) && defined(UNIX)
-#include <Python.h>
+#include <boost/python/detail/wrap_python.hpp>
 #endif
 #include "shared_vector.h"
 

@@ -6,7 +6,7 @@
  * */
 #ifdef BSPY_EXPORTING
 #ifdef UNIX
-#include <Python.h>
+#include <boost/python/detail/wrap_python.hpp>
 #endif
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
