@@ -4,8 +4,7 @@ To build BlueSky kernel you need:
  1. Python (>=2.5)
  2. Boost libraries
  3. Loki library
- 4. libconfig++ (will be removed due to GPL license)
- 8. SCons - build system
+ 4. SCons - build system
 
 1) To build kernel without python support to exe/debug simply run:
 scons -u
