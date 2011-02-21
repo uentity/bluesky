@@ -83,6 +83,9 @@ public:
 	// ctor from vector copy
 	bs_vecbase_impl(const container& c) : base_t(c) {}
 
+	// given size & fill value
+	bs_vecbase_impl(size_type sz, const value_type& v = value_type()) : base_t(sz, v) {}
+
 	bool insert(const key_type& key, const value_type& value) {
 		if(key > this->size()) return false;
 		container::insert(container::begin() + key, value);

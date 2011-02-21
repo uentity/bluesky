@@ -134,7 +134,7 @@ public:
 	void assign(const bs_arrbase< R >& rhs) {
 		size_type n = rhs.size();
 		if(this->size() != n) this->resize(n);
-		if(this->size() && this->begin() != rhs.begin())
+		if(this->size() && (void*)this->begin() != (void*)rhs.begin())
 			std::copy(rhs.begin(), rhs.begin() + std::min(n, this->size()), this->begin());
 	}
 
@@ -179,6 +179,10 @@ public:
 
 	// ctor for constructing from container copy
 	bs_arrbase_impl(const container& c) : array_t(c) {}
+
+	// given size & fill value
+	bs_arrbase_impl(size_type sz, const value_type& v = value_type()) : array_t(sz, v) {}
+
 
 	size_type size() const {
 		return static_cast< size_type >(container::size());

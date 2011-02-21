@@ -71,6 +71,11 @@ public:
 		: base_t(c)
 	{}
 
+	// construct from given size & fill value
+	bs_array(size_type sz, const value_type& v = value_type())
+		: base_t(sz, v)
+	{}
+
 	void dispose() const {
 		objbase::dispose();
 	}
@@ -81,7 +86,7 @@ public:
 	}
 
 	void init(size_type sz, const value_type& v = value_type()) {
-		this_t(container(sz, v)).swap(*this);
+		this_t(sz, v).swap(*this);
 	}
 
 	template< class input_iterator >
