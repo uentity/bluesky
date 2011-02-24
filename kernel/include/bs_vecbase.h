@@ -43,6 +43,7 @@ public:
 	virtual iterator erase(iterator start, iterator finish) = 0;
 
 	virtual void clear() = 0;
+	virtual void reserve(size_type sz) = 0;
 
 	virtual void push_back(const value_type&) = 0;
 	virtual void pop_back() = 0;
@@ -127,6 +128,10 @@ public:
 
 	virtual void pop_back() {
 		container::pop_back();
+	}
+
+	void reserve(size_type sz) {
+		container::reserve(sz);
 	}
 
 	sp_arrbase clone() const {

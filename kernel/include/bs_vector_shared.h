@@ -33,8 +33,11 @@ public:
 
 	typedef smart_ptr< bs_array_base, true > sp_vector_shared;
 	typedef typename arrbase::sp_arrbase sp_arrbase;
-	typedef typename base_t::def_cont_impl def_cont_impl;
-	typedef typename base_t::def_cont_tag def_cont_tag;
+	// ensure we create a vector container
+	typedef bs_array< T, vector_traits > def_cont_impl;
+	typedef Loki::Type2Type< def_cont_impl > def_cont_tag;
+	//typedef typename base_t::def_cont_impl def_cont_impl;
+	//typedef typename base_t::def_cont_tag def_cont_tag;
 	typedef bs_vecbase< T > vecbase_t;
 
 	typedef typename base_t::value_type value_type;
@@ -50,40 +53,40 @@ public:
 		pvec_ = const_cast< vecbase_t* >(static_cast< const vecbase_t* >((const def_cont_impl*)buf_holder_.get()));
 	}
 
-	template< class container >
+	template< class container_t >
 	bs_vector_shared(
 		size_type n = 0,
 		const value_type& v = value_type(),
-		const Loki::Type2Type< container >& t = def_cont_tag()
+		const Loki::Type2Type< container_t >& t = def_cont_tag()
 		)
 		: base_t(n, v, t)
 	{
 		assert(buf_holder_.get());
-		pvec_ = const_cast< vecbase_t* >(static_cast< const vecbase_t* >((const container*)buf_holder_.get()));
+		pvec_ = const_cast< vecbase_t* >(static_cast< const vecbase_t* >((const container_t*)buf_holder_.get()));
 	}
 
-	template< class input_iterator, class container >
+	template< class input_iterator, class container_t >
 	bs_vector_shared(
 			input_iterator start,
 			input_iterator finish,
-			const Loki::Type2Type< container >& t = def_cont_tag()
+			const Loki::Type2Type< container_t >& t = def_cont_tag()
 			)
 		: base_t(start, finish, t)
 	{
 		assert(buf_holder_.get());
-		pvec_ = const_cast< vecbase_t* >(static_cast< const vecbase_t* >((const container*)buf_holder_.get()));
+		pvec_ = const_cast< vecbase_t* >(static_cast< const vecbase_t* >((const container_t*)buf_holder_.get()));
 	}
 
 	// more convinient factory functions - no need to use Loki::Type2Type
-	template< class container >
+	template< class container_t >
 	static sp_vector_shared create(size_type n = 0, const value_type& v = value_type()) {
-		return new bs_vector_shared(n, v, Loki::Type2Type< container >());
+		return new bs_vector_shared(n, v, Loki::Type2Type< container_t >());
 	}
 
 	// more convinient factory functions - no need to use Loki::Type2Type
-	template< class container, class input_iterator >
+	template< class container_t, class input_iterator >
 	static sp_vector_shared create(input_iterator start, input_iterator finish) {
-		return new bs_vector_shared(start, finish, Loki::Type2Type< container >());
+		return new bs_vector_shared(start, finish, Loki::Type2Type< container_t >());
 	}
 
 	// ctor with external data
@@ -91,16 +94,20 @@ public:
 	bs_vector_shared(const container& c)
 		: base_t(c)
 	{
-		assert(buf_holder_);
-		pvec_ = const_cast< vecbase_t* >(dynamic_cast< const vecbase_t* >((const container*)buf_holder_.get()));
-		BS_ERROR(pvec_, "Container passed to bs_vector_shared ctor doesn't have vector iface");
+		init_inplace(c);
 	}
 
 	void init_inplace(const container& c) {
 		assert(c.get());
-		pvec_ = const_cast< vecbase_t* >(dynamic_cast< const vecbase_t* >((const container*)c.get()));
-		BS_ERROR(pvec_, "Container passed to bs_vector_shared ctor doesn't have vector iface");
-		base_t::init_inplace(c);
+		pvec_ = const_cast< vecbase_t* >(dynamic_cast< const vecbase_t* >(c.get()));
+		if(pvec_)
+			base_t::init_inplace(c);
+		else {
+			// if container is not vector-based then make a copy of data
+			base_t::init(def_cont_tag(), c->begin(), c->end());
+			pvec_ = const_cast< vecbase_t* >(static_cast< const vecbase_t* >((const def_cont_impl*)buf_holder_.get()));
+		}
+		//BS_ERROR(pvec_, "Container passed to bs_vector_shared ctor doesn't have vector iface");
 	}
 
 	void push_back(const value_type& v) {
@@ -147,6 +154,10 @@ public:
 		vecbuf()->clear();
 	}
 
+	void reserve(size_type sz) {
+		vecbuf()->reserve(sz);
+	}
+
 	// explicitly make array copy
 	sp_arrbase clone() const {
 		return create< def_cont_impl >(this->begin(), this->end());
@@ -160,7 +171,7 @@ private:
 	// we can use dynamic_cast or store pointer to bs_vecbase iface
 	vecbase_t* pvec_;
 
-	// RAII for updating data_ and size_ after eeach operation
+	// RAII for updating data_ and size_ after each intrusive operation
 	struct vb_handle {
 		explicit vb_handle(bs_vector_shared& v) : self_(v) {}
 
