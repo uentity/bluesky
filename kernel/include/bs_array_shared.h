@@ -133,6 +133,10 @@ public:
 		init_inplace(c);
 	}
 
+	static sp_array_shared create(const container& c) {
+		return new bs_array_shared(c);
+	}
+
 	// std copy ctor is fine and make a reference to data_
 
 	iterator begin() {
