@@ -55,9 +55,9 @@ public:
 	typedef std::reverse_iterator< iterator >       reverse_iterator;
 	typedef std::reverse_iterator< const_iterator > const_reverse_iterator;
 
-	template< class container >
-	void init(Loki::Type2Type< container >, size_type n = 0, const value_type& v = value_type()) {
-		smart_ptr< container > c = BS_KERNEL.create_object(container::bs_type());
+	template< class container_t >
+	void init(Loki::Type2Type< container_t >, size_type n = 0, const value_type& v = value_type()) {
+		smart_ptr< container_t > c = BS_KERNEL.create_object(container_t::bs_type());
 		data_ = NULL; size_ = 0;
 		if(!c) return;
 
@@ -68,9 +68,9 @@ public:
 		buf_holder_ = c;
 	}
 
-	template< class input_iterator, class container >
-	void init(Loki::Type2Type< container >, input_iterator start, input_iterator finish) {
-		smart_ptr< container > c = BS_KERNEL.create_object(container::bs_type());
+	template< class input_iterator, class container_t >
+	void init(Loki::Type2Type< container_t >, input_iterator start, input_iterator finish) {
+		smart_ptr< container_t > c = BS_KERNEL.create_object(container_t::bs_type());
 		size_ = 0; data_ = NULL;
 		if(!c) return;
 
@@ -85,35 +85,35 @@ public:
 		init(def_cont_tag(), n, v);
 	}
 
-	template< class container >
+	template< class container_t >
 	bs_array_shared(
 			size_type n = 0,
 			const value_type& v = value_type(),
-			const Loki::Type2Type< container >& t = def_cont_tag()
+			const Loki::Type2Type< container_t >& t = def_cont_tag()
 			)
 	{
 		init(t, n, v);
 	}
 
-	template< class input_iterator, class container >
+	template< class input_iterator, class container_t >
 	bs_array_shared(
 			input_iterator start,
 			input_iterator finish,
-			const Loki::Type2Type< container >& t = def_cont_tag()
+			const Loki::Type2Type< container_t >& t = def_cont_tag()
 			)
 	{
 		init(t, start, finish);
 	}
 
 	// more convinient factory functions - no need to use Loki::Type2Type
-	template< class container >
+	template< class container_t >
 	static sp_array_shared create(size_type n = 0, const value_type& v = value_type()) {
-		return new bs_array_shared(n, v, Loki::Type2Type< container >());
+		return new bs_array_shared(n, v, Loki::Type2Type< container_t >());
 	}
 
-	template< class container, class input_iterator >
+	template< class container_t, class input_iterator >
 	static sp_array_shared create(input_iterator start, input_iterator finish) {
-		return new bs_array_shared(start, finish, Loki::Type2Type< container >());
+		return new bs_array_shared(start, finish, Loki::Type2Type< container_t >());
 	}
 
 	// array doesn't own data
@@ -123,7 +123,7 @@ public:
 
 	// can be called in any time to switch container
 	virtual void init_inplace(const container& c) {
-		if((buf_holder_ = c)) {
+		if(&buf_holder_ != &c && (buf_holder_ = c)) {
 			if((size_ = buf_holder_->size()))
 				data_ = &buf_holder_->ss(0);
 		}
@@ -131,6 +131,10 @@ public:
 
 	bs_array_shared(const container& c) {
 		init_inplace(c);
+	}
+
+	static sp_array_shared create(const container& c) {
+		return new bs_array_shared(c);
 	}
 
 	// std copy ctor is fine and make a reference to data_

@@ -25,6 +25,7 @@ namespace blue_sky {
 
 // bs_array< T, bs_nparray > instantiations
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_nparray));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_nparray));
 
@@ -285,11 +286,13 @@ struct bspy_nparray_traits {
 void py_export_nparray() {
 	// export converters
 	bspy_nparray_traits< int >::register_converters();
+	bspy_nparray_traits< long >::register_converters();
 	bspy_nparray_traits< float >::register_converters();
 	bspy_nparray_traits< double >::register_converters();
 
 	// export test functions
 	def("test_nparray_i", &test_nparray< bs_nparray_i, bs_array< int > >);
+	def("test_nparray_l", &test_nparray< bs_nparray_i, bs_array< long > >);
 	def("test_nparray_f", &test_nparray< bs_nparray_f, bs_array< float > >);
 	def("test_nparray_d", &test_nparray< bs_nparray_d, bs_array< double, vector_traits > >);
 	//def("test_nparray_d", &test_nparray< bs_array< double, vector_traits >, bs_array< double, vector_traits > >);

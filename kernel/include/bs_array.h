@@ -23,6 +23,10 @@
 //#include "shared_vector.h"
 #include <vector>
 
+#if !defined(BS_ARRAY_DEFAULT_TRAITS)
+#define BS_ARRAY_DEFAULT_TRAITS bs_array_shared
+#endif
+
 namespace blue_sky {
 
 /// @brief traits for arrays with std::vector container
@@ -38,7 +42,7 @@ struct BS_API vector_traits : public bs_vecbase_impl< T, std::vector< T > > {};
 /// template params:
 ///           T -- type of array elements
 /// cont_traits -- specifies underlying container
-template< class T, template< class > class cont_traits = bs_array_shared >
+template< class T, template< class > class cont_traits = BS_ARRAY_DEFAULT_TRAITS >
 class BS_API bs_array : public objbase, public cont_traits< T >::bs_array_base
 {
 public:
@@ -71,6 +75,11 @@ public:
 		: base_t(c)
 	{}
 
+	// construct from given size & fill value
+	bs_array(size_type sz, const value_type& v = value_type())
+		: base_t(sz, v)
+	{}
+
 	void dispose() const {
 		objbase::dispose();
 	}
@@ -81,7 +90,7 @@ public:
 	}
 
 	void init(size_type sz, const value_type& v = value_type()) {
-		this_t(container(sz, v)).swap(*this);
+		this_t(sz, v).swap(*this);
 	}
 
 	template< class input_iterator >
