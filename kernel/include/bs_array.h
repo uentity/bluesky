@@ -23,11 +23,29 @@
 //#include "shared_vector.h"
 #include <vector>
 
-#if !defined(BS_ARRAY_DEFAULT_TRAITS)
-#define BS_ARRAY_DEFAULT_TRAITS bs_array_shared
-#endif
-
 namespace blue_sky {
+
+struct bs_array_default_traits_tag {};
+
+template< class T, template< class > class base_t >
+struct bs_array_base2traits {
+	typedef base_t< T > bs_array_base;
+	typedef typename bs_array_base::arrbase arrbase;
+	typedef typename bs_array_base::container container;
+};
+
+/// make partial specialization bs_array_default_traits< T,  bs_array_default_traits_tag >
+/// in order to redefine default bs_array traits
+template< class T, class traits_tag = bs_array_default_traits_tag >
+struct bs_array_default_traits : public bs_array_base2traits< T, bs_array_shared > {};
+
+template< class T >
+struct bs_array_tag2traits {
+	typedef bs_array_default_traits< T > traits_t;
+	typedef typename traits_t::bs_array_base bs_array_base;
+	typedef typename traits_t::arrbase arrbase;
+	typedef typename traits_t::container container;
+};
 
 /// @brief traits for arrays with std::vector container
 template< class T >
@@ -42,7 +60,7 @@ struct BS_API vector_traits : public bs_vecbase_impl< T, std::vector< T > > {};
 /// template params:
 ///           T -- type of array elements
 /// cont_traits -- specifies underlying container
-template< class T, template< class > class cont_traits = BS_ARRAY_DEFAULT_TRAITS >
+template< class T, template< class > class cont_traits = bs_array_tag2traits >
 class BS_API bs_array : public objbase, public cont_traits< T >::bs_array_base
 {
 public:
