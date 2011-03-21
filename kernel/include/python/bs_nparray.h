@@ -16,17 +16,11 @@
 #ifndef BS_NPARRAY_5NAYJGRI
 #define BS_NPARRAY_5NAYJGRI
 
-#include "bs_array.h"
+#include "bs_arrbase.h"
 #include <pyublas/numpy.hpp>
 #include <boost/python/errors.hpp>
-//#include <iostream>
 
 namespace blue_sky {
-
-///// @brief traits for arrays with pyublas::numpy_array container
-//template< class T >
-//struct BS_API numpy_array_traits : public bs_arrbase_impl< T, pyublas::numpy_array< T > >
-//{};
 
 template< class T >
 class BS_API bs_nparray : public bs_arrbase_impl< T, pyublas::numpy_array< T > > {
@@ -125,30 +119,7 @@ public:
 		std::fill(new_data + std::min(old_size, new_size), new_data + new_size, init);
 	}
 
-//protected:
-//	// copy construct from base class
-//	bs_nparray(const bs_array_t& rhs)
-//		: bs_array_t(rhs)
-//	{}
-//
-//	BLUE_SKY_TYPE_DECL_T(bs_nparray);
 };
-
-//// default ctor
-//template< class T >
-//bs_nparray< T >::bs_nparray(bs_type_ctor_param param)
-//{}
-//
-//// copy ctor
-//template< class T >
-//bs_nparray< T >::bs_nparray(const bs_nparray& v)
-//	: bs_refcounter(), bs_array_t(v)
-//{}
-
-// usefull typedefs
-typedef bs_array< int, bs_nparray > bs_nparray_i;
-typedef bs_array< float, bs_nparray > bs_nparray_f;
-typedef bs_array< double, bs_nparray > bs_nparray_d;
 
 } 	// eof blue_sky namespace
 
