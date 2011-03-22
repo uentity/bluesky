@@ -33,8 +33,9 @@ struct array_converters {
 	/*-----------------------------------------------------------------
 	 * bs_nparray <--> Python converter
 	 *----------------------------------------------------------------*/
+	template< template< class > class cont_traits = bs_nparray >
 	struct nparray_traits {
-		typedef bs_array< T, bs_nparray > array_t;
+		typedef bs_array< T, cont_traits > array_t;
 		typedef bs_nparray< T > cont_t;
 		// target type for bspy_converter
 		typedef smart_ptr< array_t > type;
@@ -87,7 +88,7 @@ struct array_converters {
 		}
 
 		static bool is_convertible(PyObject* py_obj) {
-			return array_converters< T >::nparray_traits::is_convertible(py_obj);
+			return array_converters< T >::nparray_traits<>::is_convertible(py_obj);
 		}
 	};
 
@@ -139,12 +140,12 @@ struct array_converters {
 		}
 
 		static bool is_convertible(PyObject* py_obj) {
-			return nparray_traits::is_convertible(py_obj);
+			return nparray_traits<>::is_convertible(py_obj);
 		}
 	};
 
 	template< class conv_traits >
-	static void reg_helper() {
+	static void make_helper() {
 		namespace bp = boost::python;
 
 		typedef typename conv_traits::array_t array_t;
@@ -158,19 +159,61 @@ struct array_converters {
 		bp::implicitly_convertible< typename conv_traits::type, smart_ptr< objbase > >();
 	}
 
-	// register all converters
+	template< template< class > class cont_traits >
 	static void make() {
+		make_helper< typename deduce_conv_traits< cont_traits >::type >();
+	}
+
+	// register all converters
+	static void make_known() {
 		// register native conversions to/from bs_array< T, bs_nparray > first
-		reg_helper< nparray_traits >();
+		make_helper< nparray_traits<> >();
 
 		// ref converter for bs_array_shared
-		reg_helper< shared_traits< bs_array_shared > >();
+		make_helper< shared_traits< bs_array_shared > >();
 
 		// copy converter for bs_vector_shared
-		reg_helper< copy_traits< bs_vector_shared > >();
+		make_helper< copy_traits< bs_vector_shared > >();
 		// copy converter for vector_traits
-		reg_helper< copy_traits< vector_traits > >();
+		make_helper< copy_traits< vector_traits > >();
 	}
+
+private:
+	template< template< class > class cont_traits >
+	struct deduce_conv_traits {
+		typedef cont_traits< T > traits_t;
+		typedef typename traits_t::bs_array_base abase_t;
+
+		enum { use_nparray = conversion< abase_t, bs_nparray< T > >::exists };
+		enum { use_copy = conversion< abase_t, bs_vecbase< T > >::exists && !use_nparray };
+		enum { use_shared = conversion< abase_t, bs_arrbase< T > >::exists && !use_nparray && !use_copy };
+		// 0 - error (unknown traits), 1 - nparray, 2 - copy, 3 - shared
+		enum { traits_code = use_nparray + use_copy*2 + use_shared*3 };
+
+		// unknown traits - error
+		template< int t, class = void >
+		struct code2conv_traits {
+			struct unknown_array_traits;
+			enum { er = sizeof(unknown_array_traits) };
+		};
+
+		template< class unused >
+		struct code2conv_traits< 1, unused > {
+			typedef nparray_traits< cont_traits > type;
+		};
+
+		template< class unused >
+		struct code2conv_traits< 2, unused > {
+			typedef copy_traits< cont_traits > type;
+		};
+
+		template< class unused >
+		struct code2conv_traits< 3, unused > {
+			typedef shared_traits< cont_traits > type;
+		};
+
+		typedef typename code2conv_traits< traits_code >::type type;
+	};
 };
 
 }} 	// eof blue_sky::python
