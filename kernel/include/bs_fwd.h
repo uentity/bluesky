@@ -70,15 +70,15 @@ namespace blue_sky {
 	class bs_exception;
 
 	//data_table
-	template< class> class bs_arrbase;
-	template< class> class bs_vecbase;
-	template< class> class bs_array_shared;
-	template< class> class bs_vector_shared;
+	template< class > class bs_arrbase;
+	template< class > class bs_vecbase;
+	template< class > class bs_array_shared;
+	template< class > class bs_vector_shared;
 	template< class, template< class > class > class bs_array;
 	template< class, template< class > class > class bs_map;
 	// traits
-	template< class > class vector_traits;
-	template< class > class str_val_traits;
+	template< class > struct vector_traits;
+	template< class > struct str_val_traits;
 	//template< class > class str_val_table;
 	//template< class > class bs_array;
 	template< template< class, template< class > class > class, template< class > class > class data_table;

@@ -31,7 +31,7 @@ namespace blue_sky {
 
 /// @brief traits for arrays with std::vector container
 template< class T >
-class BS_API vector_traits : public bs_vecbase_impl< T, std::vector< T > > {};
+struct BS_API vector_traits : public bs_vecbase_impl< T, std::vector< T > > {};
 
 /*-----------------------------------------------------------------------------
  *  bs_array - BlueSky class to choose arrbase_impl or vecbase_impl for different containers

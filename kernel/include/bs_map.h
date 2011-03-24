@@ -45,7 +45,7 @@ namespace blue_sky {
 
 /// @brief traits for maps with string key
 template< class T >
-class str_val_traits : public BS_MAP(std::string, T) {
+struct str_val_traits : public BS_MAP(std::string, T) {
 	/// container
 	typedef BS_MAP(std::string, T) container;
 	/// value type
