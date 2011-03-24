@@ -56,6 +56,7 @@ public:
 		while(getline(fmt, leaf_name, fmt.widen('/'))) {
 
 		}
+		return false;
 	}
 
 	bool validate_path(const path_t& context) {

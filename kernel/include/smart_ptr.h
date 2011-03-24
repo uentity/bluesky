@@ -695,7 +695,7 @@ public:
 	Use supplied external mutex to lock on. This ctor can be used with signlethreaded smart pointers.
 	\param lp - smart pointer
 	*/
-	explicit lsmart_ptr(const SP& lp, const bs_mutex& m)
+	explicit lsmart_ptr(const SP& lp, bs_mutex& m)
 		: base_t(lp), guard_(&m)
 #ifndef BS_DISABLE_MT_LOCKS
 		, lobj_(m)

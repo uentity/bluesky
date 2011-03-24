@@ -152,6 +152,8 @@ public:
 private:
 	typedef bs_map< T, cont_traits > this_t;
 
+	using container::find;
+
 	template< class iterator_t, class ref_t >
 	ref_t _at(const key_type& key) {
 		iterator_t p_res(find(key));
