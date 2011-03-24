@@ -53,7 +53,7 @@ smart_ptr< ret_array_t > test_nparray(smart_ptr< inp_array_t > a, smart_ptr< inp
 	tmp->resize(10);
 	tmp->resize(11);
 
-	ulong sz = std::min(a->size(), b->size());
+	ulong sz = (ulong) std::min(a->size(), b->size());
 	smart_ptr< ret_array_t > res = BS_KERNEL.create_object(ret_array_t::bs_type());
 	*res = *a;
 	res->assign(*a);

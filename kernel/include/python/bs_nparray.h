@@ -103,7 +103,7 @@ public:
 			if(new_array.get() && new_array.get() != Py_None && new_array.get() != this->handle().get())
 				this_t(new_array).swap(*this);
 		}
-		catch(const boost::python::error_already_set& e){
+		catch(const boost::python::error_already_set& /*e*/){
 			// if resize fails - do nothing
 			PyErr_Print();
 		}
