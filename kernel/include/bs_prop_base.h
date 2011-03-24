@@ -145,13 +145,19 @@ template< class T >
 	default value is returned.
 	*/
 	template< class T >
-	DT_VAL_T extract_value(const DT_KEY_T& key, DT_CONST_REF_T def_value =
-#ifdef _MSC_VER
-		table_t< T, cont_traits >::value_type()
-#else
-		typename table_t< T, cont_traits >::value_type()
-#endif
-		) const {
+	DT_VAL_T extract_value(const DT_KEY_T& key) const {
+		typedef typename table_t< T, cont_traits >::value_type value_type;
+		//try to find a value
+		try {
+			return at< T >(key);
+		}
+		catch(...) {
+			return value_type();
+		}
+	}
+
+	template< class T >
+	DT_VAL_T extract_value(const DT_KEY_T& key, DT_CONST_REF_T def_value) const {
 		//try to find a value
 		try {
 			return at< T >(key);

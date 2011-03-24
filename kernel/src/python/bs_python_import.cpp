@@ -55,19 +55,7 @@ BLUE_SKY_INIT_PY_FUN
 {
 	register_exception_translator<bs_exception>(&exception_translator);
 
-	//class_< plugin_descriptor >("plugin_descriptor", no_init)
-	//	.add_property("name_", &plugin_descriptor::name_)
-	//	.add_property("version_", &plugin_descriptor::version_)
-	//	.add_property("short_descr_", &plugin_descriptor::short_descr_)
-	//	.add_property("long_descr_", &plugin_descriptor::long_descr_)
-	//	.def(self < self)
-	//	.def(self == self)
-	//	.def(self != self);
-
-	//class_< std::list<std::string> >("list_string")
-	//	.def("__iter__", boost::python::iterator< std::list<std::string> >());
-
-	py_export_vectors ();
+	//py_export_vectors ();
 	python::py_export_error_codes ();
 	python::py_export_assert ();
 

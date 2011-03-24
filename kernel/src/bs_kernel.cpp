@@ -1004,7 +1004,7 @@ public:
 		typename cont_t::const_iterator i = m.find(id);
 		if (i != m.end())
 			return (m->second);
-		throw bs_exception("BlueSky kernel", blue_sky::no_type, err_msg, false);
+		throw bs_exception("BlueSky kernel", err_msg);
 	}
 
 	template< class cont_t >

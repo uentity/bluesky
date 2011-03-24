@@ -261,7 +261,7 @@ struct bs_leaf {
 //pointers to leafs will be used in order container
 typedef bs_leaf::leaf_ptr leaf_ptr;
 //nil element definition for leaf_ptr
-template< > bs_leaf leaf_ptr::nil_el = bs_leaf(NULL);
+bs_leaf leaf_ptr::nil_el = bs_leaf(NULL);
 
 //------------------------------ typedefs used in node_impl class ------------------------------------------------------
 //fast allocator for sp_link pointers
