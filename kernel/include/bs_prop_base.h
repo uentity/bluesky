@@ -119,7 +119,7 @@ template< class T >
 #ifndef BS_DISABLE_MT_LOCKS
 	bs_locker< T > at(const DT_KEY_T& key) {
 		DT_SP_TBL p_vt = find_table< T >();
-		if(!p_vt) throw std::out_of_range("str_val_table: Table of values of requested type doesn't exist");
+		if(!p_vt) throw std::out_of_range("data_table: Table of values of requested type doesn't exist");
 		//NOTE: manual const_cast - I know what am I doing, but never do it by yourself unless you also know The Thing
 		return bs_locker< T >(
 			&const_cast< table_t< T, cont_traits >* >(p_vt.get())->at(key),
@@ -129,14 +129,14 @@ template< class T >
 #else
 	DT_REF_T at(const DT_KEY_T& key) {
 		DT_SP_TBL p_vt = find_table< T >();
-		if(!p_vt) throw std::out_of_range("str_val_table: Table of values of requested type doesn't exist");
+		if(!p_vt) throw std::out_of_range("data_table: Table of values of requested type doesn't exist");
 		return p_vt->at(key);
 	};
 #endif
 	template< class T >
 	DT_CONST_REF_T at(const DT_KEY_T& key) const {
 		DT_SP_TBL p_vt = find_table< T >();
-		if(!p_vt) throw std::out_of_range("str_val_table: Table of values of requested type doesn't exist");
+		if(!p_vt) throw std::out_of_range("data_table: Table of values of requested type doesn't exist");
 		return p_vt->at(key);
 	};
 

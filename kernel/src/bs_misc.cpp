@@ -320,9 +320,9 @@ blue_sky::error_code search_files(vector<string> &res, const char * what, const 
 				continue;
 #endif
 			}
-			if (mask_verify(dll_dir_itr->string().c_str(),what))
+			if (mask_verify(dll_dir_itr->path().string().c_str(),what))
 				{
-          res.push_back(string(dll_dir_itr->string()));
+          res.push_back(string(dll_dir_itr->path().string().c_str()));
         }
 		}
 	}
