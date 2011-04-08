@@ -70,6 +70,8 @@ public:
 	typedef typename arrbase_t::reverse_iterator       reverse_iterator;
 	typedef typename arrbase_t::const_reverse_iterator const_reverse_iterator;
 
+	using arrbase_t::assign;
+
 	// copy construct from container
 	bs_array(const container& c)
 		: base_t(c)

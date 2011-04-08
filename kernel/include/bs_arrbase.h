@@ -133,9 +133,15 @@ public:
 	template< class R >
 	void assign(const bs_arrbase< R >& rhs) {
 		size_type n = rhs.size();
-		if(this->size() != n) this->resize(n);
-		if(this->size() && (void*)this->begin() != (void*)rhs.begin())
+		if((void*)this->begin() != (void*)rhs.begin())
 			std::copy(rhs.begin(), rhs.begin() + std::min(n, this->size()), this->begin());
+	}
+
+	// iterator version of assign - alias for std::copy
+	// no bound-checking performed, make sure range(start, finish) <= dest array size
+	template< class input_iterator >
+	void assign(const input_iterator start, const input_iterator finish) {
+		std::copy(start, finish, this->begin());
 	}
 
 	/// @brief empty destructor

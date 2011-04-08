@@ -24,10 +24,10 @@
 //boost::python
 #include <boost/python/module_init.hpp>
 #include <boost/python/scope.hpp>
-#include <boost/python/class.hpp>
-#include <boost/python/str.hpp>
-#include <boost/python/exec.hpp>
-#include <boost/python/import.hpp>
+//#include <boost/python/class.hpp>
+//#include <boost/python/str.hpp>
+//#include <boost/python/exec.hpp>
+//#include <boost/python/import.hpp>
 #endif
 
 #include "bs_kernel.h"

@@ -57,6 +57,7 @@ smart_ptr< ret_array_t > test_nparray(smart_ptr< inp_array_t > a, smart_ptr< inp
 	smart_ptr< ret_array_t > res = BS_KERNEL.create_object(ret_array_t::bs_type());
 	*res = *a;
 	res->assign(*a);
+	res->assign(a->begin(), a->end());
 	//*res = *a->clone();
 	res->resize(sz + 1);
 	for(ulong i = 0; i < sz; ++i)

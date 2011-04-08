@@ -50,6 +50,15 @@ public:
 
 	/// @brief empty destructor
 	virtual ~bs_vecbase() {};
+
+	// assign for different type array
+	template< class R >
+	void assign(const bs_arrbase< R >& rhs) {
+		size_type n = rhs.size();
+		if(this->size() != n) this->resize(n);
+		if((void*)this->begin() != (void*)rhs.begin())
+			std::copy(rhs.begin(), rhs.begin() + std::min(n, this->size()), this->begin());
+	}
 };
 
 /*-----------------------------------------------------------------
