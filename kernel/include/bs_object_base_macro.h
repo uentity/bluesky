@@ -181,5 +181,10 @@ BLUE_SKY_TYPE_IMPL_T(T, base, #T, short_descr, "")
 #define BLUE_SKY_TYPE_IMPL_T_NOCOPY_SHORT(T, base, short_descr) \
 BLUE_SKY_TYPE_IMPL_T_NOCOPY(T, base, #T, short_descr, "")
 
+// shortcut for quick declaration of smart_ptr to BS object
+#define SP(T) smart_ptr< T, true >
+// shortcut for quick declaration of smart_ptr to generic object
+#define SPG(T) smart_ptr< T, false >
+
 #endif	// guard
 
