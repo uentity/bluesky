@@ -255,7 +255,7 @@ namespace blue_sky {
         this->capacity_   = new_capacity;
 
         BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
-        change_owner (new_memory, new_memory + n, new_capacity);
+        this->change_owner (new_memory, new_memory + n, new_capacity);
       }
 
       void
@@ -267,7 +267,7 @@ namespace blue_sky {
         this->array_end_  = new_memory;
 
         BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
-        change_owner (new_memory, new_memory, this->capacity ());
+        this->change_owner (new_memory, new_memory, this->capacity ());
       }
 
       template <typename input_iterator>
@@ -651,7 +651,7 @@ namespace blue_sky {
     {
       if (this->is_owner ())
         {
-          push_back__ (value);
+          this->push_back__ (value);
         }
       else
         {
@@ -813,7 +813,7 @@ namespace blue_sky {
     {
       if (this->is_owner ())
         {
-          resize__ (new_size, value);
+          this->resize__ (new_size, value);
         }
       else
         {
@@ -832,7 +832,7 @@ namespace blue_sky {
     { 
       if (this->is_owner ())
         {
-          erase_at_end__ (this->size ());
+          this->erase_at_end__ (this->size ());
         }
       else
         {
@@ -854,7 +854,7 @@ namespace blue_sky {
     {
       if (this->is_owner ())
         {
-          swap__ (v);
+          this->swap__ (v);
         }
       else
         {
@@ -904,7 +904,7 @@ namespace blue_sky {
       if (this->is_owner ())
         {
           typedef typename base_t::template is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
-          assign_dispatch__ (first, last, integral_t ());
+          this->assign_dispatch__ (first, last, integral_t ());
         }
       else
         {
