@@ -116,6 +116,8 @@ namespace blue_sky
 		bool operator <(const plugin_descriptor& pd) const;
 		bool operator ==(const plugin_descriptor& pd) const;
 
+    std::string get_name () const { return name_; }
+
 	private:
 		friend class kernel;
 		static unsigned int self_version();

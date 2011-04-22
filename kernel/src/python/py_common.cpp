@@ -150,7 +150,9 @@ void py_bind_common() {
 		.def(self < self)
 		.def(self == self)
 		.def(self != self)
-		.def(str(self))
+    .def ("__str__", &plugin_descriptor::get_name)
+    .def ("__repr__", &plugin_descriptor::get_name)
+		//.def(str(self))
 		;
 
 	// register vector of plugin descriptors <-> Python list converters
@@ -176,6 +178,7 @@ void py_bind_common() {
 		.def(self == std::string())
 		.def(self != std::string())
 		.def(str(self))
+    .def ("__repr__", &type_descriptor::name)
 		;
 
 	// register vector of type descriptors <-> Python list converters
