@@ -95,17 +95,25 @@ public:
 	}
 
 	virtual iterator begin() {
-		return &ss(0);
+		if(this->size() > 0)
+			return &ss(0);
+		else return 0;
 	}
 	virtual const_iterator begin() const {
-		return &ss(0);
+		if(this->size() > 0)
+			return &ss(0);
+		else return 0;
 	}
 
 	virtual iterator end() {
-		return &ss(0) + size();
+		if(this->size() > 0)
+			return &ss(0) + size();
+		else return 0;
 	}
 	virtual const_iterator end() const {
-		return &ss(0) + size();
+		if(this->size() > 0)
+			return &ss(0) + size();
+		else return 0;
 	}
 
 	virtual reverse_iterator rbegin() {
