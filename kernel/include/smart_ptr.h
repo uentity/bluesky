@@ -540,20 +540,7 @@ namespace bs_private {
 
 	//function that fires unlock signal
 	template< class T, bool can_fire = conversion< T, bs_imessaging >::exists_uc >
-	struct signal_unlock {
-		static void fire(T* p) {
-			if(p) {
-				//assume that unlock signal always has id = 1
-				static_cast< const bs_imessaging* >(p)->fire_signal(1, sp_obj(NULL));
-			}
-		}
-	};
-
-	template< class T >
-	struct signal_unlock< T, false > {
-		static void fire(T*) {}
-	};
-
+	struct signal_unlock;
 } // end of namespace bs_private
 
 /*!
@@ -1701,6 +1688,26 @@ private:
 	template< class R, bool > friend class smart_ptr;
 #endif
 };
+
+namespace bs_private {
+
+	//function that fires unlock signal
+template< class T, bool can_fire >
+struct signal_unlock {
+	static void fire(T* p) {
+		if(p) {
+			//assume that unlock signal always has id = 1
+			static_cast< const bs_imessaging* >(p)->fire_signal(1, sp_obj(NULL));
+		}
+	}
+};
+
+template< class T >
+struct signal_unlock< T, false > {
+	static void fire(T*) {}
+};
+
+}
 
 //! -----------------------------------------comparison operators----------------------------------------------------
 
