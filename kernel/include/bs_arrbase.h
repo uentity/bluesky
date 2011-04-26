@@ -157,6 +157,21 @@ public:
 		std::copy(start, finish, this->begin());
 	}
 
+	// get first & last elements
+	reference back() {
+		return *(end() - 1);
+	}
+	const_reference back() const {
+		return *(end() - 1);
+	}
+
+	reference front() {
+		return *begin();
+	}
+	const_reference front() const {
+		return *begin();
+	}
+
 	/// @brief empty destructor
 	virtual ~bs_arrbase() {};
 };
