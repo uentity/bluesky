@@ -289,14 +289,14 @@ namespace blue_sky {
         this->capacity_   = new_capacity;
 
         BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
-        change_owner (new_memory, new_finish, new_capacity);
+        this->change_owner (new_memory, new_finish, new_capacity);
       }
 
       template <typename integer_t>
       void
       ctor_dispatch__ (integer_t n, integer_t value, is_integral__ <true>)
       {
-        ctor_fill__ (n, value);
+        this->ctor_fill__ (n, value);
       }
 
       template <typename input_iterator>
@@ -304,7 +304,7 @@ namespace blue_sky {
       ctor_dispatch__ (input_iterator first, input_iterator last, is_integral__ <false>)
       {
         typedef typename std::iterator_traits <input_iterator>::iterator_category iterator_category_t;
-        ctor_range__ (first, last, iterator_category_t ());
+        this->ctor_range__ (first, last, iterator_category_t ());
       }
 
       void
@@ -675,7 +675,7 @@ namespace blue_sky {
     {
       if (this->is_owner ())
         {
-          return insert__ (pos, value);
+          return this->insert__ (pos, value);
         }
       else
         {
@@ -701,7 +701,7 @@ namespace blue_sky {
     {
       if (this->is_owner ())
         {
-          insert_fill__ (pos, n, value);
+          this->insert_fill__ (pos, n, value);
         }
       else
         {
@@ -730,7 +730,7 @@ namespace blue_sky {
       if (this->is_owner ())
         {
           typedef typename base_t::template is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
-          insert_dispatch__ (position, first, last, integral_t ());
+          this->insert_dispatch__ (position, first, last, integral_t ());
         }
       else
         {
@@ -758,7 +758,7 @@ namespace blue_sky {
     {
       if (this->is_owner ())
         {
-          return erase__ (position);
+          return this->erase__ (position);
         }
       else
         {
@@ -789,7 +789,7 @@ namespace blue_sky {
     {
       if (this->is_owner ())
         {
-          return erase__ (first, last);
+          return this->erase__ (first, last);
         }
       else
         {
@@ -877,7 +877,7 @@ namespace blue_sky {
     { 
       if (this->is_owner ())
         {
-          assign_fill__ (n, value); 
+          this->assign_fill__ (n, value); 
         }
       else
         {
@@ -951,7 +951,7 @@ namespace blue_sky {
     {
       if (this->is_owner ())
         {
-          ctor_fill__ (n, value);
+          this->ctor_fill__ (n, value);
         }
       else
         {
@@ -965,7 +965,7 @@ namespace blue_sky {
       if (this->is_owner ())
         {
           typedef typename base_t::template is_integral__ <std::numeric_limits <input_iterator>::is_integer> integral_t;
-          ctor_dispatch__ (first, last, integral_t ());
+          this->ctor_dispatch__ (first, last, integral_t ());
         }
       else
         {
