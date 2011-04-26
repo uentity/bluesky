@@ -88,6 +88,10 @@ public:
 		return operator[](key);
 	}
 
+  const_reference back () const {
+    return ss (0);
+  }
+
 	virtual void resize(size_type new_size) = 0;
 
 	virtual void clear() {
