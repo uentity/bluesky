@@ -19,6 +19,9 @@
  * \author Andrey Morozov <andrew.morozov@gmail.com icq 213000915>
  * \date 2008-01-30
  */
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
 
 #include "thread_pool.h"
 #include <functional>

@@ -1,3 +1,7 @@
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
+
 #include "bs_conf_reader.h"
 #include "bs_kernel.h"
 #include "bs_report.h"

@@ -19,6 +19,9 @@
  * \author Sergey Miryanov
  * \date 22.08.2008
  * */
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
 
 #include "setup_common_api.h"
 //#include "bs_refcounter.h"

@@ -12,6 +12,9 @@
 // 
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
 
 #include "bs_object_base.h"
 #include "bs_link.h"

@@ -20,6 +20,9 @@
  */
 
 //this comment line explicitly added to force svn commit
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
 
 #include "bs_misc.h"
 #include "bs_report.h"

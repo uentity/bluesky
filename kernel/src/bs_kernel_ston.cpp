@@ -21,6 +21,10 @@
 //
 // Author: Гагарин Александр Владимирович <GagarinAV@ufanipi.ru>, (C) 2008
 //
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
+
 #include "bs_kernel.h"
 #include "thread_pool.h"
 #include "bs_report.h"

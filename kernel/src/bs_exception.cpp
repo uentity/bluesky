@@ -18,6 +18,9 @@
   \brief Contains implimentations of blue-sky exception class
   \author NikonovMA a ka no_NaMe <__no_name__@rambler.ru>
  */
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
 
 #include "bs_exception.h"
 //#include "bs_log.h"

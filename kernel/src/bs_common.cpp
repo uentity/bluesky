@@ -18,6 +18,10 @@
   \brief Common parts of blue-sky
   \author Gagarin Alexander <gagrinav@ufanipi.ru>
 */
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
+
 #include "bs_common.h"
 #include "bs_kernel.h"
 #include "type_descriptor.h"

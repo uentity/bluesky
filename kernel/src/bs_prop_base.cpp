@@ -18,6 +18,9 @@
  * \brief Contains blue-sky storage tables implimentations.
  * \author uentity
  */
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
 #include "bs_prop_base.h"
 
 //DEBUG!

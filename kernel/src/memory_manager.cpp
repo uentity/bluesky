@@ -4,6 +4,10 @@
  * \author Sergey Miryanov
  * \date 10.06.2009
  * */
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
+
 #include "memory_manager.h"
 #include "bs_exception.h"
 #include "bs_assert.h"

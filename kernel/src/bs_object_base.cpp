@@ -19,6 +19,9 @@
  * \author Gagarin Alexander <gagrinav@ufanipi.ru>
  * \date 2007-03-05
  */
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
 
 #include "bs_object_base.h"
 #include "bs_command.h"

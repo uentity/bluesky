@@ -4,6 +4,9 @@
  * \author Sergey Miryanov
  * \date 14.05.2008
  * */
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
 
 #include "bs_assert.h"
 #include <stdlib.h>

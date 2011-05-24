@@ -4,6 +4,10 @@
  * \author Sergey Miryanov
  * \date 07.07.2009
  * */
+#ifdef BSPY_EXPORTING_PLUGIN
+#include <boost/python.hpp>
+#endif
+
 #include "bs_log_scribers.h"
 #include <iostream>
 
