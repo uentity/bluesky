@@ -209,7 +209,14 @@ namespace blue_sky {
 			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),string(getenv("HOME")) + string("/.blue-sky/plugins"));
 			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),cfg_.env_mp["BLUE_SKY_PREFIX"][0] + string("/share/blue-sky/plugins"));
 #else // WINDOWS
-			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),string(getenv("APPDATA")) + string("\\blue-sky\\plugins"));
+      string userappdata = getenv("APPDATA");
+			string appdata;
+
+			get_leaf_win(appdata,userappdata);
+			appdata = string(getenv("ALLUSERSPROFILE")) + string("\\") + appdata;
+			
+			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),appdata + string("\\blue-sky\\plugins"));
+			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),userappdata + string("\\blue-sky\\plugins"));
 			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),cfg_.env_mp["BLUE_SKY_PREFIX"][0] + string("\\plugins"));
 #endif // UNIX
 			
