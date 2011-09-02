@@ -29,7 +29,7 @@ class bs_link_pyw : public bs_link, public wrapper< bs_link > {
 public:
 	string name() const {
 		if(override f = this->get_override("name"))
-			return f();
+			return (const string&)f();
 		else
 			return bs_link::name();
 	}

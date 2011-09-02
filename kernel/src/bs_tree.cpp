@@ -1195,8 +1195,8 @@ bs_node::n_iterator bs_node::node_impl::si2ni(const typename index_t::const_iter
 template< class index_t, class iter_t >
 bs_node::n_range bs_node::node_impl::sr2nr(const pair< iter_t, iter_t >& rng) const {
 	return bs_node::n_range(
-		new n_iterator::ni_impl(this, typename index_t::const_iterator(rng.first), idx_traits< index_t >()),
-		new n_iterator::ni_impl(this, typename index_t::const_iterator(rng.second), idx_traits< index_t >())
+		n_iterator(new n_iterator::ni_impl(this, typename index_t::const_iterator(rng.first), idx_traits< index_t >())),
+		n_iterator(new n_iterator::ni_impl(this, typename index_t::const_iterator(rng.second), idx_traits< index_t >()))
 	);
 }
 
