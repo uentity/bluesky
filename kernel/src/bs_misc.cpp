@@ -159,69 +159,7 @@ gettime()
 	}
 	return cur_time_str;
 }
-/*
-void my_sprintf(std::string& buf, const char* fmt, ...)
-{
-	//prepare string stream
-	ostringstream ss;
-	//start main loop
-	va_list arg_list;
-	va_start(arg_list, fmt);
-	const char* term = fmt + strlen(fmt);
-	char* beg = const_cast<char*>(fmt);
-	char* pos;
-	while((pos = strchr(beg, '%')) != NULL && ss) {
-		ss.write(beg, static_cast<streamsize>(pos - beg));
-		if(++pos >= term) break;
-		switch(*pos) {
-			case 'c':	//char
-				if(*(pos + 1) == 'c')		//const char
-					ss << va_arg(arg_list, const char*);
-				else
-					ss << va_arg(arg_list, char);
-				break;
-			case 's':	//c++ string
-				ss << va_arg(arg_list, const char*);
-				break;
-			case 'i':	//integer
-				ss << va_arg(arg_list, int);
-				break;
-			case 'l':	//long
-				ss << va_arg(arg_list, long);
-				break;
-			case 'u':	//unsigned
-				if(++pos >= term) break;
-				switch(*pos) {
-					case 'i':
-						ss << va_arg(arg_list, uint);
-						break;
-					case 'l':
-						ss << va_arg(arg_list, ulong);
-						break;
-					default:		//no type symbol found - step back
-						--pos;
-						break;
-				}
-				break;
-			case 'f':	//double
-				ss << va_arg(arg_list, double);
-				break;
-			case '%':	//%% - just type %
-				ss << '%';
-				break;
-			default:		//no type symbol found - step back
-				--pos;
-				break;
-		}
-		if((beg = ++pos) >= term) break;
-	}
-	va_end(arg_list);
-	//write latter end of format string
-	ss << beg;
-	ss.flush();
-	buf = ss.str();
-}
-*/
+
 void DumpV(const ul_vec& v, const char* pFname)
 {
 	if(pFname) {
@@ -463,7 +401,7 @@ void get_name(string &container_, const string& src)
 	if(res.size() > 0) {
 		tmp = res.front();
 		res.clear();
-		expression = regex("^(libbs_|bs_|lib)(.*)$");
+		expression = regex("^(.*)(libbs_|bs_|lib)(.*)$");
 		regex_split(back_inserter(res), tmp, expression, match_default);
 		if(res.size() > 0)
 			container_ = res.back();
