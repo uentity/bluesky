@@ -67,9 +67,9 @@ typedef std::vector<lload> v_lload;
 BS_C_API void get_lib_list(std::list<lload> & //!< list of loading
 							);
 //! \brief string-based versions comparator
-BS_C_API int version_comparator(const char * //!< left version
-								 , const char * //!< right version
-								 );
+BS_C_API int version_comparator(const std::string& //!< left version
+								, const std::string& //!< right version
+								);
 //! \brief get time function
 BS_API std::string gettime();
 

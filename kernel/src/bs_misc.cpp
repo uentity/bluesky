@@ -67,17 +67,22 @@ namespace blue_sky {
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> load_graph;
 
 //!	\brief compares src with string = before + doubt + after.
-bool compare(const char* src , const char* dbt, const char* before, const char* after);
+bool compare(const string& src , const string& dbt, const string& before, const string& after);
+
 //const char *find_cfg_file(std::string&, std::vector<const char*>&);
 //!	\brief Get leaf of src.
-void get_leaf(std::string &, std::string &);
+void get_leaf(std::string&, const std::string &);
+
 //!	\brief get name of file in format name.expansion
-void get_name(std::string &, std::string &);
+void get_name(std::string&, const std::string &);
+
 //int version_comparator(const char *, const char *);
 //! \brief separator of version-strings
-void version_separator(std::vector<std::string> &, const char *);
+void version_separator(std::vector<std::string> &, const string&);
+
 //!	\brief Makes graph with list cntr_.
 blue_sky::error_code make_graph(load_graph &,v_lload &); // throw();
+
 //!	\brief Depth search.
 void graph_to_list(std::vector<int> &, const load_graph &);
 
@@ -133,10 +138,11 @@ const char *find_cfg_file(string& doubt, std::vector<string> &vec)
 	\param after - mask after dbt
 	\return true - if contains, false - otherwise
  */
-bool compare(const char* src , const char* dbt, const char* before, const char* after)
+bool compare(const string& src , const string& dbt, const string& before, const string& after)
 {
-	regex expression(string(before) + string(dbt) + string(after));
-	return ((regex_search(string(src),expression)) ? true : false);
+	string t = string(before) + dbt + after;
+	//regex expression(t);
+	return regex_search(src, regex(t)) ? true : false;
 }
 
 //! \return string of chars, contains current time
@@ -339,10 +345,10 @@ blue_sky::error_code search_files(vector<string> &res, const char * what, const 
 	\param res - separated by subversions version
 	\param src - version string
  */
-void version_separator(vector<string> &res, const char *src)
+void version_separator(vector<string> &res, const string& src)
 {
-	if (!src) return;
-	if(!strcmp(src,"")) return;
+	if (!src.size()) return;
+	//if(!strcmp(src,"")) return;
 	vector<string> tmp;
 	string c;
 
@@ -350,15 +356,15 @@ void version_separator(vector<string> &res, const char *src)
 	c = src;
 	for(;;)
 	{
-		regex_split(back_inserter(tmp),c,expression);
+		regex_split(back_inserter(tmp), c, expression);
 		if(!tmp.size())
 		{
-			regex_split(back_inserter(tmp),c,regex("(.*)"));
+			regex_split(back_inserter(tmp), c, regex("(.*)"));
 			res.push_back(tmp.back());
 			break;
 		}
-		res.push_back(string(tmp.back().c_str()));
-		if(!regex_search(tmp.front().c_str(),expression))
+		res.push_back(tmp.back());
+		if(!regex_search(tmp.front(), expression))
 		{
 			res.push_back(tmp.front());
 			break;
@@ -373,12 +379,12 @@ void version_separator(vector<string> &res, const char *src)
 	0 if they are equal or \n
 	1 if left ver > then right ver.
 */
-int version_comparator(const char *lc, const char *rc)
+int version_comparator(const string& lc, const string& rc)
 {
-	vector<string> lres,rres;
+	vector<string> lres, rres;
 	char *tmp;
-	version_separator(lres,lc);
-	version_separator(rres,rc);
+	version_separator(lres, lc);
+	version_separator(rres, rc);
 	int i,j;
 	long l,r;
 
@@ -388,8 +394,8 @@ int version_comparator(const char *lc, const char *rc)
 	j = (int)rres.size() - 1;
 	for(; i > -1 && j > -1; --i, --j)
 	{
-		l = strtol(lres[i].c_str(),&tmp,10);
-		r = strtol(rres[j].c_str(),&tmp,10);
+		l = strtol(lres[i].c_str(), &tmp, 10);
+		r = strtol(rres[j].c_str(), &tmp, 10);
 		if(l == r)
 			continue;
 		else if(l < r)
@@ -414,13 +420,13 @@ int version_comparator(const char *lc, const char *rc)
 	\param name - name of vertex
 	\return index of name or -1 - otherwise
  */
-int find_vertex(vector<string> &lp, const char *name)
+int find_vertex(vector<string> &lp, const string& name)
 {
+	string tmp;
 	for(unsigned int i = 0; i < lp.size(); ++i)
 	{
-		string tmp;
-		get_leaf(tmp,lp[i]);
-		if(compare(tmp.c_str(),name,"^(.*)","(_d.|.)(dll|so)$"))
+		get_leaf(tmp, lp[i]);
+		if(compare(tmp, name, "^(.*)","(_d.|.)(dll|so)$"))
 			return i;
 	}
 	return (-1);
@@ -431,14 +437,16 @@ int find_vertex(vector<string> &lp, const char *name)
 	\param container_ - here will be leaf
 	\param src - all path
  */
-void get_leaf(string &container_, string &src)
+void get_leaf(string& container_, const string& src)
 {
 	vector<string> res;
-	string tmp = string(src);
+	string tmp = src;
 	regex expression("(/\?(\?:[^\?#/]*/)*)\?([^\?#]*)");
-	regex_split(back_inserter(res),tmp,expression,match_default);
+	regex_split(back_inserter(res), tmp, expression, match_default);
 	if(res.size() > 0)
 		container_ = res.back();
+	else
+		container_.clear();
 }
 
 /*!
@@ -446,17 +454,17 @@ void get_leaf(string &container_, string &src)
 	\param container_ - here will be name
 	\param src - all path
  */
-void get_name(string &container_, string &src)
+void get_name(string &container_, const string& src)
 {
 	vector<string> res;
-	string tmp = string(src);
+	string tmp = src;
 	regex expression("^([^\?#]*)[.](.*)$");
-	regex_split(back_inserter(res),tmp,expression,match_default);
+	regex_split(back_inserter(res), tmp, expression, match_default);
 	if(res.size() > 0) {
-		tmp = string(res.front());
+		tmp = res.front();
 		res.clear();
 		expression = regex("^(libbs_|bs_|lib)(.*)$");
-		regex_split(back_inserter(res),tmp,expression,match_default);
+		regex_split(back_inserter(res), tmp, expression, match_default);
 		if(res.size() > 0)
 			container_ = res.back();
 		else
