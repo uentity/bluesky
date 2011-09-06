@@ -33,15 +33,15 @@
 using namespace Loki;
 using namespace std;
 
-namespace blue_sky { namespace bs_private {
-
-static bool kernel_alive = false;
-
+namespace {
+using namespace blue_sky;
 /*-----------------------------------------------------------------------------
  *  Specific logging system wrappers
  *-----------------------------------------------------------------------------*/
 struct bs_log_wrapper : public bs_log
 {
+	static bool kernel_alive;
+
 	bs_log_wrapper ()
 	{
 		if (kernel_alive)
@@ -84,6 +84,8 @@ struct bs_log_wrapper : public bs_log
 	}
 };
 
+bool bs_log_wrapper::kernel_alive = false;
+
 struct thread_log_wrapper : public thread_log
 {
 	thread_log_wrapper ()
@@ -108,6 +110,15 @@ struct thread_log_wrapper : public thread_log
 	//}
 };
 
+typedef SingletonHolder < bs_log_wrapper, CreateUsingNew, PhoenixSingleton >      bs_log_holder;
+typedef SingletonHolder < thread_log_wrapper, CreateUsingNew, PhoenixSingleton >  thread_log_holder;
+
+} // eof hidden namespace
+
+namespace blue_sky {
+namespace bs_private {
+//static bool kernel_alive = false;
+
 /// @brief Wrapper allowing to do some initialization on first give_kernel()::Instance() call
 /// just after the kernel class is created
 struct wrapper_kernel {
@@ -119,7 +130,7 @@ struct wrapper_kernel {
 	wrapper_kernel()
 		: ref_fun_(&wrapper_kernel::initial_kernel_getter)
 	{
-		kernel_alive = true;
+		bs_log_wrapper::kernel_alive = true;
 	}
 
 	// normal getter - just returns kernel reference
@@ -148,14 +159,11 @@ struct wrapper_kernel {
 
 	~wrapper_kernel() {
 		// signal that it is destroyed
-		kernel_alive = false;
+		bs_log_wrapper::kernel_alive = false;
 	}
 };
 
-typedef SingletonHolder < bs_log_wrapper, CreateUsingNew, PhoenixSingleton >      bs_log_holder;
-typedef SingletonHolder < thread_log_wrapper, CreateUsingNew, PhoenixSingleton >  thread_log_holder;
-
-}	// namespace bs_private
+}	// eof bs_private namespace
 
 
 /*-----------------------------------------------------------------------------
@@ -202,30 +210,26 @@ worker_thread_pool& singleton< worker_thread_pool >::Instance() {
 typedef singleton <bs_log>      bs_log_singleton;
 typedef singleton <thread_log>  thread_log_singleton;
 
-template <> 
-	bs_log & 
-singleton <bs_log>::Instance() 
+template< >
+bs_log& singleton< bs_log >::Instance()
 {
-	return bs_private::bs_log_holder::Instance().get_log ();
+	return bs_log_holder::Instance().get_log();
 }
 
-template <>
-	thread_log &
-singleton <thread_log>::Instance ()
+template< >
+thread_log& singleton< thread_log >::Instance()
 {
-	return bs_private::thread_log_holder::Instance ().get_log ();
+	return thread_log_holder::Instance().get_log();
 }
 
-	bs_log &
-kernel::get_log ()
+bs_log& kernel::get_log()
 {
-	return bs_log_singleton::Instance ();
+	return bs_log_singleton::Instance();
 }
 
-	thread_log &
-kernel::get_tlog ()
+thread_log& kernel::get_tlog()
 {
-	return thread_log_singleton::Instance ();
+	return thread_log_singleton::Instance();
 }
 
 }	// namespace blue_sky

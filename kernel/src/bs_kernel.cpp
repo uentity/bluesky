@@ -1270,6 +1270,12 @@ kernel::kernel()
 }
 
 kernel::~kernel() {
+	cleanup();
+	// manually destroy pimpl, cause mt_ptr is used
+	if(pimpl_.get()) delete pimpl_.get();
+}
+
+void kernel::cleanup() {
 	for (size_t i = 0, cnt = disconnectors_.size (); i < cnt; ++i) {
 		if (disconnectors_[i])
 			disconnectors_[i]->disconnect_signals ();
@@ -1286,9 +1292,6 @@ kernel::~kernel() {
 	//BS_ASSERT (pimpl_->pert_str_tbl_.empty ());
 	//BS_ASSERT (pimpl_->pert_idx_tbl_.empty ());
 	//BS_ASSERT (pimpl_->sig_storage_.empty ()) (pimpl_->sig_storage_.size ());
-
-	// WTF??
-	if(pimpl_.get()) delete pimpl_.get();
 }
 
 void
