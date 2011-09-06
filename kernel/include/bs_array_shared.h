@@ -57,8 +57,8 @@ public:
 
 	template< class container_t >
 	void init(Loki::Type2Type< container_t >, size_type n = 0, const value_type& v = value_type()) {
+		data_ = NULL; size_ = 0; buf_holder_ = NULL;
 		smart_ptr< container_t > c = BS_KERNEL.create_object(container_t::bs_type());
-		data_ = NULL; size_ = 0;
 		if(!c) return;
 
 		if(n)
@@ -70,8 +70,8 @@ public:
 
 	template< class input_iterator, class container_t >
 	void init(Loki::Type2Type< container_t >, input_iterator start, input_iterator finish) {
+		size_ = 0; data_ = NULL; buf_holder_ = NULL;
 		smart_ptr< container_t > c = BS_KERNEL.create_object(container_t::bs_type());
-		size_ = 0; data_ = NULL;
 		if(!c) return;
 
 		c->init(start, finish);
