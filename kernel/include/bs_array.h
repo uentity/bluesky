@@ -58,8 +58,8 @@ public:
 
 	// inherited from bs_arrbase class
 	typedef typename arrbase_t::value_type value_type;
-	typedef typename arrbase_t::size_type size_type;
-	typedef typename arrbase_t::key_type key_type;
+	typedef typename arrbase_t::size_type  size_type;
+	typedef typename arrbase_t::key_type   key_type;
 
 	typedef typename arrbase_t::pointer                pointer;
 	typedef typename arrbase_t::reference              reference;

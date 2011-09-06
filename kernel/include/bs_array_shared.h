@@ -35,25 +35,25 @@ public:
 	//typedef container_t< T > container;
 	// here container means smart_ptr< container > to deal with bs_array
 	typedef smart_ptr< bs_arrbase< T > > container;
-	typedef bs_array_shared< T > bs_array_base;
+	typedef bs_array_shared< T >         bs_array_base;
 
 	typedef smart_ptr< bs_array_base, true > sp_array_shared;
-	typedef typename arrbase::sp_arrbase sp_arrbase;
-	typedef bs_array< T, vector_traits > def_cont_impl;
+	typedef typename arrbase::sp_arrbase     sp_arrbase;
+	typedef bs_array< T, vector_traits >     def_cont_impl;
 	typedef Loki::Type2Type< def_cont_impl > def_cont_tag;
 
-	typedef T              value_type;
-	typedef std::size_t    size_type;
-	typedef std::ptrdiff_t difference_type;
-	typedef T*             pointer;
-	typedef T const*       const_pointer;
-	typedef T&             reference;
-	typedef T const&       const_reference;
-	typedef pointer        iterator;
-	typedef const_pointer  const_iterator;
+	typedef typename arrbase::value_type value_type;
+	typedef typename arrbase::key_type   key_type;
+	typedef typename arrbase::size_type  size_type;
 
-	typedef std::reverse_iterator< iterator >       reverse_iterator;
-	typedef std::reverse_iterator< const_iterator > const_reverse_iterator;
+	typedef typename arrbase::pointer                pointer;
+	typedef typename arrbase::reference              reference;
+	typedef typename arrbase::const_pointer          const_pointer;
+	typedef typename arrbase::const_reference        const_reference;
+	typedef typename arrbase::iterator               iterator;
+	typedef typename arrbase::const_iterator         const_iterator;
+	typedef typename arrbase::reverse_iterator       reverse_iterator;
+	typedef typename arrbase::const_reverse_iterator const_reverse_iterator;
 
 	template< class container_t >
 	void init(Loki::Type2Type< container_t >, size_type n = 0, const value_type& v = value_type()) {
@@ -126,6 +126,8 @@ public:
 		if(&buf_holder_ != &c && (buf_holder_ = c)) {
 			if((size_ = buf_holder_->size()))
 				data_ = &buf_holder_->ss(0);
+			else
+				data_ = NULL;
 		}
 	}
 
@@ -139,70 +141,9 @@ public:
 
 	// std copy ctor is fine and make a reference to data_
 
-	iterator begin() {
-		return data_;
-	}
-	iterator end() {
-		return data_ + size_;
-	}
-
-	const_iterator begin() const {
-		return data_;
-	}
-	const_iterator end() const {
-		return data_ + size_;
-	}
-
-	reverse_iterator rbegin() {
-		return reverse_iterator(end());
-	}
-	reverse_iterator rend() {
-		return reverse_iterator(begin());
-	}
-
-	const_reverse_iterator rbegin() const {
-		return const_reverse_iterator(end());
-	}
-	const_reverse_iterator rend() const {
-		return const_reverse_iterator(begin());
-	}
-
+	// implement bs_arrbase interface
 	size_type size() const {
 		return size_;
-	}
-
-	reference operator[](const size_type& n) {
-		return data_[n];
-	}
-	const_reference operator[](const size_type& n) const {
-		return data_[n];
-	}
-
-	bs_array_shared& operator=(const bs_array_shared& rhs) {
-		data_ = rhs.data_;
-		size_ = rhs.size_;
-		buf_holder_ = rhs.buf_holder_;
-		return *this;
-	}
-
-	reference front() {
-		return data_[0];
-	}
-	const_reference front() const {
-		return data_[0];
-	}
-
-	reference back() {
-		return data_[size_ - 1];
-	}
-	const_reference back() const {
-		return data_[size_ - 1];
-	}
-
-	void swap(bs_array_shared& rhs) {
-		std::swap(data_, rhs.data_);
-		std::swap(size_, rhs.size_);
-		std::swap(buf_holder_, rhs.buf_holder_);
 	}
 
 	void resize(size_type n) {
@@ -212,9 +153,30 @@ public:
 				data_ = &buf_holder_->ss(0);
 			else
 				data_ = NULL;
-			//return true;
 		}
-		//return false;
+	}
+
+	pointer data() {
+		return data_;
+	}
+
+	// explicitly make array copy
+	sp_arrbase clone() const {
+		return create< def_cont_impl >(this->begin(), this->end());
+	}
+
+	// reference to rhs array
+	bs_array_shared& operator=(const bs_array_shared& rhs) {
+		data_ = rhs.data_;
+		size_ = rhs.size_;
+		buf_holder_ = rhs.buf_holder_;
+		return *this;
+	}
+
+	void swap(bs_array_shared& rhs) {
+		std::swap(data_, rhs.data_);
+		std::swap(size_, rhs.size_);
+		std::swap(buf_holder_, rhs.buf_holder_);
 	}
 
 	friend bool operator==(const bs_array_shared& lhs, const bs_array_shared& rhs) {
@@ -223,11 +185,6 @@ public:
 
 	friend bool operator<(const bs_array_shared& lhs, const bs_array_shared& rhs) {
 		return lhs.data_ < rhs.data_;
-	}
-
-	// explicitly make array copy
-	sp_arrbase clone() const {
-		return create< def_cont_impl >(begin(), end());
 	}
 
 	void dispose() const {
