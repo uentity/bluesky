@@ -1280,6 +1280,7 @@ void kernel::cleanup() {
 		if (disconnectors_[i])
 			disconnectors_[i]->disconnect_signals ();
 	}
+	disconnectors_.clear();
 
 	// why assert?
 	//BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());

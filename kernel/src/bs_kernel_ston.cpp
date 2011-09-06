@@ -21,6 +21,7 @@
 //
 // Author: Гагарин Александр Владимирович <GagarinAV@ufanipi.ru>, (C) 2008
 //
+
 #include "bs_kernel.h"
 #include "thread_pool.h"
 #include "bs_report.h"
@@ -126,6 +127,8 @@ struct wrapper_kernel {
 
 	kernel& (wrapper_kernel::*ref_fun_)();
 
+	static void kernel_cleanup();
+
 	// constructor
 	wrapper_kernel()
 		: ref_fun_(&wrapper_kernel::initial_kernel_getter)
@@ -148,6 +151,12 @@ struct wrapper_kernel {
 #ifdef BS_AUTOLOAD_PLUGINS
 		// load plugins
 		k_.LoadPlugins();
+#endif
+#ifdef BSPY_EXPORTING
+		// if we build with Python support
+		// register function that cleans up kernel
+		// when Python interpreter exits
+		Py_AtExit(&kernel_cleanup);
 #endif
 		// return reference
 		return k_;
@@ -185,6 +194,10 @@ BS_API kernel& singleton< kernel >::Instance()
 {
 	//cout << "give_kernel.Instance() entered" << endl;
 	return kernel_holder::Instance().k_ref();
+}
+
+void bs_private::wrapper_kernel::kernel_cleanup() {
+	BS_KERNEL.cleanup();
 }
 
 //! thread pool singleton
