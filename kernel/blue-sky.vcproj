@@ -129,7 +129,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories="&quot;$(STLPORT_PATH_)/stlport&quot;;&quot;$(ProjectDir)/include&quot;;&quot;$(ProjectDir)/include/python&quot;;&quot;$(LOKI_PATH)/include&quot;;&quot;$(BOOST_PATH)&quot;;&quot;$(PYTHON_PATH)/include&quot;;&quot;$(NUMPY_PATH)/include&quot;"
-				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;NOMINMAX"
+				PreprocessorDefinitions="BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;NOMINMAX;BOOST_ALL_DYN_LINK"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="true"
 				FloatingPointExceptions="true"
