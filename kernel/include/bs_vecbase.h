@@ -87,6 +87,8 @@ public:
 	typedef typename arrbase::reverse_iterator       reverse_iterator;
 	typedef typename arrbase::const_reverse_iterator const_reverse_iterator;
 
+	using container::empty;
+
 	// default ctor
 	bs_vecbase_impl() {}
 

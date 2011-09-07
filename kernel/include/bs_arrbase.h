@@ -221,6 +221,8 @@ public:
 	using arrbase::rend;
 	using arrbase::assign;
 	using arrbase::clear;
+	using arrbase::back;
+	using arrbase::front;
 
 	// default ctor
 	bs_arrbase_impl() {}

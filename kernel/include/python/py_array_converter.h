@@ -16,8 +16,9 @@
 #ifndef PY_ARRAY_CONVERTER_QSXYZL0I
 #define PY_ARRAY_CONVERTER_QSXYZL0I
 
-#include "bs_nparray.h"
 #include "bs_array.h"
+#include "bs_nparray.h"
+#include "bs_npvec.h"
 #include "py_bs_converter.h"
 #include "bs_kernel.h"
 
@@ -26,6 +27,7 @@ namespace blue_sky { namespace python {
 // implements converters for all types of arrays in BS
 template< class T >
 struct array_converters {
+	typedef pyublas::numpy_array< T > backend_t;
 	typedef bs_nparray< T > cont_t;
 	typedef bs_array< T, bs_nparray > nparray_t;
 	typedef smart_ptr< nparray_t > sp_nparray_t;
@@ -69,22 +71,51 @@ struct array_converters {
 
 		static void create_type(void* memory_chunk, const boost::python::object& py_obj) {
 			// create empty array and init it with Python array
-			sp_nparray_t src = BS_KERNEL.create_object(nparray_t::bs_type());
-			src.lock()->init(cont_t(py_obj.ptr()));
+			cont_t src(py_obj.ptr());
 
 			// copy data to destination array
 			type dst = BS_KERNEL.create_object(array_t::bs_type());
-			dst->resize(src->size());
-			std::copy(src->begin(), src->end(), dst.lock()->begin());
+			dst.lock()->resize(src.size());
+			std::copy(src.begin(), src.end(), dst.lock()->begin());
 			new(memory_chunk) type(dst);
 		}
 
 		static PyObject* to_python(type const& v) {
 			// create empty array and init it with copied data from v
-			sp_nparray_t dst = BS_KERNEL.create_object(nparray_t::bs_type());
-			dst.lock()->init(v->size());
-			std::copy(v->begin(), v->end(), dst.lock()->begin());
-			return dst->to_python();
+			cont_t proxy(v->size());
+			std::copy(v->begin(), v->end(), proxy.begin());
+			return proxy.to_python();
+		}
+
+		static bool is_convertible(PyObject* py_obj) {
+			return array_converters< T >::nparray_traits<>::is_convertible(py_obj);
+		}
+	};
+
+	// safe implicit conversion that copies data buffers
+	// preserve shape data
+	template< template< class > class cont_traits >
+	struct copy_traits_wshape {
+		typedef bs_array< T, cont_traits > array_t;
+		typedef cont_traits< T > traits_t;
+		// target type for bspy_converter
+		typedef smart_ptr< array_t > type;
+
+		static void create_type(void* memory_chunk, const boost::python::object& py_obj) {
+			// create empty array and init it with Python array
+			cont_t src(py_obj.ptr());
+
+			// copy data to destination array
+			// along with shape info
+			type dst = BS_KERNEL.create_object(array_t::bs_type());
+			dst.lock()->init(traits_t(src.ndim(), src.dims(), src.data()));
+			new(memory_chunk) type(dst);
+		}
+
+		static PyObject* to_python(type const& v) {
+			// create empty array and init it with copied data from v
+			cont_t proxy(backend_t(v->ndim(), v->dims(), v->data()));
+			return proxy.to_python();
 		}
 
 		static bool is_convertible(PyObject* py_obj) {
@@ -176,6 +207,8 @@ struct array_converters {
 		make_helper< copy_traits< bs_vector_shared > >();
 		// copy converter for vector_traits
 		make_helper< copy_traits< vector_traits > >();
+		// copy with shape for bs_npvec
+		make_helper< copy_traits_wshape< bs_npvec > >();
 	}
 
 private:
