@@ -114,7 +114,8 @@ struct array_converters {
 
 		static PyObject* to_python(type const& v) {
 			// create empty array and init it with copied data from v
-			cont_t proxy(backend_t(v->ndim(), v->dims(), v->data()));
+			cont_t proxy(backend_t(v->ndim(), v->dims()));
+			std::copy(v->begin(), v->end(), proxy.begin());
 			return proxy.to_python();
 		}
 
