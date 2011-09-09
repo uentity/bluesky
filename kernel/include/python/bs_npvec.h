@@ -34,30 +34,20 @@
 #include <numpy/arrayobject.h>
 
 namespace blue_sky {
+namespace detail {
 
-template< class T >
-class BS_API bs_npvec : public bs_vecbase_impl< T, std::vector< T > > {
+template< class base_t >
+class bs_npvec_impl : public base_t {
 public:
-	typedef std::vector< T > container;
-	typedef bs_npvec< T > this_t;
-	typedef bs_vecbase_impl< T, container > base_t;
-	typedef bs_arrbase< T > arrbase;
-	typedef this_t bs_array_base;
+	typedef typename base_t::value_type value_type;
+	typedef typename base_t::size_type  size_type;
+
+	typedef bs_npvec_impl this_t;
+	typedef typename base_t::container container;
+	typedef typename base_t::arrbase arrbase;
+
 	typedef typename arrbase::sp_arrbase sp_arrbase;
-
-	// inherited from bs_arrbase class
-	typedef typename arrbase::value_type value_type;
-	typedef typename arrbase::key_type   key_type;
-	typedef typename arrbase::size_type  size_type;
-
-	typedef typename arrbase::pointer                pointer;
-	typedef typename arrbase::reference              reference;
-	typedef typename arrbase::const_pointer          const_pointer;
-	typedef typename arrbase::const_reference        const_reference;
-	typedef typename arrbase::iterator               iterator;
-	typedef typename arrbase::const_iterator         const_iterator;
-	typedef typename arrbase::reverse_iterator       reverse_iterator;
-	typedef typename arrbase::const_reverse_iterator const_reverse_iterator;
+	typedef typename arrbase::const_pointer const_pointer;
 
 	using base_t::size;
 	using base_t::data;
@@ -65,31 +55,14 @@ public:
 	using base_t::end;
 
 	// ctors needed by bs_array
-	bs_npvec() : dims_(1, 0) {}
-	bs_npvec(const container& c) : base_t(c), dims_(1) {
+	bs_npvec_impl() : dims_(1, 0) {}
+	bs_npvec_impl(const container& c) : base_t(c), dims_(1) {
 		dims_[0] = size();
 	}
 	// given size & fill value
-	bs_npvec(size_type sz, const value_type& v = value_type()) : base_t(sz, v), dims_(1) {
+	bs_npvec_impl(size_type sz, const value_type& v = value_type()) : base_t(sz, v), dims_(1) {
 		dims_[0] = size();
 	}
-
-	// ctors-aliases for init
-	bs_npvec(size_type ndim, const npy_intp* dims) {
-		init(ndim, dims);
-	}
-
-	bs_npvec(size_type ndim, const npy_intp* dims, const_pointer data) {
-		init(ndim, dims, data);
-	}
-
-	template< typename in_t >
-	bs_npvec(in_t const& in,
-		typename boost::enable_if< boost::is_class< in_t > >::type *dummy = 0)
-	{
-		init< in_t >(in, dummy);
-	}
-
 	// std copy stor is fine
 
 	// model numpy_array
@@ -105,7 +78,7 @@ public:
 
 	size_type init(size_type ndim, const npy_intp* dims, const_pointer data) {
 		size_type sz = init(ndim, dims);
-		copy(data, data + sz, begin());
+		std::copy(data, data + sz, begin());
 		return sz;
 	}
 
@@ -120,11 +93,9 @@ public:
 		return sz;
 	}
 
-	// bs_arrbase interface
-	sp_arrbase clone() const {
-		sp_arrbase res = new this_t(*this);
-		//std::copy(this->begin(), this->end(), res->begin());
-		return res;
+	void swap(bs_npvec_impl& rhs) {
+		base_t::swap(rhs);
+		std::swap(dims_, rhs.dims_);
 	}
 
 	void resize(size_type new_size) {
@@ -135,11 +106,6 @@ public:
 		size_type old_size = this->size();
 		if(resize_to_shape(new_size))
 			std::fill(data() + std::min(new_size, old_size), data() + new_size, v);
-	}
-
-	void swap(bs_npvec& rhs) {
-		base_t::swap(rhs);
-		std::swap(dims_, rhs.dims_);
 	}
 
 	size_type ndim() const {
@@ -159,7 +125,7 @@ public:
 	}
 
 	npy_intp itemsize() const {
-		return sizeof(T);
+		return sizeof(value_type);
 	}
 
 	// shape manipulation
@@ -167,14 +133,20 @@ public:
 		init(ndim, dims);
 	}
 
-private:
+protected:
 	std::vector< npy_intp > dims_;
 
-	size_type resize_from_shape() {
+	size_type size_from_shape() const {
 		size_type sz = 1;
 		for(ulong i = 0; i < dims_.size(); ++i)
 			sz *= dims_[i];
-		resize(sz);
+		return sz;
+	}
+
+	size_type resize_from_shape() {
+		size_type sz = size_from_shape();
+		if(sz != size())
+			resize(sz);
 		return sz;
 	}
 
@@ -187,6 +159,57 @@ private:
 			return true;
 		}
 		return false;
+	}
+};
+
+} // eof namespace detail
+
+template< class T >
+class BS_API bs_npvec : public detail::bs_npvec_impl< bs_vecbase_impl< T, std::vector< T > > > {
+public:
+	typedef detail::bs_npvec_impl< bs_vecbase_impl< T, std::vector< T > > > base_t;
+
+	typedef std::vector< T > container;
+	typedef bs_arrbase< T > arrbase;
+	typedef bs_npvec bs_array_base;
+	typedef typename arrbase::sp_arrbase sp_arrbase;
+
+	// inherited from bs_arrbase class
+	typedef typename arrbase::value_type    value_type;
+	typedef typename arrbase::size_type     size_type;
+	typedef typename arrbase::const_pointer const_pointer;
+
+	using base_t::init;
+
+	// ctors needed by bs_array
+	bs_npvec() {}
+	bs_npvec(const container& c) : base_t(c) {}
+	// given size & fill value
+	bs_npvec(size_type sz, const value_type& v = value_type()) : base_t(sz, v) {}
+
+	// ctors-aliases for init
+	bs_npvec(size_type ndim, const npy_intp* dims) {
+		init(ndim, dims);
+	}
+
+	bs_npvec(size_type ndim, const npy_intp* dims, const_pointer data) {
+		init(ndim, dims, data);
+	}
+
+	template< typename in_t >
+	bs_npvec(in_t const& in,
+		typename boost::enable_if< boost::is_class< in_t > >::type *dummy = 0)
+	{
+		init(in, dummy);
+	}
+
+	sp_arrbase clone() const {
+		// copy ctor will make deep copy
+		return new bs_npvec(*this);
+	}
+
+	void swap(bs_npvec& rhs) {
+		base_t::swap(rhs);
 	}
 };
 
