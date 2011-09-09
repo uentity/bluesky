@@ -78,7 +78,8 @@ void py_export_nparray() {
 	def("test_nparray_i", &test_nparray< bs_nparray_i, bs_array< int > >);
 	def("test_nparray_l", &test_nparray< bs_nparray_i, bs_array< long > >);
 	def("test_nparray_f", &test_nparray< bs_nparray_f, bs_array< float > >);
-	def("test_nparray_d", &test_nparray< bs_array< double, bs_npvec >, bs_array< double, bs_npvec > >);
+	def("test_nparray_d", &test_nparray< bs_array< double, bs_npvec_shared >,
+		bs_array< double, bs_npvec_shared > >);
 	//def("test_nparray_d", &test_nparray< bs_array< double, vector_traits >, bs_array< double, vector_traits > >);
 	//def("test_nparray_d", &test_nparray< bs_nparray< double >, bs_array< double, vector_traits > >);
 	//def("test_nparray_d", &test_nparray< double, bs_arrbase >);
