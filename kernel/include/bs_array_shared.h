@@ -160,6 +160,10 @@ public:
 		return data_;
 	}
 
+	const_pointer data() const {
+		return data_;
+	}
+
 	// explicitly make array copy
 	sp_arrbase clone() const {
 		return create< def_cont_impl >(this->begin(), this->end());

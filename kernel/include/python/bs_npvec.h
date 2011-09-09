@@ -1,5 +1,5 @@
 /// @file bs_npvec.h
-/// @brief vector triats for bs_array with reshape and other numpy_array feautures support
+/// @brief vector traits for bs_array with reshape and other numpy_array feautures support
 /// @author uentity
 /// @version 1.0
 /// @date 07.09.2011

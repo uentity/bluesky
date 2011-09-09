@@ -14,7 +14,7 @@
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
 #include "bs_npvec.h"
-#include "py_array_converter.h"
+#include "bs_array.h"
 #include "py_bs_exports.h"
 #include "py_smart_ptr.h"
 
