@@ -61,7 +61,6 @@ public:
 	typedef typename arrbase::reverse_iterator       reverse_iterator;
 	typedef typename arrbase::const_reverse_iterator const_reverse_iterator;
 
-	using base_t::resize;
 	using base_t::size;
 	using base_t::data;
 	using base_t::begin;
@@ -108,7 +107,7 @@ public:
 
 	size_type init(size_type ndim, const npy_intp* dims, const_pointer data) {
 		size_type sz = init(ndim, dims);
-		copy(data, data + sz, begin());
+		std::copy(data, data + sz, begin());
 		return sz;
 	}
 
@@ -128,12 +127,14 @@ public:
 		return new this_t(ndim(), dims(), data());
 	}
 
+	void resize(size_type new_size) {
+		resize_to_shape(new_size);
+	}
+
 	void resize(size_type new_size, const value_type& v) {
 		size_type old_size = this->size();
-		if(new_size != old_size) {
-			resize(new_size);
+		if(resize_to_shape(new_size))
 			std::fill(data() + std::min(new_size, old_size), data() + new_size, v);
-		}
 	}
 
 	void swap(bs_npvec_shared& rhs) {
@@ -199,8 +200,20 @@ private:
 
 	size_type resize_from_shape() {
 		size_type sz = size_from_shape();
-		resize(sz);
+		if(sz != size())
+			resize(sz);
 		return sz;
+	}
+
+	// if resize happens, discard dims info and make array vector-like
+	bool resize_to_shape(size_type new_size) {
+		if(new_size != size()) {
+			base_t::resize(new_size);
+			dims_.resize(1);
+			dims_[0] = size();
+			return true;
+		}
+		return false;
 	}
 };
 
