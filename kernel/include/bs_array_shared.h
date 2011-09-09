@@ -40,6 +40,7 @@ public:
 	typedef smart_ptr< bs_array_base, true > sp_array_shared;
 	typedef typename arrbase::sp_arrbase     sp_arrbase;
 	typedef bs_array< T, vector_traits >     def_cont_impl;
+	//typedef bs_arrbase_impl< T, std::vector< T > > def_cont_impl;
 	typedef Loki::Type2Type< def_cont_impl > def_cont_tag;
 
 	typedef typename arrbase::value_type value_type;
@@ -57,27 +58,22 @@ public:
 
 	template< class container_t >
 	void init(Loki::Type2Type< container_t >, size_type n = 0, const value_type& v = value_type()) {
-		data_ = NULL; size_ = 0; buf_holder_ = NULL;
-		smart_ptr< container_t > c = BS_KERNEL.create_object(container_t::bs_type());
-		if(!c) return;
-
-		if(n)
-			c->init(n, v);
-		if((size_ = c->size()))
-			data_ = &c->ss(0);
-		buf_holder_ = c;
+		buf_holder_ = NULL;
+		if(smart_ptr< container_t > c = create_buf< container_t >()) {
+			if(n)
+				c->init(n, v);
+			buf_holder_ = c;
+		}
 	}
 
 	template< class input_iterator, class container_t >
 	void init(Loki::Type2Type< container_t >, input_iterator start, input_iterator finish) {
-		size_ = 0; data_ = NULL; buf_holder_ = NULL;
-		smart_ptr< container_t > c = BS_KERNEL.create_object(container_t::bs_type());
-		if(!c) return;
-
-		c->init(start, finish);
-		if((size_ = c->size()))
-			data_ = &c->ss(0);
-		buf_holder_ = c;
+		buf_holder_ = NULL;
+		//smart_ptr< container_t > c = BS_KERNEL.create_object(container_t::bs_type());
+		if(smart_ptr< container_t > c = create_buf< container_t >()) {
+			c->init(start, finish);
+			buf_holder_ = c;
+		}
 	}
 
 	// ctors, array ownes data
@@ -116,19 +112,10 @@ public:
 		return new bs_array_shared(start, finish, Loki::Type2Type< container_t >());
 	}
 
-	// array doesn't own data
-	bs_array_shared(pointer data, size_type n)
-		: buf_holder_(NULL), data_(data), size_(n)
-	{}
-
 	// can be called in any time to switch container
 	virtual void init_inplace(const container& c) {
-		if(&buf_holder_ != &c && (buf_holder_ = c)) {
-			if((size_ = buf_holder_->size()))
-				data_ = &buf_holder_->ss(0);
-			else
-				data_ = NULL;
-		}
+		if(buf_holder_.get() != c.get())
+			buf_holder_ = c;
 	}
 
 	bs_array_shared(const container& c) {
@@ -143,25 +130,29 @@ public:
 
 	// implement bs_arrbase interface
 	size_type size() const {
-		return size_;
+		if(buf_holder_)
+			return buf_holder_->size();
+		else
+			return 0;
 	}
 
 	void resize(size_type n) {
-		if(buf_holder_ && n != size_) {
+		if(buf_holder_ && size() != n)
 			buf_holder_->resize(n);
-			if((size_ = buf_holder_->size()))
-				data_ = &buf_holder_->ss(0);
-			else
-				data_ = NULL;
-		}
 	}
 
 	pointer data() {
-		return data_;
+		if(buf_holder_)
+			return buf_holder_->data();
+		else
+			return NULL;
 	}
 
 	const_pointer data() const {
-		return data_;
+		if(buf_holder_)
+			return buf_holder_->data();
+		else
+			return NULL;
 	}
 
 	// explicitly make array copy
@@ -171,24 +162,20 @@ public:
 
 	// reference to rhs array
 	bs_array_shared& operator=(const bs_array_shared& rhs) {
-		data_ = rhs.data_;
-		size_ = rhs.size_;
 		buf_holder_ = rhs.buf_holder_;
 		return *this;
 	}
 
 	void swap(bs_array_shared& rhs) {
-		std::swap(data_, rhs.data_);
-		std::swap(size_, rhs.size_);
 		std::swap(buf_holder_, rhs.buf_holder_);
 	}
 
 	friend bool operator==(const bs_array_shared& lhs, const bs_array_shared& rhs) {
-		return lhs.data_ == rhs.data_;
+		return lhs.data() == rhs.data();
 	}
 
 	friend bool operator<(const bs_array_shared& lhs, const bs_array_shared& rhs) {
-		return lhs.data_ < rhs.data_;
+		return lhs.data() < rhs.data();
 	}
 
 	void dispose() const {
@@ -204,9 +191,25 @@ protected:
 	// if shared array owns buffer here's real buffer handler
 	// otherwise NULL
 	container buf_holder_;
-	// pointer to raw data
-	pointer data_;
-	size_type size_;
+
+	// helpers to create BS objects via kernel
+	// and others via new
+	template< class container_t >
+	static smart_ptr< container_t > create_buf_(Loki::Int2Type< 0 >) {
+		return new container_t;
+	}
+	template< class container_t >
+	static smart_ptr< container_t > create_buf_(Loki::Int2Type< 1 >) {
+		return BS_KERNEL.create_object(container_t::bs_type());
+	}
+
+	// main container creator
+	template< class container_t >
+	static smart_ptr< container_t > create_buf() {
+		return create_buf_< container_t >(
+			Loki::Int2Type< conversion< container_t, objbase >::exists_uc >()
+		);
+	}
 };
 
 }   // eof blue_sky

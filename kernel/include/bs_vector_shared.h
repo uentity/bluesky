@@ -116,51 +116,51 @@ public:
 	}
 
 	void push_back(const value_type& v) {
-		vecbuf()->push_back(v);
+		pvec_->push_back(v);
 	}
 
 	void pop_back() {
-		vecbuf()->pop_back();
+		pvec_->pop_back();
 	}
 
 	iterator insert(iterator pos, const value_type& v) {
-		return vecbuf()->insert(pos, v);
+		return pvec_->insert(pos, v);
 	}
 	void insert(iterator pos, size_type n, const value_type& v) {
-		vecbuf()->insert(pos, n, v);
+		pvec_->insert(pos, n, v);
 	}
 
 	//template< class input_iterator >
 	//void insert(iterator pos, input_iterator start, input_iterator finish) {
-	//	vecbuf()->insert(pos, start, finish);
+	//	pvec_->insert(pos, start, finish);
 	//}
 
 	iterator erase(iterator pos) {
-		return vecbuf()->erase(pos);
+		return pvec_->erase(pos);
 	}
 	iterator erase(iterator start, iterator finish) {
-		return vecbuf()->erase(start, finish);
+		return pvec_->erase(start, finish);
 	}
 
 	// overloads from bs_vecbase
 	bool insert(const key_type& key, const value_type& value) {
-		return vecbuf()->insert(key, value);
+		return pvec_->insert(key, value);
 	}
 
 	bool insert(const value_type& value) {
-		return vecbuf()->insert(value);
+		return pvec_->insert(value);
 	}
 
 	void erase(const key_type& key)	{
-		vecbuf()->erase(key);
+		pvec_->erase(key);
 	}
 
 	void clear() {
-		vecbuf()->clear();
+		pvec_->clear();
 	}
 
 	void reserve(size_type sz) {
-		vecbuf()->reserve(sz);
+		pvec_->reserve(sz);
 	}
 
 	// explicitly make array copy
@@ -170,9 +170,6 @@ public:
 
 private:
 	using base_t::buf_holder_;
-	using base_t::size_;
-	using base_t::data_;
-
 	// we can use dynamic_cast or store pointer to bs_vecbase iface
 	vecbase_t* pvec_;
 
@@ -183,33 +180,6 @@ private:
 			);
 		else
 			return NULL;
-	}
-
-	// RAII for updating data_ and size_ after each intrusive operation
-	struct vb_handle {
-		explicit vb_handle(bs_vector_shared& v) : self_(v) {}
-
-		~vb_handle() {
-			self_.upd_data();
-		}
-
-		inline vecbase_t* operator->() {
-			return self_.pvec_;
-		}
-
-		bs_vector_shared& self_;
-	};
-	// static cast to bs_vecbase
-	inline vb_handle vecbuf() {
-		return vb_handle(*this);
-	}
-
-	inline void upd_data() {
-		size_ = buf_holder_->size();
-		if(size_)
-			data_ = &buf_holder_->ss(0);
-		else
-			data_ = NULL;
 	}
 };
 
