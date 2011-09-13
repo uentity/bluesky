@@ -27,11 +27,11 @@ namespace blue_sky {
 template< class T >
 class BS_API bs_vecbase {
 public:
-	typedef bs_arrbase< T > arrbase;
-	typedef typename arrbase::key_type key_type;
+	typedef bs_arrbase< T >              arrbase;
+	typedef typename arrbase::key_type   key_type;
 	typedef typename arrbase::value_type value_type;
-	typedef typename arrbase::size_type size_type;
-	typedef typename arrbase::iterator iterator;
+	typedef typename arrbase::size_type  size_type;
+	typedef typename arrbase::iterator   iterator;
 
 	virtual bool insert(const key_type& key, const value_type& value) = 0;
 	virtual bool insert(const value_type& value) = 0;
@@ -75,8 +75,8 @@ public:
 
 	// inherited from bs_arrbase class
 	typedef typename arrbase::value_type value_type;
-	typedef typename arrbase::key_type key_type;
-	typedef typename arrbase::size_type size_type;
+	typedef typename arrbase::key_type   key_type;
+	typedef typename arrbase::size_type  size_type;
 
 	typedef typename arrbase::pointer                pointer;
 	typedef typename arrbase::reference              reference;
@@ -86,6 +86,8 @@ public:
 	typedef typename arrbase::const_iterator         const_iterator;
 	typedef typename arrbase::reverse_iterator       reverse_iterator;
 	typedef typename arrbase::const_reverse_iterator const_reverse_iterator;
+
+	using container::empty;
 
 	// default ctor
 	bs_vecbase_impl() {}
@@ -144,7 +146,9 @@ public:
 	}
 
 	sp_arrbase clone() const {
-		return new bs_vecbase_impl(*this);
+		sp_arrbase res = new bs_vecbase_impl(this->size());
+		std::copy(this->begin(), this->end(), res->begin());
+		return res;
 	}
 
 	void swap(bs_vecbase_impl& rhs) {

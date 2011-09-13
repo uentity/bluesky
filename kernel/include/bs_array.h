@@ -58,8 +58,8 @@ public:
 
 	// inherited from bs_arrbase class
 	typedef typename arrbase_t::value_type value_type;
-	typedef typename arrbase_t::size_type size_type;
-	typedef typename arrbase_t::key_type key_type;
+	typedef typename arrbase_t::size_type  size_type;
+	typedef typename arrbase_t::key_type   key_type;
 
 	typedef typename arrbase_t::pointer                pointer;
 	typedef typename arrbase_t::reference              reference;
@@ -73,8 +73,9 @@ public:
 	using arrbase_t::assign;
 
 	// copy construct from container
-	bs_array(const container& c)
-		: base_t(c)
+	template< class R >
+	bs_array(const R& rhs)
+		: base_t(rhs)
 	{}
 
 	// construct from given size & fill value
@@ -87,8 +88,9 @@ public:
 	}
 
 	// ctor via init
-	void init(const container& c) {
-		this_t(c).swap(*this);
+	template< class R >
+	void init(const R& rhs) {
+		this_t(rhs).swap(*this);
 	}
 
 	void init(size_type sz, const value_type& v = value_type()) {

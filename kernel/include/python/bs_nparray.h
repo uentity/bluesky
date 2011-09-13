@@ -30,14 +30,24 @@ public:
 	typedef bs_arrbase_impl< T, pyublas::numpy_array< T > > base_t;
 
 	// traits for bs_array
-	typedef numpy_array_t container;
+	typedef numpy_array_t   container;
 	typedef bs_arrbase< T > arrbase;
-	typedef this_t bs_array_base;
+	typedef this_t          bs_array_base;
 
 	typedef typename arrbase::sp_arrbase sp_arrbase;
-	typedef typename arrbase::size_type size_type;
+
 	typedef typename arrbase::value_type value_type;
-	typedef typename arrbase::pointer pointer;
+	typedef typename arrbase::key_type   key_type;
+	typedef typename arrbase::size_type  size_type;
+
+	typedef typename arrbase::pointer                pointer;
+	typedef typename arrbase::reference              reference;
+	typedef typename arrbase::const_pointer          const_pointer;
+	typedef typename arrbase::const_reference        const_reference;
+	typedef typename arrbase::iterator               iterator;
+	typedef typename arrbase::const_iterator         const_iterator;
+	typedef typename arrbase::reverse_iterator       reverse_iterator;
+	typedef typename arrbase::const_reverse_iterator const_reverse_iterator;
 
 	// ctors needed by bs_array
 	bs_nparray() {}
@@ -73,16 +83,13 @@ public:
 		this_t(base_t(numpy_array_t(1, sz, data))).swap(*this);
 	}
 
+	// implement bs_arrbase interface
+	pointer data() {
+		return numpy_array_t::data();
+	}
+
 	sp_arrbase clone() const {
 		return new bs_nparray(this->copy());
-	}
-
-	void swap(this_t& rhs) {
-		base_t::swap(rhs);
-	}
-
-	PyObject* to_python() const {
-		return base_t::to_python().release();
 	}
 
 	// numpy::array implementation just create new array
@@ -119,6 +126,13 @@ public:
 		std::fill(new_data + std::min(old_size, new_size), new_data + new_size, init);
 	}
 
+	void swap(this_t& rhs) {
+		base_t::swap(rhs);
+	}
+
+	PyObject* to_python() const {
+		return base_t::to_python().release();
+	}
 };
 
 } 	// eof blue_sky namespace

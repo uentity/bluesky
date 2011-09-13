@@ -1,0 +1,295 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="release_with_debug|Win32">
+      <Configuration>release_with_debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7C235C2A-609A-49B4-A89B-AC23530F0F89}</ProjectGuid>
+    <RootNamespace>blue_sky</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='release_with_debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='release_with_debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\exe\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">build\$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\exe\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">build\$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='release_with_debug|Win32'">..\exe\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='release_with_debug|Win32'">build\$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='release_with_debug|Win32'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='release_with_debug|Win32'">true</GenerateManifest>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectName)</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectName)_d</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(ProjectDir)/include;$(ProjectDir)/include/python;$(LOKI_PATH)/include;$(BOOST_PATH);$(PYTHON_PATH)/include;$(NUMPY_PATH)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;BS_EXPORTING;BS_EXPORTING_PLUGIN;OUTPUT_DATETIME_MESSAGE;BSPY_EXPORTING;BOOST_DEBUG_PYTHON_;BOOST_ALL_NO_LIB_;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;BS_CREATE_UNMANAGED_OBJECTS;NOMINMAX;%(PreprocessorDefinitions);BOOST_ALL_DYN_LINK;_SECURE_SCL=0;BOOST_ALL_DYN_LINK</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <SmallerTypeCheck>true</SmallerTypeCheck>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ProgramDataBaseFileName>$(IntDir)vc70.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <ShowIncludes>false</ShowIncludes>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>loki_D.lib;psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalLibraryDirectories>$(BOOST_PATH)\lib;$(LOKI_PATH)/lib;$(PYTHON_PATH)/libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(ProjectName).pdb</ProgramDatabaseFile>
+      <SubSystem>NotSet</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(STLPORT_PATH_)/stlport;$(ProjectDir)/include;$(ProjectDir)/include/python;$(LOKI_PATH)/include;$(BOOST_PATH);$(PYTHON_PATH)/include;$(NUMPY_PATH)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;NOMINMAX;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions);_SECURE_SCL=0</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <FloatingPointExceptions>true</FloatingPointExceptions>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ProgramDataBaseFileName>$(IntDir)vc70.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>loki.lib;psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalLibraryDirectories>$(STLPORT_PATH_)/lib;$(BOOST_PATH)/lib;$(LOKI_PATH)/lib;$(PYTHON_PATH)/libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(ProjectName).pdb</ProgramDatabaseFile>
+      <SubSystem>NotSet</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release_with_debug|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)/src;$(LOKI_PATH)/include;$(BOOST_PATH);$(LIBCONFIG_PATH);$(PYTHON_PATH)/include;$(NUMPY_PATH)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;%(PreprocessorDefinitions);_SECURE_SCL=0</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <FloatingPointExceptions>true</FloatingPointExceptions>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ProgramDataBaseFileName>$(IntDir)vc70.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>loki.lib;psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalLibraryDirectories>$(BOOST_PATH)/lib;$(LOKI_PATH)/lib;$(LIBCONFIG_PATH)/release;$(PYTHON_PATH)/libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(ProjectName).pdb</ProgramDatabaseFile>
+      <SubSystem>NotSet</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\bs_abstract_storage.cpp" />
+    <ClCompile Include="src\bs_command.cpp" />
+    <ClCompile Include="src\bs_common.cpp" />
+    <ClCompile Include="src\bs_exception.cpp" />
+    <ClCompile Include="src\bs_kernel.cpp" />
+    <ClCompile Include="src\bs_kernel_ston.cpp" />
+    <ClCompile Include="src\bs_messaging.cpp" />
+    <ClCompile Include="src\bs_misc.cpp" />
+    <ClCompile Include="src\bs_object_base.cpp" />
+    <ClCompile Include="src\bs_prop_base.cpp" />
+    <ClCompile Include="src\bs_shell.cpp" />
+    <ClCompile Include="src\bs_type_info.cpp" />
+    <ClCompile Include="src\python\bs_npvec.cpp" />
+    <ClCompile Include="src\python\bs_npvec_shared.cpp" />
+    <ClCompile Include="src\smart_ptr.cpp" />
+    <ClCompile Include="src\thread_pool.cpp" />
+    <ClCompile Include="src\python\bs_import_common.cpp" />
+    <ClCompile Include="src\python\bs_nparray.cpp" />
+    <ClCompile Include="src\python\bs_python_import.cpp" />
+    <ClCompile Include="src\python\py_anyobject.cpp" />
+    <ClCompile Include="src\python\py_bs_abstract_storage.cpp" />
+    <ClCompile Include="src\python\py_bs_command.cpp" />
+    <ClCompile Include="src\python\py_bs_kernel.cpp" />
+    <ClCompile Include="src\python\py_bs_messaging.cpp" />
+    <ClCompile Include="src\python\py_bs_object_base.cpp" />
+    <ClCompile Include="src\python\py_bs_shell.cpp" />
+    <ClCompile Include="src\python\py_bs_typed.cpp" />
+    <ClCompile Include="src\python\py_common.cpp" />
+    <ClCompile Include="src\python\py_kernel.cpp" />
+    <ClCompile Include="src\python\py_link.cpp" />
+    <ClCompile Include="src\python\py_messaging.cpp" />
+    <ClCompile Include="src\python\py_object_base.cpp" />
+    <ClCompile Include="src\python\py_tree.cpp" />
+    <ClCompile Include="src\memory_manager.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">BS_BACKTRACE_LEN=48;BS_BOS_CORE_COLLECT_BACKTRACE_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">BS_BACKTRACE_LEN=48;BS_BOS_CORE_COLLECT_BACKTRACE_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="src\bs_assert.cpp" />
+    <ClCompile Include="src\python\py_bs_assert.cpp" />
+    <ClCompile Include="src\bs_conf_reader.cpp" />
+    <ClCompile Include="src\bs_config_parser.cpp" />
+    <ClCompile Include="src\bs_kernel_tools.cpp" />
+    <ClCompile Include="src\bs_link.cpp" />
+    <ClCompile Include="src\bs_tree.cpp" />
+    <ClCompile Include="src\python\py_bs_link.cpp" />
+    <ClCompile Include="src\python\py_bs_tree.cpp" />
+    <ClCompile Include="src\bs_log_scribers.cpp" />
+    <ClCompile Include="src\bs_report.cpp" />
+    <ClCompile Include="src\python\py_bs_log.cpp" />
+    <ClCompile Include="src\bs_array.cpp" />
+    <ClCompile Include="src\shared_array_allocator.cpp" />
+    <ClCompile Include="src\shared_vector.cpp" />
+    <ClCompile Include="src\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\bs_abstract_storage.h" />
+    <ClInclude Include="include\bs_command.h" />
+    <ClInclude Include="include\bs_common.h" />
+    <ClInclude Include="include\bs_conversion.h" />
+    <ClInclude Include="include\bs_exception.h" />
+    <ClInclude Include="include\bs_fwd.h" />
+    <ClInclude Include="include\bs_imessaging.h" />
+    <ClInclude Include="include\bs_kernel.h" />
+    <ClInclude Include="include\bs_macro_private.h" />
+    <ClInclude Include="include\bs_messaging.h" />
+    <ClInclude Include="include\bs_misc.h" />
+    <ClInclude Include="include\bs_module_name_win.h" />
+    <ClInclude Include="include\bs_named_type.h" />
+    <ClInclude Include="include\bs_object_base.h" />
+    <ClInclude Include="include\bs_object_base_macro.h" />
+    <ClInclude Include="include\bs_obsolete.h" />
+    <ClInclude Include="include\bs_plugin_common.h" />
+    <ClInclude Include="include\bs_prop_base.h" />
+    <ClInclude Include="include\bs_refcounter.h" />
+    <ClInclude Include="include\bs_shell.h" />
+    <ClInclude Include="include\bs_type_info.h" />
+    <ClInclude Include="include\bs_type_macro.h" />
+    <ClInclude Include="include\force_plugin_import.h" />
+    <ClInclude Include="include\heap_manage_win.h" />
+    <ClInclude Include="include\python\bs_npvec.h" />
+    <ClInclude Include="include\python\py_object_handler.h" />
+    <ClInclude Include="include\setup_common_api.h" />
+    <ClInclude Include="include\setup_plugin_api.h" />
+    <ClInclude Include="include\smart_ptr.h" />
+    <ClInclude Include="include\stop_plugin_import.h" />
+    <ClInclude Include="include\thread_pool.h" />
+    <ClInclude Include="include\throw_exception.h" />
+    <ClInclude Include="include\type_descriptor.h" />
+    <ClInclude Include="src\python\bs_import_common.h" />
+    <ClInclude Include="include\python\bs_nparray.h" />
+    <ClInclude Include="include\python\pyublas\numpy.hpp" />
+    <ClInclude Include="src\python\print_python_exception.h" />
+    <ClInclude Include="include\python\py_bs_abstract_storage.h" />
+    <ClInclude Include="include\python\py_bs_command.h" />
+    <ClInclude Include="include\python\py_bs_converter.h" />
+    <ClInclude Include="src\python\py_bs_exports.h" />
+    <ClInclude Include="include\python\py_bs_iterator.h" />
+    <ClInclude Include="include\python\py_bs_kernel.h" />
+    <ClInclude Include="include\python\py_bs_messaging.h" />
+    <ClInclude Include="include\python\py_bs_object_base.h" />
+    <ClInclude Include="include\python\py_bs_shell.h" />
+    <ClInclude Include="include\python\py_list_converter.h" />
+    <ClInclude Include="include\python\py_pair_converter.h" />
+    <ClInclude Include="include\python\py_smart_ptr.h" />
+    <ClInclude Include="include\python\pyublas\python_helpers.hpp" />
+    <ClInclude Include="include\allocator_interface.h" />
+    <ClInclude Include="src\backtrace_tools_unix.h" />
+    <ClInclude Include="src\backtrace_tools_win.h" />
+    <ClInclude Include="src\hoard_allocator.h" />
+    <ClInclude Include="include\memory_manager.h" />
+    <ClInclude Include="src\std_allocator.h" />
+    <ClInclude Include="src\tlsf_allocator.h" />
+    <ClInclude Include="include\bs_assert.h" />
+    <ClInclude Include="include\python\py_bs_assert.h" />
+    <ClInclude Include="src\bs_conf_reader.h" />
+    <ClInclude Include="include\bs_config_parser.h" />
+    <ClInclude Include="include\bs_kernel_tools.h" />
+    <ClInclude Include="include\pp_param_list.h" />
+    <ClInclude Include="include\bs_link.h" />
+    <ClInclude Include="include\bs_tree.h" />
+    <ClInclude Include="include\python\py_bs_link.h" />
+    <ClInclude Include="include\python\py_bs_tree.h" />
+    <ClInclude Include="include\bs_log_scribers.h" />
+    <ClInclude Include="include\bs_log_stream.h" />
+    <ClInclude Include="include\bs_report.h" />
+    <ClInclude Include="include\python\py_bs_log.h" />
+    <ClInclude Include="include\aligned_allocator.h" />
+    <ClInclude Include="include\array_ext.h" />
+    <ClInclude Include="include\bs_array.h" />
+    <ClInclude Include="include\bs_array_shared.h" />
+    <ClInclude Include="include\bs_arrbase.h" />
+    <ClInclude Include="include\bs_vecbase.h" />
+    <ClInclude Include="include\bs_vector_shared.h" />
+    <ClInclude Include="include\shared_array.h" />
+    <ClInclude Include="include\shared_array_allocator.h" />
+    <ClInclude Include="include\shared_array_detail.h" />
+    <ClInclude Include="include\shared_vector.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
