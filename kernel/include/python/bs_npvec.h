@@ -146,8 +146,8 @@ protected:
 	size_type resize_from_shape() {
 		size_type sz = size_from_shape();
 		if(sz != size())
-			resize(sz);
-		return sz;
+			base_t::resize(sz);
+		return size();
 	}
 
 	// if resize happens, discard dims info and make array vector-like
