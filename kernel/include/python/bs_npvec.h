@@ -84,7 +84,7 @@ public:
 
 	template< typename in_t >
 	size_type init(in_t const& in,
-		typename boost::enable_if< boost::is_class< in_t > >::type *dummy = 0)
+		typename boost::enable_if< boost::is_class< in_t > >::type* = 0)
 	{
 		npy_intp dims[] = { boost::size(in) };
 		size_type sz = init(1, dims);
@@ -146,8 +146,8 @@ protected:
 	size_type resize_from_shape() {
 		size_type sz = size_from_shape();
 		if(sz != size())
-			resize(sz);
-		return sz;
+			base_t::resize(sz);
+		return size();
 	}
 
 	// if resize happens, discard dims info and make array vector-like

@@ -202,7 +202,7 @@ namespace pyublas
 
       template<typename in_t>
       numpy_array(in_t const& in,
-          typename boost::enable_if<boost::is_class<in_t> >::type *dummy=0)
+          typename boost::enable_if<boost::is_class<in_t> >::type* = 0)
       {
         if (boost::size(in))
         {
