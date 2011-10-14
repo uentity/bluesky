@@ -206,7 +206,7 @@ namespace blue_sky {
 			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),cfg_.env_mp["BLUE_SKY_PREFIX"][0] + string("/share/blue-sky/plugins"));
 #else // WINDOWS
 			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),string(getenv("APPDATA")) + string("\\blue-sky\\plugins"));
-			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),cfg_.env_mp["BLUE_SKY_PREFIX"][0] + string("\\plugins"));
+			cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].insert(cfg_.env_mp["BLUE_SKY_PLUGINS_PATH"].begin(),string(getenv("ALLUSERSPROFILE")) + string("\\Application Data\\blue-sky\\plugins"));
 #endif // UNIX
 			
 		}
