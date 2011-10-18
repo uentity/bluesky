@@ -22,8 +22,9 @@ namespace blue_sky { namespace python {
 namespace bp = boost::python;
 
 // strat_id: 0 - allcoate vector first, then assign elements
-//               fast, but requires default ctor for elements
-//           1 - grow vector using push_back, only copy ctor needed
+//               fast, but requires appropriate list_t ctor (use fo vectors)
+//           1 - grow list_t using push_back, only copy ctor needed (vector and list)
+//           2 - grow list_t using insert (use for sets)
 template< class list_t, int strat_id = 0 >
 struct list_traits {
 	typedef list_t type;
@@ -55,6 +56,19 @@ struct list_traits {
 			size_t i = 0;
 			for(typename type::iterator pv = res->begin(), end = res->end(); pv != end; ++pv, ++i)
 				*pv = bp::extract< value_t >(obj[i]);
+		}
+	};
+
+	template< class unused >
+	struct create_strat< 2, unused > {
+		static void create_type(void* mem_chunk, boost::python::object& obj) {
+			// get length
+			size_t sz = bp::len(obj);
+			// create c++ object
+			list_t* res = new(mem_chunk) list_t;
+			// fill it from Python list
+			for(size_t i = 0; i < sz; ++i)
+				res->insert(bp::extract< value_t >(obj[i]));
 		}
 	};
 

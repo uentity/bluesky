@@ -59,6 +59,8 @@ struct array_converters {
 		}
 
 		static PyObject* to_python(type const& v) {
+			if(!v)
+				return cont_t().to_python();
 			//return v->handle().get();
 			return v->to_python();
 		}
@@ -83,6 +85,8 @@ struct array_converters {
 		}
 
 		static PyObject* to_python(type const& v) {
+			if(!v)
+				return cont_t().to_python();
 			// create empty array and init it with copied data from v
 			cont_t proxy(v->size());
 			std::copy(v->begin(), v->end(), proxy.begin());
@@ -115,6 +119,8 @@ struct array_converters {
 		}
 
 		static PyObject* to_python(type const& v) {
+			if(!v)
+				return cont_t().to_python();
 			// create empty array and init it with copied data from v
 			cont_t proxy(backend_t(v->ndim(), v->dims()));
 			std::copy(v->begin(), v->end(), proxy.begin());
@@ -145,6 +151,8 @@ struct array_converters {
 		}
 
 		static PyObject* to_python(type const& v) {
+			if(!v)
+				return cont_t().to_python();
 			// convert opaque ptr to data into Python object
 			// then explicitly increment refcounter of sp_data
 			// and pass ptr to refcounter as *desc argument of
@@ -190,6 +198,9 @@ struct array_converters {
 		}
 
 		static PyObject* to_python(type const& v) {
+			// sanity check
+			if(!v)
+				return cont_t().to_python();
 			// convert opaque ptr to data into Python object
 			// then explicitly increment refcounter of sp_data
 			// and pass ptr to refcounter as *desc argument of
