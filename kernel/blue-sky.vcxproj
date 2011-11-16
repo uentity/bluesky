@@ -219,14 +219,10 @@
     <ClInclude Include="include\bs_fwd.h" />
     <ClInclude Include="include\bs_imessaging.h" />
     <ClInclude Include="include\bs_kernel.h" />
-    <ClInclude Include="include\bs_macro_private.h" />
     <ClInclude Include="include\bs_messaging.h" />
     <ClInclude Include="include\bs_misc.h" />
-    <ClInclude Include="include\bs_module_name_win.h" />
-    <ClInclude Include="include\bs_named_type.h" />
     <ClInclude Include="include\bs_object_base.h" />
     <ClInclude Include="include\bs_object_base_macro.h" />
-    <ClInclude Include="include\bs_obsolete.h" />
     <ClInclude Include="include\bs_plugin_common.h" />
     <ClInclude Include="include\bs_prop_base.h" />
     <ClInclude Include="include\bs_refcounter.h" />
@@ -234,7 +230,6 @@
     <ClInclude Include="include\bs_type_info.h" />
     <ClInclude Include="include\bs_type_macro.h" />
     <ClInclude Include="include\force_plugin_import.h" />
-    <ClInclude Include="include\heap_manage_win.h" />
     <ClInclude Include="include\python\bs_npvec.h" />
     <ClInclude Include="include\python\py_object_handler.h" />
     <ClInclude Include="include\setup_common_api.h" />
@@ -290,7 +285,6 @@
     <ClInclude Include="include\bs_vecbase.h" />
     <ClInclude Include="include\bs_vector_shared.h" />
     <ClInclude Include="include\shared_array.h" />
-    <ClInclude Include="include\shared_array_allocator.h" />
     <ClInclude Include="include\shared_array_detail.h" />
     <ClInclude Include="include\shared_vector.h" />
   </ItemGroup>
