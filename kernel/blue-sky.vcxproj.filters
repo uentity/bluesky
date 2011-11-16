@@ -214,28 +214,16 @@
     <ClInclude Include="include\bs_kernel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\bs_macro_private.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\bs_messaging.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\bs_misc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\bs_module_name_win.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\bs_named_type.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\bs_object_base.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\bs_object_base_macro.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\bs_obsolete.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\bs_plugin_common.h">
@@ -257,9 +245,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\force_plugin_import.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\heap_manage_win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\python\py_object_handler.h">
@@ -422,9 +407,6 @@
       <Filter>arrays</Filter>
     </ClInclude>
     <ClInclude Include="include\shared_array.h">
-      <Filter>arrays</Filter>
-    </ClInclude>
-    <ClInclude Include="include\shared_array_allocator.h">
       <Filter>arrays</Filter>
     </ClInclude>
     <ClInclude Include="include\shared_array_detail.h">
