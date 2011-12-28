@@ -16,6 +16,7 @@
 #include "bs_kernel.h"
 
 #include <iostream>
+#include <fstream>
 #include <time.h>
 #include <stdio.h>
 
@@ -31,6 +32,7 @@
 #include "bs_shell.h"
 #include "bs_array.h"
 #include "bs_kernel_tools.h"
+#include "bs_array_serialize.h"
 
 #ifdef BSPY_EXPORTING_PLUGIN
 #include "py_bs_kernel.h"
@@ -42,6 +44,9 @@
 
 #include "boost/type_traits.hpp"
 #include "boost/thread.hpp"
+
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 //#define USE_TBB_LIB
 
@@ -825,6 +830,20 @@ struct test_array_unit {
 	sp_array_t a_;
 };
 
+template< class array_t >
+void save_array(smart_ptr< array_t > v) {
+	std::ofstream ofs("array_data.txt");
+	boost::archive::text_oarchive oa(ofs);
+	oa << v;
+}
+
+template< class array_t >
+void load_array(smart_ptr< array_t > v) {
+	std::ifstream ifs("array_data.txt");
+	boost::archive::text_iarchive oa(ifs);
+	oa >> v;
+}
+
 void test_array() {
 	cout << "-----------------------------bs_array test------------------------------" << endl;
 	typedef bs_array< double, bs_array_shared > real_array_t;
@@ -848,12 +867,17 @@ void test_array() {
 	test_array_unit< str_array_t > str_u = sp_astr;
 	str_u.test_vecbase("hello");
 
+	// test save/load
+	save_array(sp_areal);
+	load_array(sp_areal);
+
 	// print array contents
 	cout << "Real array contents:" << endl;
 	for(real_array_t::const_iterator p = sp_areal->begin(), end = sp_areal->end(); p != end; ++p)
 		cout << *p << ' ';
 	cout << endl << "------------------------------------------------------------------------" << endl;
 }
+
 
 /*!
  * \brief main function
@@ -911,7 +935,7 @@ try {
 		smart_ptr< bs_cube > c = k.create_object(bs_cube::bs_type());
 		c.lock()->test();
 
-		test_objects();
+		//test_objects();
 
 		//test_plugins();
 
