@@ -11,6 +11,7 @@ def list_suffix(in_list, what) :
 kernel_cpp_list = Split("""
 	bs_abstract_storage.cpp
 	bs_array.cpp
+	bs_array_serialize.cpp
 	bs_assert.cpp
 	bs_command.cpp
 	bs_common.cpp
@@ -127,7 +128,7 @@ if base_env['platform'].startswith('lin') :
     base_env.Append(LIBS = ['dl']);
 
 # define boost lib names to include
-boost_libnames = ['filesystem', 'regex', 'thread', 'signals'];
+boost_libnames = ['filesystem', 'regex', 'thread', 'signals', 'serialization'];
 
 # are we building with python support?
 if base_env['py'] == '1' :
