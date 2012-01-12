@@ -34,8 +34,12 @@
 #if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 39
 #include "boost/detail/shared_count.hpp"
 #else
-#include "boost/smart_ptr/detail/shared_count.hpp"
+//#include "boost/smart_ptr/detail/shared_count.hpp"
+// use shared_count compatible with boost serialization (public sp_counted_base*)
+#include <boost/serialization/detail/shared_count_132.hpp>
 #endif
+// provide access to private members for serialization machinery
+#include <boost/serialization/access.hpp>
 
 #include "loki/TypeManip.h"
 //#include <iostream>
@@ -965,6 +969,7 @@ public:
 	}
 
 private:
+	friend class boost::serialization::access;
 #if defined(_MSC_VER)
 	friend class mt_ptr;
 #else
@@ -996,7 +1001,7 @@ public:
 	typedef typename base_t::ref_t ref_t;
 
 	//typedef bs_refcounter_ptr refcounter_ptr_t;
-	typedef boost::detail::shared_count refcounter_ptr_t;
+	typedef boost_132::detail::shared_count refcounter_ptr_t;
 
 	/*!
 	\brief Constructor from simple pointer
@@ -1122,15 +1127,15 @@ public:
 	}
 
 private:
+	friend class boost::serialization::access;
 #if defined(_MSC_VER)
 	friend class st_smart_ptr;
 #else
 	template< class R > friend class st_smart_ptr;
 #endif
 
+	// reference counter
 	refcounter_ptr_t count_;
-	//! boost shared_pointer's advanced reference counter
-	//boost::detail::shared_count count_;
 
 	//void dispose() {
 	//	count_->del_ref();
@@ -1407,6 +1412,7 @@ public:
 	bs_mutex* mutex() const { return mut_; }
 
 private:
+	friend class boost::serialization::access;
 #if defined(_MSC_VER)
 	friend class smart_ptr;
 #else
