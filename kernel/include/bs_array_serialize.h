@@ -26,26 +26,25 @@ namespace boost { namespace serialization {
 using namespace blue_sky;
 
 template< class Archive, class T, template< class > class cont_traits >
-void save(Archive& ar, const smart_ptr< bs_array< T, cont_traits > >& data, const unsigned int version) {
+void save(Archive& ar, const bs_array< T, cont_traits >& data, const unsigned int version) {
+	typedef typename bs_array< T, cont_traits >::const_iterator citerator;
 	// save array size
-	ar << (const ulong&)data->size();
+	ar << (const ulong&)data.size();
 	// save data
-	for(ulong i = 0; i < data->size(); ++i)
-		ar << data->ss(i);
+	for(citerator pd = data.begin(), end = data.end(); pd != end; ++pd)
+		ar << *pd;
 }
 
 template< class Archive, class T, template< class > class cont_traits >
-void load(Archive& ar, smart_ptr< bs_array< T, cont_traits > >& data, const unsigned int version) {
-	// create array
-	if(!data)
-		data = BS_KERNEL.create_object(bs_array< T, cont_traits >::bs_type());
+void load(Archive& ar, bs_array< T, cont_traits >& data, const unsigned int version) {
+	typedef typename bs_array< T, cont_traits >::iterator iterator;
 	// restore size
 	ulong sz;
 	ar >> sz;
-	data->resize(sz);
+	data.resize(sz);
 	// restore data
-	for(ulong i = 0; i < data->size(); ++i)
-		ar >> data->ss(i);
+	for(iterator pd = data.begin(), end = data.end(); pd != end; ++pd)
+		ar >> *pd;
 }
 
 // override serialize
@@ -56,16 +55,6 @@ inline void serialize(
 {
 	split_free(ar, data, version);
 }
-
-// define guids for arrays
-//template< class T, template< class > class cont_traits >
-//struct guid_defined< smart_ptr< bs_array< T, cont_traits > > > : boost::mpl::true_ {};
-
-//template< class T, template< class > class cont_traits >
-//inline const char * guid< smart_ptr< bs_array< T, cont_traits > > >() {
-//	return bs_array< T, cont_traits >::bs_type().stype_;
-//}
-
 
 }} /* boost::serialization */
 
