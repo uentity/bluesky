@@ -35,6 +35,8 @@
 #include "boost/detail/shared_count.hpp"
 #else
 //#include "boost/smart_ptr/detail/shared_count.hpp"
+// shared_count_132.hpp cause compile error without this header first
+#include <boost/serialization/assume_abstract.hpp>
 // use shared_count compatible with boost serialization (public sp_counted_base*)
 #include <boost/serialization/detail/shared_count_132.hpp>
 #endif
