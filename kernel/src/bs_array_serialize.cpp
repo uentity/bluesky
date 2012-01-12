@@ -55,13 +55,33 @@ factory< blue_sky::bs_array< T, blue_sky::cont_traits >, N >(std::va_list) { \
 }                                                                            \
 }}
 
+#define BS_ARRAY_FACTORY_PTR(T, cont_traits)                                    \
+namespace boost {                                                               \
+namespace archive { namespace detail {                                          \
+template< >                                                                     \
+struct heap_allocator< blue_sky::bs_array< T, blue_sky::cont_traits > > {       \
+    typedef blue_sky::bs_array< T, blue_sky::cont_traits > type;                \
+    typedef blue_sky::smart_ptr< type, true > sp_type;                          \
+    static type* invoke() {                                                     \
+        sp_type t = BS_KERNEL.create_object(type::bs_type(), false);            \
+        return t.lock();                                                        \
+    }                                                                           \
+};                                                                              \
+}} namespace serialization {                                                    \
+template< >                                                                     \
+void access::construct(blue_sky::bs_array< T, blue_sky::cont_traits >*) {}      \
+template< >                                                                     \
+void access::destroy(const blue_sky::bs_array< T, blue_sky::cont_traits >* t) { \
+    typedef blue_sky::bs_array< T, blue_sky::cont_traits > type;                \
+    typedef blue_sky::smart_ptr< type > sp_type;                                \
+    BS_KERNEL.free_instance(sp_type(t));                                        \
+}                                                                               \
+}}
+
 #define BS_ARRAY_GUID(T, cont_traits)     \
 BS_ARRAY_GUID_VALUE(T, cont_traits)       \
 BS_ARRAY_EXPORT_IMPLEMENT(T, cont_traits) \
-BS_ARRAY_FACTORY_N(T, cont_traits, 0)     \
-BS_ARRAY_FACTORY_N(T, cont_traits, 1)     \
-BS_ARRAY_FACTORY_N(T, cont_traits, 2)     \
-BS_ARRAY_FACTORY_N(T, cont_traits, 3)
+BS_ARRAY_FACTORY_PTR(T, cont_traits)
 
 BS_ARRAY_GUID(int, vector_traits)
 //BS_ARRAY_GUID(unsigned int, vector_traits)

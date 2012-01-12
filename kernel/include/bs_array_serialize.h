@@ -50,7 +50,7 @@ void load(Archive& ar, bs_array< T, cont_traits >& data, const unsigned int vers
 // override serialize
 template< class Archive, class T, template< class > class cont_traits >
 inline void serialize(
-	Archive & ar, smart_ptr< bs_array< T, cont_traits > >& data, const unsigned int version
+	Archive & ar, bs_array< T, cont_traits >& data, const unsigned int version
 )
 {
 	split_free(ar, data, version);
