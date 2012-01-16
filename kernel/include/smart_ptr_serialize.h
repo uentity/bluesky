@@ -26,6 +26,7 @@
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/tracking.hpp>
 #include <boost/serialization/base_object.hpp>
+#include <boost/serialization/tracking.hpp>
 // include shared_ptr serialization
 //#include <boost/serialization/shared_ptr.hpp>
 
@@ -36,12 +37,14 @@ template< class T, bool F >
 struct tracking_level< ::blue_sky::smart_ptr< T, F > > {
 	typedef mpl::integral_c_tag tag;
 	typedef mpl::int_< ::boost::serialization::track_never> type;
+	BOOST_STATIC_CONSTANT(int, value = type::value);
 };
 
 template< class T >
 struct tracking_level< ::blue_sky::mt_ptr< T > > {
 	typedef mpl::integral_c_tag tag;
 	typedef mpl::int_< ::boost::serialization::track_never> type;
+	BOOST_STATIC_CONSTANT(int, value = type::value);
 };
 
 /*-----------------------------------------------------------------

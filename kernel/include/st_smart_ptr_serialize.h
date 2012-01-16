@@ -27,106 +27,153 @@
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/tracking.hpp>
 #include <boost/serialization/void_cast.hpp>
+#include <boost/serialization/tracking.hpp>
 
-namespace boost { namespace serialize {
+namespace boost { namespace serialization {
 
 // turn of tracking of st_smart_ptr instancies
 template< class T >
 struct tracking_level< ::blue_sky::st_smart_ptr< T > > {
 	typedef mpl::integral_c_tag tag;
 	typedef mpl::int_< ::boost::serialization::track_never> type;
+	BOOST_STATIC_CONSTANT(int, value = type::value);
 };
 
 /*-----------------------------------------------------------------
  * Serialization of st_smart_ptr to any type
  *----------------------------------------------------------------*/
 /////////////////////////////////////////////////////////////
-// sp_counted_base_impl serialization
-
-template< class Archive, class P, class D >
+// bs_refcounter_sp serialization
+//
+template< class Archive, class T >
 inline void serialize(
 	Archive & /* ar */,
-	boost_132::detail::sp_counted_base_impl<P, D> & /* t */,
+	blue_sky::bs_private::bs_refcounter_sp< T > & /* t */,
 	const unsigned int /*file_version*/
 ){
 	// register the relationship between each derived class
-	// its polymorphic base
+	// and its polymorphic base
 	boost::serialization::void_cast_register<
-		boost_132::detail::sp_counted_base_impl<P, D>,
-		boost_132::detail::sp_counted_base
+		blue_sky::bs_private::bs_refcounter_sp< T >,
+		blue_sky::bs_refcounter
 	>(
-		static_cast<boost_132::detail::sp_counted_base_impl<P, D> *>(NULL),
-		static_cast<boost_132::detail::sp_counted_base *>(NULL)
+		static_cast< blue_sky::bs_private::bs_refcounter_sp< T >* >(NULL),
+		static_cast< blue_sky::bs_refcounter* >(NULL)
 	);
 }
 
-template< class Archive, class P, class D >
-inline void save_construct_data(
-	Archive & ar,
-	const boost_132::detail::sp_counted_base_impl<P, D> *t,
-	const BOOST_PFTO unsigned int /* file_version */
+/////////////////////////////////////////////////////////////
+// bs_refcounter_spd serialization
+//
+template< class Archive, class T, class D >
+inline void serialize(
+	Archive & /* ar */,
+	blue_sky::bs_private::bs_refcounter_spd< T, D > & /* t */,
+	const unsigned int /*file_version*/
 ){
-	// variables used for construction
-	ar << boost::serialization::make_nvp("ptr", t->ptr);
+	// register the relationship between each derived class
+	// and its polymorphic base
+	boost::serialization::void_cast_register<
+		blue_sky::bs_private::bs_refcounter_spd< T, D >,
+		blue_sky::bs_refcounter
+	>(
+		static_cast< blue_sky::bs_private::bs_refcounter_spd< T, D >* >(NULL),
+		static_cast< blue_sky::bs_refcounter* >(NULL)
+	);
 }
 
-template< class Archive, class P, class D >
-inline void load_construct_data(
+/////////////////////////////////////////////////////////////
+// bs_refcounter_sp counstruction
+//
+template< class Archive, class T >
+inline void save_construct_data(
 	Archive & ar,
-	boost_132::detail::sp_counted_base_impl<P, D> * t,
+	const blue_sky::bs_private::bs_refcounter_sp< T > *t,
 	const unsigned int /* file_version */
 ){
-	P ptr_;
-	ar >> boost::serialization::make_nvp("ptr", ptr_);
-	::new(t)boost_132::detail::sp_counted_base_impl<P, D>(ptr_,  D());
-	// uentity - delete underlying object as usual
-	// new shared_ptr sserialize system is not involved
-	// placement
-	// note: the original ::new... above is replaced by the one here.  This one
-	// creates all new objects with a null_deleter so that after the archive
-	// is finished loading and the shared_ptrs are destroyed - the underlying
-	// raw pointers are NOT deleted.  This is necessary as they are used by the 
-	// new system as well.
-	//::new(t)boost_132::detail::sp_counted_base_impl<
-	//	P,
-	//	boost_132::serialization::detail::null_deleter
-	//>(
-	//	ptr_,  boost_132::serialization::detail::null_deleter()
-	//); // placement new
+	// variables used for construction
+	ar << boost::serialization::make_nvp("ptr", t->p_);
+}
 
+template< class Archive, class T >
+inline void load_construct_data(
+	Archive & ar,
+	blue_sky::bs_private::bs_refcounter_sp< T >* t,
+	const unsigned int /* file_version */
+){
+	typename blue_sky::bs_private::bs_refcounter_sp< T >::pointer_t ptr;
+	ar >> boost::serialization::make_nvp("ptr", ptr);
+	// invoke ctor
+	::new(t) blue_sky::bs_private::bs_refcounter_sp< T >*(ptr, 0);
+
+	// uentity: already compensated in ctor
 	// compensate for that fact that a new shared count always is 
 	// initialized with one. the add_ref_copy below will increment it
 	// every time its serialized so without this adjustment
 	// the use and weak counts will be off by one.
-	t->use_count_ = 0;
+	//t->use_count_ = 0;
 }
 
 /////////////////////////////////////////////////////////////
-// shared_count serialization
-template<class Archive>
+// bs_refcounter_spd counstruction
+//
+template< class Archive, class T, class D >
+inline void save_construct_data(
+	Archive & ar,
+	const blue_sky::bs_private::bs_refcounter_spd< T, D > *t,
+	const unsigned int /* file_version */
+){
+	// variables used for construction
+	ar << boost::serialization::make_nvp("ptr", t->p_);
+}
+
+template< class Archive, class T, class D >
+inline void load_construct_data(
+	Archive & ar,
+	blue_sky::bs_private::bs_refcounter_spd< T, D >* t,
+	const unsigned int /* file_version */
+){
+	typename blue_sky::bs_private::bs_refcounter_spd< T, D >::pointer_t ptr;
+	ar >> boost::serialization::make_nvp("ptr", ptr);
+	// invoke ctor
+	::new(t) blue_sky::bs_private::bs_refcounter_spd< T, D >*(ptr, 0);
+}
+
+/////////////////////////////////////////////////////////////
+// bs_refcounter_ptr serialization
+template< class Archive, class T >
 inline void save(
 	Archive & ar,
-	const boost_132::detail::shared_count &t,
+	const blue_sky::bs_private::bs_refcounter_ptr< T > &t,
 	const unsigned int /* file_version */
 ){
-	ar << boost::serialization::make_nvp("pi", t.pi_);
+	ar << boost::serialization::make_nvp("rc", t.rc_);
 }
 
-template<class Archive>
+template< class Archive, class T >
 inline void load(
 	Archive & ar,
-	boost_132::detail::shared_count &t,
+	blue_sky::bs_private::bs_refcounter_ptr< T > &t,
 	const unsigned int /* file_version */
 ){
-	ar >> boost::serialization::make_nvp("pi", t.pi_);
+	ar >> boost::serialization::make_nvp("rc", t.rc_);
 	if(NULL != t.pi_)
-		t.pi_->add_ref_copy();
+		t.rc_->add_ref();
+}
+
+template< class Archive, class T >
+inline void serialize(
+	Archive & ar,
+	blue_sky::bs_private::bs_refcounter_ptr< T > &t,
+	const unsigned int file_version
+){
+	boost::serialization::split_free(ar, t, file_version);
 }
 
 /////////////////////////////////////////////////////////////
-// implement serialization for smart_ptr< T >
+// implement serialization for st_smart_ptr< T >
 //
-template<class Archive, class T>
+template< class Archive, class T >
 inline void save(
 	Archive & ar,
 	const blue_sky::st_smart_ptr< T > &t,
@@ -135,13 +182,13 @@ inline void save(
 	// only the raw pointer has to be saved
 	// the ref count is maintained automatically as shared pointers are loaded
 	ar.register_type(static_cast<
-		boost_132::detail::sp_counted_base_impl<T *, boost::checked_deleter< T > > *
+		blue_sky::bs_private::bs_refcounter_sp< T >*
 	>(NULL));
 	ar << boost::serialization::make_nvp("px", t.p_);
 	ar << boost::serialization::make_nvp("pn", t.count_);
 }
 
-template<class Archive, class T>
+template< class Archive, class T >
 inline void load(
 	Archive & ar,
 	blue_sky::smart_ptr< T > &t,
@@ -150,16 +197,16 @@ inline void load(
 	// only the raw pointer has to be saved
 	// the ref count is maintained automatically as shared pointers are loaded
 	ar.register_type(static_cast<
-		boost_132::detail::sp_counted_base_impl<T *, boost::checked_deleter< T > > *
+		blue_sky::bs_private::bs_refcounter_sp< T >*
 	>(NULL));
 	ar >> boost::serialization::make_nvp("px", t.p_);
 	ar >> boost::serialization::make_nvp("pn", t.count_);
 }
 
-template<class Archive, class T>
+template< class Archive, class T >
 inline void serialize(
 	Archive & ar,
-	boost::shared_ptr< T > &t,
+	blue_sky::st_smart_ptr< T > &t,
 	const unsigned int file_version
 ){
 	// correct shared_ptr serialization depends upon object tracking
@@ -171,9 +218,7 @@ inline void serialize(
 	boost::serialization::split_free(ar, t, file_version);
 }
 
-}} /* boost::serialize */
-
-BOOST_SERIALIZATION_SPLIT_FREE(boost::detail::shared_count)
+}} /* boost::serialization */
 
 // note: change below uses null_deleter 
 // This macro is used to export GUIDS for shared pointers to allow

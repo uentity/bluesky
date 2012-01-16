@@ -448,7 +448,7 @@ namespace bs_private {
 	public:
 		typedef T* pointer_t;
 
-		explicit bs_refcounter_sp(pointer_t p) 
+		explicit bs_refcounter_sp(pointer_t p)
 			: bs_refcounter(1), p_(p)
 		{}
 
@@ -457,11 +457,18 @@ namespace bs_private {
 			delete this;
 		}
 
-		 pointer_t get() const {
+		pointer_t get() const {
 			return p_;
 		}
 
 	private:
+		friend class boost::serialization::access;
+
+		// special ctor for restoring after serialization with refcount = 0
+		explicit bs_refcounter_sp(pointer_t p, int)
+			: bs_refcounter(0), p_(p)
+		{}
+
 		pointer_t p_;
 	};
 
@@ -471,22 +478,30 @@ namespace bs_private {
 	public:
 		typedef T* pointer_t;
 
-		explicit bs_refcounter_spd(pointer_t p, D d) 
-			: bs_refcounter(1), p_(p), d_(d)
+		explicit bs_refcounter_spd(pointer_t p)
+			: bs_refcounter(1), p_(p) //, d_(d)
 		{}
 
-		 void dispose() const {
-			d_(p_);
+		void dispose() const {
+			//d_(p_);
+			D()(p_);
 			delete this;
-		 }
+		}
 
-		 pointer_t get() const {
+		pointer_t get() const {
 			 return p_;
-		 }
+		}
 
 	private:
+		friend class boost::serialization::access;
+
+		// special ctor for restoring after serialization with refcount = 0
+		explicit bs_refcounter_spd(pointer_t p, int)
+			: bs_refcounter(0), p_(p) //, d_(d)
+		{}
+
 		pointer_t p_;
-		D d_;
+		//D d_;
 	};
 
 	// refcounter around simple ptr - auto inc ref in copy ctor, dec ref in dtor
@@ -500,9 +515,10 @@ namespace bs_private {
 			: rc_(new bs_refcounter_sp< T >(p))
 		{}
 
+		// second param only for compatibility with boost::detail::shared_count
 		template< class D >
-		explicit bs_refcounter_ptr(pointer_t p, D d)
-			: rc_(new bs_refcounter_spd< T, D >(p, d))
+		explicit bs_refcounter_ptr(pointer_t p, D)
+			: rc_(new bs_refcounter_spd< T, D >(p))
 		{}
 
 		bs_refcounter_ptr(const bs_refcounter_ptr& lhs)
@@ -541,6 +557,11 @@ namespace bs_private {
 		}
 
 	private:
+		friend class boost::serialization::access;
+		// empty ctor for serialization purposes
+		bs_refcounter_ptr() : rc_(NULL) {}
+
+		// pointer to reference counter
 		bs_refcounter* rc_;
 	};
 
@@ -1002,8 +1023,8 @@ public:
 	typedef typename base_t::pointer_t pointer_t;
 	typedef typename base_t::ref_t ref_t;
 
-	//typedef bs_refcounter_ptr refcounter_ptr_t;
-	typedef boost_132::detail::shared_count refcounter_ptr_t;
+	typedef bs_private::bs_refcounter_ptr< pointed_t > refcounter_ptr_t;
+	//typedef boost_132::detail::shared_count refcounter_ptr_t;
 
 	/*!
 	\brief Constructor from simple pointer
