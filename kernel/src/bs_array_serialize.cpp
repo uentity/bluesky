@@ -15,9 +15,13 @@
 
 #include "bs_array_serialize.h"
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
+//#include <boost/archive/text_iarchive.hpp>
+//#include <boost/archive/text_oarchive.hpp>
+
 #include <boost/serialization/export.hpp>
+#include <boost/serialization/split_free.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/string.hpp>
 
 #define BS_ARRAY_EXPORT_IMPLEMENT(T, cont_traits)                                            \
 namespace boost { namespace archive { namespace detail { namespace extra_detail {            \
@@ -55,55 +59,87 @@ factory< blue_sky::bs_array< T, blue_sky::cont_traits >, N >(std::va_list) { \
 }                                                                            \
 }}
 
-#define BS_ARRAY_FACTORY_PTR(T, cont_traits)                                    \
-namespace boost {                                                               \
-namespace archive { namespace detail {                                          \
-template< >                                                                     \
-struct heap_allocator< blue_sky::bs_array< T, blue_sky::cont_traits > > {       \
-    typedef blue_sky::bs_array< T, blue_sky::cont_traits > type;                \
-    typedef blue_sky::smart_ptr< type, true > sp_type;                          \
-    static type* invoke() {                                                     \
-        sp_type t = BS_KERNEL.create_object(type::bs_type(), false);            \
-        return t.lock();                                                        \
-    }                                                                           \
-};                                                                              \
-}} namespace serialization {                                                    \
-template< >                                                                     \
-void access::construct(blue_sky::bs_array< T, blue_sky::cont_traits >*) {}      \
-template< >                                                                     \
-void access::destroy(const blue_sky::bs_array< T, blue_sky::cont_traits >* t) { \
-    typedef blue_sky::bs_array< T, blue_sky::cont_traits > type;                \
-    typedef blue_sky::smart_ptr< type > sp_type;                                \
-    BS_KERNEL.free_instance(sp_type(t));                                        \
-}                                                                               \
-}}
-
 #define BS_ARRAY_GUID(T, cont_traits)     \
 BS_ARRAY_GUID_VALUE(T, cont_traits)       \
 BS_ARRAY_EXPORT_IMPLEMENT(T, cont_traits) \
-BS_ARRAY_FACTORY_PTR(T, cont_traits)
+//BS_ARRAY_FACTORY_PTR(T, cont_traits)
+
+namespace boost { namespace serialization {
+using namespace blue_sky;
+
+template< class Archive, class T, template< class > class cont_traits >
+void save(Archive& ar, const bs_array< T, cont_traits >& data, const unsigned int version) {
+	typedef typename bs_array< T, cont_traits >::const_iterator citerator;
+	// save array size
+	ar << (const ulong&)data.size();
+	// save data
+	for(citerator pd = data.begin(), end = data.end(); pd != end; ++pd)
+		ar << *pd;
+}
+
+template< class Archive, class T, template< class > class cont_traits >
+void load(Archive& ar, bs_array< T, cont_traits >& data, const unsigned int version) {
+	typedef typename bs_array< T, cont_traits >::iterator iterator;
+	// restore size
+	ulong sz;
+	ar >> sz;
+	data.resize(sz);
+	// restore data
+	for(iterator pd = data.begin(), end = data.end(); pd != end; ++pd)
+		ar >> *pd;
+}
+
+// override serialize
+template< class Archive, class T, template< class > class cont_traits >
+void serialize(
+	Archive & ar, bs_array< T, cont_traits >& data, const unsigned int version
+){
+	split_free(ar, data, version);
+}
+
+// default construct does nothing
+template< class Archive, class T, template< class > class cont_traits >
+void load_construct_data(
+	Archive & ar,
+	blue_sky::bs_array< T, cont_traits >* data,
+	const unsigned int version
+)
+{}
+
+}} /* boost::serialization */
+
+namespace boost { namespace archive { namespace detail {
+
+template< class T, template< class > class cont_traits >
+typename heap_allocator< blue_sky::bs_array< T, cont_traits > >::type*
+heap_allocator< blue_sky::bs_array< T, cont_traits > >::invoke() {
+	sp_type t = BS_KERNEL.create_object(type::bs_type(), false);
+	return t.lock();
+}
+
+}}} /* boost::archive::detail */
 
 BS_ARRAY_GUID(int, vector_traits)
-//BS_ARRAY_GUID(unsigned int, vector_traits)
-//BS_ARRAY_GUID(long, vector_traits)
-//BS_ARRAY_GUID(unsigned long, vector_traits)
-//BS_ARRAY_GUID(float, vector_traits)
-//BS_ARRAY_GUID(double, vector_traits)
-//BS_ARRAY_GUID(std::string, vector_traits)
-//
-//BS_ARRAY_GUID(int, bs_array_shared)
-//BS_ARRAY_GUID(unsigned int, bs_array_shared)
-//BS_ARRAY_GUID(long, bs_array_shared)
-//BS_ARRAY_GUID(unsigned long, bs_array_shared)
-//BS_ARRAY_GUID(float, bs_array_shared)
-//BS_ARRAY_GUID(double, bs_array_shared)
-//BS_ARRAY_GUID(std::string, bs_array_shared)
-//
-//BS_ARRAY_GUID(int, bs_vector_shared)
-//BS_ARRAY_GUID(unsigned int, bs_vector_shared)
-//BS_ARRAY_GUID(long, bs_vector_shared)
-//BS_ARRAY_GUID(unsigned long, bs_vector_shared)
-//BS_ARRAY_GUID(float, bs_vector_shared)
-//BS_ARRAY_GUID(double, bs_vector_shared)
-//BS_ARRAY_GUID(std::string, bs_vector_shared)
+BS_ARRAY_GUID(unsigned int, vector_traits)
+BS_ARRAY_GUID(long, vector_traits)
+BS_ARRAY_GUID(unsigned long, vector_traits)
+BS_ARRAY_GUID(float, vector_traits)
+BS_ARRAY_GUID(double, vector_traits)
+BS_ARRAY_GUID(std::string, vector_traits)
+
+BS_ARRAY_GUID(int, bs_array_shared)
+BS_ARRAY_GUID(unsigned int, bs_array_shared)
+BS_ARRAY_GUID(long, bs_array_shared)
+BS_ARRAY_GUID(unsigned long, bs_array_shared)
+BS_ARRAY_GUID(float, bs_array_shared)
+BS_ARRAY_GUID(double, bs_array_shared)
+BS_ARRAY_GUID(std::string, bs_array_shared)
+
+BS_ARRAY_GUID(int, bs_vector_shared)
+BS_ARRAY_GUID(unsigned int, bs_vector_shared)
+BS_ARRAY_GUID(long, bs_vector_shared)
+BS_ARRAY_GUID(unsigned long, bs_vector_shared)
+BS_ARRAY_GUID(float, bs_vector_shared)
+BS_ARRAY_GUID(double, bs_vector_shared)
+BS_ARRAY_GUID(std::string, bs_vector_shared)
 
