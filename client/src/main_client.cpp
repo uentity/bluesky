@@ -32,7 +32,7 @@
 #include "bs_shell.h"
 #include "bs_array.h"
 #include "bs_kernel_tools.h"
-#include "bs_array_serialize.h"
+#include "bs_serialize.h"
 
 #ifdef BSPY_EXPORTING_PLUGIN
 #include "py_bs_kernel.h"
@@ -45,8 +45,8 @@
 #include "boost/type_traits.hpp"
 #include "boost/thread.hpp"
 
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/polymorphic_text_iarchive.hpp>
+#include <boost/archive/polymorphic_text_oarchive.hpp>
 
 //#define USE_TBB_LIB
 
@@ -833,14 +833,14 @@ struct test_array_unit {
 template< class array_t >
 void save_array(smart_ptr< array_t > v) {
 	std::ofstream ofs("array_data.txt");
-	boost::archive::text_oarchive oa(ofs);
+	boost::archive::polymorphic_text_oarchive oa(ofs);
 	oa << v;
 }
 
 template< class array_t >
 void load_array(smart_ptr< array_t > v) {
 	std::ifstream ifs("array_data.txt");
-	boost::archive::text_iarchive oa(ifs);
+	boost::archive::polymorphic_text_iarchive oa(ifs);
 	oa >> v;
 }
 
@@ -871,9 +871,28 @@ void test_array() {
 	save_array(sp_areal);
 	load_array(sp_areal);
 
+	// test multiple smart_ptr save|restore
+	// save
+	smart_ptr< real_array_t > vptr[10];
+	std::ofstream ofs("array_data_sp.txt");
+	boost::archive::polymorphic_text_oarchive oa(ofs);
+	for(int i = 0; i < 10; ++i) {
+		vptr[i] = sp_areal;
+		oa << vptr[i];
+	}
+	ofs.close();
+
+	// load
+	std::ifstream ifs("array_data_sp.txt");
+	boost::archive::polymorphic_text_iarchive ia(ifs);
+	for(int i = 0; i < 10; ++i) {
+		//smart_ptr< real_array_t > p;
+		ia >> vptr[i];
+	}
+
 	// print array contents
 	cout << "Real array contents:" << endl;
-	for(real_array_t::const_iterator p = sp_areal->begin(), end = sp_areal->end(); p != end; ++p)
+	for(real_array_t::const_iterator p = vptr[0]->begin(), end = vptr[0]->end(); p != end; ++p)
 		cout << *p << ' ';
 	cout << endl << "------------------------------------------------------------------------" << endl;
 }
