@@ -17,42 +17,14 @@
 #define BS_ARRAY_SERIALIZE_ATPO4NI3
 
 #include "bs_array.h"
+#include "bs_serialize_macro.h"
+
 #include <boost/serialization/serialization.hpp>
 #include <boost/archive/polymorphic_iarchive.hpp>
 #include <boost/archive/polymorphic_oarchive.hpp>
 
-#define BS_ARRAY_FACTORY_PTR(T, cont_traits)                                    \
-namespace boost {                                                               \
-namespace archive { namespace detail {                                          \
-template< >                                                                     \
-struct heap_allocator< blue_sky::bs_array< T, blue_sky::cont_traits > > {       \
-    typedef blue_sky::bs_array< T, blue_sky::cont_traits > type;                \
-    typedef blue_sky::smart_ptr< type, true > sp_type;                          \
-    static type* invoke() {                                                     \
-        sp_type t = BS_KERNEL.create_object(type::bs_type(), false);            \
-        return t.lock();                                                        \
-    }                                                                           \
-};                                                                              \
-}} namespace serialization {                                                    \
-template< >                                                                     \
-void access::construct(blue_sky::bs_array< T, blue_sky::cont_traits >*) {}      \
-template< >                                                                     \
-void access::destroy(const blue_sky::bs_array< T, blue_sky::cont_traits >* t) { \
-    typedef blue_sky::bs_array< T, blue_sky::cont_traits > type;                \
-    typedef blue_sky::smart_ptr< type > sp_type;                                \
-    BS_KERNEL.free_instance(sp_type(t));                                        \
-}                                                                               \
-}}
-
-
-//namespace boost {
-//namespace archive {
-//
-//class polymorphic_iarchive;
-//class polymorphic_oarchive;
-//
-//} // namespace archive
-//} // namespace boost
+#define BS_ARRAY_GUID_VALUE(T, cont_traits) \
+BLUE_SKY_TYPE_SERIALIZE_GUID_EXT(blue_sky::bs_array, 2, (T, blue_sky::cont_traits))
 
 namespace boost { namespace serialization {
 
@@ -63,51 +35,33 @@ BS_API void serialize(
 	const unsigned int version
 );
 
-template< class Archive, class T, template< class > class cont_traits >
-BS_API void load_construct_data(
-	Archive & ar,
-	blue_sky::bs_array< T, cont_traits >* data,
-	const unsigned int version
-);
-
 }} /* boost::serialization */
 
-namespace boost { namespace archive { namespace detail {
+BLUE_SKY_TYPE_SERIALIZE_DECL_EXT(blue_sky::bs_array, 2, (class, template< class > class))
 
-template< class T, template< class > class cont_traits >
-struct BS_API heap_allocator< blue_sky::bs_array< T, cont_traits > > {
-	typedef blue_sky::bs_array< T, cont_traits > type;
-	typedef blue_sky::smart_ptr< type, true > sp_type;
-
-	static type* invoke();
-};
-
-}}}
-
-
-//BS_ARRAY_FACTORY_PTR(int, vector_traits)
-//BS_ARRAY_FACTORY_PTR(unsigned int, vector_traits)
-//BS_ARRAY_FACTORY_PTR(long, vector_traits)
-//BS_ARRAY_FACTORY_PTR(unsigned long, vector_traits)
-//BS_ARRAY_FACTORY_PTR(float, vector_traits)
-//BS_ARRAY_FACTORY_PTR(double, vector_traits)
-//BS_ARRAY_FACTORY_PTR(std::string, vector_traits)
+//BS_ARRAY_GUID_VALUE(int, vector_traits)
+//BS_ARRAY_GUID_VALUE(unsigned int, vector_traits)
+//BS_ARRAY_GUID_VALUE(long, vector_traits)
+//BS_ARRAY_GUID_VALUE(unsigned long, vector_traits)
+//BS_ARRAY_GUID_VALUE(float, vector_traits)
+//BS_ARRAY_GUID_VALUE(double, vector_traits)
+//BS_ARRAY_GUID_VALUE(std::string, vector_traits)
 //
-//BS_ARRAY_FACTORY_PTR(int, bs_array_shared)
-//BS_ARRAY_FACTORY_PTR(unsigned int, bs_array_shared)
-//BS_ARRAY_FACTORY_PTR(long, bs_array_shared)
-//BS_ARRAY_FACTORY_PTR(unsigned long, bs_array_shared)
-//BS_ARRAY_FACTORY_PTR(float, bs_array_shared)
-//BS_ARRAY_FACTORY_PTR(double, bs_array_shared)
-//BS_ARRAY_FACTORY_PTR(std::string, bs_array_shared)
+//BS_ARRAY_GUID_VALUE(int, bs_array_shared)
+//BS_ARRAY_GUID_VALUE(unsigned int, bs_array_shared)
+//BS_ARRAY_GUID_VALUE(long, bs_array_shared)
+//BS_ARRAY_GUID_VALUE(unsigned long, bs_array_shared)
+//BS_ARRAY_GUID_VALUE(float, bs_array_shared)
+//BS_ARRAY_GUID_VALUE(double, bs_array_shared)
+//BS_ARRAY_GUID_VALUE(std::string, bs_array_shared)
 //
-//BS_ARRAY_FACTORY_PTR(int, bs_vector_shared)
-//BS_ARRAY_FACTORY_PTR(unsigned int, bs_vector_shared)
-//BS_ARRAY_FACTORY_PTR(long, bs_vector_shared)
-//BS_ARRAY_FACTORY_PTR(unsigned long, bs_vector_shared)
-//BS_ARRAY_FACTORY_PTR(float, bs_vector_shared)
-//BS_ARRAY_FACTORY_PTR(double, bs_vector_shared)
-//BS_ARRAY_FACTORY_PTR(std::string, bs_vector_shared)
+//BS_ARRAY_GUID_VALUE(int, bs_vector_shared)
+//BS_ARRAY_GUID_VALUE(unsigned int, bs_vector_shared)
+//BS_ARRAY_GUID_VALUE(long, bs_vector_shared)
+//BS_ARRAY_GUID_VALUE(unsigned long, bs_vector_shared)
+//BS_ARRAY_GUID_VALUE(float, bs_vector_shared)
+//BS_ARRAY_GUID_VALUE(double, bs_vector_shared)
+//BS_ARRAY_GUID_VALUE(std::string, bs_vector_shared)
 
 #endif /* end of include guard: BS_ARRAY_SERIALIZE_ATPO4NI3 */
 
