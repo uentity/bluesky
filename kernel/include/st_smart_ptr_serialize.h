@@ -223,20 +223,18 @@ inline void serialize(
 // note: change below uses null_deleter 
 // This macro is used to export GUIDS for shared pointers to allow
 // the serialization system to export them properly. David Tonge
-#define BS_ST_SMARTPTR_EXPORT_GUID(T, K)                               \
-    typedef boost::detail::sp_counted_base_impl<                       \
-        T *,                                                           \
-        boost::checked_deleter< T >                                    \
-    > __st_smart_ptr_ ## T;                                            \
+#define BLUE_SKY_ST_SMARTPTR_EXPORT_GUID(T, K)                         \
+    typedef blue_sky::bs_private::bs_refcounter_sp< T >                \
+    __st_smart_ptr_ ## T;                                              \
     BOOST_CLASS_EXPORT_GUID(__st_smart_ptr_ ## T, "__st_smart_ptr_" K) \
     BOOST_CLASS_EXPORT_GUID(T, K)                                      \
     /**/
 
-#define BS_ST_SMARTPTR_EXPORT(T) \
-    BS_ST_SMART_PTR_EXPORT_GUID( \
-        T,                       \
-        BOOST_PP_STRINGIZE(T)    \
-    )                            \
+#define BLUE_SKY_ST_SMARTPTR_EXPORT(T) \
+    BS_ST_SMART_PTR_EXPORT_GUID(       \
+        T,                             \
+        BOOST_PP_STRINGIZE(T)          \
+    )                                  \
     /**/
 
 #endif /* end of include guard: ST_SMART_PTR_SERIALIZE_RINMRD5M */
