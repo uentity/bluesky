@@ -38,7 +38,7 @@ BOOST_PP_CAT(param, i)
 #define BS_MAKE_TPL_ARGS_1(tpl_args_num) \
 < BOOST_PP_ENUM_PARAMS(tpl_args_num, A) >
 
-#define BS_MAKE_TPL_ARGS_0(tpl_args_num) BOOST_PP_EMPTY
+#define BS_MAKE_TPL_ARGS_0(tpl_args_num)
 
 // expands to T< A0, A1, ..., An-1 > if n > 0
 // otherwise to T
@@ -49,24 +49,33 @@ T BOOST_PP_CAT(BS_MAKE_TPL_ARGS_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_num)
 #define BS_MAKE_FULL_TYPE_ARGS_1(tpl_args_num, tpl_args) \
 < BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args)) >
 
-#define BS_MAKE_FULL_TYPE_ARGS_0(tpl_args_num, tpl_args) BOOST_PP_EMPTY
+#define BS_MAKE_FULL_TYPE_ARGS_0(tpl_args_num, tpl_args)
 
 // expands to T< tpl_args[0], tpl_args[0], ..., tpl_args[n - 1] > if n > 0
 // otherwise to T
 #define BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)                \
 T BOOST_PP_CAT(BS_MAKE_FULL_TYPE_ARGS_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_num, tpl_args)
 
+// expands to < A0, A1, ..., An-1 >
+#define BS_ENUM_TPL_ARGS_1(tpl_args_prefix) \
+BOOST_PP_SEQ_FOR_EACH_I(BS_TPL_ARG_, A, tpl_args_prefix)
+
+#define BS_ENUM_TPL_ARGS_0(tpl_args_prefix)
+
+#define BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) \
+BOOST_PP_CAT(BS_ENUM_TPL_ARGS_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_prefix)
+
 // third param passed as a sequence
 #define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)    \
 namespace boost { namespace serialization {                          \
 template< class Archive                                              \
 BOOST_PP_COMMA_IF(tpl_args_num)                                      \
-BOOST_PP_SEQ_FOR_EACH_I(BS_TPL_ARG_, A, tpl_args_prefix) >           \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                    \
 BS_API void load_construct_data(                                     \
     Archive&, BS_MAKE_FULL_TYPE(T, tpl_args_num)*,                   \
     const unsigned int);                                             \
 } namespace archive { namespace detail {                             \
-template< BOOST_PP_SEQ_FOR_EACH_I(BS_TPL_ARG_, A, tpl_args_prefix) > \
+template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >          \
 struct BS_API heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
     typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                 \
     typedef blue_sky::smart_ptr< type, true > sp_type;               \
@@ -77,13 +86,13 @@ struct BS_API heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
 namespace boost { namespace serialization {                          \
 template< class Archive                                              \
 BOOST_PP_COMMA_IF(tpl_args_num)                                      \
-BOOST_PP_SEQ_FOR_EACH_I(BS_TPL_ARG_, A, tpl_args_prefix) >           \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                    \
 BS_API void load_construct_data(                                     \
     Archive&, BS_MAKE_FULL_TYPE(T, tpl_args_num)*,                   \
     const unsigned int)                                              \
 {}                                                                   \
 } namespace archive { namespace detail {                             \
-template< BOOST_PP_SEQ_FOR_EACH_I(BS_TPL_ARG_, A, tpl_args_prefix) > \
+template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >          \
 typename heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::type* \
 heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {     \
     sp_type t = BS_KERNEL.create_object(type::bs_type(), false);     \
@@ -158,6 +167,117 @@ BLUE_SKY_TYPE_SERIALIZE_GUID_EXT(T, 0, ())
 
 #define BLUE_SKY_TYPE_SERIALIZE_EXPORT(T) \
 BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(T, 0, ())
+
+/*-----------------------------------------------------------------
+ * Sugar for generating boost::serialization functions for any class
+ *----------------------------------------------------------------*/
+#define BLUE_SKY_CLASS_FCN_DECL_EXT_serialize(T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace serialization {        \
+template< class Archive                            \
+BOOST_PP_COMMA_IF(tpl_args_num)                    \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >  \
+BS_API_PLUGIN void serialize(                      \
+    Archive&, BS_MAKE_FULL_TYPE(T, tpl_args_num)&, \
+    const unsigned int);                           \
+}}
+
+#define BLUE_SKY_CLASS_FCN_DECL_EXT_save_construct_data(T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace serialization {              \
+template< class Archive                                  \
+BOOST_PP_COMMA_IF(tpl_args_num)                          \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >        \
+BS_API_PLUGIN void save_construct_data(                  \
+    Archive&, const BS_MAKE_FULL_TYPE(T, tpl_args_num)*, \
+    const unsigned int);                                 \
+}}
+
+#define BLUE_SKY_CLASS_FCN_DECL_EXT_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace serialization {        \
+template< class Archive                            \
+BOOST_PP_COMMA_IF(tpl_args_num)                    \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >  \
+BS_API_PLUGIN void load_construct_data(            \
+    Archive&, BS_MAKE_FULL_TYPE(T, tpl_args_num)*, \
+    const unsigned int);                           \
+}}
+
+#define BLUE_SKY_CLASS_FCN_BEGIN_EXT_save(T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace serialization {                   \
+template< class Archive                                       \
+BOOST_PP_COMMA_IF(tpl_args_num)                               \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >             \
+void save(                                                    \
+    Archive& ar, const BS_MAKE_FULL_TYPE(T, tpl_args_num)& t, \
+    const unsigned int version                                \
+){ (void)version;                                             \
+/* */
+
+#define BLUE_SKY_CLASS_FCN_BEGIN_EXT_load(T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace serialization {             \
+template< class Archive                                 \
+BOOST_PP_COMMA_IF(tpl_args_num)                         \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >       \
+void load(                                              \
+    Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t, \
+    const unsigned int version                          \
+){ (void)version;                                       \
+/* */
+
+#define BLUE_SKY_CLASS_FCN_BEGIN_EXT_serialize(T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace serialization {             \
+template< class Archive                                 \
+BOOST_PP_COMMA_IF(tpl_args_num)                         \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >       \
+void serialize(                                         \
+    Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t, \
+    const unsigned int version                          \
+){ (void)version;                                       \
+/* */
+
+#define BLUE_SKY_CLASS_FCN_BEGIN_EXT_save_construct_data(T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace serialization {                   \
+template< class Archive                                       \
+BOOST_PP_COMMA_IF(tpl_args_num)                               \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >             \
+void save_construct_data(                                     \
+    Archive& ar, const BS_MAKE_FULL_TYPE(T, tpl_args_num)* t, \
+    const unsigned int version                                \
+){ (void)version;                                             \
+/* */
+
+#define BLUE_SKY_CLASS_FCN_BEGIN_EXT_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace serialization {             \
+template< class Archive                                 \
+BOOST_PP_COMMA_IF(tpl_args_num)                         \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >       \
+void load_construct_data(                               \
+    Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)* t, \
+    const unsigned int version                          \
+){ (void)version;                                       \
+/* */
+
+#define BLUE_SKY_CLASS_SRZ_FCN_END \
+} }}
+
+#define BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(fcn, T, tpl_args_num, tpl_args_prefix) \
+BOOST_PP_CAT(BLUE_SKY_CLASS_FCN_BEGIN_EXT_, fcn)(T, tpl_args_num, tpl_args_prefix)
+
+#define BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(fcn, T, tpl_args_num) \
+BOOST_PP_CAT(BLUE_SKY_CLASS_FCN_BEGIN_EXT_, fcn)(T, tpl_args_num, \
+(BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)))
+
+#define BLUE_SKY_CLASS_SRZ_FCN_BEGIN(fcn, T) \
+BOOST_PP_CAT(BLUE_SKY_CLASS_FCN_BEGIN_EXT_, fcn)(T, 0, ())
+
+#define BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(fcn, T, tpl_args_num, tpl_args_prefix) \
+BOOST_PP_CAT(BLUE_SKY_CLASS_FCN_DECL_EXT_, fcn)(T, tpl_args_num, tpl_args_prefix)
+
+#define BLUE_SKY_CLASS_SRZ_FCN_DECL_T(fcn, T, tpl_args_num) \
+BOOST_PP_CAT(BLUE_SKY_CLASS_FCN_DECL_EXT_, fcn)(T, tpl_args_num, \
+(BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)))
+
+#define BLUE_SKY_CLASS_SRZ_FCN_DECL(fcn, T) \
+BOOST_PP_CAT(BLUE_SKY_CLASS_FCN_DECL_EXT_, fcn)(T, 0, ())
 
 #endif /* end of include guard: BS_SERIALIZE_MACRO_OS0F6LJB */
 
