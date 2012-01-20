@@ -452,6 +452,11 @@ namespace bs_private {
 			: bs_refcounter(1), p_(p)
 		{}
 
+		template< class R >
+		explicit bs_refcounter_sp(R* p)
+			: bs_refcounter(1), p_(p)
+		{}
+
 		void dispose() const {
 			usual_deleter< T >()(p_);
 			delete this;
@@ -480,6 +485,11 @@ namespace bs_private {
 
 		explicit bs_refcounter_spd(pointer_t p)
 			: bs_refcounter(1), p_(p) //, d_(d)
+		{}
+
+		template< class R >
+		explicit bs_refcounter_spd(R* p)
+			: bs_refcounter(1), p_(p)
 		{}
 
 		void dispose() const {
@@ -521,7 +531,25 @@ namespace bs_private {
 			: rc_(new bs_refcounter_spd< T, D >(p))
 		{}
 
+		template< class R >
+		explicit bs_refcounter_ptr(R* p)
+			: rc_(new bs_refcounter_sp< T >(p))
+		{}
+
+		template< class R, class D >
+		explicit bs_refcounter_ptr(R* p, D)
+			: rc_(new bs_refcounter_spd< T, D >(p))
+		{}
+
 		bs_refcounter_ptr(const bs_refcounter_ptr& lhs)
+			: rc_(lhs.rc_)
+		{
+			if(rc_)
+				rc_->add_ref();
+		}
+
+		template< class R >
+		bs_refcounter_ptr(const bs_refcounter_ptr< R >& lhs)
 			: rc_(lhs.rc_)
 		{
 			if(rc_)
@@ -558,6 +586,12 @@ namespace bs_private {
 
 	private:
 		friend class boost::serialization::access;
+#if defined(_MSC_VER)
+		friend class bs_refcounter_ptr;
+#else
+		template< class R > friend class bs_refcounter_ptr;
+#endif
+
 		// empty ctor for serialization purposes
 		bs_refcounter_ptr() : rc_(NULL) {}
 
