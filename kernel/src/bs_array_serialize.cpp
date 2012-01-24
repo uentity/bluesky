@@ -38,40 +38,29 @@ factory< blue_sky::bs_array< T, blue_sky::cont_traits >, N >(std::va_list) { \
 BLUE_SKY_TYPE_SERIALIZE_GUID_EXT(blue_sky::bs_array, 2, (T, blue_sky::cont_traits)) \
 BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(blue_sky::bs_array, 2, (T, blue_sky::cont_traits))
 
-namespace boost { namespace serialization {
 using namespace blue_sky;
 
-template< class Archive, class T, template< class > class cont_traits >
-void save(Archive& ar, const bs_array< T, cont_traits >& data, const unsigned int version) {
-	typedef typename bs_array< T, cont_traits >::const_iterator citerator;
+BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(save, bs_array, 2, (class, template< class > class))
+	typedef typename type::const_iterator citerator;
 	// save array size
-	ar << (const ulong&)data.size();
+	ar << (const ulong&)t.size();
 	// save data
-	for(citerator pd = data.begin(), end = data.end(); pd != end; ++pd)
+	for(citerator pd = t.begin(), end = t.end(); pd != end; ++pd)
 		ar << *pd;
-}
+BLUE_SKY_CLASS_SRZ_FCN_END
 
-template< class Archive, class T, template< class > class cont_traits >
-void load(Archive& ar, bs_array< T, cont_traits >& data, const unsigned int version) {
-	typedef typename bs_array< T, cont_traits >::iterator iterator;
+BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(load, bs_array, 2, (class, template< class > class))
+	typedef typename type::iterator iterator;
 	// restore size
 	ulong sz;
 	ar >> sz;
-	data.resize(sz);
+	t.resize(sz);
 	// restore data
-	for(iterator pd = data.begin(), end = data.end(); pd != end; ++pd)
+	for(iterator pd = t.begin(), end = t.end(); pd != end; ++pd)
 		ar >> *pd;
-}
+BLUE_SKY_CLASS_SRZ_FCN_END
 
-// override serialize
-template< class Archive, class T, template< class > class cont_traits >
-void serialize(
-	Archive & ar, bs_array< T, cont_traits >& data, const unsigned int version
-){
-	split_free(ar, data, version);
-}
-
-}} /* boost::serialization */
+BLUE_SKY_CLASS_SERIALIZE_SPLIT_EXT(blue_sky::bs_array, 2, (class, template< class > class))
 
 BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(blue_sky::bs_array, 2, (class, template< class > class))
 

@@ -27,6 +27,7 @@ kernel_cpp_list = Split("""
 	bs_object_base.cpp
 	bs_prop_base.cpp
 	bs_report.cpp
+	bs_serialize.cpp
 	bs_shell.cpp
 	bs_tree.cpp
 	bs_type_info.cpp

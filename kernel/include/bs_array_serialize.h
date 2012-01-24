@@ -18,26 +18,19 @@
 
 #include "bs_array.h"
 #include "bs_serialize_macro.h"
+#include "bs_serialize_decl.h"
 
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/export.hpp>
 #include <boost/archive/polymorphic_iarchive.hpp>
 #include <boost/archive/polymorphic_oarchive.hpp>
 
 #define BS_ARRAY_GUID_VALUE(T, cont_traits) \
 BLUE_SKY_TYPE_SERIALIZE_GUID_EXT(blue_sky::bs_array, 2, (T, blue_sky::cont_traits))
 
-namespace boost { namespace serialization {
-
-template< class Archive, class T, template< class > class cont_traits >
-BS_API void serialize(
-	Archive & ar,
-	blue_sky::bs_array< T, cont_traits >& data,
-	const unsigned int version
-);
-
-}} /* boost::serialization */
-
 BLUE_SKY_TYPE_SERIALIZE_DECL_EXT(blue_sky::bs_array, 2, (class, template< class > class))
+
+BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(serialize, blue_sky::bs_array, 2, (class, template< class > class))
 
 //BS_ARRAY_GUID_VALUE(int, vector_traits)
 //BS_ARRAY_GUID_VALUE(unsigned int, vector_traits)
