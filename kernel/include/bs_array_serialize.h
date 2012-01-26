@@ -32,29 +32,29 @@ BLUE_SKY_TYPE_SERIALIZE_DECL_EXT(blue_sky::bs_array, 2, (class, template< class 
 
 BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(serialize, blue_sky::bs_array, 2, (class, template< class > class))
 
-//BS_ARRAY_GUID_VALUE(int, vector_traits)
-//BS_ARRAY_GUID_VALUE(unsigned int, vector_traits)
-//BS_ARRAY_GUID_VALUE(long, vector_traits)
-//BS_ARRAY_GUID_VALUE(unsigned long, vector_traits)
-//BS_ARRAY_GUID_VALUE(float, vector_traits)
-//BS_ARRAY_GUID_VALUE(double, vector_traits)
-//BS_ARRAY_GUID_VALUE(std::string, vector_traits)
-//
-//BS_ARRAY_GUID_VALUE(int, bs_array_shared)
-//BS_ARRAY_GUID_VALUE(unsigned int, bs_array_shared)
-//BS_ARRAY_GUID_VALUE(long, bs_array_shared)
-//BS_ARRAY_GUID_VALUE(unsigned long, bs_array_shared)
-//BS_ARRAY_GUID_VALUE(float, bs_array_shared)
-//BS_ARRAY_GUID_VALUE(double, bs_array_shared)
-//BS_ARRAY_GUID_VALUE(std::string, bs_array_shared)
-//
-//BS_ARRAY_GUID_VALUE(int, bs_vector_shared)
-//BS_ARRAY_GUID_VALUE(unsigned int, bs_vector_shared)
-//BS_ARRAY_GUID_VALUE(long, bs_vector_shared)
-//BS_ARRAY_GUID_VALUE(unsigned long, bs_vector_shared)
-//BS_ARRAY_GUID_VALUE(float, bs_vector_shared)
-//BS_ARRAY_GUID_VALUE(double, bs_vector_shared)
-//BS_ARRAY_GUID_VALUE(std::string, bs_vector_shared)
+BS_ARRAY_GUID_VALUE(int, vector_traits)
+BS_ARRAY_GUID_VALUE(unsigned int, vector_traits)
+BS_ARRAY_GUID_VALUE(long, vector_traits)
+BS_ARRAY_GUID_VALUE(unsigned long, vector_traits)
+BS_ARRAY_GUID_VALUE(float, vector_traits)
+BS_ARRAY_GUID_VALUE(double, vector_traits)
+BS_ARRAY_GUID_VALUE(std::string, vector_traits)
+
+BS_ARRAY_GUID_VALUE(int, bs_array_shared)
+BS_ARRAY_GUID_VALUE(unsigned int, bs_array_shared)
+BS_ARRAY_GUID_VALUE(long, bs_array_shared)
+BS_ARRAY_GUID_VALUE(unsigned long, bs_array_shared)
+BS_ARRAY_GUID_VALUE(float, bs_array_shared)
+BS_ARRAY_GUID_VALUE(double, bs_array_shared)
+BS_ARRAY_GUID_VALUE(std::string, bs_array_shared)
+
+BS_ARRAY_GUID_VALUE(int, bs_vector_shared)
+BS_ARRAY_GUID_VALUE(unsigned int, bs_vector_shared)
+BS_ARRAY_GUID_VALUE(long, bs_vector_shared)
+BS_ARRAY_GUID_VALUE(unsigned long, bs_vector_shared)
+BS_ARRAY_GUID_VALUE(float, bs_vector_shared)
+BS_ARRAY_GUID_VALUE(double, bs_vector_shared)
+BS_ARRAY_GUID_VALUE(std::string, bs_vector_shared)
 
 #endif /* end of include guard: BS_ARRAY_SERIALIZE_ATPO4NI3 */
 
