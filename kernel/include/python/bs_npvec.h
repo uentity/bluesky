@@ -78,7 +78,8 @@ public:
 
 	size_type init(size_type ndim, const npy_intp* dims, const_pointer data) {
 		size_type sz = init(ndim, dims);
-		std::copy(data, data + sz, begin());
+		if(this->size())
+			std::copy(data, data + sz, begin());
 		return sz;
 	}
 
