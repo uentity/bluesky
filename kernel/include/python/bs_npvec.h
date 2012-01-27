@@ -78,7 +78,7 @@ public:
 
 	size_type init(size_type ndim, const npy_intp* dims, const_pointer data) {
 		size_type sz = init(ndim, dims);
-		if(this->size())
+		if(sz)
 			std::copy(data, data + sz, begin());
 		return sz;
 	}
@@ -89,7 +89,7 @@ public:
 	{
 		npy_intp dims[] = { boost::size(in) };
 		size_type sz = init(1, dims);
-		if(this->size())
+		if(sz)
 			std::copy(boost::begin(in), boost::end(in), begin());
 		return sz;
 	}
