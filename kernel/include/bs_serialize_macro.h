@@ -393,5 +393,44 @@ BS_TYPE_SERIALIZE_IMPL_BYNAME_(T, tpl_args_num, \
 BS_TYPE_SERIALIZE_IMPL_BYNAME_(T, 0, (), stype) \
 BLUE_SKY_TYPE_SERIALIZE_EXPORT(T)
 
+/*-----------------------------------------------------------------
+ * override of boost::detail::base_register to call
+ * bs_void_cast_register() instead of void_cast_register()
+ * skiping compile-time check if Base is virtual base of Derived
+ * and resolving compilation error that pops up when using
+ * boost::serialization::base_object
+ *----------------------------------------------------------------*/
+// generator, prefixes passed as sequences
+#define BS_CLASS_HAS_NONVIRTUAL_BASE_(T, tpl_args_num, tpl_args_prefix, B, btpl_args_num, btpl_args_prefix) \
+namespace boost { namespace detail {                                                 \
+template < BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix)                           \
+BOOST_PP_COMMA_IF(btpl_args_num) BS_ENUM_TPL_ARGS(btpl_args_num, btpl_args_prefix) > \
+struct base_register< BS_MAKE_FULL_TYPE(T, tpl_args_num), \
+BS_MAKE_FULL_TYPE(B, btpl_args_num) > {                   \
+    typedef BS_MAKE_FULL_TYPE(B, btpl_args_num) Base;     \
+    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) Derived;   \
+    struct polymorphic {                                  \
+        static void const * invoke(){                     \
+            Base const * const b = 0;                     \
+            Derived const * const d = 0;                  \
+            return & bs_void_cast_register(d, b);         \
+        }                                                 \
+    };                                                    \
+    struct non_polymorphic {                              \
+        static void const * invoke(){                     \
+            return 0;                                     \
+        }                                                 \
+    };                                                    \
+    static void const * invoke(){                         \
+        typedef BOOST_DEDUCED_TYPENAME mpl::eval_if<      \
+            is_polymorphic<Base>,                         \
+            mpl::identity<polymorphic>,                   \
+            mpl::identity<non_polymorphic>                \
+        >::type type;                                     \
+        return type::invoke();                            \
+    }                                                     \
+}; }}
+
+
 #endif /* end of include guard: BS_SERIALIZE_MACRO_OS0F6LJB */
 
