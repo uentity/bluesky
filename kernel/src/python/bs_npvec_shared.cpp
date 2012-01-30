@@ -22,10 +22,13 @@ using namespace std;
 
 namespace blue_sky {
 // usefull typedefs
-typedef bs_array< int    , bs_npvec_shared > bs_npvec_shared_i;
-typedef bs_array< long   , bs_npvec_shared > bs_npvec_shared_l;
-typedef bs_array< float  , bs_npvec_shared > bs_npvec_shared_f;
-typedef bs_array< double , bs_npvec_shared > bs_npvec_shared_d;
+typedef bs_array< int           , bs_npvec_shared > bs_npvec_shared_i;
+typedef bs_array< unsigned int  , bs_npvec_shared > bs_npvec_shared_ui;
+typedef bs_array< long          , bs_npvec_shared > bs_npvec_shared_l;
+typedef bs_array< unsigned long , bs_npvec_shared > bs_npvec_shared_ul;
+typedef bs_array< float         , bs_npvec_shared > bs_npvec_shared_f;
+typedef bs_array< double        , bs_npvec_shared > bs_npvec_shared_d;
+typedef bs_array< std::string   , bs_npvec_shared > bs_npvec_shared_s;
 
 // bs_array< T, bs_nparray > instantiations
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_npvec_shared));
@@ -34,14 +37,18 @@ BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_npvec_shared));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_npvec_shared));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_npvec_shared));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_npvec_shared));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_npvec_shared));
 
 kernel::types_enum register_npvec_shared() {
 	kernel::types_enum te;
-    te.push_back(bs_npvec_shared_i::bs_type());
-    te.push_back(bs_npvec_shared_l::bs_type());
-    te.push_back(bs_npvec_shared_f::bs_type());
-    te.push_back(bs_npvec_shared_d::bs_type());
-    return te;
+	te.push_back(bs_npvec_shared_i::bs_type());
+	te.push_back(bs_npvec_shared_ui::bs_type());
+	te.push_back(bs_npvec_shared_l::bs_type());
+	te.push_back(bs_npvec_shared_ul::bs_type());
+	te.push_back(bs_npvec_shared_f::bs_type());
+	te.push_back(bs_npvec_shared_d::bs_type());
+	te.push_back(bs_npvec_shared_s::bs_type());
+	return te;
 }
 
 }
