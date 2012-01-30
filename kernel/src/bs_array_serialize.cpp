@@ -14,14 +14,16 @@
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
 #include "bs_array_serialize.h"
-
-//#include <boost/archive/text_iarchive.hpp>
-//#include <boost/archive/text_oarchive.hpp>
+#include "bs_serialize_overl.h"
 
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/split_free.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/string.hpp>
+// instantiate code for text archives for compatibility reason
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 
 #define BS_ARRAY_FACTORY_N(T, cont_traits, N)                                \
 namespace boost { namespace serialization {                                  \
@@ -34,11 +36,15 @@ factory< blue_sky::bs_array< T, blue_sky::cont_traits >, N >(std::va_list) { \
 }                                                                            \
 }}
 
-#define BS_ARRAY_EXPORT(T, cont_traits)     \
+#define BS_ARRAY_EXPORT(T, cont_traits) \
 BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(blue_sky::bs_array, 2, (T, blue_sky::cont_traits))
 
 using namespace blue_sky;
+namespace boser = boost::serialization;
 
+/*-----------------------------------------------------------------
+ * serialize bs_array
+ *----------------------------------------------------------------*/
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(save, bs_array, 2, (class, template< class > class))
 	typedef typename type::const_iterator citerator;
 	// save array size
@@ -59,10 +65,37 @@ BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(load, bs_array, 2, (class, template< class > cl
 		ar >> *pd;
 BLUE_SKY_CLASS_SRZ_FCN_END
 
-BLUE_SKY_CLASS_SERIALIZE_SPLIT_EXT(blue_sky::bs_array, 2, (class, template< class > class))
+BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(serialize, blue_sky::bs_array, 2, (class, template< class > class))
+	// invoke serialization of base class first
+	typedef typename type::base_t base_t;
+	boser::bs_base_object< base_t, type >(t);
+
+	// split
+	boser::split_free(ar, t, version);
+BLUE_SKY_CLASS_SRZ_FCN_END
+
+//BLUE_SKY_CLASS_SERIALIZE_SPLIT_EXT(blue_sky::bs_array, 2, (class, template< class > class))
 
 BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(blue_sky::bs_array, 2, (class, template< class > class))
 
+/*-----------------------------------------------------------------
+ * serializate array traits
+ *----------------------------------------------------------------*/
+////////////////////////////////////////////////////////////////////
+// empty serialization functions for simple traits
+//
+BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(serialize, vector_traits, 1)
+BLUE_SKY_CLASS_SRZ_FCN_END
+
+BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(serialize, bs_array_shared, 1)
+BLUE_SKY_CLASS_SRZ_FCN_END
+
+BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(serialize, bs_vector_shared, 1)
+BLUE_SKY_CLASS_SRZ_FCN_END
+
+/*-----------------------------------------------------------------
+ * instantiate serialization code
+ *----------------------------------------------------------------*/
 BS_ARRAY_EXPORT(int, vector_traits)
 BS_ARRAY_EXPORT(unsigned int, vector_traits)
 BS_ARRAY_EXPORT(long, vector_traits)
@@ -87,3 +120,22 @@ BS_ARRAY_EXPORT(float, bs_vector_shared)
 BS_ARRAY_EXPORT(double, bs_vector_shared)
 BS_ARRAY_EXPORT(std::string, bs_vector_shared)
 
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+#include "bs_npvec_serialize.h"
+
+BS_ARRAY_EXPORT(int, bs_npvec)
+BS_ARRAY_EXPORT(unsigned int, bs_npvec)
+BS_ARRAY_EXPORT(long, bs_npvec)
+BS_ARRAY_EXPORT(unsigned long, bs_npvec)
+BS_ARRAY_EXPORT(float, bs_npvec)
+BS_ARRAY_EXPORT(double, bs_npvec)
+BS_ARRAY_EXPORT(std::string, bs_npvec)
+
+BS_ARRAY_EXPORT(int, bs_npvec_shared)
+BS_ARRAY_EXPORT(unsigned int, bs_npvec_shared)
+BS_ARRAY_EXPORT(long, bs_npvec_shared)
+BS_ARRAY_EXPORT(unsigned long, bs_npvec_shared)
+BS_ARRAY_EXPORT(float, bs_npvec_shared)
+BS_ARRAY_EXPORT(double, bs_npvec_shared)
+BS_ARRAY_EXPORT(std::string, bs_npvec_shared)
+#endif

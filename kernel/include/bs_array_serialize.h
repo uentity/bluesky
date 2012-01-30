@@ -56,5 +56,25 @@ BS_ARRAY_GUID_VALUE(float, bs_vector_shared)
 BS_ARRAY_GUID_VALUE(double, bs_vector_shared)
 BS_ARRAY_GUID_VALUE(std::string, bs_vector_shared)
 
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+#include "bs_npvec_shared.h"
+
+BS_ARRAY_GUID_VALUE(int, bs_npvec)
+BS_ARRAY_GUID_VALUE(unsigned int, bs_npvec)
+BS_ARRAY_GUID_VALUE(long, bs_npvec)
+BS_ARRAY_GUID_VALUE(unsigned long, bs_npvec)
+BS_ARRAY_GUID_VALUE(float, bs_npvec)
+BS_ARRAY_GUID_VALUE(double, bs_npvec)
+BS_ARRAY_GUID_VALUE(std::string, bs_npvec)
+
+BS_ARRAY_GUID_VALUE(int, bs_npvec_shared)
+BS_ARRAY_GUID_VALUE(unsigned int, bs_npvec_shared)
+BS_ARRAY_GUID_VALUE(long, bs_npvec_shared)
+BS_ARRAY_GUID_VALUE(unsigned long, bs_npvec_shared)
+BS_ARRAY_GUID_VALUE(float, bs_npvec_shared)
+BS_ARRAY_GUID_VALUE(double, bs_npvec_shared)
+BS_ARRAY_GUID_VALUE(std::string, bs_npvec_shared)
+#endif
+
 #endif /* end of include guard: BS_ARRAY_SERIALIZE_ATPO4NI3 */
 
