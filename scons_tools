@@ -3,6 +3,9 @@ import os, sys, glob
 def list_suffix (list, suffix) :
 	return [x + suffix for x in list];
 
+def list_prefix(in_list, what) :
+    return [what + x for x in in_list];
+
 def add_suffix (x, suffix) :
     if (len (x) == 0) :
         return x
@@ -38,6 +41,7 @@ def bs_common_defines(custom_env) :
 	if custom_env['py'] == '1' :
 		custom_env.AppendUnique(CPPDEFINES = ["BSPY_EXPORTING_PLUGIN"]);
 
+Export ("list_prefix")
 Export ("list_suffix")
 Export ("add_suffix")
 Export ("files")
