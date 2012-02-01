@@ -274,11 +274,17 @@ struct guid_defined<                                                            
     BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)                                   \
 > : boost::mpl::true_ {};                                                               \
 template< >                                                                             \
-inline const char* guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() {        \
-    return BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)::bs_type().stype_.c_str(); \
-} }}
+BS_API_PLUGIN const char* guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >();  \
+}}
 
 #define BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(T, tpl_args_num, tpl_args)                       \
+namespace boost { namespace serialization {                                                 \
+template< >                                                                                 \
+const char* guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() {                   \
+    static std::string stype =                                                              \
+        BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)::bs_type().stype_.c_str();        \
+    return stype.c_str();                                                                   \
+} }}                                                                                        \
 namespace boost { namespace archive { namespace detail { namespace extra_detail {           \
 template< >                                                                                 \
 struct init_guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) > {                     \
