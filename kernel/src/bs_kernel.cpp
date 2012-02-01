@@ -944,31 +944,15 @@ public:
 	}
 
 	str_dt_ptr pert_str_dt(const type_descriptor& obj_t) {
-		//ensure that given type is registered
-		fe_ptr tp;
-		register_rt_type(obj_t, &tp);
-		if(tp.is_nil())
-      {
-        throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
-      }
-
-		//create or return data_table for it
-		smart_ptr< str_data_table >& p_tbl = pert_str_tbl_[tp];
+		// create or return data_table for given type
+		smart_ptr< str_data_table >& p_tbl = pert_str_tbl_[demand_type(obj_t)];
 		if(!p_tbl) p_tbl = create_object(str_data_table::bs_type(), false, NULL);
 		return str_dt_ptr(p_tbl, p_tbl->mutex());
 	}
 
 	idx_dt_ptr pert_idx_dt(const type_descriptor& obj_t) {
-		//ensure that given type is registered
-		fe_ptr tp;
-		register_rt_type(obj_t, &tp);
-		if(tp.is_nil())
-      {
-        throw bs_kernel_exception ("BlueSky Kernel", blue_sky::no_type, "Cannot create str_data_table for unknown type: " + obj_t.name ());
-      }
-
-		//create or return data_table for it
-		smart_ptr< idx_data_table >& p_tbl = pert_idx_tbl_[tp];
+		// create or return data_table for given type
+		smart_ptr< idx_data_table >& p_tbl = pert_idx_tbl_[demand_type(obj_t)];
 		if(!p_tbl) p_tbl = create_object(idx_data_table::bs_type(), false, NULL);
 		return idx_dt_ptr(p_tbl, p_tbl->mutex());
 	}

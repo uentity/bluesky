@@ -244,8 +244,8 @@ template< class T >
 	template< class T >
 	inline ulong size() const {
 		DT_SP_TBL p_vt = find_table< T >();
-		if(!p_vt) return 0;
-		else p_vt->size();
+		if(p_vt) return p_vt->size();
+		return 0;
 	}
 
 	//begin() and end() to iterate through props tables in stl-style
