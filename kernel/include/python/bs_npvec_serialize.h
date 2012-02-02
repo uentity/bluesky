@@ -24,6 +24,7 @@
 
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/export.hpp>
+#include <boost/serialization/array.hpp>
 #include <boost/archive/polymorphic_iarchive.hpp>
 #include <boost/archive/polymorphic_oarchive.hpp>
 
@@ -48,7 +49,7 @@ BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(load, blue_sky::detail::bs_npvec_impl, 1)
 	size_t ndim;
 	ar >> ndim;
 	std::vector< npy_intp > dims(ndim);
-	ar >> make_array(&dims[0], ndim);
+	ar >> boost::serialization::make_array(&dims[0], ndim);
 	t.init(ndim, &dims[0]);
 BLUE_SKY_CLASS_SRZ_FCN_END
 
@@ -59,14 +60,12 @@ BLUE_SKY_CLASS_SERIALIZE_SPLIT_T(blue_sky::detail::bs_npvec_impl, 1)
  *----------------------------------------------------------------*/
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(serialize, blue_sky::bs_npvec, 1)
 	// just serialize impl
-	typedef blue_sky::detail::bs_npvec_impl< typename type::value_type > base_t;
-	boost::serialization::bs_base_object< base_t, type >(t);
+	ar & boost::serialization::bs_base_object< typename type::base_t, type >(t);
 BLUE_SKY_CLASS_SRZ_FCN_END
 
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(serialize, blue_sky::bs_npvec_shared, 1)
 	// just serialize impl
-	typedef blue_sky::detail::bs_npvec_impl< typename type::value_type > base_t;
-	boost::serialization::bs_base_object< base_t, type >(t);
+	ar & boost::serialization::bs_base_object< typename type::base_t, type >(t);
 BLUE_SKY_CLASS_SRZ_FCN_END
 
 #endif /* end of include guard: BS_NPVEC_SERIALIZE_DUQHKGZW */

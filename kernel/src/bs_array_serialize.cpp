@@ -68,7 +68,7 @@ BLUE_SKY_CLASS_SRZ_FCN_END
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(serialize, blue_sky::bs_array, 2, (class, template< class > class))
 	// invoke serialization of base class first
 	typedef typename type::base_t base_t;
-	boser::bs_base_object< base_t, type >(t);
+	ar & boser::bs_base_object< base_t, type >(t);
 
 	// split
 	boser::split_free(ar, t, version);
@@ -84,7 +84,7 @@ BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(blue_sky::bs_array, 2, (class, template< class 
 ////////////////////////////////////////////////////////////////////
 // empty serialization functions for simple traits
 //
-BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(serialize, vector_traits, 1)
+BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(serialize, bs_vecbase_impl, 2)
 BLUE_SKY_CLASS_SRZ_FCN_END
 
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(serialize, bs_array_shared, 1)
