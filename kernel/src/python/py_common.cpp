@@ -24,44 +24,35 @@
 
 #include <ostream>
 #include <iostream>
+#include <sstream>
 
 namespace blue_sky {
 using namespace std;
 
 // def(str(self)) impl for plugin_descriptor
-ostream& operator<<(ostream& os, const plugin_descriptor& pd) {
-	os << '{' << endl;
-	os << "\tPlugin: " << pd.name_ << ", version " << pd.version_ << endl;
-	os << '\t' << pd.short_descr_ << endl;
-	if(pd.long_descr_.size() > 0)
-		os << '\t' << pd.long_descr_ << endl;
-	os << "\tNamespace: " << pd.py_namespace_ << endl;
-	os << '}' << endl;
+BS_HIDDEN_API ostream& operator<<(ostream& os, const plugin_descriptor& pd) {
+	os << "{PLUGIN: " << pd.name_ << "; VERSIOM " << pd.version_;
+	os << "; INFO: " << pd.short_descr_;
+	if(pd.long_descr_.size() > 0)		os << "; LONG INFO: " << pd.long_descr_;
+	os << "; NAMESPACE: " << pd.py_namespace_ << '}';
 	return os;
 }
 
 // def(str(self)) impl for type_descriptor
-ostream& operator<<(ostream& os, const type_descriptor& td) {
+BS_HIDDEN_API ostream& operator<<(ostream& os, const type_descriptor& td) {
 	if(td.is_nil())
-		os << "\tBlueSky Nil type" << endl;
+		os << "BlueSky Nil type" << endl;
 	else {
-		os << '{' << endl;
-		os << "\tBlueSky type: " << td.stype_ << endl;
-		os << '\t' << td.short_descr_ << endl;
+		os << "{TYPENAME: " << td.stype_;
+		os << "; INFO: " << td.short_descr_;
 		if(td.long_descr_.size() > 0)
-			os << '\t' << td.long_descr_ << endl;
-		os << '}' << endl;
-		// print type full chain
-		if(!td.parent_td().is_nil()) {
-			os << "Parent type_descriptor ->" << endl;
-			os << td.parent_td();
-		}
+			os << "; LONG INFO: " << td.long_descr_ << '}';
 	}
 	return os;
 }
 
 // def(str(self)) impl for type_info
-ostream& operator<<(ostream& os, const bs_type_info& ti) {
+BS_HIDDEN_API ostream& operator<<(ostream& os, const bs_type_info& ti) {
 	os << "BlueSky C++ layer type_info: '" << ti.name() << "' at " << &ti.get() << endl;
 	return os;
 }
@@ -85,25 +76,25 @@ public:
 		this->get_override("dispose");
 	}
 
-	void add_ref() const {
-		if(override f = this->get_override("add_ref"))
-			f();
-		else
-			bs_refcounter::add_ref();
-	}
-	void def_add_ref() const {
-		bs_refcounter::add_ref();
-	}
+	//void add_ref() const {
+	//	if(override f = this->get_override("add_ref"))
+	//		f();
+	//	else
+	//		bs_refcounter::add_ref();
+	//}
+	//void def_add_ref() const {
+	//	bs_refcounter::add_ref();
+	//}
 
-	void del_ref() const {
-		if(override f = this->get_override("del_ref"))
-			f();
-		else
-			bs_refcounter::del_ref();
-	}
-	void def_del_ref() const {
-		bs_refcounter::del_ref();
-	}
+	//void del_ref() const {
+	//	if(override f = this->get_override("del_ref"))
+	//		f();
+	//	else
+	//		bs_refcounter::del_ref();
+	//}
+	//void def_del_ref() const {
+	//	bs_refcounter::del_ref();
+	//}
 };
 
 }
@@ -150,9 +141,8 @@ void py_bind_common() {
 		.def(self < self)
 		.def(self == self)
 		.def(self != self)
-    .def ("__str__", &plugin_descriptor::get_name)
-    .def ("__repr__", &plugin_descriptor::get_name)
-		//.def(str(self))
+		.def ("__repr__", &plugin_descriptor::get_name)
+		.def(str(self))
 		;
 
 	// register vector of plugin descriptors <-> Python list converters
@@ -177,8 +167,8 @@ void py_bind_common() {
 		.def(self < std::string())
 		.def(self == std::string())
 		.def(self != std::string())
+		.def ("__repr__", &type_descriptor::name)
 		.def(str(self))
-    .def ("__repr__", &type_descriptor::name)
 		;
 
 	// register vector of type descriptors <-> Python list converters
@@ -199,8 +189,10 @@ void py_bind_common() {
 	//def("test_type_v", &test_type_v);
 
 	class_< bs_refcounter_pyw, boost::noncopyable >("refcounter")
-		.def("add_ref", &bs_refcounter::add_ref, &bs_refcounter_pyw::def_add_ref)
-		.def("del_ref", &bs_refcounter::del_ref, &bs_refcounter_pyw::def_del_ref)
+		//.def("add_ref", &bs_refcounter::add_ref, &bs_refcounter_pyw::def_add_ref)
+		//.def("del_ref", &bs_refcounter::del_ref, &bs_refcounter_pyw::def_del_ref)
+		.def("add_ref", &bs_refcounter::add_ref)
+		.def("del_ref", &bs_refcounter::del_ref)
 		.add_property("refs", &bs_refcounter::refs)
 		.def("dispose", pure_virtual(&bs_refcounter::dispose))
 	;

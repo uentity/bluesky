@@ -56,14 +56,14 @@ public:
 	/*!
 	\brief Add reference.
 	*/
-	virtual void add_ref() const {
+	void add_ref() const {
 		++refcnt_;
 	}
 
 	/*!
 	\brief Delete reference.
 	*/
-	virtual void del_ref() const {
+	void del_ref() const {
 		if(--refcnt_ == 0)
 			dispose();
 	}
