@@ -45,7 +45,7 @@ namespace blue_sky {
 	\brief This is a base class for all objects.
 */
 
-	class BS_API objbase : virtual public bs_refcounter, public bs_messaging
+	class BS_API objbase : public bs_messaging
 	{
 		friend class kernel;
 		friend class combase;
