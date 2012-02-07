@@ -315,39 +315,55 @@ BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(T, 0, ())
  * Generate specific overloads for BlueSky types
  *----------------------------------------------------------------*/
 // third param passed as a sequence
-#define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)           \
-BS_CLASS_FREE_FCN_load_construct_data(T, tpl_args_num, tpl_args_prefix, 0)  \
+#define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)        \
+BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
+BLUE_SKY_CLASS_SRZ_FCN_END                                               \
+namespace boost { namespace archive { namespace detail {                 \
+template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >              \
+struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {            \
+    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                     \
+    typedef blue_sky::smart_ptr< type, true > sp_type;                   \
+    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                \
+        sp_type t = BS_KERNEL.create_object(type::bs_type(), false);     \
+        return t.lock();                                                 \
+} }; }}}
+
+#define BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, tpl_args_prefix, stype) \
+BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix)    \
+BLUE_SKY_CLASS_SRZ_FCN_END                                                  \
 namespace boost { namespace archive { namespace detail {                    \
 template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                 \
-struct BS_API_PLUGIN heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
+struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {               \
     typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                        \
     typedef blue_sky::smart_ptr< type, true > sp_type;                      \
-    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke();                    \
-}; }}}
+    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                   \
+        sp_type t = BS_KERNEL.create_object(stype, false);                  \
+        return t.lock();                                                    \
+} }; }}}
 
-#define BS_TYPE_SERIALIZE_IMPL_(T, tpl_args_num, tpl_args_prefix)        \
-BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
-BLUE_SKY_CLASS_SRZ_FCN_END                                               \
-namespace boost { namespace archive { namespace detail {                 \
-BS_ENUM_TPL_ARGS_IMPL(tpl_args_num, tpl_args_prefix)                     \
-BS_API_PLUGIN                                                            \
-BS_MAKE_FULL_TYPE(T, tpl_args_num)*                                      \
-heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {         \
-    sp_type t = BS_KERNEL.create_object(type::bs_type(), false);         \
-    return t.lock();                                                     \
-} }}}
+//#define BS_TYPE_SERIALIZE_IMPL_(T, tpl_args_num, tpl_args_prefix)        \
+//BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
+//BLUE_SKY_CLASS_SRZ_FCN_END                                               \
+//namespace boost { namespace archive { namespace detail {                 \
+//BS_ENUM_TPL_ARGS_IMPL(tpl_args_num, tpl_args_prefix)                     \
+//BS_API_PLUGIN                                                            \
+//BS_MAKE_FULL_TYPE(T, tpl_args_num)*                                      \
+//heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {         \
+//    sp_type t = BS_KERNEL.create_object(type::bs_type(), false);         \
+//    return t.lock();                                                     \
+//} }}}
 
-#define BS_TYPE_SERIALIZE_IMPL_BYNAME_(T, tpl_args_num, tpl_args_prefix, stype) \
-BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
-BLUE_SKY_CLASS_SRZ_FCN_END                                               \
-namespace boost { namespace archive { namespace detail {                 \
-BS_ENUM_TPL_ARGS_IMPL(tpl_args_num, tpl_args_prefix)                     \
-BS_API_PLUGIN                                                            \
-BS_MAKE_FULL_TYPE(T, tpl_args_num)*                                      \
-heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {         \
-    sp_type t = BS_KERNEL.create_object(stype, false);                   \
-    return t.lock();                                                     \
-} }}}
+//#define BS_TYPE_SERIALIZE_IMPL_BYNAME_(T, tpl_args_num, tpl_args_prefix, stype) \
+//BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
+//BLUE_SKY_CLASS_SRZ_FCN_END                                               \
+//namespace boost { namespace archive { namespace detail {                 \
+//BS_ENUM_TPL_ARGS_IMPL(tpl_args_num, tpl_args_prefix)                     \
+//BS_API_PLUGIN                                                            \
+//BS_MAKE_FULL_TYPE(T, tpl_args_num)*                                      \
+//heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {         \
+//    sp_type t = BS_KERNEL.create_object(stype, false);                   \
+//    return t.lock();                                                     \
+//} }}}
 
 // insert declaraion of nessessary boost::serialization overrides
 // needed for correct BS objects creation when they are serialized via pointers
@@ -357,17 +373,10 @@ heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {         \
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_EXT(T, tpl_args_num, tpl_args_prefix) \
 BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args_prefix))
 
-// implementation of declarations made above
-#define BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, tpl_args_num, tpl_args_prefix) \
-BS_TYPE_SERIALIZE_IMPL_(T, tpl_args_num, BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args_prefix))
-
 // simplified versions of above macroses for simple template types
 // assume that prefix for every template parameter is 'class'
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_T(T, tpl_args_num) \
 BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, (BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)))
-
-#define BLUE_SKY_TYPE_SERIALIZE_IMPL_T(T, tpl_args_num) \
-BS_TYPE_SERIALIZE_IMPL_(T, tpl_args_num, (BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)))
 
 // most simple versions for non-template types
 // here we can automatically include *_GUID macro in DECL
@@ -380,26 +389,34 @@ BLUE_SKY_TYPE_SERIALIZE_GUID(T)
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_NOGUID(T) \
 BS_TYPE_SERIALIZE_DECL_(T, 0, ())
 
+// implementation of declarations made above
+//#define BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, tpl_args_num, tpl_args_prefix) \
+//BS_TYPE_SERIALIZE_IMPL_(T, tpl_args_num, BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args_prefix))
+//
+//#define BLUE_SKY_TYPE_SERIALIZE_IMPL_T(T, tpl_args_num) \
+//BS_TYPE_SERIALIZE_IMPL_(T, tpl_args_num, (BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)))
+
+// deprecated!
 #define BLUE_SKY_TYPE_SERIALIZE_IMPL(T) \
-BS_TYPE_SERIALIZE_IMPL_(T, 0, ()) \
 BLUE_SKY_TYPE_SERIALIZE_EXPORT(T)
+//BS_TYPE_SERIALIZE_IMPL_(T, 0, ()) \
 
 ////////////////////////////////////////////////////////////////////
-// *_IMPL_BYNAME* macro provided to create BlueSky object by string
+// *_DECL_BYNAME* macro provided to create BlueSky object by string
 // type name instead of typeinfo provided by static bs_type() fcn
 // this is useful for serializing interfaces
 //
-#define BLUE_SKY_TYPE_SERIALIZE_IMPL_BYNAME_EXT(T, tpl_args_num, tpl_args_prefix, stype) \
-BS_TYPE_SERIALIZE_IMPL_BYNAME_(T, tpl_args_num, \
+#define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME_EXT(T, tpl_args_num, tpl_args_prefix, stype) \
+BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, \
     BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args_prefix), stype)
 
-#define BLUE_SKY_TYPE_SERIALIZE_IMPL_BYNAME_T(T, tpl_args_num, stype) \
-BS_TYPE_SERIALIZE_IMPL_BYNAME_(T, tpl_args_num, \
+#define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME_T(T, tpl_args_num, stype) \
+BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, \
     (BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)), stype)
 
-#define BLUE_SKY_TYPE_SERIALIZE_IMPL_BYNAME(T, stype) \
-BS_TYPE_SERIALIZE_IMPL_BYNAME_(T, 0, (), stype) \
-BLUE_SKY_TYPE_SERIALIZE_EXPORT(T)
+#define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME(T, stype) \
+BS_TYPE_SERIALIZE_DECL_BYNAME_(T, 0, (), stype)
+//BLUE_SKY_TYPE_SERIALIZE_EXPORT(T)
 
 /*-----------------------------------------------------------------
  * override of boost::detail::base_register to call

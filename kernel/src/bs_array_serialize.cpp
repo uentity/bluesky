@@ -76,7 +76,7 @@ BLUE_SKY_CLASS_SRZ_FCN_END
 
 //BLUE_SKY_CLASS_SERIALIZE_SPLIT_EXT(blue_sky::bs_array, 2, (class, template< class > class))
 
-BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(blue_sky::bs_array, 2, (class, template< class > class))
+//BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(blue_sky::bs_array, 2, (class, template< class > class))
 
 /*-----------------------------------------------------------------
  * serializate array traits
