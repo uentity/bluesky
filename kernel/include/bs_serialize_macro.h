@@ -315,14 +315,14 @@ BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(T, 0, ())
  * Generate specific overloads for BlueSky types
  *----------------------------------------------------------------*/
 // third param passed as a sequence
-#define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)          \
-BS_CLASS_FREE_FCN_load_construct_data(T, tpl_args_num, tpl_args_prefix, 0) \
-namespace boost { namespace archive { namespace detail {                   \
-template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                \
-struct BS_API heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {       \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                       \
-    typedef blue_sky::smart_ptr< type, true > sp_type;                     \
-    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke();                   \
+#define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)           \
+BS_CLASS_FREE_FCN_load_construct_data(T, tpl_args_num, tpl_args_prefix, 0)  \
+namespace boost { namespace archive { namespace detail {                    \
+template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                 \
+struct BS_API_PLUGIN heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
+    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                        \
+    typedef blue_sky::smart_ptr< type, true > sp_type;                      \
+    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke();                    \
 }; }}}
 
 #define BS_TYPE_SERIALIZE_IMPL_(T, tpl_args_num, tpl_args_prefix)        \
