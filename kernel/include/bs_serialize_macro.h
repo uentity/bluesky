@@ -279,7 +279,7 @@ BS_API_PLUGIN const char* guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args
 
 #define BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(T, tpl_args_num, tpl_args)                       \
 namespace boost { namespace serialization {                                                 \
-template< >                                                                                 \
+template< > BS_API_PLUGIN                                                                   \
 const char* guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() {                   \
     static std::string stype =                                                              \
         BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)::bs_type().stype_.c_str();        \
@@ -330,6 +330,7 @@ BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
 BLUE_SKY_CLASS_SRZ_FCN_END                                               \
 namespace boost { namespace archive { namespace detail {                 \
 BS_ENUM_TPL_ARGS_IMPL(tpl_args_num, tpl_args_prefix)                     \
+BS_API_PLUGIN                                                            \
 BS_MAKE_FULL_TYPE(T, tpl_args_num)*                                      \
 heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {         \
     sp_type t = BS_KERNEL.create_object(type::bs_type(), false);         \
@@ -337,14 +338,15 @@ heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {         \
 } }}}
 
 #define BS_TYPE_SERIALIZE_IMPL_BYNAME_(T, tpl_args_num, tpl_args_prefix, stype) \
-BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix)   \
-BLUE_SKY_CLASS_SRZ_FCN_END                                                 \
-namespace boost { namespace archive { namespace detail {                   \
-BS_ENUM_TPL_ARGS_IMPL(tpl_args_num, tpl_args_prefix)                       \
-BS_MAKE_FULL_TYPE(T, tpl_args_num)*                                        \
-heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {           \
-    sp_type t = BS_KERNEL.create_object(stype, false);                     \
-    return t.lock();                                                       \
+BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
+BLUE_SKY_CLASS_SRZ_FCN_END                                               \
+namespace boost { namespace archive { namespace detail {                 \
+BS_ENUM_TPL_ARGS_IMPL(tpl_args_num, tpl_args_prefix)                     \
+BS_API_PLUGIN                                                            \
+BS_MAKE_FULL_TYPE(T, tpl_args_num)*                                      \
+heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) >::invoke() {         \
+    sp_type t = BS_KERNEL.create_object(stype, false);                   \
+    return t.lock();                                                     \
 } }}}
 
 // insert declaraion of nessessary boost::serialization overrides
