@@ -37,7 +37,7 @@ factory< blue_sky::bs_array< T, blue_sky::cont_traits >, N >(std::va_list) { \
 }}
 
 #define BS_ARRAY_EXPORT(T, cont_traits) \
-BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(blue_sky::bs_array, 2, (T, blue_sky::cont_traits))
+BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(blue_sky::bs_array, 2, (T, blue_sky::cont_traits))
 
 using namespace blue_sky;
 namespace boser = boost::serialization;
@@ -73,10 +73,6 @@ BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(serialize, blue_sky::bs_array, 2, (class, templ
 	// split
 	boser::split_free(ar, t, version);
 BLUE_SKY_CLASS_SRZ_FCN_END
-
-//BLUE_SKY_CLASS_SERIALIZE_SPLIT_EXT(blue_sky::bs_array, 2, (class, template< class > class))
-
-//BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(blue_sky::bs_array, 2, (class, template< class > class))
 
 /*-----------------------------------------------------------------
  * serializate array traits
