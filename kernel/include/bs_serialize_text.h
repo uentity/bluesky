@@ -37,7 +37,7 @@ BS_API_PLUGIN std::string serialize_to_str(smart_ptr< T, true >& t) {
 
 template< class T >
 BS_API_PLUGIN smart_ptr< T, true > serialize_from_str(const std::string& src) {
-	std::istringstream is;
+	std::istringstream is(src);
 	boost::archive::text_iarchive ar(is);
 	smart_ptr< T, true > t;
 	ar >> t;
