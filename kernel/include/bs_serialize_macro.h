@@ -365,7 +365,7 @@ BLUE_SKY_TYPE_SERIALIZE_GUID_EXT(T, 0, ())
  * instantiate serialization code for BS types
  *----------------------------------------------------------------*/
 
-#define BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, tpl_args_num, tpl_args)                       \
+#define BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, tpl_args_num, tpl_args)                         \
 namespace boost { namespace serialization {                                                 \
 template< > BS_API_PLUGIN                                                                   \
 const char* guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() {                   \
@@ -392,6 +392,21 @@ BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, 1, (tpl_arg))
 // for non-template types
 #define BLUE_SKY_TYPE_SERIALIZE_IMPL(T) \
 BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, 0, ())
+
+/*-----------------------------------------------------------------
+ * EXPORT = GUID + IMPL
+ *----------------------------------------------------------------*/
+#define BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(T, tpl_args_num, tpl_args) \
+BLUE_SKY_TYPE_SERIALIZE_GUID(T, tpl_args_num, tpl_args) \
+BLUE_SKY_TYPE_SERIALIZE_IMPL(T, tpl_args_num, tpl_args)
+
+#define BLUE_SKY_TYPE_SERIALIZE_EXPORT_T(T, tpl_arg) \
+BLUE_SKY_TYPE_SERIALIZE_GUID(T, 1, tpl_arg) \
+BLUE_SKY_TYPE_SERIALIZE_IMPL(T, 1, tpl_arg)
+
+#define BLUE_SKY_TYPE_SERIALIZE_EXPORT_T(T) \
+BLUE_SKY_TYPE_SERIALIZE_GUID(T, 0, ()) \
+BLUE_SKY_TYPE_SERIALIZE_IMPL(T, 0, ())
 
 /*-----------------------------------------------------------------
  * override of boost::detail::base_register to call
