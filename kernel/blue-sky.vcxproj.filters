@@ -188,6 +188,12 @@
     <ClCompile Include="src\python\bs_npvec_shared.cpp">
       <Filter>arrays</Filter>
     </ClCompile>
+    <ClCompile Include="src\bs_serialize.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_array_serialize.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bs_abstract_storage.h">
@@ -417,6 +423,9 @@
     </ClInclude>
     <ClInclude Include="include\python\bs_npvec.h">
       <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_macro.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

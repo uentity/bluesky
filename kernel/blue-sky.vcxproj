@@ -83,7 +83,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <ShowIncludes>false</ShowIncludes>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions> /Zm1000</AdditionalOptions>
+      <AdditionalOptions> /Zm1000 /bigobj</AdditionalOptions>
       <DisableSpecificWarnings>4520</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -157,6 +157,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\bs_abstract_storage.cpp" />
+    <ClCompile Include="src\bs_array_serialize.cpp" />
     <ClCompile Include="src\bs_command.cpp" />
     <ClCompile Include="src\bs_common.cpp" />
     <ClCompile Include="src\bs_exception.cpp" />
@@ -166,6 +167,7 @@
     <ClCompile Include="src\bs_misc.cpp" />
     <ClCompile Include="src\bs_object_base.cpp" />
     <ClCompile Include="src\bs_prop_base.cpp" />
+    <ClCompile Include="src\bs_serialize.cpp" />
     <ClCompile Include="src\bs_shell.cpp" />
     <ClCompile Include="src\bs_type_info.cpp" />
     <ClCompile Include="src\python\bs_npvec.cpp" />
@@ -226,6 +228,7 @@
     <ClInclude Include="include\bs_plugin_common.h" />
     <ClInclude Include="include\bs_prop_base.h" />
     <ClInclude Include="include\bs_refcounter.h" />
+    <ClInclude Include="include\bs_serialize_macro.h" />
     <ClInclude Include="include\bs_shell.h" />
     <ClInclude Include="include\bs_type_info.h" />
     <ClInclude Include="include\bs_type_macro.h" />
