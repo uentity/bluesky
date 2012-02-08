@@ -362,10 +362,33 @@ BLUE_SKY_TYPE_SERIALIZE_GUID_EXT(T, 1, (tpl_arg))
 BLUE_SKY_TYPE_SERIALIZE_GUID_EXT(T, 0, ())
 
 /*-----------------------------------------------------------------
+ * macro for generating blue_sky::serialize_register_eti< T >() body
+ *----------------------------------------------------------------*/
+#define BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, tpl_args_num, tpl_args)                   \
+namespace blue_sky {                                                                 \
+template< >                                                                          \
+void serialize_register_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() { \
+    const ::boost::serialization::extended_type_info& eti =                          \
+    ::boost::serialization::type_info_implementation<                                \
+        BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)                            \
+    >::type::get_const_instance();                                                   \
+    (void)eti;                                                                       \
+} }
+
+// simplified versions of above macroses for one template parameter
+#define BLUE_SKY_CLASS_REGISTER_ETI_T(T, tpl_arg) \
+BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, 1, (tpl_arg))
+
+// for non-template types
+#define BLUE_SKY_CLASS_REGISTER_ETI(T) \
+BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, 0, ())
+
+/*-----------------------------------------------------------------
  * instantiate serialization code for BS types
  *----------------------------------------------------------------*/
 
 #define BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, tpl_args_num, tpl_args)                         \
+BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, tpl_args_num, tpl_args)                                  \
 namespace boost { namespace serialization {                                                 \
 template< > BS_API_PLUGIN                                                                   \
 const char* guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() {                   \
@@ -404,7 +427,7 @@ BLUE_SKY_TYPE_SERIALIZE_IMPL(T, tpl_args_num, tpl_args)
 BLUE_SKY_TYPE_SERIALIZE_GUID(T, 1, tpl_arg) \
 BLUE_SKY_TYPE_SERIALIZE_IMPL(T, 1, tpl_arg)
 
-#define BLUE_SKY_TYPE_SERIALIZE_EXPORT_T(T) \
+#define BLUE_SKY_TYPE_SERIALIZE_EXPORT(T) \
 BLUE_SKY_TYPE_SERIALIZE_GUID(T, 0, ()) \
 BLUE_SKY_TYPE_SERIALIZE_IMPL(T, 0, ())
 

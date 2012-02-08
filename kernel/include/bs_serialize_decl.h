@@ -73,57 +73,14 @@ public:
 	};
 };
 
-}  // eof blue_sky
 
-// redirect serialization free functions to blue_sky::bs_serialize
-//namespace boost { namespace serialization {
-//
-//template< class Archive, class T >
-//BS_API_PLUGIN void serialize(
-//	Archive& ar,
-//	T& t,
-//	const unsigned int version
-//){
-//	::blue_sky::bs_serialize< T >::serialize(ar, t, version);
-//}
-//
-//template< class Archive, class T >
-//BS_API_PLUGIN void save_construct_data(
-//	Archive& ar,
-//	const T* t,
-//	const unsigned int version
-//){
-//	::blue_sky::bs_serialize< T >::save_construct_data(ar, t, version);
-//}
-//
-//template< class Archive, class T >
-//BS_API_PLUGIN void load_construct_data(
-//	Archive& ar,
-//	T* t,
-//	const unsigned int version
-//){
-//	::blue_sky::bs_serialize< T >::load_construct_data(ar, t, version);
-//}
-//
-//template< class Archive, class T >
-//static void save(
-//	Archive& ar,
-//	const T& t,
-//	const unsigned int version
-//){
-//	::blue_sky::bs_serialize< T >::save(ar, t, version);
-//}
-//
-//template< class Archive, class T >
-//static void load(
-//	Archive& ar,
-//	T& t,
-//	const unsigned int version
-//){
-//	::blue_sky::bs_serialize< T >::load(ar, t, version);
-//}
-//
-//}}  // eof boost::serialization
+/// @brief Force boost::serialization::extended_type_info creation (and registering)
+///
+/// @tparam T
+template< class T >
+void serialize_register_eti();
+
+}  // eof blue_sky
 
 #endif /* end of include guard: BS_SERIALIZE_DECL_AN05AGKZ */
 
