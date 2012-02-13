@@ -365,15 +365,24 @@ BLUE_SKY_TYPE_SERIALIZE_GUID_EXT(T, 0, ())
  * macro for generating blue_sky::serialize_register_eti< T >() body
  *----------------------------------------------------------------*/
 #define BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, tpl_args_num, tpl_args)                   \
-namespace blue_sky {                                                                 \
+namespace blue_sky { namespace detail {                                              \
 template< >                                                                          \
-void serialize_register_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() { \
-    const ::boost::serialization::extended_type_info& eti =                          \
+struct bs_init_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) > {            \
+    static ::boost::serialization::extended_type_info const& eti;                    \
+};                                                                                   \
+::boost::serialization::extended_type_info const&                                    \
+bs_init_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >::eti =              \
     ::boost::serialization::type_info_implementation<                                \
         BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)                            \
     >::type::get_const_instance();                                                   \
-    (void)eti;                                                                       \
-} }
+}                                                                                    \
+template< >                                                                          \
+void serialize_register_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() { \
+    detail::bs_init_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >();      \
+}                                                                                    \
+template                                                                             \
+void serialize_register_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >();  \
+}
 
 // simplified versions of above macroses for one template parameter
 #define BLUE_SKY_CLASS_REGISTER_ETI_T(T, tpl_arg) \

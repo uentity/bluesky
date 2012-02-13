@@ -73,6 +73,12 @@ public:
 	};
 };
 
+namespace detail {
+
+template< class T >
+struct bs_init_eti;
+
+}
 
 /// @brief Force boost::serialization::extended_type_info creation (and registering)
 ///
