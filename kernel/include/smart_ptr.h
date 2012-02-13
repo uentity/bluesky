@@ -674,7 +674,7 @@ public:
 	~bs_locker() {
 #ifndef BS_DISABLE_MT_LOCKS
 		//fire unlock signal
-		bs_private::signal_unlock< pure_pointed_t >::fire(p_);
+		bs_private::signal_unlock< pointed_t >::fire(p_);
 #endif
 	}
 
