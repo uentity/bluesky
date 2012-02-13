@@ -379,10 +379,7 @@ bs_init_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >::eti =         
 template< >                                                                          \
 void serialize_register_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() { \
     detail::bs_init_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >();      \
-}                                                                                    \
-template                                                                             \
-void serialize_register_eti< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >();  \
-}
+} }
 
 // simplified versions of above macroses for one template parameter
 #define BLUE_SKY_CLASS_REGISTER_ETI_T(T, tpl_arg) \
@@ -429,16 +426,16 @@ BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, 0, ())
  * EXPORT = GUID + IMPL
  *----------------------------------------------------------------*/
 #define BLUE_SKY_TYPE_SERIALIZE_EXPORT_EXT(T, tpl_args_num, tpl_args) \
-BLUE_SKY_TYPE_SERIALIZE_GUID(T, tpl_args_num, tpl_args) \
-BLUE_SKY_TYPE_SERIALIZE_IMPL(T, tpl_args_num, tpl_args)
+BLUE_SKY_TYPE_SERIALIZE_GUID_EXT(T, tpl_args_num, tpl_args) \
+BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, tpl_args_num, tpl_args)
 
 #define BLUE_SKY_TYPE_SERIALIZE_EXPORT_T(T, tpl_arg) \
-BLUE_SKY_TYPE_SERIALIZE_GUID(T, 1, tpl_arg) \
-BLUE_SKY_TYPE_SERIALIZE_IMPL(T, 1, tpl_arg)
+BLUE_SKY_TYPE_SERIALIZE_GUID_T(T, tpl_arg) \
+BLUE_SKY_TYPE_SERIALIZE_IMPL_T(T, tpl_arg)
 
 #define BLUE_SKY_TYPE_SERIALIZE_EXPORT(T) \
-BLUE_SKY_TYPE_SERIALIZE_GUID(T, 0, ()) \
-BLUE_SKY_TYPE_SERIALIZE_IMPL(T, 0, ())
+BLUE_SKY_TYPE_SERIALIZE_GUID(T) \
+BLUE_SKY_TYPE_SERIALIZE_IMPL(T)
 
 /*-----------------------------------------------------------------
  * override of boost::detail::base_register to call
