@@ -30,7 +30,7 @@ BLUE_SKY_CLASS_SRZ_FCN_BEGIN(serialize, objbase)
 		static_cast< objbase* >(NULL),
 		static_cast< bs_refcounter* >(NULL)
 	);
-	boser::void_cast_register(
+	boser::bs_void_cast_register(
 		static_cast< objbase* >(NULL),
 		static_cast< bs_messaging * >(NULL)
 	);
