@@ -21,6 +21,7 @@
 #include <boost/preprocessor/facilities/empty.hpp>
 #include <boost/preprocessor/repetition/enum.hpp>
 #include <boost/preprocessor/tuple/to_seq.hpp>
+#include <boost/preprocessor/tuple/rem.hpp>
 #include <boost/preprocessor/seq/enum.hpp>
 #include <boost/preprocessor/seq/for_each_i.hpp>
 #include <boost/preprocessor/repetition/enum_params.hpp>
@@ -51,7 +52,8 @@ T BOOST_PP_CAT(BS_MAKE_TPL_ARGS_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_num)
 
 // expands to < tpl_args[0], tpl_args[0], ..., tpl_args[n - 1] >
 #define BS_MAKE_FULL_TYPE_ARGS_1(tpl_args_num, tpl_args) \
-< BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args)) >
+< BOOST_PP_TUPLE_REM_CTOR(tpl_args_num, tpl_args) >
+//< BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args)) >
 
 #define BS_MAKE_FULL_TYPE_ARGS_0(tpl_args_num, tpl_args)
 
@@ -80,6 +82,17 @@ template < BS_ENUM_TPL_ARGS_1(tpl_args_prefix) >
 // otherwise to nothing
 #define BS_ENUM_TPL_ARGS_IMPL(tpl_args_num, tpl_args_prefix) \
 BOOST_PP_CAT(BS_ENUM_TPL_ARGS_IMPL_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_prefix)
+
+// expands to tpl_args[0], tpl_args[0], ..., tpl_args[n - 1]
+#define BS_ENUM_TYPE_TPL_ARGS_1(tpl_args_num, tpl_args) \
+BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args))
+
+#define BS_ENUM_TYPE_TPL_ARGS_0(tpl_args_num, tpl_args)
+
+// expands to tpl_args[0], tpl_args[0], ..., tpl_args[n - 1] if n > 0
+// otherwise to nothing
+#define BS_ENUM_TYPE_TPL_ARGS(tpl_args_num, tpl_args) \
+BOOST_PP_CAT(BS_ENUM_TYPE_TPL_ARGS_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_num, tpl_args)
 
 /*-----------------------------------------------------------------
  * Sugar for generating boost::serialization functions for any class
@@ -131,7 +144,7 @@ namespace boost { namespace serialization {                    \
 template< class Archive                                        \
 BOOST_PP_COMMA_IF(tpl_args_num)                                \
 BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >              \
-void save(                                                     \
+BS_API_PLUGIN void save(                                       \
     Archive& ar, const BS_MAKE_FULL_TYPE(T, tpl_args_num)& t,  \
     const unsigned int version)                                \
 BOOST_PP_CAT(BS_CLASS_FREE_FCN_BODY_, has_body)(save, T, tpl_args_num) \
@@ -142,7 +155,7 @@ namespace boost { namespace serialization {              \
 template< class Archive                                  \
 BOOST_PP_COMMA_IF(tpl_args_num)                          \
 BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >        \
-void load(                                               \
+BS_API_PLUGIN void load(                                 \
     Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t,  \
     const unsigned int version)                          \
 BOOST_PP_CAT(BS_CLASS_FREE_FCN_BODY_, has_body)(load, T, tpl_args_num) \
@@ -390,11 +403,36 @@ BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, 1, (tpl_arg))
 BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, 0, ())
 
 /*-----------------------------------------------------------------
+ * explicitly instantiate serialize() templates for given class
+ *----------------------------------------------------------------*/
+#define BLUE_SKY_CLASS_SERIALIZE_INST_AR(Ar_t, T, tpl_args_num, tpl_args)      \
+namespace boost { namespace serialization {                                    \
+template void serialize<                                                       \
+    boost::archive::Ar_t BOOST_PP_COMMA_IF(tpl_args_num)                       \
+    BOOST_PP_TUPLE_REM_CTOR(tpl_args_num, tpl_args)                            \
+>(  boost::archive::Ar_t&, BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)&, \
+    const unsigned int                                                         \
+); }}
+
+#define BLUE_SKY_CLASS_SERIALIZE_INST_EXT(T, tpl_args_num, tpl_args)              \
+BLUE_SKY_CLASS_SERIALIZE_INST_AR(polymorphic_iarchive, T, tpl_args_num, tpl_args) \
+BLUE_SKY_CLASS_SERIALIZE_INST_AR(polymorphic_oarchive, T, tpl_args_num, tpl_args) \
+BLUE_SKY_CLASS_SERIALIZE_INST_AR(text_iarchive, T, tpl_args_num, tpl_args)        \
+BLUE_SKY_CLASS_SERIALIZE_INST_AR(text_oarchive, T, tpl_args_num, tpl_args)
+
+#define BLUE_SKY_CLASS_SERIALIZE_INST_T(T, tpl_arg) \
+BLUE_SKY_CLASS_SERIALIZE_INST_EXT(T, 1, (tpl_arg))
+
+#define BLUE_SKY_CLASS_SERIALIZE_INST(T) \
+BLUE_SKY_CLASS_SERIALIZE_INST_EXT(T, 0, ())
+
+/*-----------------------------------------------------------------
  * instantiate serialization code for BS types
  *----------------------------------------------------------------*/
 
 #define BLUE_SKY_TYPE_SERIALIZE_IMPL_EXT(T, tpl_args_num, tpl_args)                         \
 BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, tpl_args_num, tpl_args)                                  \
+BLUE_SKY_CLASS_SERIALIZE_INST_EXT(T, tpl_args_num, tpl_args)                                \
 namespace boost { namespace serialization {                                                 \
 template< > BS_API_PLUGIN                                                                   \
 const char* guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() {                   \
