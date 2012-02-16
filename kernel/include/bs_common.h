@@ -22,10 +22,8 @@
 #ifndef _BS_COMMON_H
 #define _BS_COMMON_H
 
-#if PYTHON_VERSION > 25
 #if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
 #include <boost/python/detail/wrap_python.hpp>
-#endif
 #endif
 
 #include "setup_common_api.h"
