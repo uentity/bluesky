@@ -414,6 +414,12 @@ template void serialize<                                                       \
     const unsigned int                                                         \
 ); }}
 
+#ifdef _WIN32
+// explicit instantiation of serialize() not needed in VC++
+#define BLUE_SKY_CLASS_SERIALIZE_INST_EXT(T, tpl_args_num, tpl_args)
+#define BLUE_SKY_CLASS_SERIALIZE_INST_T(T, tpl_arg)
+#define BLUE_SKY_CLASS_SERIALIZE_INST(T)
+#else
 #define BLUE_SKY_CLASS_SERIALIZE_INST_EXT(T, tpl_args_num, tpl_args)              \
 BLUE_SKY_CLASS_SERIALIZE_INST_AR(polymorphic_iarchive, T, tpl_args_num, tpl_args) \
 BLUE_SKY_CLASS_SERIALIZE_INST_AR(polymorphic_oarchive, T, tpl_args_num, tpl_args) \
@@ -425,6 +431,7 @@ BLUE_SKY_CLASS_SERIALIZE_INST_EXT(T, 1, (tpl_arg))
 
 #define BLUE_SKY_CLASS_SERIALIZE_INST(T) \
 BLUE_SKY_CLASS_SERIALIZE_INST_EXT(T, 0, ())
+#endif
 
 /*-----------------------------------------------------------------
  * instantiate serialization code for BS types

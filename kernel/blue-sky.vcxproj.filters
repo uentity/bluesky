@@ -427,5 +427,14 @@
     <ClInclude Include="include\bs_serialize_macro.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\bs_serialize_decl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_overl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_text.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
