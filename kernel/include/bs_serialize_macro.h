@@ -37,7 +37,7 @@ BOOST_PP_COMMA_IF(i) prefix_elem BOOST_PP_CAT(param, i)
 #define BS_TYPE_TPL_ARG_(z, i, param) \
 BOOST_PP_CAT(param, i)
 
-#define BS_TEXT(z, i, text) text
+#define BS_TEXT_(z, i, text) text
 
 // expands to < A0, A1, ..., An-1 >
 #define BS_MAKE_TPL_ARGS_1(tpl_args_num) \
@@ -170,10 +170,10 @@ BOOST_PP_CAT(BS_CLASS_FREE_FCN_, fcn) \
 
 #define BLUE_SKY_CLASS_SRZ_FCN_DECL_T(fcn, T, tpl_args_num) \
 BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(fcn, T, tpl_args_num, \
-(BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)))
+(BOOST_PP_ENUM(tpl_args_num, BS_TEXT_, class)))
 
 #define BLUE_SKY_CLASS_SRZ_FCN_DECL(fcn, T) \
-BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(fcn, T, 0, ())
+BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(fcn, T, 0, (BOOST_PP_EMPTY()))
 
 ////////////////////////////////////////////////////////////////////
 // generate common overloads to omit duplicating a lot of code in
@@ -254,10 +254,10 @@ BOOST_PP_CAT(BS_CLASS_FCN_BEGIN_, fcn) \
 
 #define BLUE_SKY_CLASS_SRZ_FCN_BEGIN_T(fcn, T, tpl_args_num) \
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(fcn, T, tpl_args_num, \
-(BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)))
+(BOOST_PP_ENUM(tpl_args_num, BS_TEXT_, class)))
 
 #define BLUE_SKY_CLASS_SRZ_FCN_BEGIN(fcn, T) \
-BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(fcn, T, 0, ())
+BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(fcn, T, 0, (BOOST_PP_EMPTY()))
 
 ////////////////////////////////////////////////////////////////////
 // generate body of serialize() function that splits to save & load
@@ -306,18 +306,18 @@ BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl
 // simplified versions of above macroses for simple template types
 // assume that prefix for every template parameter is 'class'
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_T(T, tpl_args_num) \
-BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, (BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)))
+BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, (BOOST_PP_ENUM(tpl_args_num, BS_TEXT_, class)))
 
 // most simple versions for non-template types
 // here we can automatically include *_GUID macro in DECL
 // cause it anyway should be there
 #define BLUE_SKY_TYPE_SERIALIZE_DECL(T) \
-BS_TYPE_SERIALIZE_DECL_(T, 0, ()) \
+BS_TYPE_SERIALIZE_DECL_(T, 0, (BOOST_PP_EMPTY())) \
 BLUE_SKY_TYPE_SERIALIZE_GUID(T)
 
 // DECL without GUID can be used for interfaces
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_NOGUID(T) \
-BS_TYPE_SERIALIZE_DECL_(T, 0, ())
+BS_TYPE_SERIALIZE_DECL_(T, 0, (BOOST_PP_EMPTY()))
 
 ////////////////////////////////////////////////////////////////////
 // *_DECL_BYNAME* macro provided to create BlueSky object by string
@@ -343,14 +343,14 @@ BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, \
 
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME_T(T, tpl_args_num, stype) \
 BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, \
-    (BOOST_PP_ENUM(tpl_args_num, BS_TEXT, class)), stype)
+    (BOOST_PP_ENUM(tpl_args_num, BS_TEXT_, class)), stype)
 
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME(T, stype) \
-BS_TYPE_SERIALIZE_DECL_BYNAME_(T, 0, (), stype) \
+BS_TYPE_SERIALIZE_DECL_BYNAME_(T, 0, (BOOST_PP_EMPTY()), stype) \
 BLUE_SKY_TYPE_SERIALIZE_GUID(T)
 
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME_NOGUID(T, stype) \
-BS_TYPE_SERIALIZE_DECL_BYNAME_(T, 0, (), stype)
+BS_TYPE_SERIALIZE_DECL_BYNAME_(T, 0, (BOOST_PP_EMPTY()), stype)
 
 /*-----------------------------------------------------------------
  * serialization GUID provider for BlueSky types
