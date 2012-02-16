@@ -287,6 +287,7 @@ BS_CLASS_SERIALIZE_SPLIT_BODY_
 // third param passed as a sequence
 #define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)        \
 BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
+    (void)ar; (void)t;                                                   \
 BLUE_SKY_CLASS_SRZ_FCN_END                                               \
 namespace boost { namespace archive { namespace detail {                 \
 template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >              \
@@ -325,16 +326,17 @@ BS_TYPE_SERIALIZE_DECL_(T, 0, ())
 // can be useful for serializing interfaces
 //
 #define BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, tpl_args_prefix, stype) \
-BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix)    \
-BLUE_SKY_CLASS_SRZ_FCN_END                                                  \
-namespace boost { namespace archive { namespace detail {                    \
-template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                 \
-struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {               \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                        \
-    typedef blue_sky::smart_ptr< type, true > sp_type;                      \
-    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                   \
-        sp_type t = BS_KERNEL.create_object(stype, false);                  \
-        return t.lock();                                                    \
+BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
+    (void)ar; (void)t;                                                   \
+BLUE_SKY_CLASS_SRZ_FCN_END                                               \
+namespace boost { namespace archive { namespace detail {                 \
+template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >              \
+struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {            \
+    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                     \
+    typedef blue_sky::smart_ptr< type, true > sp_type;                   \
+    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                \
+        sp_type t = BS_KERNEL.create_object(stype, false);               \
+        return t.lock();                                                 \
 } }; }}}
 
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME_EXT(T, tpl_args_num, tpl_args_prefix, stype) \

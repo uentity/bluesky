@@ -16,7 +16,7 @@
 #ifndef BS_SERIALIZE_MIZAXRNW
 #define BS_SERIALIZE_MIZAXRNW
 
-#include "bs_common.h"
+#include "bs_kernel.h"
 
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/export.hpp>
