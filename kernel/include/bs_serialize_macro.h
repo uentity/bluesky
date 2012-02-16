@@ -43,7 +43,7 @@ BOOST_PP_CAT(param, i)
 #define BS_MAKE_TPL_ARGS_1(tpl_args_num) \
 < BOOST_PP_ENUM_PARAMS(tpl_args_num, A) >
 
-#define BS_MAKE_TPL_ARGS_0(tpl_args_num)
+#define BS_MAKE_TPL_ARGS_0(...)
 
 // expands to T< A0, A1, ..., An-1 > if n > 0
 // otherwise to T
@@ -55,7 +55,7 @@ T BOOST_PP_CAT(BS_MAKE_TPL_ARGS_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_num)
 < BOOST_PP_TUPLE_REM_CTOR(tpl_args_num, tpl_args) >
 //< BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args)) >
 
-#define BS_MAKE_FULL_TYPE_ARGS_0(tpl_args_num, tpl_args)
+#define BS_MAKE_FULL_TYPE_ARGS_0(...)
 
 // expands to T< tpl_args[0], tpl_args[0], ..., tpl_args[n - 1] > if n > 0
 // otherwise to T
@@ -66,7 +66,7 @@ T BOOST_PP_CAT(BS_MAKE_FULL_TYPE_ARGS_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_nu
 #define BS_ENUM_TPL_ARGS_1(tpl_args_prefix) \
 BOOST_PP_SEQ_FOR_EACH_I(BS_TPL_ARG_, A, tpl_args_prefix)
 
-#define BS_ENUM_TPL_ARGS_0(tpl_args_prefix)
+#define BS_ENUM_TPL_ARGS_0(...)
 
 // expands to A0, A1, ..., An-1 if n > 0
 // otherwise to nothing
@@ -76,7 +76,7 @@ BOOST_PP_CAT(BS_ENUM_TPL_ARGS_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_prefix)
 #define BS_ENUM_TPL_ARGS_IMPL_1(tpl_args_prefix) \
 template < BS_ENUM_TPL_ARGS_1(tpl_args_prefix) >
 
-#define BS_ENUM_TPL_ARGS_IMPL_0(tpl_args_prefix)
+#define BS_ENUM_TPL_ARGS_IMPL_0(...)
 
 // expands to template< A0, A1, ..., An-1 > if n > 0
 // otherwise to nothing
@@ -87,7 +87,7 @@ BOOST_PP_CAT(BS_ENUM_TPL_ARGS_IMPL_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_prefi
 #define BS_ENUM_TYPE_TPL_ARGS_1(tpl_args_num, tpl_args) \
 BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(tpl_args_num, tpl_args))
 
-#define BS_ENUM_TYPE_TPL_ARGS_0(tpl_args_num, tpl_args)
+#define BS_ENUM_TYPE_TPL_ARGS_0(...)
 
 // expands to tpl_args[0], tpl_args[0], ..., tpl_args[n - 1] if n > 0
 // otherwise to nothing
@@ -173,7 +173,7 @@ BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(fcn, T, tpl_args_num, \
 (BOOST_PP_ENUM(tpl_args_num, BS_TEXT_, class)))
 
 #define BLUE_SKY_CLASS_SRZ_FCN_DECL(fcn, T) \
-BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(fcn, T, 0, (BOOST_PP_EMPTY()))
+BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(fcn, T, 0, ())
 
 ////////////////////////////////////////////////////////////////////
 // generate common overloads to omit duplicating a lot of code in
@@ -257,7 +257,7 @@ BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(fcn, T, tpl_args_num, \
 (BOOST_PP_ENUM(tpl_args_num, BS_TEXT_, class)))
 
 #define BLUE_SKY_CLASS_SRZ_FCN_BEGIN(fcn, T) \
-BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(fcn, T, 0, (BOOST_PP_EMPTY()))
+BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(fcn, T, 0, ())
 
 ////////////////////////////////////////////////////////////////////
 // generate body of serialize() function that splits to save & load
@@ -312,12 +312,12 @@ BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, (BOOST_PP_ENUM(tpl_args_num, BS_TEXT_, 
 // here we can automatically include *_GUID macro in DECL
 // cause it anyway should be there
 #define BLUE_SKY_TYPE_SERIALIZE_DECL(T) \
-BS_TYPE_SERIALIZE_DECL_(T, 0, (BOOST_PP_EMPTY())) \
+BS_TYPE_SERIALIZE_DECL_(T, 0, ()) \
 BLUE_SKY_TYPE_SERIALIZE_GUID(T)
 
 // DECL without GUID can be used for interfaces
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_NOGUID(T) \
-BS_TYPE_SERIALIZE_DECL_(T, 0, (BOOST_PP_EMPTY()))
+BS_TYPE_SERIALIZE_DECL_(T, 0, ())
 
 ////////////////////////////////////////////////////////////////////
 // *_DECL_BYNAME* macro provided to create BlueSky object by string
@@ -346,11 +346,11 @@ BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, \
     (BOOST_PP_ENUM(tpl_args_num, BS_TEXT_, class)), stype)
 
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME(T, stype) \
-BS_TYPE_SERIALIZE_DECL_BYNAME_(T, 0, (BOOST_PP_EMPTY()), stype) \
+BS_TYPE_SERIALIZE_DECL_BYNAME_(T, 0, (), stype) \
 BLUE_SKY_TYPE_SERIALIZE_GUID(T)
 
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME_NOGUID(T, stype) \
-BS_TYPE_SERIALIZE_DECL_BYNAME_(T, 0, (BOOST_PP_EMPTY()), stype)
+BS_TYPE_SERIALIZE_DECL_BYNAME_(T, 0, (), stype)
 
 /*-----------------------------------------------------------------
  * serialization GUID provider for BlueSky types
