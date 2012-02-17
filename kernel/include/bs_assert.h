@@ -240,11 +240,12 @@ namespace blue_sky {
 #ifdef _DEBUG
 #define BS_ASSERT(cond) \
   if (false) ; else     \
-  bs_assert::assert_wrapper wrapper_ = bs_assert::asserter::workaround(__FILE__, __LINE__, (#cond)).make(!!(cond))->ASSERTER_A
+  bs_assert::asserter::workaround(__FILE__, __LINE__, (#cond)).make(!!(cond))->ASSERTER_A
 #else
 #define BS_ASSERT(cond) \
   if (true) ; else      \
-  bs_assert::assert_wrapper wrapper_ = bs_assert::asserter::workaround(__FILE__, __LINE__, (#cond)).make(!!(cond))->ASSERTER_A
+  bs_assert::asserter::workaround(__FILE__, __LINE__, (#cond)).make(!!(cond))->ASSERTER_A
+  //bs_assert::assert_wrapper wrapper_ = bs_assert::asserter::workaround(__FILE__, __LINE__, (#cond)).make(!!(cond))->ASSERTER_A
 #endif
 
 #ifdef _DEBUG
