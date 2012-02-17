@@ -193,8 +193,7 @@ BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                            \
 struct bs_serialize::save< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > {   \
     static void go(Archive& ar, const BS_MAKE_FULL_TYPE(T, tpl_args_num)& t, \
     const unsigned int version                                               \
-    ){ (void)version;                                                        \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                         \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                      \
 /* */
 
 #define BS_CLASS_FCN_BEGIN_load(T, tpl_args_num, tpl_args_prefix)      \
@@ -205,8 +204,7 @@ BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                      \
 struct bs_serialize::load< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > {    \
     static void go(Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t, \
     const unsigned int version                                         \
-    ){ (void)version;                                                  \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                   \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                \
 /* */
 
 #define BS_CLASS_FCN_BEGIN_serialize(T, tpl_args_num, tpl_args_prefix)   \
@@ -217,8 +215,7 @@ BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                        \
 struct bs_serialize::serialize< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
     static void go(Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t,   \
     const unsigned int version                                           \
-    ){ (void)version;                                                    \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                     \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                  \
 /* */
 
 #define BS_CLASS_FCN_BEGIN_save_construct_data(T, tpl_args_num, tpl_args_prefix) \
@@ -229,8 +226,7 @@ BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                               
 struct bs_serialize::save_construct_data< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
     static void go(Archive& ar, const BS_MAKE_FULL_TYPE(T, tpl_args_num)* t,     \
     const unsigned int version                                                   \
-    ){ (void)version;                                                            \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                             \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                          \
 /* */
 
 #define BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
@@ -241,12 +237,14 @@ BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                               
 struct bs_serialize::load_construct_data< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
     static void go(Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)* t,           \
     const unsigned int version                                                   \
-    ){ (void)version;                                                            \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                             \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                          \
 /* */
 
+////////////////////////////////////////////////////////////////////
+// use this macro as function terminator
+//
 #define BLUE_SKY_CLASS_SRZ_FCN_END \
-} }; }
+(void)version; (void)ar; (void)t; } }; }
 
 #define BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(fcn, T, tpl_args_num, tpl_args_prefix) \
 BOOST_PP_CAT(BS_CLASS_FCN_BEGIN_, fcn) \
@@ -287,7 +285,6 @@ BS_CLASS_SERIALIZE_SPLIT_BODY_
 // third param passed as a sequence
 #define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)        \
 BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
-    (void)ar; (void)t;                                                   \
 BLUE_SKY_CLASS_SRZ_FCN_END                                               \
 namespace boost { namespace archive { namespace detail {                 \
 template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >              \
@@ -327,7 +324,6 @@ BS_TYPE_SERIALIZE_DECL_(T, 0, ())
 //
 #define BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, tpl_args_prefix, stype) \
 BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
-    (void)ar; (void)t;                                                   \
 BLUE_SKY_CLASS_SRZ_FCN_END                                               \
 namespace boost { namespace archive { namespace detail {                 \
 template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >              \
