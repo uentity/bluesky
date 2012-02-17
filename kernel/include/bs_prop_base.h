@@ -262,6 +262,11 @@ template< class T >
 		return table< T >()->end();
 	}
 
+	template< class T >
+	inline void clear() {
+		DT_SP_TBL p_vt = find_table< T >();
+		if(p_vt) p_vt->clear();
+	}
 
 private:
 	container tables_; //!< object container
