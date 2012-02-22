@@ -1,0 +1,40 @@
+import os;
+
+# import created custom_env & custom_vars
+Import('*');
+
+if build_kind == 'init' :
+	# Extend sconscripts list
+	ss_tree = ss_tree + [
+			'client/SConscript',
+			'plugins/bs-eagle/SConscript'
+			];
+	Export('ss_tree');
+	
+	# for bs_bos_core
+	# manually call init stage of bs-eagle
+	SConscript("plugins/bs-eagle/SConscript")
+
+	defines = {"bs_hdf5_storage" : ['_HDF5', 'H5_USE_16_API']};
+	Export('defines');
+
+else :
+	# propagate external environment
+	custom_env['ENV'] = os.environ;
+
+	# specify some settings
+	# append here custom LIBPATH, RPATH, etc
+	# for example, if you use custom boost build
+	custom_env.AppendUnique(
+		CPPDEFINES = ['PYTHON_VERSION=27', 'BS_EXCEPTION_USE_BOOST_FORMAT', 'BS_DISABLE_MT_LOCKS'],
+		CCFLAGS = ['-fvisibility=hidden', '-Wno-missing-field-initializers', '-Werror=return-type']
+		);
+
+	# append BS_EXPORTING_PLUGING and BSPY_EXPORTING_PLUGIN
+	bs_common_defines(custom_env);
+
+	if build_kind == 'release' :
+		custom_env.AppendUnique(CCFLAGS = ['-mtune=native', '-march=native'])
+
+	Export('custom_env');
+
