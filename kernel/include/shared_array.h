@@ -58,7 +58,7 @@ namespace private_ {
       owner_list_->push_back (this);
     }
 
-    shared_array (const numpy_deleter &d, T *e, size_t N)
+    shared_array (const numpy_deleter & /*d*/, T *e, size_t N)
     : array_ (e)
     , array_end_ (e + N)
     , capacity_ (N)
