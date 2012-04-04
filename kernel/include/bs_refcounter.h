@@ -48,6 +48,10 @@ public:
 	bs_refcounter() : refcnt_(0) {}
 	//copy ctor
 	bs_refcounter(const bs_refcounter& /*src*/) : refcnt_(0) {}
+
+	// virtual dtor
+	virtual ~bs_refcounter() {}
+
 	//assignment operator - does nothing
 	//its meaningless to assign 2 refcounters
 	bs_refcounter& operator=(const bs_refcounter& /*src*/) { return *this; }

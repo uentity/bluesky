@@ -66,8 +66,11 @@ public:
 		struct key_type {
 			typedef st_smart_ptr< key_type > key_ptr;
 			virtual bool sort_order(const key_ptr& k) const = 0;
+			virtual ~key_type() {};
 		};
 		typedef key_type::key_ptr key_ptr;
+
+		virtual ~sort_traits() {};
 
 		virtual const char* sort_name() const = 0;
 		virtual key_ptr key_generator(const sp_link& l) const = 0;
