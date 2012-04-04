@@ -289,7 +289,7 @@ namespace blue_sky {
         this->capacity_   = new_capacity;
 
         BS_ASSERT (this->owner_list_->size () == 1) (this->owner_list_->size ());
-        change_owner (new_memory, new_finish, new_capacity);
+        this->change_owner (new_memory, new_finish, new_capacity);
       }
 
       template <typename integer_t>
@@ -629,6 +629,16 @@ namespace blue_sky {
     typedef typename base_t::iterator                       iterator;
     typedef typename std::allocator <T>::pointer            pointer;
     typedef size_t                                          size_type;
+
+    using base_t::insert_dispatch__;
+    using base_t::erase__;
+    using base_t::ctor_dispatch__;
+    using base_t::assign_fill__;
+    using base_t::insert__;
+
+    using base_t::back;
+    using base_t::assign;
+    using base_t::size;
 
     template <typename Y>
     struct array
@@ -982,10 +992,6 @@ namespace blue_sky {
     : base_t (d, e, N)
     {
     }
-
-    using base_t::back;
-    using base_t::assign;
-    using base_t::size;
   };
 
   template <typename T>
