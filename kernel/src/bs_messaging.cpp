@@ -96,6 +96,9 @@ public:
 	// children should override this function
 	virtual void fire_slot(const sp_mobj& sender, int signal_code, const sp_obj& param) const = 0;
 
+	// virtual dtor
+	virtual ~slot_holder() {};
+
 protected:
 	sp_slot slot_;
 	// if sender != NULL then only signals from this sender will be triggered
@@ -119,7 +122,7 @@ class async_layer : public slot_holder {
 		}
 
 		void unexecute() {}
-		bool can_unexecute() { return false; }
+		bool can_unexecute() const { return false; }
 
 		void dispose() const {
 			//DEBUG
