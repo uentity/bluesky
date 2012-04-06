@@ -635,6 +635,7 @@ namespace blue_sky {
     using base_t::ctor_dispatch__;
     using base_t::assign_fill__;
     using base_t::insert__;
+    using base_t::ctor_fill__;
 
     using base_t::back;
     using base_t::assign;
