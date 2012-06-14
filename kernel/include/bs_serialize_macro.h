@@ -406,7 +406,7 @@ BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, 0, ())
  *----------------------------------------------------------------*/
 #define BLUE_SKY_CLASS_SERIALIZE_INST_AR(Ar_t, T, tpl_args_num, tpl_args)      \
 namespace boost { namespace serialization {                                    \
-template void serialize<                                                       \
+template BS_API_PLUGIN void serialize<                                         \
     boost::archive::Ar_t BOOST_PP_COMMA_IF(tpl_args_num)                       \
     BS_ENUM_TYPE_TPL_ARGS(tpl_args_num, tpl_args)                              \
 >(  boost::archive::Ar_t&, BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)&, \
