@@ -44,6 +44,11 @@ BS_API_PLUGIN smart_ptr< T, true > serialize_from_str(const std::string& src) {
 	return t;
 }
 
+template< class T >
+BS_API_PLUGIN smart_ptr< T, true > copy_via_serialize(smart_ptr< T, true > src) {
+	return serialize_from_str< T >(serialize_to_str< T >(src));
+}
+
 }  // eof blue_sky namespace
 
 #endif /* end of include guard: BS_SERIALIZE_MISC_MMP1RZ0U */
