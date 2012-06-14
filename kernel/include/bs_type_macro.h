@@ -27,6 +27,7 @@
 #include <boost/preprocessor/control/expr_iif.hpp>
 #include "boost/preprocessor/facilities/empty.hpp"
 #include "boost/preprocessor/tuple/to_seq.hpp"
+#include <boost/preprocessor/seq/seq.hpp>
 #include "boost/preprocessor/seq/enum.hpp"
 #include "boost/preprocessor/seq/for_each_i.hpp"
 #include "boost/preprocessor/seq/size.hpp"
@@ -43,20 +44,14 @@
 #define BS_SEQ_NIL() (;)
 #define BS_ARRAY_NIL() (0, ())
 
-#define BS_ARRAY_ENUM(array) \
-    BOOST_PP_TUPLE_REM_CTOR( \
-        BOOST_PP_ARRAY_SIZE(array), \
-        BOOST_PP_ARRAY_DATA(array) \
-    )
-
 #define BS_FMT_TYPE_SPEC(T, is_decl) \
-BS_ARRAY_ENUM(BOOST_PP_IIF(is_decl, BS_ARRAY_NIL(), BOOST_PP_SEQ_TO_ARRAY(T)))BOOST_PP_EXPR_IIF(BOOST_PP_COMPL(is_decl), ::)
+BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, BOOST_PP_SEQ_NIL(), T))BOOST_PP_EXPR_IIF(BOOST_PP_COMPL(is_decl), ::)
 
 //================================ macro definitions ===================================================================
-#define BS_TYPE_DECL \
-public: static blue_sky::type_descriptor bs_type(); \
-virtual blue_sky::type_descriptor bs_resolve_type() const; \
-private: friend class blue_sky::type_descriptor; \
+#define BS_TYPE_DECL                                                 \
+public: static blue_sky::type_descriptor bs_type();                  \
+virtual blue_sky::type_descriptor bs_resolve_type() const;           \
+private: friend class blue_sky::type_descriptor;                     \
 static objbase* bs_create_instance(bs_type_ctor_param param = NULL); \
 static objbase* bs_create_copy(bs_type_cpy_ctor_param param = NULL);
 

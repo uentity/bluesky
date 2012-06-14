@@ -16,6 +16,7 @@
 #ifndef BS_SERIALIZE_MACRO_OS0F6LJB
 #define BS_SERIALIZE_MACRO_OS0F6LJB
 
+#include <boost/preprocessor/control/if.hpp>
 #include <boost/preprocessor/punctuation/comma_if.hpp>
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/facilities/empty.hpp>
@@ -407,7 +408,7 @@ BLUE_SKY_CLASS_REGISTER_ETI_EXT(T, 0, ())
 namespace boost { namespace serialization {                                    \
 template void serialize<                                                       \
     boost::archive::Ar_t BOOST_PP_COMMA_IF(tpl_args_num)                       \
-    BOOST_PP_TUPLE_REM_CTOR(tpl_args_num, tpl_args)                            \
+    BS_ENUM_TYPE_TPL_ARGS(tpl_args_num, tpl_args)                              \
 >(  boost::archive::Ar_t&, BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)&, \
     const unsigned int                                                         \
 ); }}

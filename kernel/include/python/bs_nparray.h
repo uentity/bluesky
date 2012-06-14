@@ -79,7 +79,7 @@ public:
 	{}
 
 	bs_nparray(pointer data, size_type n) {
-		npy_intp sz[] = { n };
+		npy_intp sz[] = { npy_intp(n) };
 		this_t(base_t(numpy_array_t(1, sz, data))).swap(*this);
 	}
 
@@ -101,7 +101,7 @@ public:
 		if(new_size == this->size()) return;
 
 		// native resize
-		npy_intp new_dims[] = { new_size };
+		npy_intp new_dims[] = { npy_intp(new_size) };
 		PyArray_Dims d = { new_dims, 1};
 		try {
 			boost::python::handle<> new_array = boost::python::handle<>(
