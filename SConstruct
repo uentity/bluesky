@@ -217,15 +217,15 @@ for x in ss_tree :
 	print x;
 print']';
 
-# checkers
+# configure
 if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :
-	conf = Configure(custom_env, custom_tests = { 'CheckBoost' : CheckBoost });
+	conf = Configure(custom_env);
 	if not conf.CheckCXX() :
 		print('!! Your compiler and/or environment is not correctly configured.');
-		Exit(0);
+		Exit(1);
 	CheckBoost(conf);
 	CheckLoki(conf);
-	env = conf.Finish();
+	custom_env = conf.Finish();
 
 # save default custom_env
 custom_env_def = custom_env.Clone();

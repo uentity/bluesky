@@ -1,4 +1,4 @@
-import os, sys, glob
+import os, sys
 
 def list_suffix (list, suffix) :
 	return [x + suffix for x in list];
@@ -73,40 +73,114 @@ def CheckBoostVersion(context, version):
 	context.Result(ret)
 	return ret
 
+def CheckBoostLibrary(context, library, header) :
+	context.Message('Checking for Boost library %s... ' % (library))
+	test_src = """
+	#include <%s>
+	int main()
+	{
+		return 0;
+	}
+	""" % header;
+
+	#context.AppendLIBS(library);
+	print test_src
+	ret = context.TryCompile(test_src, '.cpp')
+	#if ret :
+	#	ret &= context.TryLink(test_src, '.cpp');
+	context.Result(ret)
+	return ret
+
+
 def FindBoostLibrary(conf, lib, path, postfix = ''):
+	def libfinder(lib, path, postfix) :
+		def select_fname(files) :
+			# FIXME: choose the best one.
+			# select fname with shortest length
+			lib_fname = '';
+			min_fname = 0;
+			#print files;
+			for i in range(len(files)) :
+				if min_fname == 0 or len(files[i]) < min_fname :
+					lib_fname = os.path.basename(files[i])[3:-3];
+					min_fname = len(files[i]);
+			return lib_fname;
+
+		import glob;
+		# direct form: e.g. libboost_iostreams.so
+		files = glob.glob(os.path.join(path, 'lib{0}{1}.so'.format(lib, postfix)));
+		if len(files) > 0 :
+			return select_fname(files);
+		# check things like libboost_iostreams-gcc.so
+		files = glob.glob(os.path.join(path, 'lib{0}-*{1}.so'.format(lib, postfix)));
+		if len(files) > 0 :
+			return select_fname(files);
+		# nothing is found
+		return '';
+
 	# look for boost libraries
 	conf.Message('Looking for library {0}{1}... '.format(lib, postfix))
-	#for path in pathes:
-	 # direct form: e.g. libboost_iostreams.so
-	files = glob.glob(os.path.join(path, 'lib{0}{1}.so'.format(lib, postfix)));
-	if len(files) > 0 :
+
+	# try to find library in given path
+	lib_fname = '';
+	if len(path) > 0 :
+		# prefer multithread versions
+		lib_fname = libfinder(lib, path, '*mt*' + postfix);
+		if len(lib_fname) == 0 :
+			# otherwise try to check non-mt lib
+			lib_fname = libfinder(lib, path, postfix);
+		if len(lib_fname) == 0 :
+			print "Warning! " + lib + " wasn't found in " + path;
+
+	if len(lib_fname) > 0 :
 		conf.Result('yes');
-		return files[0];
-	# check things like libboost_iostreams-gcc.so
-	files = glob.glob(os.path.join(path, 'lib{0}-*{1}.so'.format(lib, postfix)));
-	#print files;
-	# if there are more than one, choose the first one
-	# FIXME: choose the best one.
-	if len(files) > 0:
-		# get xxx-gcc from /usr/local/lib/libboost_xxx-gcc.a
-		conf.Result('yes');
-		#print files[0].split(os.sep);
-		#print files[0].split(os.sep)[-1];
-		#print files[0].split(os.sep)[-1][3:-3];
-		#return files[0].split(os.sep)[-1][3:-3];
-		return files[0].split(os.sep)[-1][3:-3];
+		return lib_fname;
+
 	# nothing is found
 	conf.Result('no');
 	return '';
 
 def CheckBoost(conf) :
-	# define boost lib names to include
-	boost_libnames = list_prefix(['filesystem', 'regex', 'thread', 'signals'], 'boost_');
-	if (conf.env['py'] == '1') :
-		boost_libnames += ['boost_python'];
-		conf.env.AppendUnique(LIBS = ['${python_name}']);
+	# helper to fill dictionary of lib alias -> lib name
+	def libdict_builder(alias, path, postfix, subst_dict = None) :
+		res = dict();
+		for lib in alias :
+			lib_defname = 'boost_' + lib;
+			lib_fname = [conf.FindBoostLibrary(lib_defname, path, postfix)];
+			if len(lib_fname[0]) == 0 :
+				if subst_dict is None :
+					# check for mt-version first
+					lib_fname = [lib_defname + '-mt' + postfix, lib_defname + postfix];
+				else :
+					lib_fname = [subst_dict[lib]];
+					#res[lib] = subst_dict[lib];
+			#res[lib] = lib_fname;
 
-	#conf.Message('Checking Boost headers and libs for building BlueSky...');
+		#for [lib, lib_fname] in res.items() :
+			# check that library exists
+			res[lib] = '';
+			for f in lib_fname :
+				#print 'header', 'boost/' + lib + '.hpp'
+				# CheckLib makes LIBS dirty, so save and restore it
+				orig_LIBS = conf.env.subst('$LIBS');
+				check_res = conf.CheckLib(f, language='CXX');
+				conf.env.Replace(LIBS = orig_LIBS);
+				#if conf.CheckCXXHeader('boost/' + lib + '.hpp') :
+				#if conf.CheckBoostLibrary(f, 'boost/' + lib + '.hpp') :
+				if check_res :
+					print lib + ' -> ' + f;
+					res[lib] = f;
+					break;
+			if len(res[lib]) == 0 :
+				# strange BUG with boost_python doen't detected, though it present!
+				if lib == 'python' and len(lib_fname) == 1 :
+					res[lib] = lib_fname[0];
+				else :
+					print 'Error! ' + lib_defname + ' library is required to build BlueSky!';
+					Exit(1);
+		return res;
+
+	boost_libpath = '';
 	# if BOOST_PATH env variable present, it overrides system path check
 	if 'BOOST_PATH' in os.environ :
 		print "BOOST_PATH found!";
@@ -118,32 +192,29 @@ def CheckBoost(conf) :
 			RPATH = [boost_libpath]
 		);
 
-		# find full lib name based on path
-		conf.AddTest('FindBoostLibrary', FindBoostLibrary);
-		postfix = '';
-		if 'debug' in conf.env['build_kinds'] :
-			postfix = '-d';
-
-		for i in range(len(boost_libnames)) :
-			lib_fname = conf.FindBoostLibrary(boost_libnames[i], boost_libpath, postfix);
-			if len(lib_fname) > 0 :
-				print boost_libnames[i] + ' -> ' + lib_fname;
-				boost_libnames[i] = lib_fname;
-			else :
-				print "Warning! " + libname + " wasn't found in " + boost_libpath;
-
 	# check Boost version
 	conf.AddTest('CheckBoostVersion', CheckBoostVersion);
-	if not conf.CheckBoostVersion('1.37') :
-		print 'Boost version >= 1.37 required to build BlueSky!'
+	if not conf.CheckBoostVersion('1.46') :
+		print 'Boost version >= 1.46 required to build BlueSky!'
 		Exit(1);
 
-	# check Boost libraries
-	for libname in boost_libnames :
-		if not conf.CheckLib(libname, language='C++') :
-			print libname + ' library is required to build BlueSky!'
-			Exit(1);
-	return boost_libnames;
+	# make persistent dictionary of alias -> full library name
+	# both for release and debug builds
+	boost_libalias = ['filesystem', 'regex', 'thread', 'signals', 'serialization'];
+	if (conf.env['py'] == '1') :
+		boost_libalias += ['python'];
+	#libdefname = list_prefix(boost_libalias, 'boost_');
+
+	# make dictionaries for debug and release builds
+	# for release build
+	conf.AddTest('FindBoostLibrary', FindBoostLibrary);
+	conf.AddTest('CheckBoostLibrary', CheckBoostLibrary);
+	boost_libnames = libdict_builder(boost_libalias, boost_libpath, '');
+	Export('boost_libnames');
+	# for debug builds
+	if 'debug' in conf.env['build_kinds'] :
+		boost_libnames_d = libdict_builder(boost_libalias, boost_libpath, '-d', boost_libnames);
+		Export('boost_libnames_d');
 
 def CheckLoki(conf) :
 	if 'LOKI_PATH' in os.environ :
