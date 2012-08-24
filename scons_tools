@@ -200,7 +200,7 @@ def CheckBoost(conf) :
 
 	# make persistent dictionary of alias -> full library name
 	# both for release and debug builds
-	boost_libalias = ['filesystem', 'regex', 'thread', 'signals', 'serialization'];
+	boost_libalias = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time'];
 	if (conf.env['py'] == '1') :
 		boost_libalias += ['python'];
 	#libdefname = list_prefix(boost_libalias, 'boost_');
