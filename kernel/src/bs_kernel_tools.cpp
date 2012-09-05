@@ -16,14 +16,6 @@
 #include "bs_kernel_tools.h"
 #include "bs_shell.h"
 
-#ifdef BS_BOS_CORE_COLLECT_BACKTRACE
-#ifdef _WIN32
-#include "backtrace_tools_win.h"
-#else
-#include "backtrace_tools_unix.h"
-#endif
-#endif
-
 #include <sstream>
 
 using namespace std;
@@ -147,7 +139,14 @@ std::string kernel_tools::print_registered_instances() {
 	return outs.str();
 }
 
-#ifdef BS_BOS_CORE_COLLECT_BACKTRACE
+
+#if defined(BS_BOS_CORE_COLLECT_BACKTRACE) || defined(BS_EXCEPTION_COLLECT_BACKTRACE)
+#ifdef _WIN32
+#include "backtrace_tools_win.h"
+#else
+#include "backtrace_tools_unix.h"
+#endif
+
 std::string
 kernel_tools::get_backtrace (int backtrace_depth)
 {
@@ -176,6 +175,11 @@ kernel_tools::get_backtrace (int backtrace_depth)
     }
 
   return "No call stack";
+}
+#else
+std::string
+kernel_tools::get_backtrace (int backtrace_depth) {
+	return "Backtrace collection disabled in this build";
 }
 #endif
 
