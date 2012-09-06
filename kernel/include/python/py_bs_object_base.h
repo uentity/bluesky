@@ -121,12 +121,12 @@ public:
 	//if you've made a wrapped_t typedef then you can use the following
 	template< class py_wrapper >
 	static smart_ptr< typename py_wrapper::wrapped_t, true > get_spx(const py_wrapper* pw) {
-		return pw->get_spx< typename py_wrapper::wrapped_t >();
+		return pw->template get_spx< typename py_wrapper::wrapped_t >();
 	}
 
 	template< class py_wrapper >
 	static lsmart_ptr< smart_ptr< typename py_wrapper::wrapped_t, true > > get_lspx(const py_wrapper* pw) {
-		return pw->get_lspx< typename py_wrapper::wrapped_t >();
+		return pw->template get_lspx< typename py_wrapper::wrapped_t >();
 	}
 
 protected:
