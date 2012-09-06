@@ -8,7 +8,7 @@ custom_env.AppendUnique(
 );
 
 if build_kind == 'debug' :
-	custom_env.AppendUnique(CCFLAGS = ['-O0', '-ggdb3']);
+	custom_env.AppendUnique(CCFLAGS = ['-O0', '-g']);
 elif build_kind == 'release' :
 	custom_env.AppendUnique(CCFLAGS = ['-O3', '-ftree-vectorize']);
 Export('custom_env');
