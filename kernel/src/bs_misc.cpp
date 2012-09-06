@@ -180,18 +180,18 @@ typedef graph_traits<load_graph>::edge_descriptor edge_t;
 
 void topo_sort_dfs(const load_graph& /*g*/, vertex_t u, vertex_t*& topo_order, int* mark)
 {
-  mark[u] = 1; // 1 - посещённая вершина
-  *--topo_order = u;
+	mark[u] = 1; // 1 - посещённая вершина
+	*--topo_order = u;
 }
 
 void topo_sort(const load_graph& g, vertex_t* topo_order)
 {
-  std::vector<int> mark(num_vertices(g), 0);
-  graph_traits<load_graph>::vertex_iterator vi, vi_end;
+	std::vector<int> mark(num_vertices(g), 0);
+	graph_traits<load_graph>::vertex_iterator vi, vi_end;
 
-  for (tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
+	for (boost::tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
 		if (mark[*vi] == 0)
-      topo_sort_dfs(g, *vi, topo_order, &mark[0]);
+			topo_sort_dfs(g, *vi, topo_order, &mark[0]);
 }
 
 /*!
