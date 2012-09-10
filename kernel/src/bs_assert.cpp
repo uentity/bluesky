@@ -13,14 +13,14 @@
 //#include "bos_report.h"
 #include "bs_exception.h"
 
-#if defined (_WIN32)
+#ifdef _WIN32
 
 #include <windows.h>
 #include <crtdbg.h>
 
-#if _WIN32 >= 0x400
-#define BREAK_HERE          \
-  if (IsDebuggerPresent ()) \
+#if defined(_M_X64) || _WIN32 >= 0x400
+#define BREAK_HERE        \
+if (IsDebuggerPresent ()) \
 	DebugBreak ();
 #else
 #define BREAK_HERE __asm { int 3 }

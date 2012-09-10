@@ -139,7 +139,6 @@ std::string kernel_tools::print_registered_instances() {
 	return outs.str();
 }
 
-
 #if defined(BS_BOS_CORE_COLLECT_BACKTRACE) || defined(BS_EXCEPTION_COLLECT_BACKTRACE)
 #ifdef _WIN32
 #include "backtrace_tools_win.h"

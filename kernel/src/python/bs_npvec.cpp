@@ -25,6 +25,7 @@ namespace blue_sky {
 typedef bs_array< int           , bs_npvec > bs_npvec_i;
 typedef bs_array< unsigned int  , bs_npvec > bs_npvec_ui;
 typedef bs_array< long          , bs_npvec > bs_npvec_l;
+typedef bs_array< long long     , bs_npvec > bs_npvec_ll;
 typedef bs_array< unsigned long , bs_npvec > bs_npvec_ul;
 typedef bs_array< float         , bs_npvec > bs_npvec_f;
 typedef bs_array< double        , bs_npvec > bs_npvec_d;
@@ -34,6 +35,7 @@ typedef bs_array< std::string   , bs_npvec > bs_npvec_s;
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_npvec));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_npvec));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_npvec));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_npvec));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_npvec));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_npvec));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_npvec));
@@ -44,6 +46,7 @@ kernel::types_enum register_npvec() {
 	te.push_back(bs_npvec_i::bs_type());
 	te.push_back(bs_npvec_ui::bs_type());
 	te.push_back(bs_npvec_l::bs_type());
+	te.push_back(bs_npvec_ll::bs_type());
 	te.push_back(bs_npvec_ul::bs_type());
 	te.push_back(bs_npvec_f::bs_type());
 	te.push_back(bs_npvec_d::bs_type());
