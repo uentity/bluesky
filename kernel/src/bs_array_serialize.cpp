@@ -48,7 +48,8 @@ namespace boser = boost::serialization;
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(save, bs_array, 2, (class, template< class > class))
 	typedef typename type::const_iterator citerator;
 	// save array size
-	ar << (const ulong&)t.size();
+	const ulong sz = t.size();
+	ar << sz;
 	// save data
 	for(citerator pd = t.begin(), end = t.end(); pd != end; ++pd)
 		ar << *pd;
