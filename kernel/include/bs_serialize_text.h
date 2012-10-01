@@ -30,17 +30,23 @@ namespace blue_sky {
 template< class T >
 BS_API_PLUGIN std::string serialize_to_str(smart_ptr< T, true >& t) {
 	std::ostringstream os;
-	boost::archive::text_oarchive ar(os);
-	ar << t;
+	// ensure archive is destroyed before stream is closed
+	{
+		boost::archive::text_oarchive ar(os);
+		ar << t;
+	}
 	return os.str();
 }
 
 template< class T >
 BS_API_PLUGIN smart_ptr< T, true > serialize_from_str(const std::string& src) {
 	std::istringstream is(src);
-	boost::archive::text_iarchive ar(is);
 	smart_ptr< T, true > t;
-	ar >> t;
+	// ensure archive is destroyed before stream is closed
+	{
+		boost::archive::text_iarchive ar(is);
+		ar >> t;
+	}
 	return t;
 }
 
