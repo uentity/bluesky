@@ -24,8 +24,9 @@
 #include <boost/archive/polymorphic_iarchive.hpp>
 #include <boost/archive/polymorphic_oarchive.hpp>
 
-#include "bs_serialize_macro.h"
 #include "bs_serialize_decl.h"
+#include "bs_serialize_fixreal.h"
+#include "bs_serialize_macro.h"
 #include "bs_serialize_overl.h"
 #include "bs_serialize_text.h"
 

@@ -15,6 +15,7 @@
 
 #include "bs_array_serialize.h"
 #include "bs_serialize_overl.h"
+#include "bs_serialize_fixreal.h"
 
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/split_free.hpp>

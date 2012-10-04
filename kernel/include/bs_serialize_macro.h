@@ -107,6 +107,10 @@ BOOST_PP_CAT(BS_ENUM_TYPE_TPL_ARGS_, BOOST_PP_BOOL(tpl_args_num))(tpl_args_num, 
 #define BS_CLASS_FREE_FCN_BODY_1(fcn, T, tpl_args_num) \
 { ::blue_sky::bs_serialize:: fcn < Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) >::go(ar, t, version); }
 
+// empty body case
+#define BS_CLASS_FREE_FCN_BODY_2(fcn, T, tpl_args_num) \
+{}
+
 #define BS_CLASS_FREE_FCN_serialize(T, tpl_args_num, tpl_args_prefix, has_body) \
 namespace boost { namespace serialization {             \
 template< class Archive                                 \
@@ -184,61 +188,72 @@ BLUE_SKY_CLASS_SRZ_FCN_DECL_EXT(fcn, T, 0, ())
 BOOST_PP_CAT(BS_CLASS_FREE_FCN_, fcn)(T, tpl_args_num, tpl_args_prefix, 1)
 
 ////////////////////////////////////////////////////////////////////
+// overloads with empty body
+//
+#define BS_CLASS_OVERL_IMPL_EMPTY_(fcn, T, tpl_args_num, tpl_args_prefix) \
+BOOST_PP_CAT(BS_CLASS_FREE_FCN_, fcn)(T, tpl_args_num, tpl_args_prefix, 2)
+
+////////////////////////////////////////////////////////////////////
 // implementation
 //
-#define BS_CLASS_FCN_BEGIN_save(T, tpl_args_num, tpl_args_prefix)            \
-BS_CLASS_OVERL_IMPL_(save, T, tpl_args_num, tpl_args_prefix)                 \
-namespace blue_sky {                                                         \
-template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                      \
-BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                            \
-struct bs_serialize::save< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > {   \
-    static void go(Archive& ar, const BS_MAKE_FULL_TYPE(T, tpl_args_num)& t, \
-    const unsigned int version                                               \
-    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                      \
+#define BS_CLASS_FCN_BEGIN_save(T, tpl_args_num, tpl_args_prefix)             \
+BS_CLASS_OVERL_IMPL_(save, T, tpl_args_num, tpl_args_prefix)                  \
+namespace blue_sky {                                                          \
+template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                       \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                             \
+struct bs_serialize::save< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > {    \
+    static void go(Archive& ar_, const BS_MAKE_FULL_TYPE(T, tpl_args_num)& t, \
+    const unsigned int version                                                \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                       \
+        blue_sky::fix_real< Archive> ar(ar_);                                 \
 /* */
 
-#define BS_CLASS_FCN_BEGIN_load(T, tpl_args_num, tpl_args_prefix)      \
-BS_CLASS_OVERL_IMPL_(load, T, tpl_args_num, tpl_args_prefix)           \
-namespace blue_sky {                                                   \
-template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                \
-BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                      \
-struct bs_serialize::load< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > {    \
-    static void go(Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t, \
-    const unsigned int version                                         \
-    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                \
+#define BS_CLASS_FCN_BEGIN_load(T, tpl_args_num, tpl_args_prefix)          \
+BS_CLASS_OVERL_IMPL_(load, T, tpl_args_num, tpl_args_prefix)               \
+namespace blue_sky {                                                       \
+template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                    \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                          \
+struct bs_serialize::load< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
+    static void go(Archive& ar_, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t,    \
+    const unsigned int version                                             \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                    \
+        blue_sky::fix_real< Archive> ar(ar_);                              \
 /* */
 
-#define BS_CLASS_FCN_BEGIN_serialize(T, tpl_args_num, tpl_args_prefix)   \
-BS_CLASS_OVERL_IMPL_(serialize, T, tpl_args_num, tpl_args_prefix)        \
-namespace blue_sky {                                                     \
-template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                  \
-BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                        \
+#define BS_CLASS_FCN_BEGIN_serialize(T, tpl_args_num, tpl_args_prefix)          \
+BS_CLASS_OVERL_IMPL_(serialize, T, tpl_args_num, tpl_args_prefix)               \
+namespace blue_sky {                                                            \
+template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                         \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                               \
 struct bs_serialize::serialize< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
-    static void go(Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t,   \
-    const unsigned int version                                           \
-    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                  \
+    static void go(Archive& ar_, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t,         \
+    const unsigned int version                                                  \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                         \
+        blue_sky::fix_real< Archive> ar(ar_);                                   \
 /* */
 
-#define BS_CLASS_FCN_BEGIN_save_construct_data(T, tpl_args_num, tpl_args_prefix) \
-BS_CLASS_OVERL_IMPL_(save_construct_data, T, tpl_args_num, tpl_args_prefix)      \
-namespace blue_sky {                                                             \
-template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                          \
-BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                                \
+#define BS_CLASS_FCN_BEGIN_save_construct_data(T, tpl_args_num, tpl_args_prefix)          \
+BS_CLASS_OVERL_IMPL_(save_construct_data, T, tpl_args_num, tpl_args_prefix)               \
+namespace blue_sky {                                                                      \
+template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                                   \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                                         \
 struct bs_serialize::save_construct_data< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
-    static void go(Archive& ar, const BS_MAKE_FULL_TYPE(T, tpl_args_num)* t,     \
-    const unsigned int version                                                   \
-    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                          \
+    static void go(Archive& ar_, const BS_MAKE_FULL_TYPE(T, tpl_args_num)* t,             \
+    const unsigned int version                                                            \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                                   \
+        blue_sky::fix_real< Archive> ar(ar_);                                             \
 /* */
 
-#define BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
-BS_CLASS_OVERL_IMPL_(load_construct_data, T, tpl_args_num, tpl_args_prefix)      \
-namespace blue_sky {                                                             \
-template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                          \
-BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                                \
+#define BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix)          \
+BS_CLASS_OVERL_IMPL_(load_construct_data, T, tpl_args_num, tpl_args_prefix)               \
+namespace blue_sky {                                                                      \
+template< class Archive BOOST_PP_COMMA_IF(tpl_args_num)                                   \
+BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                                         \
 struct bs_serialize::load_construct_data< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num) > { \
-    static void go(Archive& ar, BS_MAKE_FULL_TYPE(T, tpl_args_num)* t,           \
-    const unsigned int version                                                   \
-    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                          \
+    static void go(Archive& ar_, BS_MAKE_FULL_TYPE(T, tpl_args_num)* t,                   \
+    const unsigned int version                                                            \
+    ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                                   \
+        blue_sky::fix_real< Archive> ar(ar_);                                             \
 /* */
 
 ////////////////////////////////////////////////////////////////////
@@ -284,17 +299,16 @@ BS_CLASS_SERIALIZE_SPLIT_BODY_
 // needed for correct BS objects creation when they are serialized via pointers
 // (pointers contained in smart_ptr)
 // third param passed as a sequence
-#define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)        \
-BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
-BLUE_SKY_CLASS_SRZ_FCN_END                                               \
-namespace boost { namespace archive { namespace detail {                 \
-template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >              \
-struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {            \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                     \
-    typedef blue_sky::smart_ptr< type, true > sp_type;                   \
-    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                \
-        sp_type t = BS_KERNEL.create_object(type::bs_type(), false);     \
-        return t.lock();                                                 \
+#define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)                 \
+BS_CLASS_OVERL_IMPL_EMPTY_(load_construct_data, T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace archive { namespace detail {                          \
+template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                       \
+struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {                     \
+    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                              \
+    typedef blue_sky::smart_ptr< type, true > sp_type;                            \
+    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                         \
+        sp_type t = BS_KERNEL.create_object(type::bs_type(), false);              \
+        return t.lock();                                                          \
 } }; }}}
 
 // *_EXT macro accept third argument in enum form, i.e.
@@ -323,17 +337,16 @@ BS_TYPE_SERIALIZE_DECL_(T, 0, ())
 // type name instead of typeinfo provided by static bs_type() fcn
 // can be useful for serializing interfaces
 //
-#define BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, tpl_args_prefix, stype) \
-BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix) \
-BLUE_SKY_CLASS_SRZ_FCN_END                                               \
-namespace boost { namespace archive { namespace detail {                 \
-template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >              \
-struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {            \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                     \
-    typedef blue_sky::smart_ptr< type, true > sp_type;                   \
-    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                \
-        sp_type t = BS_KERNEL.create_object(stype, false);               \
-        return t.lock();                                                 \
+#define BS_TYPE_SERIALIZE_DECL_BYNAME_(T, tpl_args_num, tpl_args_prefix, stype)   \
+BS_CLASS_OVERL_IMPL_EMPTY_(load_construct_data, T, tpl_args_num, tpl_args_prefix) \
+namespace boost { namespace archive { namespace detail {                          \
+template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                       \
+struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {                     \
+    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                              \
+    typedef blue_sky::smart_ptr< type, true > sp_type;                            \
+    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                         \
+        sp_type t = BS_KERNEL.create_object(stype, false);                        \
+        return t.lock();                                                          \
 } }; }}}
 
 #define BLUE_SKY_TYPE_SERIALIZE_DECL_BYNAME_EXT(T, tpl_args_num, tpl_args_prefix, stype) \
