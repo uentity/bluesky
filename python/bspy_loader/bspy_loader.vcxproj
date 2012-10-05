@@ -217,8 +217,8 @@ del $(PYTHON64_PATH)\DLLs\$(TargetName).pyd
     </ClCompile>
     <Link>
       <AdditionalDependencies>psapi.lib;blue-sky.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(ProjectDir)/../../exe/release/bs.dll</OutputFile>
-      <AdditionalLibraryDirectories>$(STLPORT_PATH_)/lib;$(BOOST_PATH)/lib64;$(PYTHON64_PATH)/libs;$(ProjectDir)..\..\exe\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OutputFile>$(ProjectDir)/../../exe/release_x64/bs.dll</OutputFile>
+      <AdditionalLibraryDirectories>$(STLPORT_PATH_)/lib;$(BOOST_PATH)/lib64;$(PYTHON64_PATH)/libs;$(ProjectDir)..\..\exe\release_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
