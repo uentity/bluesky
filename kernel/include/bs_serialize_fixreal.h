@@ -39,10 +39,18 @@ public:
 	template< class T >
 	inline T do_fix(const T& v, const boost::true_type) {
 		typedef std::numeric_limits< T > nl;
+#ifdef UNIX
 		if(std::isnan(v))
 			return 0;
 		if(std::isinf(v))
 			return nl::max();
+#else
+#include <float.h>
+		if(_isnan(v))
+			return 0;
+		if(!_finite(v))
+			return nl::max();
+#endif
 		if(v < nl::min())
 			return nl::min();
 		if(v > nl::max())
