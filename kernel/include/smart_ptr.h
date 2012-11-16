@@ -443,18 +443,18 @@ namespace bs_private {
 	};
 
 	// refcounter around simple ptr - delete holded ptr on dispose
-	template< class T >
-	class bs_refcounter_sp : public bs_refcounter {
+	template< class T, class base_refcnt = bs_refcounter >
+	class bs_refcounter_sp : public base_refcnt {
 	public:
 		typedef T* pointer_t;
 
 		explicit bs_refcounter_sp(pointer_t p)
-			: bs_refcounter(1), p_(p)
+			: base_refcnt(1), p_(p)
 		{}
 
 		template< class R >
 		explicit bs_refcounter_sp(R* p)
-			: bs_refcounter(1), p_(p)
+			: base_refcnt(1), p_(p)
 		{}
 
 		void dispose() const {
@@ -471,25 +471,25 @@ namespace bs_private {
 
 		// special ctor for restoring after serialization with refcount = 0
 		explicit bs_refcounter_sp(pointer_t p, int)
-			: bs_refcounter(0), p_(p)
+			: base_refcnt(0), p_(p)
 		{}
 
 		pointer_t p_;
 	};
 
 	// same as above, but with custom deleter
-	template< class T, class D >
-	class bs_refcounter_spd : public bs_refcounter {
+	template< class T, class D, class base_refcnt = bs_refcounter >
+	class bs_refcounter_spd : public base_refcnt {
 	public:
 		typedef T* pointer_t;
 
 		explicit bs_refcounter_spd(pointer_t p)
-			: bs_refcounter(1), p_(p) //, d_(d)
+			: base_refcnt(1), p_(p) //, d_(d)
 		{}
 
 		template< class R >
 		explicit bs_refcounter_spd(R* p)
-			: bs_refcounter(1), p_(p)
+			: base_refcnt(1), p_(p)
 		{}
 
 		void dispose() const {
@@ -507,7 +507,7 @@ namespace bs_private {
 
 		// special ctor for restoring after serialization with refcount = 0
 		explicit bs_refcounter_spd(pointer_t p, int)
-			: bs_refcounter(0), p_(p) //, d_(d)
+			: base_refcnt(0), p_(p) //, d_(d)
 		{}
 
 		pointer_t p_;
@@ -516,29 +516,29 @@ namespace bs_private {
 
 	// refcounter around simple ptr - auto inc ref in copy ctor, dec ref in dtor
 	// can be used like boost::shared_count
-	template< class T >
+	template< class T, class base_refcnt = bs_refcounter >
 	class bs_refcounter_ptr {
 	public:
 		typedef T* pointer_t;
 
 		explicit bs_refcounter_ptr(pointer_t p)
-			: rc_(new bs_refcounter_sp< T >(p))
+			: rc_(new bs_refcounter_sp< T, base_refcnt >(p))
 		{}
 
 		// second param only for compatibility with boost::detail::shared_count
 		template< class D >
 		explicit bs_refcounter_ptr(pointer_t p, D)
-			: rc_(new bs_refcounter_spd< T, D >(p))
+			: rc_(new bs_refcounter_spd< T, D, base_refcnt >(p))
 		{}
 
 		template< class R >
 		explicit bs_refcounter_ptr(R* p)
-			: rc_(new bs_refcounter_sp< T >(p))
+			: rc_(new bs_refcounter_sp< T, base_refcnt >(p))
 		{}
 
 		template< class R, class D >
 		explicit bs_refcounter_ptr(R* p, D)
-			: rc_(new bs_refcounter_spd< T, D >(p))
+			: rc_(new bs_refcounter_spd< T, D, base_refcnt >(p))
 		{}
 
 		bs_refcounter_ptr(const bs_refcounter_ptr& lhs)
@@ -549,7 +549,7 @@ namespace bs_private {
 		}
 
 		template< class R >
-		bs_refcounter_ptr(const bs_refcounter_ptr< R >& lhs)
+		bs_refcounter_ptr(const bs_refcounter_ptr< R, base_refcnt >& lhs)
 			: rc_(lhs.rc_)
 		{
 			if(rc_)
@@ -589,14 +589,14 @@ namespace bs_private {
 #if defined(_MSC_VER)
 		friend class bs_refcounter_ptr;
 #else
-		template< class R > friend class bs_refcounter_ptr;
+		template< class R, class BR > friend class bs_refcounter_ptr;
 #endif
 
 		// empty ctor for serialization purposes
 		bs_refcounter_ptr() : rc_(NULL) {}
 
 		// pointer to reference counter
-		bs_refcounter* rc_;
+		base_refcnt* rc_;
 	};
 
 	//function that fires unlock signal
@@ -1057,7 +1057,7 @@ public:
 	typedef typename base_t::pointer_t pointer_t;
 	typedef typename base_t::ref_t ref_t;
 
-	typedef bs_private::bs_refcounter_ptr< pointed_t > refcounter_ptr_t;
+	typedef bs_private::bs_refcounter_ptr< pointed_t, bs_refcounter_st > refcounter_ptr_t;
 	//typedef boost_132::detail::shared_count refcounter_ptr_t;
 
 	/*!

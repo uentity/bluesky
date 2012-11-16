@@ -99,6 +99,58 @@ private:
 	//reference counter
 	mutable boost::detail::atomic_count refcnt_;
 };
+
+/*-----------------------------------------------------------------
+ * single-threaded reference counter without mutex
+ *----------------------------------------------------------------*/
+class BS_API bs_refcounter_st {
+public:
+	// default ctor
+	bs_refcounter_st() : refcnt_(0) {}
+	// copy ctor
+	bs_refcounter_st(const bs_refcounter_st&) : refcnt_(0) {}
+
+	// virtual dtor
+	virtual ~bs_refcounter_st() {}
+
+	//assignment operator - does nothing
+	//its meaningless to assign 2 refcounters
+	bs_refcounter_st& operator=(const bs_refcounter_st& /*src*/) { return *this; }
+
+	/*!
+	\brief Add reference.
+	*/
+	void add_ref() const {
+		++refcnt_;
+	}
+
+	/*!
+	\brief Delete reference.
+	*/
+	void del_ref() const {
+		if(--refcnt_ == 0)
+			dispose();
+	}
+
+	/*!
+	\brief Returns references count.
+	*/
+	long refs() const { return refcnt_; }
+
+	/*!
+	\brief Self-destruction method - default is 'delete this', assumes creating with 'new'
+	*/
+	virtual void dispose() const = 0;
+
+protected:
+	// ctor with given counter
+	bs_refcounter_st(long refcnt) : refcnt_(refcnt) {}
+
+private:
+	// counter itself
+	mutable long refcnt_;
+};
+
 }	//namespace blue_sky
 
 #endif
