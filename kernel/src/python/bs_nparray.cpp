@@ -69,12 +69,14 @@ smart_ptr< ret_array_t > test_nparray(smart_ptr< inp_array_t > a, smart_ptr< inp
 
 void py_export_nparray() {
 	// export converters
-	array_converters< int >           :: make_known();
-	array_converters< unsigned int >  :: make_known();
-	array_converters< long >          :: make_known();
-	array_converters< unsigned long > :: make_known();
-	array_converters< float >         :: make_known();
-	array_converters< double >        :: make_known();
+	array_converters< int >               :: make_known();
+	array_converters< unsigned int >      :: make_known();
+	array_converters< long >              :: make_known();
+	array_converters< long long >         :: make_known();
+	array_converters< unsigned long >     :: make_known();
+	array_converters< unsigned long long> :: make_known();
+	array_converters< float >             :: make_known();
+	array_converters< double >            :: make_known();
 
 	// export test functions
 	def("test_nparray_i", &test_nparray< bs_nparray_i, bs_array< int > >);
