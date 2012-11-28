@@ -30,7 +30,9 @@ typedef bs_array< double, bs_nparray > bs_nparray_d;
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_nparray));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_nparray));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_nparray));
 
