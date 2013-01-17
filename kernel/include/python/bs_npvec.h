@@ -87,7 +87,7 @@ public:
 	size_type init(in_t const& in,
 		typename boost::enable_if< boost::is_class< in_t > >::type* = 0)
 	{
-		npy_intp dims[] = { boost::size(in) };
+		npy_intp dims[] = { npy_intp(boost::size(in)) };
 		size_type sz = init(1, dims);
 		if(sz)
 			std::copy(boost::begin(in), boost::end(in), begin());
