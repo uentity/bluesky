@@ -23,6 +23,9 @@
 
 #include "bs_common.h"
 #include <list>
+#include <clocale>
+#include <locale>
+#include <string>
 
 namespace blue_sky {
 
@@ -83,6 +86,9 @@ BS_API std::string last_system_message();
  * */
 BS_API std::string dynamic_lib_error_message ();
 
+// functions to convert string <-> wstring
+BS_API std::string wstr2str(const std::wstring& text);
+BS_API std::wstring str2wstr(const std::string& text);
 
 }	//end of blue_sky namespace
 

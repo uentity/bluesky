@@ -644,5 +644,21 @@ string last_system_message() {
 	return system_message(err_code);
 }
 
+// functions to convert string <-> wstring
+std::string wstr2str(const std::wstring& text) {
+	std::locale const loc("");
+	wchar_t const* from = text.c_str();
+	const std::size_t len = text.size();
+	std::vector< char > buffer(len + 1);
+	std::use_facet< std::ctype< wchar_t > >(loc).narrow(from, from + len, '_', &buffer[0]);
+	return std::string(&buffer[0], &buffer[len]);
+}
+
+std::wstring str2wstr(const std::string& text) {
+	std::wstring res(text.length(), L' ');
+	std::copy(text.begin(), text.end(), res.begin());
+	return res;
+}
+
 }	//end of namespace blue_sky
 
