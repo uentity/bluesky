@@ -129,7 +129,7 @@ if base_env['platform'].startswith('lin') :
     base_env.Append(LIBS = ['dl']);
 
 # define boost lib names to include
-boost_libnames = ['filesystem', 'regex', 'thread', 'signals', 'serialization'];
+boost_libnames = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'locale'];
 
 # are we building with python support?
 if base_env['py'] == '1' :

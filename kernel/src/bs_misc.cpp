@@ -38,12 +38,13 @@
 #include <dlfcn.h>
 #endif
 
-#include "boost/graph/depth_first_search.hpp"
-#include "boost/graph/adjacency_list.hpp"
-#include "boost/filesystem/operations.hpp"
-#include "boost/filesystem/exception.hpp"
-#include "boost/filesystem/path.hpp"
-#include "boost/regex.hpp"
+#include <boost/graph/depth_first_search.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/exception.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/regex.hpp>
+#include <boost/locale.hpp>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -646,18 +647,24 @@ string last_system_message() {
 
 // functions to convert string <-> wstring
 std::string wstr2str(const std::wstring& text) {
-	std::locale const loc("");
-	wchar_t const* from = text.c_str();
-	const std::size_t len = text.size();
-	std::vector< char > buffer(len + 1);
-	std::use_facet< std::ctype< wchar_t > >(loc).narrow(from, from + len, '_', &buffer[0]);
-	return std::string(&buffer[0], &buffer[len]);
+	static const std::locale loc = boost::locale::generator().generate("ru_RU.UTF-8");
+	return boost::locale::conv::from_utf(text, loc);
+
+	//std::locale const loc("");
+	//wchar_t const* from = text.c_str();
+	//const std::size_t len = text.size();
+	//std::vector< char > buffer(len + 1);
+	//std::use_facet< std::ctype< wchar_t > >(loc).narrow(from, from + len, '_', &buffer[0]);
+	//return std::string(&buffer[0], &buffer[len]);
 }
 
 std::wstring str2wstr(const std::string& text) {
-	std::wstring res(text.length(), L' ');
-	std::copy(text.begin(), text.end(), res.begin());
-	return res;
+	static const std::locale loc = boost::locale::generator().generate("ru_RU.UTF-8");
+	return boost::locale::conv::to_utf< wchar_t >(text, loc);
+
+	//std::wstring res(text.length(), L' ');
+	//std::copy(text.begin(), text.end(), res.begin());
+	//return res;
 }
 
 }	//end of namespace blue_sky
