@@ -28,7 +28,7 @@ namespace blue_sky {
  *----------------------------------------------------------------*/
 
 template< class T >
-BS_API_PLUGIN std::string serialize_to_str(smart_ptr< T, true >& t) {
+BS_API_PLUGIN std::string serialize_to_str(const smart_ptr< T, true >& t) {
 	std::ostringstream os;
 	// ensure archive is destroyed before stream is closed
 	{
@@ -51,8 +51,28 @@ BS_API_PLUGIN smart_ptr< T, true > serialize_from_str(const std::string& src) {
 }
 
 template< class T >
-BS_API_PLUGIN smart_ptr< T, true > copy_via_serialize(smart_ptr< T, true > src) {
+BS_API_PLUGIN smart_ptr< T, true > copy_via_serialize(const smart_ptr< T, true >& src) {
 	return serialize_from_str< T >(serialize_to_str< T >(src));
+}
+
+/*-----------------------------------------------------------------
+ * indirect string serialization -- can be used with abstract interfaces
+ *----------------------------------------------------------------*/
+// 2-nd param in both functions used only to pass type information
+// R is a temporary type used to actually invoke serialization sunctions inside
+
+template< class T, class R >
+BS_API_PLUGIN std::string serialize_to_str_indirect(
+	const smart_ptr< T, true >& t)
+{
+	return serialize_to_str(smart_ptr< R, true >(t, bs_static_cast()));
+}
+
+template< class T, class R >
+BS_API_PLUGIN smart_ptr< T, true > serialize_from_str_indirect(
+	const std::string& src)
+{
+	return smart_ptr< T, true >(serialize_from_str< R >(src), bs_static_cast());
 }
 
 }  // eof blue_sky namespace
