@@ -190,8 +190,8 @@ public:
 
 	//non-const function because boost::signals doesn't support mt
 	void execute(const sp_mobj& sender) {
-		if(sender)
-			my_signal_(sender, signal_code_, param_);
+		//if(sender)
+		my_signal_(sender, signal_code_, param_);
 	}
 
 	void fire(const sp_mobj& sender, const sp_obj& param) {

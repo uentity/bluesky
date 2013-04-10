@@ -17,7 +17,7 @@
 #include "bs_object_base.h"
 #include "py_bs_exports.h"
 #include "py_smart_ptr.h"
-//#include <boost/python/python.h>
+#include <boost/python.hpp>
 
 // DEBUG
 //#include <iostream>
@@ -64,6 +64,69 @@ public:
 	}
 };
 
+class bs_messaging_pyw : public bs_messaging, public wrapper< bs_messaging > {
+public:
+	bs_messaging_pyw(const bs_messaging& rhs)
+		: bs_messaging(rhs)
+	{}
+	bs_messaging_pyw()
+	{}
+
+	bool subscribe(int signal_code, const sp_slot& slot) const {
+		if(override f = this->get_override("subscribe"))
+			return f(signal_code, slot);
+		return bs_messaging::subscribe(signal_code, slot);
+	}
+	bool def_subscribe(int signal_code, const sp_slot& slot) const {
+		return this->subscribe(signal_code, slot);
+	}
+
+	bool unsubscribe(int signal_code, const sp_slot& slot) const {
+		if(override f = this->get_override("unsubscribe"))
+			return f(signal_code, slot);
+		return bs_messaging::unsubscribe(signal_code, slot);
+	}
+	bool def_unsubscribe(int signal_code, const sp_slot& slot) const {
+		return this->unsubscribe(signal_code, slot);
+	}
+
+	ulong num_slots(int signal_code) const {
+		if(override f = this->get_override("num_slots"))
+			return f(signal_code);
+		return bs_messaging::num_slots(signal_code);
+	}
+	ulong def_num_slots(int signal_code) const {
+		return this->num_slots(signal_code);
+	}
+
+	bool fire_signal(int signal_code, const sp_obj& param = sp_obj (NULL)) const {
+		if(override f = this->get_override("fire_signal"))
+			return f(signal_code, param);
+		return bs_messaging::fire_signal(signal_code, param);
+	}
+	bool def_fire_signal(int signal_code, const sp_obj& param = sp_obj (NULL)) const {
+		return this->fire_signal(signal_code, param);
+	}
+
+	bool add_signal(int signal_code) {
+		if(override f = this->get_override("add_signal"))
+			return f(signal_code);
+		return bs_messaging::add_signal(signal_code);
+	}
+	bool def_add_signal(int signal_code) {
+		return this->add_signal(signal_code);
+	}
+
+	bool remove_signal(int signal_code) {
+		if(override f = this->get_override("remove_signal"))
+			return f(signal_code);
+		return bs_messaging::remove_signal(signal_code);
+	}
+	bool def_remove_signal(int signal_code) {
+		return this->remove_signal(signal_code);
+	}
+};
+
 void slot_tester(int, const sp_slot& slot) {
 	slot->execute(NULL, 0, NULL);
 	//bs_type_info ti = BS_GET_TI(*slot);
@@ -72,6 +135,9 @@ void slot_tester(int, const sp_slot& slot) {
 }
 
 }
+
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(connect_overl, connect, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fire_overl, fire, 0, 2)
 
 // exporting function
 void py_bind_messaging() {
@@ -111,21 +177,40 @@ void py_bind_messaging() {
 	register_ptr_to_python< blue_sky::smart_ptr< bs_imessaging, true > >();
 
 	// bs_messaging
+	bool (bs_messaging::*add_signal_ptr)(int) = &bs_messaging::add_signal;
 	class_<
-		bs_messaging,
-		smart_ptr< bs_messaging, true >,
-		bases< bs_imessaging >,
-		boost::noncopyable
+		bs_messaging_pyw,
+		smart_ptr< bs_messaging_pyw, true >,
+		bases< bs_imessaging >
 		>
-	("messaging", no_init)
-		.def("subscribe", &bs_messaging::subscribe)
-		.def("unsubscribe", &bs_messaging::unsubscribe)
-		.def("num_slots", &bs_messaging::num_slots)
-		.def("fire_signal", &bs_messaging::fire_signal)
+	("messaging")
+		.def("subscribe"     , &bs_messaging::subscribe     , &bs_messaging_pyw::def_subscribe)
+		.def("unsubscribe"   , &bs_messaging::unsubscribe   , &bs_messaging_pyw::def_unsubscribe )
+		.def("num_slots"     , &bs_messaging::num_slots     , &bs_messaging_pyw::def_num_slots)
+		.def("fire_signal"   , &bs_messaging::fire_signal   , &bs_messaging_pyw::def_fire_signal)
+		.def("add_signal"    , add_signal_ptr               , &bs_messaging_pyw::def_add_signal)
+		.def("remove_signal" , &bs_messaging::remove_signal , &bs_messaging_pyw::def_remove_signal)
 		.def("get_signal_list", &bs_messaging::get_signal_list)
 	;
 	// register smart_ptr conversions
+	implicitly_convertible< smart_ptr< bs_messaging_pyw, true >, blue_sky::smart_ptr< bs_messaging, true > >();
 	implicitly_convertible< smart_ptr< bs_messaging, true >, blue_sky::smart_ptr< bs_imessaging, true > >();
+	register_ptr_to_python< blue_sky::smart_ptr< bs_messaging, true > >();
+
+	// bs_signal
+	class_<
+		bs_signal,
+		smart_ptr< bs_signal, true >,
+		bases< bs_refcounter >
+		>
+	("signal", init< int >())
+		.def("init", &bs_signal::init)
+		.def_readonly("code", &bs_signal::get_code)
+		.def("connect", &bs_signal::connect, connect_overl())
+		.def("disconnect", &bs_signal::disconnect)
+		.def_readonly("num_slots", &bs_signal::num_slots)
+		.def("fire", &bs_signal::fire, fire_overl())
+	;
 }
 
 }}	// eof namespace blue_sky::python
