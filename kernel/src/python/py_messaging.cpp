@@ -205,10 +205,10 @@ void py_bind_messaging() {
 		>
 	("signal", init< int >())
 		.def("init", &bs_signal::init)
-		.def_readonly("code", &bs_signal::get_code)
+		.add_property("get_code", &bs_signal::get_code)
 		.def("connect", &bs_signal::connect, connect_overl())
 		.def("disconnect", &bs_signal::disconnect)
-		.def_readonly("num_slots", &bs_signal::num_slots)
+		.add_property("num_slots", &bs_signal::num_slots)
 		.def("fire", &bs_signal::fire, fire_overl())
 	;
 }
