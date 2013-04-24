@@ -97,6 +97,21 @@ public:
 	//}
 };
 
+template< class T >
+struct std_cont_converter {
+	typedef bspy_converter< list_traits< std::vector< T > > > v_converter;
+	typedef bspy_converter< list_traits< std::list< T >, 1 > > l_converter;
+	typedef bspy_converter< list_traits< std::set< T >, 2 > > s_converter;
+
+	static void go() {
+		v_converter::register_to_py();
+		l_converter::register_to_py();
+		s_converter::register_to_py();
+		// Python lists goes to C++ in most simple vector form
+		v_converter::register_from_py();
+	}
+};
+
 }
 
 // dumb function for testing type_d-tor <-> Py list
@@ -196,6 +211,18 @@ void py_bind_common() {
 		.add_property("refs", &bs_refcounter::refs)
 		.def("dispose", pure_virtual(&bs_refcounter::dispose))
 	;
+
+	// register converters for some C++ containers
+	std_cont_converter< int >::go();
+	std_cont_converter< unsigned int >::go();
+	std_cont_converter< long >::go();
+	std_cont_converter< long long >::go();
+	std_cont_converter< unsigned long >::go();
+	std_cont_converter< unsigned long long >::go();
+	std_cont_converter< float >::go();
+	std_cont_converter< double >::go();
+	std_cont_converter< std::string >::go();
+	std_cont_converter< std::wstring >::go();
 }
 
 }}	// eof namespace blue_sky::python
