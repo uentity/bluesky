@@ -35,6 +35,8 @@ BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_nparray));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_nparray));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_nparray));
+BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_nparray));
 
 kernel::types_enum register_nparray() {
 	kernel::types_enum te;
@@ -42,6 +44,13 @@ kernel::types_enum register_nparray() {
 	te.push_back(bs_nparray_l::bs_type());
 	te.push_back(bs_nparray_f::bs_type());
 	te.push_back(bs_nparray_d::bs_type());
+
+	te.push_back(bs_array< unsigned int      , bs_nparray >::bs_type());
+	te.push_back(bs_array< long long         , bs_nparray >::bs_type());
+	te.push_back(bs_array< unsigned long     , bs_nparray >::bs_type());
+	te.push_back(bs_array< unsigned long long, bs_nparray >::bs_type());
+	te.push_back(bs_array< std::string       , bs_nparray >::bs_type());
+	te.push_back(bs_array< std::wstring      , bs_nparray >::bs_type());
 	return te;
 }
 
@@ -79,6 +88,8 @@ void py_export_nparray() {
 	array_converters< unsigned long long> :: make_known();
 	array_converters< float >             :: make_known();
 	array_converters< double >            :: make_known();
+	array_converters< std::string >       :: make_known();
+	array_converters< std::wstring >      :: make_known();
 
 	// export test functions
 	def("test_nparray_i", &test_nparray< bs_nparray_i, bs_array< int > >);

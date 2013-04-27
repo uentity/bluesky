@@ -474,6 +474,8 @@ bool kernel::unmanaged_def_val() {
 typedef kernel::types_enum (*reg_kernel_types_f)();
 kernel::types_enum register_bs_array();
 kernel::types_enum register_data_table();
+kernel::types_enum register_tree_types();
+kernel::types_enum register_misc_types();
 namespace  python { void py_bind_anyobject(); }
 /*-----------------------------------------------------------------------------
  *  kernel_impl class definition
@@ -576,16 +578,14 @@ public:
 		//register inner plugin_descriptors in dictionary
 		pl_dict_.insert(kernel_pd_);
 		pl_dict_.insert(runtime_pd_);
-		//register str_data_table object
-		//register_kernel_type(str_data_table::bs_type());
-		//register idx_data_table object
-		//register_kernel_type(idx_data_table::bs_type());
 
 		register_kernel_type(empty_storage::bs_type());
 
 		bool res = true;
 		res &= register_kernel_types(register_bs_array);
 		res &= register_kernel_types(register_data_table);
+		res &= register_kernel_types(register_tree_types);
+		res &= register_kernel_types(register_misc_types);
 		if(!res) {
 			BSERR << "Warning! Some kernel types wasn't registered" << bs_line;
 		}

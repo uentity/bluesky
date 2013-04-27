@@ -1548,5 +1548,15 @@ BLUE_SKY_TYPE_STD_COPY(bs_node);
 BLUE_SKY_TYPE_STD_CREATE(bs_node);
 BLUE_SKY_TYPE_IMPL_SHORT(bs_node, objbase, "The node of BlueSky data storage");
 
+// tree-related types registering fcn
+kernel::types_enum register_tree_types() {
+	kernel::types_enum te;
+	te.push_back(bs_link::bs_type());
+	te.push_back(bs_node::bs_type());
+	te.push_back(bs_map< bs_node::s_traits_ptr, str_val_traits >::bs_type());
+	te.push_back(bs_map< sp_link, str_val_traits >::bs_type());
+	return te;
+}
+
 }	//end of namespace blue_sky
 

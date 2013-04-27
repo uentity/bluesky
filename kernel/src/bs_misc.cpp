@@ -667,5 +667,12 @@ std::wstring str2wstr(const std::string& text) {
 	//return res;
 }
 
+// register misc kernel types
+kernel::types_enum register_misc_types() {
+	kernel::types_enum te;
+	te.push_back(bs_conf_reader::bs_type());
+	return te;
+}
+
 }	//end of namespace blue_sky
 
