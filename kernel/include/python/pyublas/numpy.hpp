@@ -94,6 +94,8 @@ namespace pyublas
   inline NPY_TYPES get_typenum(boost::python::object) { return NPY_OBJECT; }
   inline NPY_TYPES get_typenum(boost::python::handle<>) { return NPY_OBJECT; }
   /* NPY_STRING, NPY_UNICODE unsupported for now */
+  inline NPY_TYPES get_typenum(std::string) { return NPY_STRING; }
+  inline NPY_TYPES get_typenum(std::wstring) { return NPY_UNICODE; }
 
   template <class T>
   inline
