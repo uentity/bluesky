@@ -107,13 +107,17 @@ asserter::make (bool b)
 	if (factory ())
 		return factory ()->make (b, file, line, cond_s);
 
-	return new asserter (b, file, line, cond_s);
+	static smart_ptr< asserter > asserter_;
+	asserter_ = new asserter (b, file, line, cond_s);
+	return asserter_.lock();
 }
 
 asserter *
 assert_factory::make (bool b, const char *file, int line, const char *cond_str)
 {
-	return new asserter (b, file, line, cond_str);
+	static smart_ptr< asserter > asserter_;
+	asserter_ = new asserter (b, file, line, cond_str);
+	return asserter_.lock();
 }
 
 assert_wrapper::assert_wrapper (asserter *pa)
