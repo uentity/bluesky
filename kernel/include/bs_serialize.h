@@ -26,6 +26,8 @@
 
 #include "bs_serialize_decl.h"
 #include "bs_serialize_fixreal.h"
+#include "bs_serialize_fixstr.h"
+#include "bs_serialize_fixdata.h"
 #include "bs_serialize_macro.h"
 #include "bs_serialize_overl.h"
 #include "bs_serialize_text.h"
@@ -38,6 +40,16 @@
 //BLUE_SKY_CLASS_SRZ_FCN_DECL(serialize, blue_sky::objbase)
 
 BLUE_SKY_TYPE_SERIALIZE_GUID(blue_sky::objbase)
+
+// specify chain of data fixers during serialization
+namespace blue_sky {
+
+template< class Archive >
+struct serialize_first_fixer< serialize_fix_data< Archive > > {
+	typedef serialize_fix_real< serialize_fix_wstring< > > type;
+};
+
+}
 
 #endif /* end of include guard: BS_SERIALIZE_MIZAXRNW */
 
