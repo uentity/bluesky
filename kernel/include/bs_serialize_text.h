@@ -17,9 +17,32 @@
 #define BS_SERIALIZE_TEXT_MMP1RZ0U
 
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/split_free.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <sstream>
+#include "bs_misc.h"
+
+/*-----------------------------------------------------------------
+ * fix serialization of wstring by converting it to/from string
+ *----------------------------------------------------------------*/
+namespace boost { namespace serialization {
+
+template< class Archive >
+BS_API_PLUGIN void save(Archive& ar, const std::wstring& s, const unsigned int) {
+	ar << (const std::string&)blue_sky::wstr2str(s);
+}
+
+template< class Archive >
+BS_API_PLUGIN void load(Archive& ar, std::wstring& s, const unsigned int) {
+	std::string t;
+	ar >> t;
+	s = blue_sky::str2wstr(t);
+}
+
+}} // eof boost::serialization
+
+BOOST_SERIALIZATION_SPLIT_FREE(std::wstring)
 
 namespace blue_sky {
 
