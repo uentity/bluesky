@@ -205,7 +205,7 @@ struct blue_sky::bs_serialize::save< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num)
     static void go(Archive& ar_, const BS_MAKE_FULL_TYPE(T, tpl_args_num)& t,        \
     const unsigned int version                                                       \
     ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                              \
-        ::blue_sky::fix_real< Archive> ar(ar_);                                      \
+        ::blue_sky::serialize_fix_data< Archive> ar(ar_);                            \
 /* */
 
 #define BS_CLASS_FCN_BEGIN_load(T, tpl_args_num, tpl_args_prefix)                    \
@@ -217,7 +217,7 @@ struct blue_sky::bs_serialize::load< Archive, BS_MAKE_FULL_TYPE(T, tpl_args_num)
     static void go(Archive& ar_, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t,              \
     const unsigned int version                                                       \
     ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                              \
-        ::blue_sky::fix_real< Archive> ar(ar_);                                      \
+        ::blue_sky::serialize_fix_data< Archive> ar(ar_);                            \
 /* */
 
 #define BS_CLASS_FCN_BEGIN_serialize(T, tpl_args_num, tpl_args_prefix)                    \
@@ -229,7 +229,7 @@ struct blue_sky::bs_serialize::serialize< Archive, BS_MAKE_FULL_TYPE(T, tpl_args
     static void go(Archive& ar_, BS_MAKE_FULL_TYPE(T, tpl_args_num)& t,                   \
     const unsigned int version                                                            \
     ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                                   \
-        ::blue_sky::fix_real< Archive> ar(ar_);                                           \
+        ::blue_sky::serialize_fix_data< Archive> ar(ar_);                                 \
 /* */
 
 #define BS_CLASS_FCN_BEGIN_save_construct_data(T, tpl_args_num, tpl_args_prefix)                    \
@@ -241,7 +241,7 @@ struct blue_sky::bs_serialize::save_construct_data< Archive, BS_MAKE_FULL_TYPE(T
     static void go(Archive& ar_, const BS_MAKE_FULL_TYPE(T, tpl_args_num)* t,                       \
     const unsigned int version                                                                      \
     ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                                             \
-        ::blue_sky::fix_real< Archive> ar(ar_);                                                     \
+        ::blue_sky::serialize_fix_data< Archive> ar(ar_);                                           \
 /* */
 
 #define BS_CLASS_FCN_BEGIN_load_construct_data(T, tpl_args_num, tpl_args_prefix)                    \
@@ -253,7 +253,7 @@ struct blue_sky::bs_serialize::load_construct_data< Archive, BS_MAKE_FULL_TYPE(T
     static void go(Archive& ar_, BS_MAKE_FULL_TYPE(T, tpl_args_num)* t,                             \
     const unsigned int version                                                                      \
     ){ typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                                             \
-        ::blue_sky::fix_real< Archive> ar(ar_);                                                     \
+        ::blue_sky::serialize_fix_data< Archive> ar(ar_);                                           \
 /* */
 
 ////////////////////////////////////////////////////////////////////

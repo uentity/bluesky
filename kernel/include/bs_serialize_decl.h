@@ -86,6 +86,19 @@ struct bs_init_eti;
 template< class T >
 void serialize_register_eti();
 
+/*-----------------------------------------------------------------
+ * check whether given serialization data fix is applicable to given type
+ *----------------------------------------------------------------*/
+template< class T, class fixer >
+struct serialize_fix_applicable {
+	// does given fixer applicable to given type T during saving?
+	typedef boost::false_type on_save;
+	// and during loading
+	typedef boost::false_type on_load;
+	// type returned by fixer save
+	typedef T save_ret_t;
+};
+
 }  // eof blue_sky
 
 #endif /* end of include guard: BS_SERIALIZE_DECL_AN05AGKZ */

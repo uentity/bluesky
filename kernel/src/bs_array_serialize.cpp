@@ -13,9 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
-#include "bs_array_serialize.h"
-#include "bs_serialize_overl.h"
-#include "bs_serialize_fixreal.h"
+#include "bs_serialize.h"
 
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/split_free.hpp>

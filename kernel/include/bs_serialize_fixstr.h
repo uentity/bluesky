@@ -13,56 +13,50 @@
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
-#ifndef BS_SERIALIZE_FIXREAL_TYBZECMB
-#define BS_SERIALIZE_FIXREAL_TYBZECMB
+#ifndef BS_SERIALIZE_FIXSTR_YG59DP85
+#define BS_SERIALIZE_FIXSTR_YG59DP85
 
 #include "bs_serialize_decl.h"
-
-#include <limits>
-#include <boost/type_traits/is_floating_point.hpp>
+#include "bs_misc.h"
+#include <boost/type_traits/integral_constant.hpp>
+#include <boost/type_traits/is_same.hpp>
 
 namespace blue_sky {
 
 /*-----------------------------------------------------------------
- * special proxy object for processing invalid real numbers before saving
+ * fix for converting wstring -> string before saving
  *----------------------------------------------------------------*/
 template< class next_fix = int >
-struct serialize_fix_real {
+struct serialize_fix_wstring {
+	// next is type of next fix in chain to be applied
 	typedef next_fix next;
 
-	// fix floating point types
-	template< class Archive, class T >
-	static void do_fix_save(Archive& ar, const T& v) {
-		T r = v;
-		typedef std::numeric_limits< T > nl;
-#ifdef UNIX
-		if(std::isnan(v))
-			r = 0;
-		if(std::isinf(v))
-			r = nl::max();
-#else
-#include <float.h>
-		if(_isnan(v))
-			r = 0;
-		if(!_finite(v))
-			r = nl::max();
-#endif
-		if(v < nl::min())
-			r = nl::min();
-		if(v > nl::max())
-			r = nl::max();
-		ar << r;
+	//static std::string do_fix_save(const std::wstring& v) {
+	//	return wstr2str(v);
+	//}
+
+	template< class Archive >
+	static void do_fix_save(Archive& ar, const std::wstring& v) {
+		ar << (const std::string&)wstr2str(v);
+	}
+
+	template< class Archive >
+	static void do_fix_load(Archive& ar, std::wstring& v) {
+		std::string s;
+		ar >> s;
+		v = str2wstr(s);
 	}
 };
 
 template< class T, class next_fixer >
-struct serialize_fix_applicable< T, serialize_fix_real< next_fixer > > {
-	typedef boost::is_floating_point< T > on_save;
-	typedef boost::false_type on_load;
-	typedef T save_ret_t;
+struct serialize_fix_applicable< T, serialize_fix_wstring< next_fixer > > {
+	typedef boost::is_same< T, std::wstring > on_save;
+	typedef on_save on_load;
+	typedef std::string save_ret_t;
 };
 
 } /* blue_sky */
 
-#endif /* end of include guard: BS_SERIALIZE_FIXREAL_TYBZECMB */
+
+#endif /* end of include guard: BS_SERIALIZE_FIXSTR_YG59DP85 */
 
