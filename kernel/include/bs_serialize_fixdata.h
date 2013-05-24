@@ -20,6 +20,7 @@
 #include <boost/type_traits/integral_constant.hpp>
 
 #include "bs_serialize_decl.h"
+#include "bs_conversion.h"
 
 namespace blue_sky {
 
@@ -37,12 +38,16 @@ struct serialize_first_fixer {
 template< class Archive >
 class BS_API_PLUGIN serialize_fix_data {
 	template< class T, class fixer >
-	struct on_save {
+	struct op_save {
+		// type is actually inherited from boost::true_type or boost::false_type
 		typedef typename serialize_fix_applicable< T, fixer >::on_save type;
+		// in order to be used in templates, chack conversion
+		enum { is_true = BS_CONVERSION(type, boost::true_type) };
 	};
 	template< class T, class fixer >
-	struct on_load {
+	struct op_load {
 		typedef typename serialize_fix_applicable< T, fixer >::on_load type;
+		enum { is_true = BS_CONVERSION(type, boost::true_type) };
 	};
 
 	// op == on_save/on_load
@@ -52,25 +57,25 @@ class BS_API_PLUGIN serialize_fix_data {
 	struct extract_fixer {
 
 		// generic specification that goes to next recursion level
-		template< class fixer_, class is_applicable >
+		template< class fixer_, int can_apply >
 		struct peek_fixer {
 			typedef typename fixer_::next next;
-			typedef typename op< T, next >::type next_applicable;
+			enum { next_applicable = op< T, next >::is_true };
 			typedef typename peek_fixer< next, next_applicable >::type type;
 		};
 		// boundary condition when applicable fix is found
 		template< class fixer_ >
-		struct peek_fixer< fixer_, boost::true_type > {
+		struct peek_fixer< fixer_, 1 > {
 			typedef fixer_ type;
 		};
 		// boundary condition when full chain is processed
-		template< class is_applicable >
-		struct peek_fixer< int, is_applicable > {
+		template< int can_apply >
+		struct peek_fixer< int, can_apply > {
 			typedef int type;
 		};
 
 		// process fixers chain in compile-time
-		typedef typename op< T, fixer_chain >::type is_applicable;
+		enum { is_applicable = op< T, fixer_chain >::is_true };
 		typedef typename peek_fixer< fixer_chain, is_applicable >::type type;
 	};
 
@@ -100,10 +105,7 @@ public:
 	// overload saving operator
 	template< class T >
 	serialize_fix_data& operator <<(const T& v) {
-		//typedef typename resolve_save_ret_t< T, first_fixer >::type R;
-		//const R& fv = go_save(v, first_fixer());
-		//ar_ << fv;
-		do_fix_save(ar_, v, typename extract_fixer< T, first_fixer, on_save >::type());
+		do_fix_save(ar_, v, typename extract_fixer< T, first_fixer, op_save >::type());
 		return *this;
 	}
 
@@ -126,8 +128,7 @@ public:
 	// overload loading operator
 	template< class T >
 	serialize_fix_data& operator >>(T& v) {
-		//go_load(ar_, v, first_fixer());
-		do_fix_load(ar_, v, typename extract_fixer< T, first_fixer, on_load >::type());
+		do_fix_load(ar_, v, typename extract_fixer< T, first_fixer, op_load >::type());
 		return *this;
 	}
 
