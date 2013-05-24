@@ -436,5 +436,17 @@
     <ClInclude Include="include\bs_serialize_text.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\bs_serialize.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_fixdata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_fixreal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_fixstr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

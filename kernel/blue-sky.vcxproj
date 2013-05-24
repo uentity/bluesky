@@ -369,7 +369,11 @@
     <ClInclude Include="include\bs_plugin_common.h" />
     <ClInclude Include="include\bs_prop_base.h" />
     <ClInclude Include="include\bs_refcounter.h" />
+    <ClInclude Include="include\bs_serialize.h" />
     <ClInclude Include="include\bs_serialize_decl.h" />
+    <ClInclude Include="include\bs_serialize_fixdata.h" />
+    <ClInclude Include="include\bs_serialize_fixreal.h" />
+    <ClInclude Include="include\bs_serialize_fixstr.h" />
     <ClInclude Include="include\bs_serialize_macro.h" />
     <ClInclude Include="include\bs_serialize_overl.h" />
     <ClInclude Include="include\bs_serialize_text.h" />
