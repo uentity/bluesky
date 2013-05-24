@@ -23,6 +23,9 @@
 
 namespace blue_sky {
 
+// by default fixers chain is empty (= int)
+// specialize this struct with serialize_fix_data
+// to specify custom fixers chain
 template< class >
 struct serialize_first_fixer {
 	typedef int type;
@@ -80,36 +83,18 @@ public:
 	serialize_fix_data(const serialize_fix_data& rhs) : ar_(const_cast< Archive& >(rhs.ar_)) {}
 
 	// SAVE PATH
-	// go_save() actually parse chain of fixes
-	// int is fixers chain terminator
+	// do_fix_save() actually selects whether to apply fix or simply dump value
+	// depending on fixer type
+	// if no fixer is applicable -- just dump value
 	template< class Archive_, class T >
-	static void go_save(Archive_& ar, const T& v, const int) {
-		// if we are here then none of fixes were applied -- just plain write value
+	static void do_fix_save(Archive_& ar, const T& v, const int) {
 		ar << v;
-	}
-
-	template< class Archive_, class T, class fixer >
-	static void go_save(Archive_& ar, const T& v, const fixer& f) {
-		// if some fix sucessfully applied -- we're done
-		if(do_fix_save(ar, v, f, typename serialize_fix_applicable< T, fixer >::on_save()))
-			return;
-		// goto next node in chain
-		go_save(ar, v, typename fixer::next());
-	}
-
-	// do_fix_save() actually selects whether to apply fix and apply it
-	// returns true if fix is actually applied
-	// if current fix isn't applicable -- do nothing
-	template< class Archive_, class T, class fixer >
-	static bool do_fix_save(Archive_& ar, const T& v, const fixer&, const boost::false_type) {
-		return false;
 	}
 
 	// specialization for applicable fix -- invoke fixer processing
 	template< class Archive_, class T, class fixer >
-	static bool do_fix_save(Archive_& ar, const T& v, const fixer&, const boost::true_type) {
+	static void do_fix_save(Archive_& ar, const T& v, const fixer&) {
 		fixer::do_fix_save(ar, v);
-		return true;
 	}
 
 	// overload saving operator
@@ -118,45 +103,31 @@ public:
 		//typedef typename resolve_save_ret_t< T, first_fixer >::type R;
 		//const R& fv = go_save(v, first_fixer());
 		//ar_ << fv;
-		go_save(ar_, v, first_fixer());
+		do_fix_save(ar_, v, typename extract_fixer< T, first_fixer, on_save >::type());
 		return *this;
 	}
 
 	// LOAD PATH
-	// go_load() actually parse chain of fixes
-	// chain boundary operation
+	// do_fix_load() actually selects whether to apply fix or simply read value
+	// depending on fixer type
+	// if no fixer is applicable -- just read value
 	template< class Archive_, class T >
-	static void go_load(Archive_& ar, T& v, const int) {
-		// if we are here then none of fixes were applied -- just plain read value
+	static void do_fix_load(Archive_& ar, T& v, const int) {
 		ar >> v;
 	}
 
+	// specialization for applicable fix -- invoke fixer processing
 	template< class Archive_, class T, class fixer >
-	static void go_load(Archive_& ar, T& v, const fixer& f) {
-		// if some fix sucessfully applied -- we're done
-		if(do_fix_load(ar, v, f, typename serialize_fix_applicable< T, fixer >::on_load()))
-			return;
-		// goto next node in chain
-		go_load(ar, v, typename fixer::next());
-	}
-
-	// do_fix_load() actually selects whether to apply fix and apply it
-	template< class Archive_, class T, class fixer >
-	static bool do_fix_load(Archive_& ar, T& v, const fixer&, const boost::false_type) {
-		return false;
-	}
-
-	template< class Archive_, class T, class fixer >
-	static bool do_fix_load(Archive_& ar, T& v, const fixer&, const boost::true_type) {
+	static void do_fix_load(Archive_& ar, T& v, const fixer&) {
 		// call fixer to load value
 		fixer::do_fix_load(ar, v);
-		return true;
 	}
 
 	// overload loading operator
 	template< class T >
 	serialize_fix_data& operator >>(T& v) {
-		go_load(ar_, v, first_fixer());
+		//go_load(ar_, v, first_fixer());
+		do_fix_load(ar_, v, typename extract_fixer< T, first_fixer, on_load >::type());
 		return *this;
 	}
 
