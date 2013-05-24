@@ -30,6 +30,7 @@ template< class next_fix = int >
 struct serialize_fix_wstring {
 	// next is type of next fix in chain to be applied
 	typedef next_fix next;
+	typedef std::vector< std::wstring > wsvector;
 
 	//static std::string do_fix_save(const std::wstring& v) {
 	//	return wstr2str(v);
@@ -46,13 +47,39 @@ struct serialize_fix_wstring {
 		ar >> s;
 		v = str2wstr(s);
 	}
+
+	template< class Archive >
+	static void do_fix_save(Archive& ar, const wsvector& v) {
+		ar << (const std::size_t&)v.size();
+		for(typename wsvector::const_iterator i = v.begin(), end = v.end(); i != end; ++i)
+			ar << (const std::string&)wstr2str(*i);
+	}
+
+	template< class Archive >
+	static void do_fix_load(Archive& ar, wsvector& v) {
+		std::size_t sz;
+		ar >> sz;
+		v.resize(sz);
+		std::string s;
+		for(typename wsvector::iterator i = v.begin(), end = v.end(); i != end; ++i) {
+			ar >> s;
+			*i = str2wstr(s);
+		}
+	}
 };
 
-template< class T, class next_fixer >
-struct serialize_fix_applicable< T, serialize_fix_wstring< next_fixer > > {
-	typedef boost::is_same< T, std::wstring > on_save;
-	typedef on_save on_load;
-	typedef std::string save_ret_t;
+// allow fixer to be applied to std::wstring
+template< class next_fixer >
+struct serialize_fix_applicable< std::wstring, serialize_fix_wstring< next_fixer > > {
+	typedef boost::true_type on_save;
+	typedef boost::true_type on_load;
+};
+
+// and to vector of wstrings
+template< class next_fixer >
+struct serialize_fix_applicable< std::vector< std::wstring >, serialize_fix_wstring< next_fixer > > {
+	typedef boost::true_type on_save;
+	typedef boost::true_type on_load;
 };
 
 } /* blue_sky */

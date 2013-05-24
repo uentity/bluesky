@@ -59,7 +59,6 @@ template< class T, class next_fixer >
 struct serialize_fix_applicable< T, serialize_fix_real< next_fixer > > {
 	typedef boost::is_floating_point< T > on_save;
 	typedef boost::false_type on_load;
-	typedef T save_ret_t;
 };
 
 } /* blue_sky */
