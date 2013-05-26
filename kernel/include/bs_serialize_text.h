@@ -22,6 +22,8 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <sstream>
 
+#include "bs_serialize_fix.h"
+
 namespace blue_sky {
 
 /*-----------------------------------------------------------------
@@ -30,23 +32,25 @@ namespace blue_sky {
 
 template< class T >
 BS_API_PLUGIN std::string serialize_to_str(const smart_ptr< T, true >& t) {
+	typedef typename boost::archive::text_oarchive archive_t;
 	std::ostringstream os;
 	// ensure archive is destroyed before stream is closed
 	{
-		boost::archive::text_oarchive ar(os);
-		ar << t;
+		archive_t ar(os);
+		serialize_fix_data< archive_t >(ar) << t;
 	}
 	return os.str();
 }
 
 template< class T >
 BS_API_PLUGIN smart_ptr< T, true > serialize_from_str(const std::string& src) {
+	typedef typename boost::archive::text_iarchive archive_t;
 	std::istringstream is(src);
 	smart_ptr< T, true > t;
 	// ensure archive is destroyed before stream is closed
 	{
-		boost::archive::text_iarchive ar(is);
-		ar >> t;
+		archive_t ar(is);
+		serialize_fix_data< archive_t >(ar) >> t;
 	}
 	return t;
 }
