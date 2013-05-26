@@ -38,7 +38,7 @@ struct serialize_fix_cont {
 	// SAVE PATH
 	// this version should be appropriate for all non-map containers
 	template< class Archive, class cont_t >
-	static void do_fix_save(Archive& ar, const cont_t v) {
+	static void do_fix_save(Archive& ar, const cont_t& v) {
 		serialize_fix_data< Archive > fixar(ar);
 
 		// first of all, save container size
