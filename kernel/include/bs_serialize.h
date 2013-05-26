@@ -25,12 +25,14 @@
 #include <boost/archive/polymorphic_oarchive.hpp>
 
 #include "bs_serialize_decl.h"
-#include "bs_serialize_fixreal.h"
-#include "bs_serialize_fixstr.h"
-#include "bs_serialize_fixdata.h"
 #include "bs_serialize_macro.h"
 #include "bs_serialize_overl.h"
 #include "bs_serialize_text.h"
+
+#include "bs_serialize_fixdata.h"
+#include "bs_serialize_fixreal.h"
+#include "bs_serialize_fixstr.h"
+#include "bs_serialize_fixcont.h"
 
 #include "smart_ptr_serialize.h"
 #include "bs_array_serialize.h"
@@ -46,7 +48,13 @@ namespace blue_sky {
 
 template< class Archive >
 struct serialize_first_fixer< serialize_fix_data< Archive > > {
-	typedef serialize_fix_real< serialize_fix_wstring< > > type;
+	typedef
+	serialize_fix_cont <
+		serialize_fix_real<
+			serialize_fix_wstring< >
+		>
+	>
+	type;
 };
 
 }
