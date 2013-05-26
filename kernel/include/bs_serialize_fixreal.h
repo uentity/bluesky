@@ -47,10 +47,12 @@ struct serialize_fix_real {
 		if(!_finite(v))
 			r = nl::max();
 #endif
-		if(v < nl::min())
-			r = nl::min();
+		if(std::abs(v) < nl::min())
+			r = 0;
 		if(v > nl::max())
 			r = nl::max();
+		if(v < -nl::max())
+			r = -nl::max();
 		ar << r;
 	}
 };
