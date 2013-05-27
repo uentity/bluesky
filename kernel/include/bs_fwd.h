@@ -16,6 +16,8 @@
 #ifndef _BS_FWD_H
 #define _BS_FWD_H
 
+#include <cstddef>
+
 //this file contains forward declarations of BlueSky kernel types
 
 namespace blue_sky {
@@ -102,7 +104,7 @@ namespace blue_sky {
 }
 
 //common typedefs
-typedef unsigned long ulong; //!< unsigned long
+typedef std::size_t ulong; //!< unsigned long
 typedef unsigned int uint; //!< unsigned int
 
 #endif
