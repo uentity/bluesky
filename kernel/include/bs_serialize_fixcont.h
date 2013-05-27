@@ -102,7 +102,6 @@ struct serialize_fix_cont {
 		v.resize(sz);
 
 		// read values
-		typename vector_t::value_type t;
 		for(typename vector_t::iterator i = v.begin(), end = v.end(); i != end; ++i) {
 			fixar >> *i;
 		}
