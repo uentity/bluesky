@@ -646,8 +646,8 @@ string last_system_message() {
 }
 
 // functions to convert string <-> wstring
-std::string wstr2str(const std::wstring& text) {
-	static const std::locale loc = boost::locale::generator().generate("ru_RU.UTF-8");
+std::string wstr2str(const std::wstring& text, const char* enc_name) {
+	static const std::locale loc = boost::locale::generator().generate(enc_name);
 	return boost::locale::conv::from_utf(text, loc);
 
 	//std::locale const loc("");
@@ -658,8 +658,8 @@ std::string wstr2str(const std::wstring& text) {
 	//return std::string(&buffer[0], &buffer[len]);
 }
 
-std::wstring str2wstr(const std::string& text) {
-	static const std::locale loc = boost::locale::generator().generate("ru_RU.UTF-8");
+std::wstring str2wstr(const std::string& text, const char* enc_name) {
+	static const std::locale loc = boost::locale::generator().generate(enc_name);
 	return boost::locale::conv::to_utf< wchar_t >(text, loc);
 
 	//std::wstring res(text.length(), L' ');

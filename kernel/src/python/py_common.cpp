@@ -20,7 +20,8 @@
 #include "py_list_converter.h"
 #include "py_pair_converter.h"
 #include "py_smart_ptr.h"
-//#include <boost/python/python.h>
+#include "bs_misc.h"
+#include <boost/python/overloads.hpp>
 
 #include <ostream>
 #include <iostream>
@@ -56,6 +57,10 @@ BS_HIDDEN_API ostream& operator<<(ostream& os, const bs_type_info& ti) {
 	os << "BlueSky C++ layer type_info: '" << ti.name() << "' at " << &ti.get() << endl;
 	return os;
 }
+
+// overloads for std::string <-> std::wstring converters
+BOOST_PYTHON_FUNCTION_OVERLOADS(str2wstr_overl, str2wstr, 1, 2)
+BOOST_PYTHON_FUNCTION_OVERLOADS(wstr2str_overl, wstr2str, 1, 2)
 
 namespace python {
 using namespace boost::python;
@@ -223,6 +228,10 @@ void py_bind_common() {
 	std_cont_converter< double >::go();
 	std_cont_converter< std::string >::go();
 	std_cont_converter< std::wstring >::go();
+
+	// register to/from UTF-8 converters
+	def("str2wstr", &str2wstr, str2wstr_overl());
+	def("wstr2str", &wstr2str, wstr2str_overl());
 }
 
 }}	// eof namespace blue_sky::python
