@@ -61,6 +61,90 @@
 using namespace std;
 using namespace boost;
 
+#include <boost/xpressive/xpressive.hpp>
+#include <iostream>
+ 
+using namespace std;
+using namespace boost::xpressive;
+ 
+/**@brief Очень упрощенный пример фасета ctype для корректной работы с
+ * кодировкой Cp1251*/
+class ctype_cp1251 : public ctype<char>
+{
+  public:
+   
+    /**@breif mask в ctype_base - это перечисление всех возможных типов
+     * символов - alpha, digit, ...*/
+    typedef ctype<char>::ctype_base::mask mask;
+   
+    // для краткости переобозначим константы
+    enum{
+      alpha = ctype<char>::alpha,
+      lower = ctype<char>::lower,
+      punct = ctype<char>::punct
+      // другие маски
+    };
+   
+    /**@brief Основной конструктор. r - характеризует область жизни
+     * фасета. Подробней см. в книге Страуструпа.*/
+    ctype_cp1251(size_t r = 0)
+    {
+      // инициализируем таблицу масок. Индекс - отрицательная часть char.
+      // То есть ext_tab[1] - маска для символа char(-1) - 'я'
+      ext_tab[0] = 0;
+      for(size_t i = 1; i <=32; ++i)
+        ext_tab[i] = alpha | lower;
+      for(size_t i = 33; i <= 64; ++i)
+        ext_tab[i] = alpha | upper;
+      // ... остальные символы в данном примере неинтересны
+      for(size_t i = 65; i <= 128; ++i)
+        ext_tab[i] = punct;
+    }
+ 
+    ~ctype_cp1251()
+    { }
+ 
+  protected:
+   
+    /**@brief Отвечает на вопрос соответствует ли символ c маске m*/
+    virtual bool is(mask m, char c) const
+    {
+      if(0 <= c && c <= 127)
+        return ctype<char>::is(m, c);
+      else if(-128 <= c && c < 0)
+        return ext_tab[static_cast<size_t>(c*-1)] & m;
+    }
+   
+    /**@brief Преобразует символ c в верхний регистр*/
+    virtual char do_toupper(char c) const
+    {
+      if(0 <= c && c <=127)
+        return ctype<char>::do_toupper(c);
+      else if(is(lower, c))
+        return c - 32;
+      return c;
+    }
+   
+    /**@brief Преобразует символ c в нижний регистр*/
+    virtual char do_tolower(char c) const
+    {
+      if(0 <= c && c <=127)
+        return ctype<char>::do_tolower(c);
+      else if(is(upper, c))
+        return c + 32;
+      return c;
+    }
+   
+    // чтобы не усложнять пример, не будем переопределять остальные
+    // виртуальные функции
+ 
+  private:
+    // запрет на копирование
+    ctype_cp1251(const ctype_cp1251&);
+    const ctype_cp1251& operator=(const ctype_cp1251&);
+    mask ext_tab[129]; //@< маски расширенной части кодовой таблицы CP1251
+};
+
 #define XPN_LOG_INST log::Instance()[XPN_LOG] //!< blue-sky log for error output
 
 namespace blue_sky {
@@ -645,17 +729,49 @@ string last_system_message() {
 	return system_message(err_code);
 }
 
-// functions to convert string <-> wstring
-std::string wstr2str(const std::wstring& text, const char* enc_name) {
-	static const std::locale loc = boost::locale::generator().generate(enc_name);
-	return boost::locale::conv::from_utf(text, loc);
 
-	//std::locale const loc("");
-	//wchar_t const* from = text.c_str();
-	//const std::size_t len = text.size();
-	//std::vector< char > buffer(len + 1);
-	//std::use_facet< std::ctype< wchar_t > >(loc).narrow(from, from + len, '_', &buffer[0]);
-	//return std::string(&buffer[0], &buffer[len]);
+
+
+// functions to convert string <-> wstring
+std::string wstr2str(const std::wstring& wstr, const char* enc_name) {
+  std::locale loc;
+
+  if (strcmp(enc_name, "ru_RU.CP1251") == 0)
+    {
+      ctype<char> *ctype_cp1251_facet = new ctype_cp1251();
+      loc = std::locale(std::locale(""), ctype_cp1251_facet);
+    }
+  else
+    {
+      loc = boost::locale::generator().generate(enc_name);
+    }
+
+  
+ 
+  // Создаем новую локализацию на основе текущей, использующей
+  // определенный выше фасет. Можно определить глобальную
+  // локализацию с описанным фасетом, тогда все классы и
+  // функции, будут использовать именно ее.
+  
+  const size_t sz = wstr.length() * 4;
+  if(sz == 0)
+    return std::string();
+  mbstate_t state = 0;
+  char *cnext;
+  const wchar_t *wnext;
+  const wchar_t *wcstr = wstr.c_str();
+  char *buffer = new char[sz + 1];
+  std::uninitialized_fill(buffer, buffer + sz + 1, 0);
+  typedef std::codecvt<wchar_t, char, mbstate_t> cvt;
+  cvt::result res;
+  res = std::use_facet<cvt>(loc).out(state, wcstr, wcstr + wstr.length(), wnext,
+      buffer, buffer + sz, cnext);
+  std::string result(buffer);
+  if(res == cvt::error)
+    return std::string();
+  return result;
+  //static const std::locale loc = boost::locale::generator().generate(enc_name);
+	
 }
 
 std::wstring str2wstr(const std::string& text, const char* enc_name) {
