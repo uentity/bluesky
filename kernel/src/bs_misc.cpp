@@ -71,78 +71,75 @@ using namespace boost::xpressive;
  * кодировкой Cp1251*/
 class ctype_cp1251 : public ctype<char>
 {
-  public:
-   
-    /**@breif mask в ctype_base - это перечисление всех возможных типов
-     * символов - alpha, digit, ...*/
-    typedef ctype<char>::ctype_base::mask mask;
-   
-    // для краткости переобозначим константы
-    enum{
-      alpha = ctype<char>::alpha,
-      lower = ctype<char>::lower,
-      punct = ctype<char>::punct
-      // другие маски
-    };
-   
-    /**@brief Основной конструктор. r - характеризует область жизни
-     * фасета. Подробней см. в книге Страуструпа.*/
-    ctype_cp1251(size_t r = 0)
-    {
-      // инициализируем таблицу масок. Индекс - отрицательная часть char.
-      // То есть ext_tab[1] - маска для символа char(-1) - 'я'
-      ext_tab[0] = 0;
-      for(size_t i = 1; i <=32; ++i)
-        ext_tab[i] = alpha | lower;
-      for(size_t i = 33; i <= 64; ++i)
-        ext_tab[i] = alpha | upper;
-      // ... остальные символы в данном примере неинтересны
-      for(size_t i = 65; i <= 128; ++i)
-        ext_tab[i] = punct;
-    }
- 
-    ~ctype_cp1251()
-    { }
- 
-  protected:
-   
-    /**@brief Отвечает на вопрос соответствует ли символ c маске m*/
-    virtual bool is(mask m, char c) const
-    {
-      if(0 <= c && c <= 127)
-        return ctype<char>::is(m, c);
-      else if(-128 <= c && c < 0)
-        return ext_tab[static_cast<size_t>(c*-1)] & m;
-    }
-   
-    /**@brief Преобразует символ c в верхний регистр*/
-    virtual char do_toupper(char c) const
-    {
-      if(0 <= c && c <=127)
-        return ctype<char>::do_toupper(c);
-      else if(is(lower, c))
-        return c - 32;
-      return c;
-    }
-   
-    /**@brief Преобразует символ c в нижний регистр*/
-    virtual char do_tolower(char c) const
-    {
-      if(0 <= c && c <=127)
-        return ctype<char>::do_tolower(c);
-      else if(is(upper, c))
-        return c + 32;
-      return c;
-    }
-   
-    // чтобы не усложнять пример, не будем переопределять остальные
-    // виртуальные функции
- 
-  private:
-    // запрет на копирование
-    ctype_cp1251(const ctype_cp1251&);
-    const ctype_cp1251& operator=(const ctype_cp1251&);
-    mask ext_tab[129]; //@< маски расширенной части кодовой таблицы CP1251
+public:
+
+	/**@breif mask в ctype_base - это перечисление всех возможных типов
+		* символов - alpha, digit, ...*/
+	typedef ctype<char>::ctype_base::mask mask;
+
+	// для краткости переобозначим константы
+	enum{
+		alpha = ctype<char>::alpha,
+		lower = ctype<char>::lower,
+		punct = ctype<char>::punct
+			// другие маски
+	};
+
+	/**@brief Основной конструктор. r - характеризует область жизни
+		* фасета. Подробней см. в книге Страуструпа.*/
+	ctype_cp1251(size_t r = 0) {
+		// инициализируем таблицу масок. Индекс - отрицательная часть char.
+		// То есть ext_tab[1] - маска для символа char(-1) - 'я'
+		ext_tab[0] = 0;
+		for(size_t i = 1; i <=32; ++i)
+			ext_tab[i] = alpha | lower;
+		for(size_t i = 33; i <= 64; ++i)
+			ext_tab[i] = alpha | upper;
+		// ... остальные символы в данном примере неинтересны
+		for(size_t i = 65; i <= 128; ++i)
+			ext_tab[i] = punct;
+	}
+
+	~ctype_cp1251()
+	{ }
+
+protected:
+
+	/**@brief Отвечает на вопрос соответствует ли символ c маске m*/
+	virtual bool is(mask m, char c) const {
+		if(0 <= c && c <= 127)
+			return ctype<char>::is(m, c);
+		else if(-128 <= c && c < 0)
+			return ext_tab[static_cast<size_t>(c*-1)] & m;
+		return false;
+	}
+
+	/**@brief Преобразует символ c в верхний регистр*/
+	virtual char do_toupper(char c) const {
+		if(0 <= c && c <=127)
+			return ctype<char>::do_toupper(c);
+		else if(is(lower, c))
+			return c - 32;
+		return c;
+	}
+
+	/**@brief Преобразует символ c в нижний регистр*/
+	virtual char do_tolower(char c) const {
+		if(0 <= c && c <=127)
+			return ctype<char>::do_tolower(c);
+		else if(is(upper, c))
+			return c + 32;
+		return c;
+	}
+
+	// чтобы не усложнять пример, не будем переопределять остальные
+	// виртуальные функции
+
+private:
+	// запрет на копирование
+	ctype_cp1251(const ctype_cp1251&);
+	const ctype_cp1251& operator=(const ctype_cp1251&);
+	mask ext_tab[129]; //@< маски расширенной части кодовой таблицы CP1251
 };
 
 #define XPN_LOG_INST log::Instance()[XPN_LOG] //!< blue-sky log for error output
@@ -202,8 +199,7 @@ bool mask_verify (const char * filename, const char * mask)
 	then will be return "blah-blah/somefile.cfg", NULL - otherwise.
 
  */
-const char *find_cfg_file(string& doubt, std::vector<string> &vec)
-{
+const char *find_cfg_file(string& doubt, std::vector<string> &vec) {
 	for(unsigned int i = 0, size_ = (unsigned int)vec.size(); i < size_; ++i)
 	{
 		string tmp,tmp_vec,vec_name;
@@ -223,17 +219,14 @@ const char *find_cfg_file(string& doubt, std::vector<string> &vec)
 	\param after - mask after dbt
 	\return true - if contains, false - otherwise
  */
-bool compare(const string& src , const string& dbt, const string& before, const string& after)
-{
+bool compare(const string& src , const string& dbt, const string& before, const string& after) {
 	string t = string(before) + dbt + after;
 	//regex expression(t);
 	return regex_search(src, regex(t)) ? true : false;
 }
 
 //! \return string of chars, contains current time
-std::string 
-gettime()
-{
+std::string gettime() {
 	time_t cur_time;
 	char * cur_time_str = NULL;
 	if(time(&cur_time))
@@ -245,8 +238,7 @@ gettime()
 	return cur_time_str;
 }
 
-void DumpV(const ul_vec& v, const char* pFname)
-{
+void DumpV(const ul_vec& v, const char* pFname) {
 	if(pFname) {
 		ofstream fd(pFname, ios::out | ios::trunc);
 		for(ul_vec::const_iterator pos(v.begin()); pos != v.end(); ++pos)
@@ -263,14 +255,12 @@ void DumpV(const ul_vec& v, const char* pFname)
 typedef graph_traits<load_graph>::vertex_descriptor vertex_t;
 typedef graph_traits<load_graph>::edge_descriptor edge_t;
 
-void topo_sort_dfs(const load_graph& /*g*/, vertex_t u, vertex_t*& topo_order, int* mark)
-{
+void topo_sort_dfs(const load_graph& /*g*/, vertex_t u, vertex_t*& topo_order, int* mark) {
 	mark[u] = 1; // 1 - посещённая вершина
 	*--topo_order = u;
 }
 
-void topo_sort(const load_graph& g, vertex_t* topo_order)
-{
+void topo_sort(const load_graph& g, vertex_t* topo_order) {
 	std::vector<int> mark(num_vertices(g), 0);
 	graph_traits<load_graph>::vertex_iterator vi, vi_end;
 
@@ -286,8 +276,7 @@ void topo_sort(const load_graph& g, vertex_t* topo_order)
 	If some dependencies will fail - list creation will be failed.
 	\param lib_list - list of pairs - path & version
 */
-void get_lib_list(list<lload> &lib_list)
-{
+void get_lib_list(list<lload> &lib_list) {
 	v_lload cntr_;
 	vector<int> vl;
 	load_graph g(0);
@@ -301,7 +290,7 @@ void get_lib_list(list<lload> &lib_list)
 			//topo	_sort(g, &vl[0] + num_vertices(g));
 
 			lib_list.clear();
-			//for(int i 	= 0; i < (int)cntr_.size(); ++i)
+			//for(int i		= 0; i < (int)cntr_.size(); ++i)
 			//	BSOUT << cnt	r_[i].first << " ___ " << cntr_[i].second << bs_end;
 
 			for(int i = 0; i < (int)vl.size(); ++i) {
@@ -322,41 +311,26 @@ void get_lib_list(list<lload> &lib_list)
 	\return blue_sky::wrong_path if path lib_dir or what is wrong, or
 	blue_sky::no_error - if all is ok.
  */
-blue_sky::error_code search_files(vector<string> &res, const char * what, const char * lib_dir)
-{
-   if(lib_dir == NULL) lib_dir = "./";
+blue_sky::error_code search_files(vector<string> &res, const char * what, const char * lib_dir) {
+	if(lib_dir == NULL) lib_dir = "./";
 
-	 try
-	 {
-
+	try {
 #ifndef UNIX
-		 filesystem::path plib_dir(lib_dir,filesystem::native);
+		filesystem::path plib_dir(lib_dir,filesystem::native);
 #else
-		 filesystem::path plib_dir(lib_dir);
+		filesystem::path plib_dir(lib_dir);
 #endif
 
 		// first file of directory as iterator
-		for (filesystem::directory_iterator dll_dir_itr(plib_dir), end_itr; dll_dir_itr != end_itr; ++dll_dir_itr)
-		{
+		for (filesystem::directory_iterator dll_dir_itr(plib_dir), end_itr; dll_dir_itr != end_itr; ++dll_dir_itr) {
 			if (is_directory(*dll_dir_itr))
-			{
 				continue;
-#if 0
-				if (!strcmp(lib_dir,"./"))
-					continue;
-				if (!filesystem::is_empty(filesystem::path(dll_dir_itr->string(),filesystem::native)))
-					search_files(res, what, dll_dir_itr->string().c_str());
-				continue;
-#endif
+			if (mask_verify(dll_dir_itr->path().string().c_str(),what)) {
+				res.push_back(string(dll_dir_itr->path().string().c_str()));
 			}
-			if (mask_verify(dll_dir_itr->path().string().c_str(),what))
-				{
-          res.push_back(string(dll_dir_itr->path().string().c_str()));
-        }
 		}
 	}
-	catch(const filesystem::filesystem_error &e)
-	{
+	catch(const filesystem::filesystem_error &e) {
 		BSERROR << e.what() << bs_end;
 		return blue_sky::wrong_path;
 	}
@@ -368,8 +342,7 @@ blue_sky::error_code search_files(vector<string> &res, const char * what, const 
 	\param res - separated by subversions version
 	\param src - version string
  */
-void version_separator(vector<string> &res, const string& src)
-{
+void version_separator(vector<string> &res, const string& src) {
 	if (!src.size()) return;
 	//if(!strcmp(src,"")) return;
 	vector<string> tmp;
@@ -377,18 +350,15 @@ void version_separator(vector<string> &res, const string& src)
 
 	regex expression("(.*)[.](.*)");
 	c = src;
-	for(;;)
-	{
+	for(;;) {
 		regex_split(back_inserter(tmp), c, expression);
-		if(!tmp.size())
-		{
+		if(!tmp.size()) {
 			regex_split(back_inserter(tmp), c, regex("(.*)"));
 			res.push_back(tmp.back());
 			break;
 		}
 		res.push_back(tmp.back());
-		if(!regex_search(tmp.front(), expression))
-		{
+		if(!regex_search(tmp.front(), expression)) {
 			res.push_back(tmp.front());
 			break;
 		}
@@ -402,8 +372,7 @@ void version_separator(vector<string> &res, const string& src)
 	0 if they are equal or \n
 	1 if left ver > then right ver.
 */
-int version_comparator(const string& lc, const string& rc)
-{
+int version_comparator(const string& lc, const string& rc) {
 	vector<string> lres, rres;
 	char *tmp;
 	version_separator(lres, lc);
@@ -415,8 +384,7 @@ int version_comparator(const string& lc, const string& rc)
 
 	i = (int)lres.size() - 1;
 	j = (int)rres.size() - 1;
-	for(; i > -1 && j > -1; --i, --j)
-	{
+	for(; i > -1 && j > -1; --i, --j) {
 		l = strtol(lres[i].c_str(), &tmp, 10);
 		r = strtol(rres[j].c_str(), &tmp, 10);
 		if(l == r)
@@ -443,11 +411,9 @@ int version_comparator(const string& lc, const string& rc)
 	\param name - name of vertex
 	\return index of name or -1 - otherwise
  */
-int find_vertex(vector<string> &lp, const string& name)
-{
+int find_vertex(vector<string> &lp, const string& name) {
 	string tmp;
-	for(unsigned int i = 0; i < lp.size(); ++i)
-	{
+	for(unsigned int i = 0; i < lp.size(); ++i) {
 		get_leaf(tmp, lp[i]);
 		if(compare(tmp, name, "^(.*)","(_d.|.)(dll|so)$"))
 			return i;
@@ -460,8 +426,7 @@ int find_vertex(vector<string> &lp, const string& name)
 	\param container_ - here will be leaf
 	\param src - all path
  */
-void get_leaf(string& container_, const string& src)
-{
+void get_leaf(string& container_, const string& src) {
 	vector<string> res;
 	string tmp = src;
 	regex expression("(/\?(\?:[^\?#/]*/)*)\?([^\?#]*)");
@@ -477,8 +442,7 @@ void get_leaf(string& container_, const string& src)
 	\param container_ - here will be name
 	\param src - all path
  */
-void get_name(string &container_, const string& src)
-{
+void get_name(string &container_, const string& src) {
 	vector<string> res;
 	string tmp = src;
 	regex expression("^([^\?#]*)[.](.*)$");
@@ -501,8 +465,7 @@ void get_name(string &container_, const string& src)
 	\return blue_sky::no_library - if some library in dependencies missing,
 	blue_sky::no_error - otherwise.
  */
-blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
-{
+blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_) {
 	typedef pair<int,int> edge_t;
 	typedef std::vector < edge_t > edge_array_t;
 
@@ -527,37 +490,32 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 	}
 
 	size_t lp_size = lp.size();
-	for(i = 0; i < (int)lp_size; ++i)
-	{
+	for(i = 0; i < (int)lp_size; ++i) {
 		cntr_.push_back(lload());
 		cntr_[i].first = string(lp[i]);
 	}
 
-	for(i = 0; i < (int)lp_size; ++i)
-	{
+	for(i = 0; i < (int)lp_size; ++i) {
 		char *cfg_file;
 		if(!(cfg_file = (char *)find_cfg_file(lp[i],sp))) continue;
 
 		cr.lock()->read_file(cfg_file);
 		std::string msg = lp[i] + " (";
 		size_t len = cr.lock()->get_length();
-		for (size_t b = 0; b < len; ++b)
-		{
+		for (size_t b = 0; b < len; ++b) {
 			if (b != 0)
 				msg += ", ";
 			std::string name, ver;
 			name = cr->get(b).lookup_value("name");
 			ver = cr->get(b).lookup_value("version");
 			msg += name;
-			if(-1 != (j = find_vertex(lp,name.c_str())))
-			{
+			if(-1 != (j = find_vertex(lp,name.c_str()))) {
 				edges.push_back(edge_t(i,j));
 				k = version_comparator(cntr_[j].second.c_str(),ver.c_str());
 				if(k == -1)
 					cntr_[j].second = string(ver.c_str());
 			}
-			else
-			{
+			else {
 			   //throw bs_exception("graph",blue_sky::no_library,name);
 				if (name != "")
 					BSERROR << "No library named \"" << name << "\";" << "graph creation failed!" << bs_end;
@@ -597,55 +555,51 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_)// throw()
 	\ingroup loading_plugins
 	\brief boost::dfs_visitor<>-legatied class for graph.
  */
-class bs_dfs_visitor : public dfs_visitor<>
-{
-	public:
-	 /*!
-		 \struct bs_dfs_vs
-		 \ingroup loading_plugins
-		 \brief Enumerated vertex of graph.
+class bs_dfs_visitor : public dfs_visitor< > {
+public:
+	/*!
+		\struct bs_dfs_vs
+		\ingroup loading_plugins
+		\brief Enumerated vertex of graph.
+	*/
+	struct bs_dfs_vs {
+		/*!
+			\brief Constructor.
+			\param nt - number in depth-search
+			\param g_nt - vertex
 		*/
-		struct bs_dfs_vs
-		{
-			/*!
-				\brief Constructor.
-				\param nt - number in depth-search
-				\param g_nt - vertex
-			*/
-			bs_dfs_vs(size_t nt, size_t g_nt) : n(nt), g_n(g_nt) {}
-			size_t n; //!< number in depth search
-			size_t g_n; //!< vertex
+		bs_dfs_vs(size_t nt, size_t g_nt) : n(nt), g_n(g_nt) {}
+		size_t n; //!< number in depth search
+		size_t g_n; //!< vertex
 
-			bool operator<(const bs_dfs_vs &vs2) const {
-				return ((n < vs2.n) ? true : false);
-			}
-		};
-
-	 /*!
-		 \brief Constructor.
-		 \param src - list of visitor vertexes.
-		*/
-		bs_dfs_visitor(vector<bs_dfs_vs> &src) : lc(src)
-		{
-			lc.clear();
+		bool operator<(const bs_dfs_vs &vs2) const {
+			return ((n < vs2.n) ? true : false);
 		}
+	};
 
-	 /*!
-		 \brief depth-search one step to pushing vertex to ds-list
-		 \param u - vertex, which must to push
-		*/
-		template <typename Vertex, typename Graph>
-		void discover_vertex(Vertex /*u*/, const Graph &/*g*/) const
-		{
-		}
+	/*!
+		\brief Constructor.
+		\param src - list of visitor vertexes.
+	*/
+	bs_dfs_visitor(vector<bs_dfs_vs> &src) : lc(src) {
+		lc.clear();
+	}
 
-	  //! End of depth search
-		template <typename Vertex, typename Graph>
-		void finish_vertex(Vertex u, const Graph &/*g*/) const {
-			lc.push_back(bs_dfs_vs((int)lc.size(),u));
-		}
+	/*!
+		\brief depth-search one step to pushing vertex to ds-list
+		\param u - vertex, which must to push
+	*/
+	template <typename Vertex, typename Graph>
+	void discover_vertex(Vertex /*u*/, const Graph &/*g*/) const
+	{}
 
-	  vector<bs_dfs_vs> &lc; //!< list of visits (depth-search-list)
+	//! End of depth search
+	template <typename Vertex, typename Graph>
+	void finish_vertex(Vertex u, const Graph &/*g*/) const {
+		lc.push_back(bs_dfs_vs((int)lc.size(),u));
+	}
+
+	vector<bs_dfs_vs> &lc; //!< list of visits (depth-search-list)
 };
 
 /*!
@@ -653,8 +607,7 @@ class bs_dfs_visitor : public dfs_visitor<>
 	\param ll - list of depth search
 	\param g - graph
  */
-void graph_to_list(vector<int> &ll, const load_graph &g)
-{
+void graph_to_list(vector<int> &ll, const load_graph &g) {
 	vector<bs_dfs_visitor::bs_dfs_vs> dfs;
 	bs_dfs_visitor v(dfs);
 
@@ -663,9 +616,8 @@ void graph_to_list(vector<int> &ll, const load_graph &g)
 	std::sort (dfs.begin(),dfs.end());
 
 #ifdef _DEBUG
-	for (size_t i = 0; i < dfs.size (); ++i)
-    {
-		  BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") " << bs_line;
+	for (size_t i = 0; i < dfs.size (); ++i) {
+		BSOUT << dfs[i].n << "(" << dfs[i].g_n << ") " << bs_line;
     }
 	BSOUT << bs_end;
 #endif
@@ -697,24 +649,22 @@ std::string system_message(int err_code) {
 	str = str.substr(0, str.find('\n'));
 	str = str.substr(0, str.find('\r'));
 #else
-  str = ::strerror(err_code);
+	str = ::strerror(err_code);
 #endif
 	return str;
 }
 
 std::string
-dynamic_lib_error_message ()
-{
+dynamic_lib_error_message() {
 #ifdef _WIN32
-  return system_message (GetLastError ());
+	return system_message (GetLastError ());
 #else
-  const char *msg_ = dlerror ();
-  if (!msg_)
-    {
-      return std::string ("NO ERROR");
-    }
+	const char *msg_ = dlerror ();
+	if (!msg_) {
+		return std::string ("NO ERROR");
+	}
 
-  return std::string (msg_);
+	return std::string (msg_);
 #endif
 }
 
@@ -730,57 +680,57 @@ string last_system_message() {
 }
 
 
+// hidden namespace
+namespace {
+// shared BS kernel locale generator
+static boost::locale::generator gloc;
+}
 
 
 // functions to convert string <-> wstring
-std::string wstr2str(const std::wstring& wstr, const char* enc_name) {
-  std::locale loc;
+std::string wstr2str(const std::wstring& text, const char* enc_name) {
+	gloc.locale_cache_enabled(true);
+	const std::locale loc = gloc.generate(enc_name);
+	return boost::locale::conv::from_utf(text, loc);
 
-  if (strcmp(enc_name, "ru_RU.CP1251") == 0)
-    {
-      ctype<char> *ctype_cp1251_facet = new ctype_cp1251();
-      loc = std::locale(std::locale(""), ctype_cp1251_facet);
-    }
-  else
-    {
-      loc = boost::locale::generator().generate(enc_name);
-    }
+	//std::locale loc;
 
-  
- 
-  // Создаем новую локализацию на основе текущей, использующей
-  // определенный выше фасет. Можно определить глобальную
-  // локализацию с описанным фасетом, тогда все классы и
-  // функции, будут использовать именно ее.
-  
-  const size_t sz = wstr.length() * 4;
-  if(sz == 0)
-    return std::string();
-  mbstate_t state = 0;
-  char *cnext;
-  const wchar_t *wnext;
-  const wchar_t *wcstr = wstr.c_str();
-  char *buffer = new char[sz + 1];
-  std::uninitialized_fill(buffer, buffer + sz + 1, 0);
-  typedef std::codecvt<wchar_t, char, mbstate_t> cvt;
-  cvt::result res;
-  res = std::use_facet<cvt>(loc).out(state, wcstr, wcstr + wstr.length(), wnext,
-      buffer, buffer + sz, cnext);
-  std::string result(buffer);
-  if(res == cvt::error)
-    return std::string();
-  return result;
-  //static const std::locale loc = boost::locale::generator().generate(enc_name);
-	
+	//if (strcmp(enc_name, "ru_RU.CP1251") == 0) {
+	//	ctype<char> *ctype_cp1251_facet = new ctype_cp1251();
+	//	loc = std::locale(std::locale(""), ctype_cp1251_facet);
+	//}
+	//else {
+	//	loc = boost::locale::generator().generate(enc_name);
+	//}
+
+	//// Создаем новую локализацию на основе текущей, использующей
+	//// определенный выше фасет. Можно определить глобальную
+	//// локализацию с описанным фасетом, тогда все классы и
+	//// функции, будут использовать именно ее.
+
+	//const size_t sz = wstr.length() * 4;
+	//if(sz == 0)
+	//	return std::string();
+	//mbstate_t state;
+	//char *cnext;
+	//const wchar_t *wnext;
+	//const wchar_t *wcstr = wstr.c_str();
+	//char *buffer = new char[sz + 1];
+	//std::uninitialized_fill(buffer, buffer + sz + 1, 0);
+	//typedef std::codecvt<wchar_t, char, mbstate_t> cvt;
+	//cvt::result res;
+	//res = std::use_facet<cvt>(loc).out(state, wcstr, wcstr + wstr.length(), wnext,
+	//	buffer, buffer + sz, cnext);
+	//std::string result(buffer);
+	//if(res == cvt::error)
+	//	return std::string();
+	//return result;
 }
 
 std::wstring str2wstr(const std::string& text, const char* enc_name) {
-	static const std::locale loc = boost::locale::generator().generate(enc_name);
+	gloc.locale_cache_enabled(true);
+	const std::locale loc = gloc.generate(enc_name);
 	return boost::locale::conv::to_utf< wchar_t >(text, loc);
-
-	//std::wstring res(text.length(), L' ');
-	//std::copy(text.begin(), text.end(), res.begin());
-	//return res;
 }
 
 // register misc kernel types
