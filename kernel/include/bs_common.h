@@ -148,6 +148,10 @@ namespace blue_sky
 		static T& Instance();
 	};
 
+//some common typedefs
+typedef std::vector< ulong > ul_vec; //!< vector<unsigned long>
+typedef blue_sky::smart_ptr< ul_vec, false > sp_ul_vec; //!< smart_ptr<vector<unsigned long> >
+
 }	//end of blue_sky namespace
 
 #define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT_STATIC(name, version, short_descr, long_descr, py_namespace)   \
@@ -219,9 +223,5 @@ typedef bool (*BS_REGISTER_PLUGIN)(const blue_sky::plugin_initializer&);
 #define BLUE_SKY_INIT_PY_FUN \
 BS_C_API_PLUGIN void bs_init_py_subsystem()
 typedef void (*bs_init_py_fn)();
-
-//some common typedefs
-typedef std::vector< ulong > ul_vec; //!< vector<unsigned long>
-typedef blue_sky::smart_ptr< ul_vec, false > sp_ul_vec; //!< smart_ptr<vector<unsigned long> >
 
 #endif //_BS_COMMON_H

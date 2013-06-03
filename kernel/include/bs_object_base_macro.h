@@ -33,26 +33,23 @@
 *	functions to manipulate with it.
 *	This macro is included by BLUE_SKY_TYPE_DECL*
 */
-#define BS_COMMON_DECL(T) \
+#define BS_COMMON_DECL(T)                                         \
 public: static bs_objinst_holder::const_iterator bs_inst_begin(); \
-static bs_objinst_holder::const_iterator bs_inst_end(); \
-static ulong bs_inst_cnt(); \
-protected: T(bs_type_ctor_param param = NULL); \
+static bs_objinst_holder::const_iterator bs_inst_end();           \
+static blue_sky::ulong bs_inst_cnt();                             \
+protected: T(bs_type_ctor_param param = NULL);                    \
 T(const T &x);
 
-#define BS_COMMON_DECL_MEM(T)                                        \
-    public: static bs_objinst_holder::const_iterator bs_inst_begin() \
-    {                                                                \
-        return BS_KERNEL.objinst_begin (bs_type ());                 \
-    }                                                                \
-    static bs_objinst_holder::const_iterator bs_inst_end()           \
-    {                                                                \
-        return BS_KERNEL.objinst_end (bs_type ());                   \
-    }                                                                \
-    static ulong bs_inst_cnt()                                       \
-    {                                                                \
-        return BS_KERNEL.objinst_cnt(bs_type());                     \
-    }
+#define BS_COMMON_DECL_MEM(T)                                      \
+public: static bs_objinst_holder::const_iterator bs_inst_begin() { \
+	return BS_KERNEL.objinst_begin (bs_type ());                   \
+}                                                                  \
+static bs_objinst_holder::const_iterator bs_inst_end() {           \
+	return BS_KERNEL.objinst_end (bs_type ());                     \
+}                                                                  \
+static blue_sky::ulong bs_inst_cnt() {                             \
+	return BS_KERNEL.objinst_cnt(bs_type());                       \
+}
 
 
 /*!
@@ -63,7 +60,7 @@ BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator BS_FMT_TYP
 bs_inst_begin() { return BS_KERNEL.objinst_begin(bs_type()); }                                     \
 BOOST_PP_SEQ_ENUM(prefix) blue_sky::bs_objinst_holder::const_iterator BS_FMT_TYPE_SPEC(T, is_decl) \
 bs_inst_end() { return BS_KERNEL.objinst_end(bs_type()); }                                         \
-BOOST_PP_SEQ_ENUM(prefix) ulong BS_FMT_TYPE_SPEC(T, is_decl)                                       \
+BOOST_PP_SEQ_ENUM(prefix) blue_sky::ulong BS_FMT_TYPE_SPEC(T, is_decl)                             \
 bs_inst_cnt() { return BS_KERNEL.objinst_cnt(bs_type()); }
 
 #define BS_COMMON_DECL_T_MEM(T)                \

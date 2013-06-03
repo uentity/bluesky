@@ -101,10 +101,11 @@ namespace blue_sky {
 		struct log_wrapper;
 		struct thread_log_wrapper;
 	}
-}
 
 //common typedefs
 typedef unsigned long long ulong; //!< unsigned long
 typedef unsigned long uint; //!< unsigned int
+
+} // eof blue_sky namespace
 
 #endif
