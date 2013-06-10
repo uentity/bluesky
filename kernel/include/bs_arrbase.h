@@ -34,9 +34,9 @@ public:
 	typedef bs_arrbase< T > this_t;
 	typedef smart_ptr < this_t, true > sp_arrbase;
 
-	typedef T           value_type;
-	typedef std::size_t size_type;
-	typedef size_type   key_type;
+	typedef T         value_type;
+	typedef ulong     size_type;
+	typedef size_type key_type;
 
 	typedef T*                                      pointer;
 	typedef T&                                      reference;
