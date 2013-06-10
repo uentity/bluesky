@@ -84,8 +84,8 @@ public:
 
 // link hash is it's address - so multiple smart_ptrs poining to the same link will have
 // identical hashes
-ulong link_hash(const bs_link& l) {
-	return reinterpret_cast< ulong >(&l);
+std::size_t link_hash(const bs_link& l) {
+	return reinterpret_cast< std::size_t >(&l);
 	//return uint(big_hash);
 }
 
