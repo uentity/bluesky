@@ -31,6 +31,8 @@
 #include <boost/iterator/iterator_categories.hpp>
 #include <boost/range.hpp>
 
+// ensure we support 'good' 1.7 version of numpy C API
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 
 namespace blue_sky {

@@ -105,7 +105,7 @@ public:
 		PyArray_Dims d = { new_dims, 1};
 		try {
 			boost::python::handle<> new_array = boost::python::handle<>(
-				PyArray_Resize((PyArrayObject*)this->handle().get(), &d, 1, NPY_ANYORDER)
+				PyArray_Resize(this->get_arobj(), &d, 1, NPY_ANYORDER)
 			);
 			if(new_array.get() && new_array.get() != Py_None && new_array.get() != this->handle().get())
 				this_t(new_array).swap(*this);

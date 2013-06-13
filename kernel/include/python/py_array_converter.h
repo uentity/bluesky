@@ -165,7 +165,9 @@ struct array_converters {
 			// build numpy array around raw data
 			cont_t proxy(v->begin(), v->size());
 			// set array's BASE to opaque_ptr to correctly free resourses
-			PyArray_BASE(proxy.handle().get()) = opaque_ptr;
+			PyArray_SetBaseObject(proxy.get_arobj(), opaque_ptr);
+			//PyArray_BASE(proxy.handle().get()) = opaque_ptr;
+
 
 			// return created numpy array to Python
 			return proxy.to_python();
@@ -213,7 +215,8 @@ struct array_converters {
 			// make numpy array that references raw data
 			backend_t proxy(v->ndim(), v->dims(), v->data());
 			// set array's BASE to opaque_ptr to correctly free resourses
-			PyArray_BASE(proxy.handle().get()) = opaque_ptr;
+			PyArray_SetBaseObject(proxy.get_arobj(), opaque_ptr);
+			//PyArray_BASE(proxy.handle().get()) = opaque_ptr;
 
 			// return created numpy array to Python
 			return proxy.to_python().release();
