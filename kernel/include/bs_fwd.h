@@ -103,8 +103,8 @@ namespace blue_sky {
 	}
 
 //common typedefs
-typedef unsigned long long ulong; //!< unsigned long
-typedef unsigned long uint; //!< unsigned int
+typedef std::size_t  ulong; //!< unsigned long
+typedef unsigned int uint; //!< unsigned int
 
 } // eof blue_sky namespace
 
