@@ -227,6 +227,28 @@ struct array_converters {
 		}
 	};
 
+
+	template< template< class > class cont_traits >
+	struct shared_traits_wshape : public semi_shared_traits_wshape< cont_traits > {
+		typedef semi_shared_traits_wshape< cont_traits > base_t;
+		typedef typename base_t::array_t array_t;
+		typedef typename base_t::traits_t traits_t;
+		// target type for bspy_converter
+		typedef smart_ptr< array_t > type;
+
+		static void create_type(void* memory_chunk, const boost::python::object& py_obj) {
+			// create proxy nparray and init it with Python array
+			sp_nparray_t src = BS_KERNEL.create_object(nparray_t::bs_type());
+			src.lock()->init(cont_t(py_obj.ptr()));
+			// make empty destination array
+			type dst = BS_KERNEL.create_object(array_t::bs_type());
+			// set it's container to newly created proxy
+			dst->init_inplace(src);
+			dst->reshape(src->ndim(), src->dims());
+			new(memory_chunk) type(dst);
+		}
+	};
+
 	static void on_numpy_array_death(void* p_refcnt) {
 		const bs_refcounter* data_rc = static_cast< const bs_refcounter* >(p_refcnt);
 		data_rc->del_ref();
@@ -268,7 +290,8 @@ struct array_converters {
 		// copy with shape for bs_npvec
 		make_helper< copy_traits_wshape< bs_npvec > >();
 		// semi-shared traits fo bs_npvec_shared
-		make_helper< semi_shared_traits_wshape< bs_npvec_shared > >();
+		make_helper< shared_traits_wshape< bs_npvec_shared > >();
+		//make_helper< semi_shared_traits_wshape< bs_npvec_shared > >();
 	}
 
 private:
