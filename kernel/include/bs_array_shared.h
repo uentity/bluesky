@@ -143,7 +143,7 @@ public:
 
 	pointer data() {
 		if(buf_holder_)
-			return buf_holder_->data();
+			return buf_holder_.lock()->data();
 		else
 			return NULL;
 	}
