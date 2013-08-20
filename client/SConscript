@@ -20,10 +20,10 @@ base_env.AppendUnique(
 	CPPPATH = ['src', '#kernel/include', '#plugins/bs_cube/src'],
 	LIBS = ['pthread']
 );
-#boost_libs = list_suffix(list_prefix(['serialization'], 'boost_'), '-mt');
-#boost_libs_dbg = list_suffix(boost_libs, '-d');
-boost_libs = [];
-boost_libs_dbg = [];
+boost_libs = list_suffix(list_prefix(['system'], 'boost_'), '-mt');
+boost_libs_dbg = list_suffix(boost_libs, '-d');
+#boost_libs = [system];
+#boost_libs_dbg = [];
 
 # construct debug and release env
 if build_kind == 'debug' :
