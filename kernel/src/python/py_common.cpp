@@ -21,6 +21,8 @@
 #include "py_pair_converter.h"
 #include "py_smart_ptr.h"
 #include "bs_misc.h"
+#include "py_string_converter.h"
+
 #include <boost/python/overloads.hpp>
 
 #include <ostream>
@@ -232,6 +234,10 @@ void py_bind_common() {
 	// register to/from UTF-8 converters
 	def("str2wstr", &str2wstr, str2wstr_overl());
 	def("wstr2str", &wstr2str, wstr2str_overl());
+
+	// export converter between Python unicode string and std::string
+	typedef bspy_converter< utf8_string_traits > utf8_converter;
+	utf8_converter::register_from_py();
 }
 
 }}	// eof namespace blue_sky::python
