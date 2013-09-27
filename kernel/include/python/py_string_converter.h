@@ -33,13 +33,7 @@ struct utf8_string_traits {
 		// 1. convert Python object -> std::wstring
 		wtype u8s = bp::extract< wtype >(obj);
 		// 2. convert wstring to string using BS converter
-#ifdef WIN32
-		// windows
-		new(mem_chunk) type(wstr2str(u8s, "ru_RU.CP1251"));
-#else
-		// UNIX and others
-		new(mem_chunk) type(wstr2str(u8s, "ru_RU.UTF-8"));
-#endif
+		new(mem_chunk) type(wstr2str(u8s));
 	}
 
 	static bool is_convertible(PyObject* py_obj) {
