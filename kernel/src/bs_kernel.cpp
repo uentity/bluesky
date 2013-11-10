@@ -1256,7 +1256,9 @@ kernel::kernel()
 kernel::~kernel() {
 	cleanup();
 	// manually destroy pimpl, cause mt_ptr is used
-	if(pimpl_.get()) delete pimpl_.get();
+	// update : disabled, causes segfault on exit in Windows
+	// probably beacause Python deletes some of registered instances
+	//if(pimpl_.get()) delete pimpl_.get();
 }
 
 void kernel::cleanup() {
@@ -1264,19 +1266,9 @@ void kernel::cleanup() {
 		if (disconnectors_[i])
 			disconnectors_[i]->disconnect_signals ();
 	}
-	disconnectors_.clear();
-
-	// why assert?
-	//BS_ASSERT (pimpl_->instances_.empty ()) (pimpl_->instances_.size ());
-	pimpl_->instances_.clear ();
 
 	memory_manager_.print_info ();
 	UnloadPlugins();
-
-	//BS_ASSERT (pimpl_->loaded_plugins_.empty ());
-	//BS_ASSERT (pimpl_->pert_str_tbl_.empty ());
-	//BS_ASSERT (pimpl_->pert_idx_tbl_.empty ());
-	//BS_ASSERT (pimpl_->sig_storage_.empty ()) (pimpl_->sig_storage_.size ());
 }
 
 void
