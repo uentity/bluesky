@@ -290,8 +290,8 @@ struct array_converters {
 		// copy with shape for bs_npvec
 		make_helper< copy_traits_wshape< bs_npvec > >();
 		// semi-shared traits fo bs_npvec_shared
-		make_helper< shared_traits_wshape< bs_npvec_shared > >();
-		//make_helper< semi_shared_traits_wshape< bs_npvec_shared > >();
+		//make_helper< shared_traits_wshape< bs_npvec_shared > >();
+		make_helper< semi_shared_traits_wshape< bs_npvec_shared > >();
 	}
 
 private:
