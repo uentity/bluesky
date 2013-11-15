@@ -355,6 +355,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bs_abstract_storage.h" />
+    <ClInclude Include="include\bs_array_serialize.h" />
     <ClInclude Include="include\bs_command.h" />
     <ClInclude Include="include\bs_common.h" />
     <ClInclude Include="include\bs_conversion.h" />
@@ -362,6 +363,7 @@
     <ClInclude Include="include\bs_fwd.h" />
     <ClInclude Include="include\bs_imessaging.h" />
     <ClInclude Include="include\bs_kernel.h" />
+    <ClInclude Include="include\bs_map.h" />
     <ClInclude Include="include\bs_messaging.h" />
     <ClInclude Include="include\bs_misc.h" />
     <ClInclude Include="include\bs_object_base.h" />
@@ -369,8 +371,11 @@
     <ClInclude Include="include\bs_plugin_common.h" />
     <ClInclude Include="include\bs_prop_base.h" />
     <ClInclude Include="include\bs_refcounter.h" />
+    <ClInclude Include="include\bs_report_thread.h" />
     <ClInclude Include="include\bs_serialize.h" />
     <ClInclude Include="include\bs_serialize_decl.h" />
+    <ClInclude Include="include\bs_serialize_fix.h" />
+    <ClInclude Include="include\bs_serialize_fixcont.h" />
     <ClInclude Include="include\bs_serialize_fixdata.h" />
     <ClInclude Include="include\bs_serialize_fixreal.h" />
     <ClInclude Include="include\bs_serialize_fixstr.h" />
@@ -380,16 +385,28 @@
     <ClInclude Include="include\bs_shell.h" />
     <ClInclude Include="include\bs_type_info.h" />
     <ClInclude Include="include\bs_type_macro.h" />
+    <ClInclude Include="include\declare_error_codes.h" />
     <ClInclude Include="include\force_plugin_import.h" />
+    <ClInclude Include="include\kernel_signals.h" />
     <ClInclude Include="include\python\bs_npvec.h" />
+    <ClInclude Include="include\python\bs_npvec_serialize.h" />
+    <ClInclude Include="include\python\bs_npvec_shared.h" />
+    <ClInclude Include="include\python\py_array_converter.h" />
     <ClInclude Include="include\python\py_object_handler.h" />
+    <ClInclude Include="include\python\py_string_converter.h" />
     <ClInclude Include="include\setup_common_api.h" />
     <ClInclude Include="include\setup_plugin_api.h" />
     <ClInclude Include="include\smart_ptr.h" />
+    <ClInclude Include="include\smart_ptr_serialize.h" />
     <ClInclude Include="include\stop_plugin_import.h" />
+    <ClInclude Include="include\st_smart_ptr_serialize.h" />
     <ClInclude Include="include\thread_pool.h" />
     <ClInclude Include="include\throw_exception.h" />
     <ClInclude Include="include\type_descriptor.h" />
+    <ClInclude Include="src\bs_macro_private.h" />
+    <ClInclude Include="src\bs_named_type.h" />
+    <ClInclude Include="src\dlmalloc_allocator.h" />
+    <ClInclude Include="src\get_thread_id.h" />
     <ClInclude Include="src\python\bs_import_common.h" />
     <ClInclude Include="include\python\bs_nparray.h" />
     <ClInclude Include="include\python\pyublas\numpy.hpp" />
@@ -413,6 +430,7 @@
     <ClInclude Include="src\hoard_allocator.h" />
     <ClInclude Include="include\memory_manager.h" />
     <ClInclude Include="src\std_allocator.h" />
+    <ClInclude Include="src\tcmalloc_allocator.h" />
     <ClInclude Include="src\tlsf_allocator.h" />
     <ClInclude Include="include\bs_assert.h" />
     <ClInclude Include="include\python\py_bs_assert.h" />
