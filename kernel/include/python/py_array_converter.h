@@ -47,7 +47,7 @@ struct array_converters {
 		static void create_type(void* memory_chunk, const boost::python::object& py_obj) {
 			// create empty array and init it with Python array
 			type sp_array = BS_KERNEL.create_object(array_t::bs_type());
-			sp_array.lock()->init(cont_t(py_obj.ptr()));
+			sp_array.lock()->init(py_obj.ptr());
 			new(memory_chunk) type(sp_array);
 		}
 
@@ -142,7 +142,7 @@ struct array_converters {
 		static void create_type(void* memory_chunk, const boost::python::object& py_obj) {
 			// create proxy nparray and init it with Python array
 			sp_nparray_t src = BS_KERNEL.create_object(nparray_t::bs_type());
-			src.lock()->init(cont_t(py_obj.ptr()));
+			src.lock()->init(py_obj.ptr());
 			// make empty destination array
 			type dst = BS_KERNEL.create_object(array_t::bs_type());
 			// set it's container to newly created proxy
@@ -239,7 +239,7 @@ struct array_converters {
 		static void create_type(void* memory_chunk, const boost::python::object& py_obj) {
 			// create proxy nparray and init it with Python array
 			sp_nparray_t src = BS_KERNEL.create_object(nparray_t::bs_type());
-			src.lock()->init(cont_t(py_obj.ptr()));
+			src.lock()->init(py_obj.ptr());
 			// make empty destination array
 			type dst = BS_KERNEL.create_object(array_t::bs_type());
 			// set it's container to newly created proxy
@@ -290,8 +290,8 @@ struct array_converters {
 		// copy with shape for bs_npvec
 		make_helper< copy_traits_wshape< bs_npvec > >();
 		// semi-shared traits fo bs_npvec_shared
-		//make_helper< shared_traits_wshape< bs_npvec_shared > >();
-		make_helper< semi_shared_traits_wshape< bs_npvec_shared > >();
+		make_helper< shared_traits_wshape< bs_npvec_shared > >();
+		//make_helper< semi_shared_traits_wshape< bs_npvec_shared > >();
 	}
 
 private:
