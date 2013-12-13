@@ -33,24 +33,17 @@
 *	functions to manipulate with it.
 *	This macro is included by BLUE_SKY_TYPE_DECL*
 */
-#define BS_COMMON_DECL(T)                                         \
+// *_IFACE macro DOES NOT declare protected ctors (usually absent in interfaces)
+#define BS_COMMON_DECL_IFACE(T)                                   \
 public: static bs_objinst_holder::const_iterator bs_inst_begin(); \
 static bs_objinst_holder::const_iterator bs_inst_end();           \
 static blue_sky::ulong bs_inst_cnt();                             \
-protected: T(bs_type_ctor_param param = NULL);                    \
+
+// DECL_IFACE + declare protected ctors to deny direct creation
+#define BS_COMMON_DECL(T)                      \
+BS_COMMON_DECL_IFACE(T)                        \
+protected: T(bs_type_ctor_param param = NULL); \
 T(const T &x);
-
-#define BS_COMMON_DECL_MEM(T)                                      \
-public: static bs_objinst_holder::const_iterator bs_inst_begin() { \
-	return BS_KERNEL.objinst_begin (bs_type ());                   \
-}                                                                  \
-static bs_objinst_holder::const_iterator bs_inst_end() {           \
-	return BS_KERNEL.objinst_end (bs_type ());                     \
-}                                                                  \
-static blue_sky::ulong bs_inst_cnt() {                             \
-	return BS_KERNEL.objinst_cnt(bs_type());                       \
-}
-
 
 /*!
 \brief Very common implementations of functions for working with static list of instances for templated type.
@@ -63,10 +56,23 @@ bs_inst_end() { return BS_KERNEL.objinst_end(bs_type()); }                      
 BOOST_PP_SEQ_ENUM(prefix) blue_sky::ulong BS_FMT_TYPE_SPEC(T, is_decl)                             \
 bs_inst_cnt() { return BS_KERNEL.objinst_cnt(bs_type()); }
 
-#define BS_COMMON_DECL_T_MEM(T)                \
-BS_COMMON_IMPL_EXT_((public: static), (T), 1)  \
-protected: T(bs_type_ctor_param param = NULL); \
-T(const T&);
+// iface version doesn't define default and copy ctors
+// these ctors are needed to create or copy class instance via kernel functions
+// using standard implementation of bs_create_instance() & bs_copy_instance()
+// but for interfaces you should anyway provide custom versions of fucntions above
+#define BS_COMMON_DECL_T_MEM_IFACE(T)          \
+BS_COMMON_IMPL_EXT_((public: static), (T), 1)
+
+// to shorten typing this version provides empty default and copy ctors
+// the reason is that MSVS compiler don't allow implementation of dllimport
+// class member following immediately after class definition in the same header
+// which is typical situation for templates
+// if you want custom constructors, use *_IFACE version of this macro
+#define BS_COMMON_DECL_T_MEM(T, base)           \
+BS_COMMON_IMPL_EXT_((public: static), (T), 1)   \
+protected: T(bs_type_ctor_param param = NULL)   \
+: bs_refcounter(), base(param) {}               \
+T(const T& rhs) : bs_refcounter(), base(rhs) {}
 
 /*!
 \brief Very common implementations of functions for working with static list of instances.
@@ -106,6 +112,11 @@ public: lsmart_ptr< smart_ptr< T, true > > lock() const                         
 	\brief Put this macro in the end of your BlueSky non-templated type declaration
 	\param T = name of your class
  */
+#define BLUE_SKY_TYPE_DECL_IFACE(T) \
+BS_TYPE_DECL                        \
+BS_COMMON_DECL_IFACE(T)             \
+BS_LOCK_THIS_DECL(T)
+
 #define BLUE_SKY_TYPE_DECL(T) \
 BS_TYPE_DECL                  \
 BS_COMMON_DECL(T)             \
@@ -116,6 +127,9 @@ BS_LOCK_THIS_DECL(T)
 	\param T = name of your class
 	To be used with templated types which export specializations
 */
+#define BLUE_SKY_TYPE_DECL_T_IFACE(T) \
+BLUE_SKY_TYPE_DECL_IFACE(T)
+
 #define BLUE_SKY_TYPE_DECL_T(T) \
 BLUE_SKY_TYPE_DECL(T)
 
@@ -129,15 +143,14 @@ To be used with templated types which export source definition. Specializations 
 When creating specialization of type T, client should pass unique string type postfix to macro BS_TYPE_IMPL_T_DEF.
 Complete unique string type for given template specialization will be: common_stype + stype_postfix
 */
-#define BLUE_SKY_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr) \
-BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr)               \
-BS_COMMON_DECL_T_MEM(T)                                                          \
+#define BLUE_SKY_TYPE_DECL_T_MEM_IFACE(T, base, common_stype, short_descr, long_descr) \
+BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr)                     \
+BS_COMMON_DECL_T_MEM_IFACE(T)                                                          \
 BS_LOCK_THIS_DECL(T)
 
-//! same as BLUE_SKY_TYPE_DECL_T_MEM but not for template classes
-#define BLUE_SKY_TYPE_DECL_MEM(T, base, common_stype, short_descr, long_descr) \
-BS_TYPE_DECL_MEM((T), (base), common_stype, short_descr, long_descr, false)    \
-BS_COMMON_DECL_MEM(T)                                                          \
+#define BLUE_SKY_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr) \
+BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr)               \
+BS_COMMON_DECL_T_MEM(T, base)                                                    \
 BS_LOCK_THIS_DECL(T)
 
 //------------------------ implementation ------------------------------------------------------------------------------
