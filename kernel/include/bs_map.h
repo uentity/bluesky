@@ -167,21 +167,18 @@ private:
 	BLUE_SKY_TYPE_STD_CREATE_T_MEM(bs_map);
 	BLUE_SKY_TYPE_STD_COPY_T_MEM(bs_map);
 
-	BLUE_SKY_TYPE_DECL_T_MEM(bs_map, objbase, "bs_map",
+	BLUE_SKY_TYPE_DECL_T_MEM_IFACE(bs_map, objbase, "bs_map",
 		"Map of values of the same type indexed by key", "");
+
+	// default bs_array ctor implementation
+	bs_map(bs_type_ctor_param param)
+		: bs_refcounter(), objbase(param), container()
+	{}
+	// default bs_array copy ctor implementation
+	bs_map(const bs_map& src)
+		: bs_refcounter(), objbase(src), container(src)
+	{}
 };
-
-// default bs_array ctor implementation
-template< class T, template< class > class cont_traits >
-bs_map< T, cont_traits >::bs_map(bs_type_ctor_param param)
-: bs_refcounter(), objbase(param), container()
-{}
-
-// default bs_array copy ctor implementation
-template< class T, template< class > class cont_traits >
-bs_map< T, cont_traits >::bs_map(const bs_map< T, cont_traits >& src)
-: bs_refcounter(), objbase(src), container(src)
-{}
 
 // make alias with 1 template param and str_val_traits accepted by default
 template< class T >
@@ -192,21 +189,9 @@ class str_val_table : public bs_map< T, str_val_traits > {
 	BLUE_SKY_TYPE_STD_CREATE_T_MEM(str_val_table);
 	BLUE_SKY_TYPE_STD_COPY_T_MEM(str_val_table);
 
-	BLUE_SKY_TYPE_DECL_T_MEM(str_val_table, objbase, "str_val_table",
+	BLUE_SKY_TYPE_DECL_T_MEM(str_val_table, base_t, "str_val_table",
 		"Map of values of the same type indexed by string", "");
 };
-
-// standard ctor
-template< class T >
-str_val_table< T >::str_val_table(bs_type_ctor_param param)
-	: bs_refcounter(), base_t(param)
-{}
-
-// copy ctor
-template< class T >
-str_val_table< T >::str_val_table(const str_val_table< T >& src)
-	: bs_refcounter(), base_t(src)
-{}
 
 }	// end of blue_sky namespace
 

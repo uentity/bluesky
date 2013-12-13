@@ -126,21 +126,19 @@ protected:
 	BLUE_SKY_TYPE_STD_CREATE_T_MEM(bs_array);
 	BLUE_SKY_TYPE_STD_COPY_T_MEM(bs_array);
 
-	BLUE_SKY_TYPE_DECL_T_MEM(bs_array, objbase, "bs_array",
+	// don't include std ctors -- we need custom copy ctor, so use IFACE version
+	BLUE_SKY_TYPE_DECL_T_MEM_IFACE(bs_array, objbase, "bs_array",
 		"Array of values of the same type indexed by integral type", "");
+
+	// default bs_array ctor implementation
+	bs_array(bs_type_ctor_param /* param */)
+		: bs_refcounter(), base_t()
+	{}
+	// default bs_array copy ctor implementation
+	bs_array(const bs_array& src)
+		: bs_refcounter(), objbase(src), base_t(src)
+	{}
 };
-
-// default bs_array ctor implementation
-template< class T, template< class > class cont_traits >
-bs_array< T, cont_traits >::bs_array(bs_type_ctor_param /* param */)
-: bs_refcounter(), base_t()
-{}
-
-// default bs_array copy ctor implementation
-template< class T, template< class > class cont_traits >
-bs_array< T, cont_traits >::bs_array(const bs_array< T, cont_traits >& src)
-: bs_refcounter(), objbase(src), base_t(src)
-{}
 
 }	// end of blue_sky namespace
 
