@@ -113,7 +113,7 @@ public: lsmart_ptr< smart_ptr< T, true > > lock() const                         
 	\param T = name of your class
  */
 #define BLUE_SKY_TYPE_DECL_IFACE(T) \
-BS_TYPE_DECL                        \
+BS_TYPE_DECL_IFACE                  \
 BS_COMMON_DECL_IFACE(T)             \
 BS_LOCK_THIS_DECL(T)
 
@@ -143,14 +143,25 @@ To be used with templated types which export source definition. Specializations 
 When creating specialization of type T, client should pass unique string type postfix to macro BS_TYPE_IMPL_T_DEF.
 Complete unique string type for given template specialization will be: common_stype + stype_postfix
 */
+// NOTE: here we use non-iface BS_TYPE_DECL_MEM (i.e. include body of bs_resolve_type())
 #define BLUE_SKY_TYPE_DECL_T_MEM_IFACE(T, base, common_stype, short_descr, long_descr) \
-BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr)                     \
+BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr, false)              \
 BS_COMMON_DECL_T_MEM_IFACE(T)                                                          \
 BS_LOCK_THIS_DECL(T)
 
 #define BLUE_SKY_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr) \
-BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr)               \
+BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr, false)        \
 BS_COMMON_DECL_T_MEM(T, base)                                                    \
+BS_LOCK_THIS_DECL(T)
+
+#define BLUE_SKY_TYPE_DECL_T_MEM_IFACE_NOCOPY(T, base, common_stype, short_descr, long_descr) \
+BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr, true)                      \
+BS_COMMON_DECL_T_MEM_IFACE(T)                                                                 \
+BS_LOCK_THIS_DECL(T)
+
+#define BLUE_SKY_TYPE_DECL_T_MEM_NOCOPY(T, base, common_stype, short_descr, long_descr) \
+BS_TYPE_DECL_T_MEM(T, base, common_stype, short_descr, long_descr, true)                \
+BS_COMMON_DECL_T_MEM(T, base)                                                           \
 BS_LOCK_THIS_DECL(T)
 
 //------------------------ implementation ------------------------------------------------------------------------------
