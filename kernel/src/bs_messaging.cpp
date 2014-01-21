@@ -27,92 +27,19 @@ using namespace Loki;
 
 namespace blue_sky {
 
-//---------------BlueSky Slot implementation--------------------------------------
-//Andrey
-//off
-//struct bs_slot::slot_wrapper
-//{
-//	slot_wrapper(const sp_slot& slot) : slot_(slot)
-//	{}
-//
-//	void operator()(sp_mobj sender, int signal_code, sp_obj param) const
-//	{
-//		kernel& k = give_kernel::Instance();
-//		slot_.lock()->init(sender, signal_code, param);
-//		k.add_task(slot_);
-//	}
-//
-//	bool operator==(const slot_wrapper& rhs) const {
-//		return (slot_ == rhs.slot_);
-//	}
-//
-//	bool operator==(const sp_slot& slot) const {
-//		return (slot_ == slot);
-//	}
-//
-//	bool operator<(const slot_wrapper& rhs) const {
-//		return (slot_ < rhs.slot_);
-//	}
-//
-//	sp_slot slot_;
-//};
-//
-//void bs_slot::init(const sp_mobj& sender, int signal_code, const sp_obj& param)
-//{
-//	sender_ = sender; signal_code_ = signal_code; param_ = param;
-//}
-//
-
 void bs_slot::dispose() const {
 	delete this;
 }
 
-//new implementation
-class slot_holder {
-public:
-	typedef const bs_imessaging* sender_ptr;
-
-	slot_holder(const sp_slot& slot, const sender_ptr& sender = NULL)
-		: slot_(slot), sender_(sender)
-	{}
-
-	bool operator==(const slot_holder& rhs) const {
-		return (slot_ == rhs.slot_);
-	}
-
-	bool operator==(const sp_slot& slot) const {
-		return (slot_ == slot);
-	}
-
-	bool operator<(const slot_holder& rhs) const {
-		return (slot_ < rhs.slot_);
-	}
-
-	void operator()(const sp_mobj& sender, int signal_code, sp_obj param) const {
-		if((!sender_) || (sender == sender_))
-			fire_slot(sender, signal_code, param);
-	}
-
-	// children should override this function
-	virtual void fire_slot(const sp_mobj& sender, int signal_code, const sp_obj& param) const = 0;
-
-	// virtual dtor
-	virtual ~slot_holder() {};
-
-protected:
-	sp_slot slot_;
-	// if sender != NULL then only signals from this sender will be triggered
-	// if we store sp_mobj then object will live forever, because every slot holds smart pointer to sender
-	// thats why only pure pointer to object is stored
-	// when sender is deleted, all slot_holders will be destroyed and there will be no dead references
-	const bs_imessaging* sender_;
-	//sp_mobj sender_;
-};
-
-class async_layer : public slot_holder {
+/*-----------------------------------------------------------------
+ * BS signal helpers
+ *----------------------------------------------------------------*/
+// define execution layer -- sync or async
+template< class slot_ptr >
+class async_layer {
 	class slot2com : public combase {
 	public:
-		slot2com(const sp_slot& slot, const sp_mobj& sender, int signal_code, const sp_obj& param)
+		slot2com(const slot_ptr& slot, const sp_mobj& sender, int signal_code, const sp_obj& param)
 			: slot_(slot), sender_(sender), sc_(signal_code), param_(param)
 		{}
 
@@ -131,40 +58,77 @@ class async_layer : public slot_holder {
 		}
 
 	private:
-		sp_slot slot_;
+		slot_ptr slot_;
 		sp_mobj sender_;
 		int sc_;
 		sp_obj param_;
 	};
 
 public:
-	typedef slot_holder::sender_ptr sender_ptr;
 
-	async_layer(const sp_slot& slot, const sender_ptr& sender = NULL)
-		: slot_holder(slot, sender)
-	{}
-
-	void fire_slot(const sp_mobj& sender, int signal_code, const sp_obj& param) const {
-		if(slot_)
-			give_kernel::Instance().add_task(new slot2com(slot_, sender, signal_code, param));
+	void fire_slot(
+		const sp_slot& slot, const sp_mobj& sender, int signal_code, const sp_obj& param
+	) const {
+		if(slot)
+			// execute slot as kernel task
+			BS_KERNEL.add_task(new slot2com(slot, sender, signal_code, param));
 	}
 };
 
-class sync_layer : public slot_holder {
+template< class slot_ptr >
+class sync_layer {
 public:
-	typedef slot_holder::sender_ptr sender_ptr;
 
-	sync_layer(const sp_slot& slot, const sender_ptr& sender = NULL)
-		: slot_holder(slot, sender)
-	{}
-
-	void fire_slot(const sp_mobj& sender, int signal_code, const sp_obj& param) const {
-		if(slot_)
-			slot_->execute(sender, signal_code, param);
+	void fire_slot(
+		const slot_ptr& slot, const sp_mobj& sender, int signal_code, const sp_obj& param
+	) const {
+		if(slot)
+			// directly execute slot
+			slot->execute(sender, signal_code, param);
 	}
 };
 
-//bs_signal definition
+// slot holder that uses execution layer to fire slot
+template< class slot_ptr = sp_slot, template < class > class exec_layer = SLOT_EXEC_LAYER  >
+class slot_holder : public exec_layer< slot_ptr > {
+public:
+	typedef const bs_imessaging* sender_ptr;
+	typedef exec_layer< slot_ptr > base_t;
+	using base_t::fire_slot;
+
+	slot_holder(const slot_ptr& slot, const sender_ptr& sender = NULL)
+		: slot_(slot), sender_(sender)
+	{}
+
+	bool operator==(const slot_holder& rhs) const {
+		return (slot_ == rhs.slot_);
+	}
+
+	bool operator==(const slot_ptr& slot) const {
+		return (slot_ == slot);
+	}
+
+	bool operator<(const slot_holder& rhs) const {
+		return (slot_ < rhs.slot_);
+	}
+
+	void operator()(const sp_mobj& sender, int signal_code, sp_obj param) const {
+		if((!sender_) || (sender == sender_))
+			fire_slot(slot_, sender, signal_code, param);
+	}
+
+protected:
+	slot_ptr slot_;
+	// if sender != NULL then only signals from this sender will be triggered
+	// if we store sp_mobj then object will live forever, because every slot holds smart pointer to sender
+	// thats why only pure pointer to object is stored
+	// when sender is deleted, all slot_holders will be destroyed and there will be no dead references
+	const bs_imessaging* sender_;
+};
+
+/*-----------------------------------------------------------------
+ * BS signal implementation details
+ *----------------------------------------------------------------*/
 class bs_signal::signal_impl
 {
 public:
@@ -203,13 +167,13 @@ public:
 	bool connect(const sp_slot& slot, const sp_mobj& sender = NULL) {
 		if(!slot) return false;
 		//my_signal_.connect(bs_slot::slot_wrapper(slot));
-		my_signal_.connect(SLOT_EXEC_LAYER(slot, sender));
+		my_signal_.connect(slot_holder<>(slot, sender));
 		return true;
 	}
 
 	bool disconnect(const sp_slot& slot) {
 		if(!slot) return false;
-		my_signal_.disconnect(SLOT_EXEC_LAYER(slot));
+		my_signal_.disconnect(slot_holder<>(slot));
 		return true;
 	}
 
@@ -231,10 +195,6 @@ void bs_signal::init(int signal_code) const {
 		throw bs_kernel_exception ("bs_signal::init", no_error, "Wrong signal code given");
 }
 
-//bool bs_signal::sender_binded() const {
-//	return (pimpl_->sender_.get() != NULL);
-//}
-
 void bs_signal::fire(const sp_mobj& sender, const sp_obj& param) const {
 	//lock during recepients call because boost:signals doesn't support mt
 	//lpimpl lp(pimpl_);
@@ -252,20 +212,6 @@ bool bs_signal::disconnect(const sp_slot& slot) const
 {
 	return pimpl_.lock()->disconnect(slot);
 }
-
-//sp_com bs_signal::execute()
-//{
-//	pimpl_->execute();
-//	return NULL;
-//}
-//
-//void bs_signal::unexecute()
-//{}
-//
-//bool bs_signal::can_unexecute() const
-//{
-//	return false;
-//}
 
 ulong bs_signal::num_slots() const {
 	return pimpl_->num_slots();
