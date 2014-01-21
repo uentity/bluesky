@@ -209,7 +209,7 @@ public:
 
 	bool disconnect(const sp_slot& slot) {
 		if(!slot) return false;
-		my_signal_.disconnect(slot);
+		my_signal_.disconnect(SLOT_EXEC_LAYER(slot));
 		return true;
 	}
 
