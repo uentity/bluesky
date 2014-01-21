@@ -33,7 +33,8 @@ struct utf8_string_traits {
 		// 1. convert Python object -> std::wstring
 		wtype u8s = bp::extract< wtype >(obj);
 		// 2. convert wstring to string using BS converter
-		new(mem_chunk) type(wstr2str(u8s));
+		// NOTE: using native system encoding, hence wstr2str_n
+		new(mem_chunk) type(wstr2str_n(u8s));
 	}
 
 	static bool is_convertible(PyObject* py_obj) {
