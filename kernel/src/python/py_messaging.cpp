@@ -32,7 +32,8 @@ using namespace std;
 class bs_slot_pyw : public bs_slot, public wrapper< bs_slot > {
 public:
 	void execute(const sp_mobj& sender, int signal_code, const sp_obj& param) const {
-		this->get_override("execute")(sender, signal_code, param);
+		if(override f = this->get_override("execute"))
+			f(sender, signal_code, param);
 	}
 };
 
