@@ -89,6 +89,9 @@ BS_API std::string dynamic_lib_error_message ();
 // functions to convert string <-> wstring
 BS_API std::string wstr2str(const std::wstring& text, const char* enc_name = "ru_RU.UTF-8");
 BS_API std::wstring str2wstr(const std::string& text, const char* enc_name = "ru_RU.UTF-8");
+// string <-> wstring conversion using native system locale
+BS_API std::string wstr2str_n(const std::wstring& text);
+BS_API std::wstring str2wstr_n(const std::string& text);
 
 }	//end of blue_sky namespace
 

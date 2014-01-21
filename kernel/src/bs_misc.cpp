@@ -609,6 +609,7 @@ string last_system_message() {
 namespace {
 // shared BS kernel locale generator
 static boost::locale::generator gloc;
+static std::string native_loc = boost::locale::util::get_system_locale();
 }
 
 
@@ -623,6 +624,15 @@ std::wstring str2wstr(const std::string& text, const char* enc_name) {
 	gloc.locale_cache_enabled(true);
 	const std::locale loc = gloc.generate(enc_name);
 	return boost::locale::conv::to_utf< wchar_t >(text, loc);
+}
+
+// same as above, but find out native system locale
+std::string wstr2str_n(const std::wstring& text) {
+	return wstr2str(text, native_loc.c_str());
+}
+
+std::wstring str2wstr(const std::string& text) {
+	return str2wstr(text, native_loc.c_str());
 }
 
 // register misc kernel types
