@@ -44,7 +44,7 @@ class async_layer {
 		{}
 
 		sp_com execute() {
-			slot_->execute(sender_, sc_, param_);
+			slot_.lock()->execute(sender_, sc_, param_);
 			return NULL;
 		}
 
@@ -84,7 +84,7 @@ public:
 	) const {
 		if(slot)
 			// directly execute slot
-			slot->execute(sender, signal_code, param);
+			slot.lock()->execute(sender, signal_code, param);
 	}
 };
 
