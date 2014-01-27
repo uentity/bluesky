@@ -637,22 +637,14 @@ public:
 	*/
 	bs_locker(const_pointer_t lp)
 		: base_t(const_cast< pointer_t >(lp))
-#ifndef BS_DISABLE_MT_LOCKS
 		  , lobj_(lp->mutex())
-#endif
 	{}
 	/*!
 	\brief Constructor from simple pointer with disjoint mutex.
 	*/
-#ifndef BS_DISABLE_MT_LOCKS
 	bs_locker(const_pointer_t lp, bs_mutex& m)
 		: base_t(const_cast< pointer_t >(lp)), lobj_(m)
 	{}
-#else
-	bs_locker(const_pointer_t lp, bs_mutex&)
-		: base_t(const_cast< pointer_t >(lp))
-	{}
-#endif
 
 	operator ref_t() const {
 		return (*p_);
@@ -672,10 +664,8 @@ public:
 
 	//dtor
 	~bs_locker() {
-#ifndef BS_DISABLE_MT_LOCKS
 		//fire unlock signal
-		bs_private::signal_unlock< pointed_t >::fire(p_);
-#endif
+		//bs_private::signal_unlock< pointed_t >::fire(p_);
 	}
 
 	/*!
@@ -686,10 +676,8 @@ public:
 	bs_locker(const bs_locker&);
 
 private:
-#ifndef BS_DISABLE_MT_LOCKS
 	//! type of locker object used in mutex
 	typename bs_mutex::scoped_lock lobj_;
-#endif
 
 	/*!
 	\brief Empty constructor prevents from creating empty object.
@@ -733,9 +721,7 @@ public:
 	*/
 	explicit lsmart_ptr(const SP& lp)
 		: base_t(lp), guard_(lp.mutex())
-#ifndef BS_DISABLE_MT_LOCKS
 		, lobj_(*lp.mutex())
-#endif
 	{}
 
 	/*!
@@ -745,17 +731,13 @@ public:
 	*/
 	explicit lsmart_ptr(const SP& lp, bs_mutex& m)
 		: base_t(lp), guard_(&m)
-#ifndef BS_DISABLE_MT_LOCKS
 		, lobj_(m)
-#endif
 	{}
 
 	//! copy ctor accuires another lock
 	lsmart_ptr(const this_t& lp)
 		: base_t(lp), guard_(lp.guard_)
-#ifndef BS_DISABLE_MT_LOCKS
 		, lobj_(*lp.guard_)
-#endif
 	{}
 
 	// destructor will automatically release the lock
@@ -805,20 +787,16 @@ public:
 	\brief Locks pointed object
 	*/
 	void lock() {
-#ifndef BS_DISABLE_MT_LOCKS
 		lobj_.lock();
-#endif
 	}
 
 	/*!
 	\brief Unlocks pointed object
 	*/
 	void unlock() {
-#ifndef BS_DISABLE_MT_LOCKS
 		lobj_.unlock();
 		//fire unlock signal
-		bs_private::signal_unlock< pointed_t >::fire(this->p_);
-#endif
+		//bs_private::signal_unlock< pointed_t >::fire(this->p_);
 	}
 
 	/*!
@@ -827,22 +805,18 @@ public:
 	Also releases the lock.
 	*/
 	void release() {
-#ifndef BS_DISABLE_MT_LOCKS
 		//release the lock
 		lobj_.~lock_obj_t();
 		//fire unlock signal
-		bs_private::signal_unlock< pointed_t >::fire(this->p_);
-#endif
+		//bs_private::signal_unlock< pointed_t >::fire(this->p_);
 		//! release pointer
 		base_t::release();
 	}
 
 	//dtor
 	~lsmart_ptr() {
-#ifndef BS_DISABLE_MT_LOCKS
 		//fire unlock signal
-		bs_private::signal_unlock< pointed_t >::fire(this->p_);
-#endif
+		//bs_private::signal_unlock< pointed_t >::fire(this->p_);
 	}
 
 private:
@@ -854,9 +828,7 @@ private:
 
 	bs_mutex* guard_;
 	typedef bs_mutex::scoped_lock lock_obj_t;
-#ifndef BS_DISABLE_MT_LOCKS
 	lock_obj_t lobj_;
-#endif
 };
 
 /*!
@@ -947,7 +919,7 @@ public:
 	*/
 	template< class R >
 	mt_ptr(const smart_ptr< R, true >& lp)
-		: base_t(lp), mut_(*lp.mutex()), 
+		: base_t(lp), mut_(*lp.mutex()),
 		d_(new bs_private::deleter_adaptor< bs_obj_deleter< pointed_t> >())
 	{
 		if(lp) lp->add_ref();
@@ -1001,20 +973,17 @@ public:
 //	const bs_locker< T > lock() const {
 //		return bs_locker< T >(this->p_, *mut_);
 //	}
-#ifndef BS_DISABLE_MT_LOCKS
 	const lsmart_ptr< this_t > lock() const {
 		return lsmart_ptr< this_t >(*this);
 	}
-#else
-	pure_pointer_t lock() const {
-		return const_cast< pure_pointer_t >(this->p_);
-	}
 
+#ifdef BS_DISABLE_MT_LOCKS
 	// override member-access function
 	pure_pointer_t operator->() const {
 		return const_cast< pure_pointer_t >(this->p_);
 	}
 #endif
+
 	//! \brief mutex accessor
 	bs_mutex* mutex() const { return mut_; }
 
@@ -1370,8 +1339,7 @@ public:
 	{}
 
 	//! destructor
-	~smart_ptr()
-	{
+	~smart_ptr() {
 		//! delete mutex if necessary
 		if(inner_ && this->refs() == 1)
 			delete mut_;
@@ -1437,15 +1405,11 @@ public:
 //	const bs_locker< T > lock() const {
 //		return bs_locker< T >(this->p_, *mut_);
 //	}
-#ifndef BS_DISABLE_MT_LOCKS
 	const lsmart_ptr< this_t > lock() const {
 		return lsmart_ptr< this_t >(*this);
 	}
-#else
-	pure_pointer_t lock() const {
-		return const_cast< pure_pointer_t >(this->p_);
-	}
 
+#ifdef BS_DISABLE_MT_LOCKS
 	// override member-access function
 	pure_pointer_t operator->() const {
 		return const_cast< pure_pointer_t >(this->p_);
@@ -1478,23 +1442,6 @@ private:
 
 	bs_mutex* mut_; //!< pointer to mutex object
 	bool inner_; //!< is mutex internal (memory allocated in constructor)
-
-	//custom deleter for correct mutex removing
-	//template< class R, class D = boost::checked_deleter< R > >
-	//struct mtsp_deleter {
-	//	mtsp_deleter(bs_mutex*& mut) : mut_(mut) {}
-	//	mtsp_deleter(bs_mutex*& mut, D d) : mut_(mut), d_(d) {}
-
-	//	void operator ()(R *const p) const {
-	//		delete mut_;
-	//		d_(p);
-	//	}
-
-	//private:
-	//	bs_mutex*& mut_;
-	//	//nested deleter
-	//	D d_;
-	//};
 
 	//! swap - swaps 2 mt_smart_ptrs - never throws
 	void swap(this_t& lp, bool leave_inner_flag = false) {
@@ -1610,11 +1557,6 @@ public:
 	*/
 	~smart_ptr() {
 		if(this->p_) {
-			//DEBUG!
-			//			std::cout << "smart_ptr destructor for object " << *this->p_->name() << " is called" << std::endl;
-			//			std::cout << "type_id = " << typeid(*this->p_).name() << std::endl;
-			//			std::cout << "ref_cnt = " << refs() << std::endl;
-
 			//this->p_->del_ref();
 			bs_refcounter_del_ref (static_cast <const bs_refcounter*> (this->p_));
 		}
@@ -1695,15 +1637,11 @@ public:
 //	const bs_locker< T > lock() const {
 //		return bs_locker< T >(this->p_);
 //	}
-#ifndef BS_DISABLE_MT_LOCKS
 	const lsmart_ptr< this_t > lock() const {
 		return lsmart_ptr< this_t >(*this);
 	}
-#else
-	pure_pointer_t lock() const {
-		return const_cast< pure_pointer_t >(this->p_);
-	}
 
+#ifdef BS_DISABLE_MT_LOCKS
 	// override member-access function
 	pure_pointer_t operator->() const {
 		return const_cast< pure_pointer_t >(this->p_);
