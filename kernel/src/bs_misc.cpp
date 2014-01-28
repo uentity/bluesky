@@ -607,32 +607,69 @@ string last_system_message() {
 
 // hidden namespace
 namespace {
-// shared BS kernel locale generator
-static boost::locale::generator gloc;
-static std::string native_loc = boost::locale::util::get_system_locale();
-}
+// BS kernel locale generator
+struct loc_storage {
+	loc_storage()
+		: native_loc(boost::locale::util::get_system_locale())
+	{
+		gloc.locale_cache_enabled(true);
+		const std::locale& native = gloc.generate(native_loc);
+		native_loc_prefix =
+			std::use_facet< boost::locale::info >(native).language() + "_" +
+			std::use_facet< boost::locale::info >(native).country();
+		native_loc_utf8 = native_loc_prefix + ".UTF-8";
+	}
 
+	// obtain locale
+	// if empty locale passed, generate native system locale
+	std::locale operator()(const std::string& loc_name = "") const {
+		if(loc_name.empty())
+			return gloc.generate(native_loc);
+		else if(loc_name == "utf-8" or loc_name == "UTF-8")
+			return gloc.generate(native_loc_utf8);
+		else
+			return gloc.generate(loc_name);
+	}
+
+	// return UTF-8 locale with native system country settings
+	std::locale native_utf8() const {
+		return operator()(native_loc_utf8);
+	}
+
+	boost::locale::generator gloc;
+	std::string native_loc;
+	std::string native_loc_prefix;
+	std::string native_loc_utf8;
+};
+// storage singleton
+static loc_storage ls_;
+
+} // eof hidden namespace
 
 // functions to convert string <-> wstring
-std::string wstr2str(const std::wstring& text, const char* enc_name) {
-	gloc.locale_cache_enabled(true);
-	const std::locale loc = gloc.generate(enc_name);
-	return boost::locale::conv::from_utf(text, loc);
+std::string wstr2str(const std::wstring& text, const std::string& loc_name) {
+	return boost::locale::conv::from_utf(text, ls_(loc_name));
 }
 
-std::wstring str2wstr(const std::string& text, const char* enc_name) {
-	gloc.locale_cache_enabled(true);
-	const std::locale loc = gloc.generate(enc_name);
-	return boost::locale::conv::to_utf< wchar_t >(text, loc);
+std::wstring str2wstr(const std::string& text, const std::string& loc_name) {
+	return boost::locale::conv::to_utf< wchar_t >(text, ls_(loc_name));
 }
 
-// same as above, but find out native system locale
-std::string wstr2str_n(const std::wstring& text) {
-	return wstr2str(text, native_loc.c_str());
+std::string ustr2str(const std::string& text, const std::string& loc_name) {
+	return boost::locale::conv::from_utf(text, ls_(loc_name));
 }
 
-std::wstring str2wstr(const std::string& text) {
-	return str2wstr(text, native_loc.c_str());
+std::string str2ustr(const std::string& text, const std::string& loc_name) {
+	return boost::locale::conv::to_utf< char >(text, ls_(loc_name));
+}
+
+std::string str2str(
+	const std::string& text, const std::string& out_loc_name, const std::string& in_loc_name
+) {
+	if(in_loc_name.size())
+		return boost::locale::conv::between(text, out_loc_name, in_loc_name);
+	else
+		return boost::locale::conv::between(text, out_loc_name, ls_.native_loc);
 }
 
 // register misc kernel types
