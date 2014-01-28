@@ -625,7 +625,7 @@ struct loc_storage {
 	std::locale operator()(const std::string& loc_name = "") const {
 		if(loc_name.empty())
 			return gloc.generate(native_loc);
-		else if(loc_name == "utf-8" or loc_name == "UTF-8")
+		else if(loc_name == "utf-8" || loc_name == "UTF-8")
 			return gloc.generate(native_loc_utf8);
 		else
 			return gloc.generate(loc_name);
