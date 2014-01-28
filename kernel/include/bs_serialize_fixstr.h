@@ -34,14 +34,14 @@ struct serialize_fix_wstring {
 
 	template< class Archive >
 	static void do_fix_save(Archive& ar, const std::wstring& v) {
-		ar << (const std::string&)wstr2str(v);
+		ar << (const std::string&)wstr2str(v, "utf-8");
 	}
 
 	template< class Archive >
 	static void do_fix_load(Archive& ar, std::wstring& v) {
 		std::string s;
 		ar >> s;
-		v = str2wstr(s);
+		v = str2wstr(s, "utf-8");
 	}
 };
 
