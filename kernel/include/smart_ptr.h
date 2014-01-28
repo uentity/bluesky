@@ -107,6 +107,21 @@
 //#endif
 #endif
 
+#define BS_SP_PURE_POINTER_ACCESS                   \
+public:                                             \
+pure_pointer_t operator->() const {                 \
+	return const_cast< pure_pointer_t >(this->p_);  \
+}                                                   \
+pure_ref_t operator*() const {                      \
+	return *const_cast< pure_pointer_t >(this->p_); \
+}                                                   \
+operator pure_pointer_t() const {                   \
+	return const_cast< pure_pointer_t >(this->p_);  \
+}                                                   \
+pure_pointer_t get() const {                        \
+	return const_cast< pure_pointer_t >(this->p_);  \
+}
+
 namespace blue_sky {
 
   void BS_API
@@ -760,6 +775,13 @@ public:
 	}
 
 	/*!
+	\brief Access to inner simple pointer.
+	*/
+	pure_pointer_t get() const {
+		return const_cast< pure_pointer_t >(this->p_);
+	}
+
+	/*!
 	\brief Dereferencing operator.
 	\return Reference to modifiable object.
 	*/
@@ -854,10 +876,10 @@ struct sp_assigner {
 // tries to make compile-time checking for inheritance from blue_sky::bs_refcounter
 // but such check works only for complete types
 template
-	<
-		class T,
-		bool has_refcnt = conversion< T, bs_refcounter >::exists_uc
-	>
+<
+	class T,
+	bool has_refcnt = conversion< T, bs_refcounter >::exists_uc
+>
 class smart_ptr;
 
 /*!
@@ -977,13 +999,6 @@ public:
 		return lsmart_ptr< this_t >(*this);
 	}
 
-#ifdef BS_DISABLE_MT_LOCKS
-	// override member-access function
-	pure_pointer_t operator->() const {
-		return const_cast< pure_pointer_t >(this->p_);
-	}
-#endif
-
 	//! \brief mutex accessor
 	bs_mutex* mutex() const { return mut_; }
 
@@ -993,6 +1008,10 @@ public:
 		std::swap(mut_, lp.mut_);
 		std::swap(d_, lp.d_);
 	}
+
+#ifdef BS_DISABLE_MT_LOCKS
+	BS_SP_PURE_POINTER_ACCESS
+#endif
 
 private:
 	friend class boost::serialization::access;
@@ -1409,28 +1428,15 @@ public:
 		return lsmart_ptr< this_t >(*this);
 	}
 
-#ifdef BS_DISABLE_MT_LOCKS
-	// override member-access function
-	pure_pointer_t operator->() const {
-		return const_cast< pure_pointer_t >(this->p_);
-	}
-
-	// override dereferencing
-	pure_ref_t operator*() const {
-		return *const_cast< pure_pointer_t >(this->p_);
-	}
-
-	// add implicit conversion to pure_pointer_t
-	operator pure_pointer_t() const {
-		return const_cast< pure_pointer_t >(this->p_);
-	}
-#endif
-
 	/*!
 	\brief mutex accessor
 	\return pointer to internal sp's mutex (bs_mutex)
 	*/
 	bs_mutex* mutex() const { return mut_; }
+
+#ifdef BS_DISABLE_MT_LOCKS
+	BS_SP_PURE_POINTER_ACCESS
+#endif
 
 private:
 	friend class boost::serialization::access;
@@ -1641,23 +1647,6 @@ public:
 		return lsmart_ptr< this_t >(*this);
 	}
 
-#ifdef BS_DISABLE_MT_LOCKS
-	// override member-access function
-	pure_pointer_t operator->() const {
-		return const_cast< pure_pointer_t >(this->p_);
-	}
-
-	// override dereferencing
-	pure_ref_t operator*() const {
-		return *const_cast< pure_pointer_t >(this->p_);
-	}
-
-	// add implicit conversion to pure_pointer_t
-	operator pure_pointer_t() const {
-		return const_cast< pure_pointer_t >(this->p_);
-	}
-#endif
-
 	/*!
 	\brief Makes this smart pointer empty (=NULL).
 	*/
@@ -1681,6 +1670,10 @@ public:
 		std::swap(this->p_, lp.p_);
 		//ref counters stay as is
 	}
+
+#ifdef BS_DISABLE_MT_LOCKS
+	BS_SP_PURE_POINTER_ACCESS
+#endif
 
 private:
 #if defined(_MSC_VER)
