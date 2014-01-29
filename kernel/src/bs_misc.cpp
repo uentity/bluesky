@@ -618,6 +618,8 @@ struct loc_storage {
 			std::use_facet< boost::locale::info >(native).language() + "_" +
 			std::use_facet< boost::locale::info >(native).country();
 		native_loc_utf8 = native_loc_prefix + ".UTF-8";
+		// DEBUG
+		BSOUT << "Native locale: " << native_loc << ", " << native_loc_utf8 << bs_end;
 	}
 
 	// obtain locale
