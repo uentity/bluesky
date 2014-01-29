@@ -124,11 +124,11 @@ pure_pointer_t get() const {                        \
 
 namespace blue_sky {
 
-  void BS_API
-  bs_refcounter_add_ref (const bs_refcounter *p);
+void BS_API
+bs_refcounter_add_ref(const bs_refcounter *p);
 
-  void BS_API
-  bs_refcounter_del_ref (const bs_refcounter *p);
+void BS_API
+bs_refcounter_del_ref(const bs_refcounter *p);
 
 enum bs_cast_policy {
 	BS_IMPLICIT_CAST = 0,
@@ -591,7 +591,7 @@ namespace bs_private {
 			return rc_;
 		}
 
-		ulong use_count() const {
+		long use_count() const {
 			return rc_ != 0 ? rc_->refs() : 0;
 		}
 
@@ -912,14 +912,15 @@ public:
 	/*!
 	\brief Constructor from simple pointer of any type and outer mutex
 	*/
-	//template< class R >
-	//mt_ptr(R* lp, bs_mutex& mut)
-	//	: base_t(lp), mut_(&mut)
-	//{}
-
 	template< class R, bs_cast_policy cast_t >
 	mt_ptr(R* lp, bs_mutex& mut, bs_castpol_val< cast_t > cast = BS_DEF_CAST_POLICY())
 		: base_t(lp, cast), mut_(&mut), d_(new bs_private::deleter_base())
+	{}
+
+	// explicitly define copy ctor
+	// reason: folowing templated ctor DOES NOT prevent implicit copy ctor creation
+	mt_ptr(const mt_ptr& lp)
+		: base_t(lp), mut_(lp.mut_), d_(new bs_private::deleter_base())
 	{}
 
 	/*!
@@ -942,13 +943,13 @@ public:
 	template< class R >
 	mt_ptr(const smart_ptr< R, true >& lp)
 		: base_t(lp), mut_(*lp.mutex()),
-		d_(new bs_private::deleter_adaptor< bs_obj_deleter< pointed_t> >())
+		d_(new bs_private::deleter_adaptor< bs_obj_deleter< pointed_t > >())
 	{
 		if(lp) lp->add_ref();
 	}
 
 	~mt_ptr() {
-		if(this->p_) d_->dispose(this->p_);
+		release();
 	}
 
 	/*!
@@ -959,8 +960,6 @@ public:
 		this->p_ = NULL;
 	}
 
-	//assignment of mt_ptrs
-
 	/*!
 	\brief Assignment from mt_ptr of castable type
 	*/
@@ -969,13 +968,6 @@ public:
 		this_t(lp).swap(*this);
 		return *this;
 	}
-
-	////assignment from mt_smart_ptr
-	//template< class R >
-	//this_t& operator=(const mt_smart_ptr< R >& lp) {
-	//	this_t(lp.get(), lp.mutex()).swap(*this);
-	//	return *this;
-	//}
 
 	/*!
 	\brief Assignment from smart_ptr to blue-sky object. Mutex embedded into pointed object used for synchronization
@@ -1105,22 +1097,12 @@ public:
 	template< class R >
 	st_smart_ptr(const st_smart_ptr< R >& lp)
 		: base_t(lp), count_(lp.count_)
-	{
-		//count_->add_ref();
-	}
+	{}
 
 	template< class R, class cast_t >
 	st_smart_ptr(const st_smart_ptr< R >& lp, cast_t cast)
 		: base_t(lp, cast), count_(lp.count_)
-	{
-		//count_->add_ref();
-	}
-
-	// dtor - std is fine
-	//~st_smart_ptr()
-	//{
-	//	count_->del_ref();
-	//}
+	{}
 
 	//! \brief standard destructor is fine with boost's shared_count
 	//! \brief standard operator= is fine with boost's shared_count
@@ -1171,7 +1153,7 @@ public:
 		count_.swap(lp.count_);
 	}
 
-private:
+protected:
 	friend class boost::serialization::access;
 #if defined(_MSC_VER)
 	friend class st_smart_ptr;
@@ -1181,12 +1163,6 @@ private:
 
 	// reference counter
 	refcounter_ptr_t count_;
-
-	//void dispose() {
-	//	count_->del_ref();
-	//	if(count_->refs() == 0)
-	//		delete count_;
-	//}
 };
 
 /*!
