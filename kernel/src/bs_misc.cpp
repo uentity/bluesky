@@ -45,6 +45,7 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/regex.hpp>
 #include <boost/locale.hpp>
+#include <boost/lexical_cast.hpp>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -618,6 +619,22 @@ struct loc_storage {
 			std::use_facet< boost::locale::info >(native).language() + "_" +
 			std::use_facet< boost::locale::info >(native).country();
 		native_loc_utf8 = native_loc_prefix + ".UTF-8";
+
+#ifdef _WIN32
+		// boost's get_system_locale() is affected by environment variables and
+		// sometimes fails to discover valid _system_ encoding
+		// but it is able to corretly determine regional settings
+		//
+		// find active Windows codepage
+		ulong acp = ulong(GetACP());
+		if(acp == 65001) {
+			// Windows codepage is UTF-8
+			native_loc = native_loc_utf8;
+		}
+		else {
+			native_loc = native_loc_prefix + ".CP" + boost::lexical_cast< std::string >(acp);
+		}
+#endif
 		// DEBUG
 		BSOUT << "Native locale: " << native_loc << ", " << native_loc_utf8 << bs_end;
 	}
