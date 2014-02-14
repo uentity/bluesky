@@ -65,10 +65,9 @@ class async_layer {
 	};
 
 public:
-
-	void fire_slot(
+	static void fire_slot(
 		const sp_slot& slot, const sp_mobj& sender, int signal_code, const sp_obj& param
-	) const {
+	) {
 		if(slot)
 			// execute slot as kernel task
 			BS_KERNEL.add_task(new slot2com(slot, sender, signal_code, param));
@@ -78,10 +77,9 @@ public:
 template< class slot_ptr >
 class sync_layer {
 public:
-
-	void fire_slot(
+	static void fire_slot(
 		const slot_ptr& slot, const sp_mobj& sender, int signal_code, const sp_obj& param
-	) const {
+	) {
 		if(slot)
 			// directly execute slot
 			slot.lock()->execute(sender, signal_code, param);
@@ -135,11 +133,6 @@ public:
 	//send signal command
 	typedef boost::signal< void (const sp_mobj& sender, int signal_code, const sp_obj& param) > signal_engine;
 
-	signal_engine my_signal_;
-	//sp_mobj sender_;
-	int signal_code_;
-	sp_obj param_;
-
 	//default ctor
 	signal_impl() : signal_code_(0) {}
 
@@ -148,25 +141,13 @@ public:
 		: signal_code_(sig_code)
 	{}
 
-//	signal_impl(const sp_mobj& sender, int sig_code)
-//		: signal_code_(sig_code), sender_(sender),
-//	{}
-
-	//non-const function because boost::signals doesn't support mt
-	void execute(const sp_mobj& sender) {
-		//if(sender)
-		my_signal_(sender, signal_code_, param_);
-	}
-
 	void fire(const sp_mobj& sender, const sp_obj& param) {
-		param_ = param;
-		execute(sender);
+		my_signal_(sender, signal_code_, param);
 	}
 
 	// if sender != NULL then slot will be activated only for given sender
 	bool connect(const sp_slot& slot, const sp_mobj& sender = NULL) {
 		if(!slot) return false;
-		//my_signal_.connect(bs_slot::slot_wrapper(slot));
 		my_signal_.connect(slot_holder<>(slot, sender));
 		return true;
 	}
@@ -180,6 +161,9 @@ public:
 	ulong num_slots() const {
 		return static_cast< ulong >(my_signal_.num_slots());
 	}
+
+	signal_engine my_signal_;
+	int signal_code_;
 };
 
 //=============================== bs_signal implementation =============================================================
@@ -197,11 +181,7 @@ void bs_signal::init(int signal_code) const {
 
 void bs_signal::fire(const sp_mobj& sender, const sp_obj& param) const {
 	//lock during recepients call because boost:signals doesn't support mt
-	//lpimpl lp(pimpl_);
-	//lp->param_ = param;
-	//lp->execute();
 	pimpl_.lock()->fire(sender, param);
-	//give_kernel::Instance().add_task(this);
 }
 
 bool bs_signal::connect(const sp_slot& slot, const sp_mobj& sender) const {
@@ -257,12 +237,7 @@ bool bs_messaging::fire_signal(int signal_code, const sp_obj& params) const
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig == signals_.end()) return false;
 
-	//if(!sig->second->sender_binded())
-	//	sig->second->init(this);
 	sig->second->fire(this, params);
-	//kernel &k = give_kernel::Instance();
-	//sig->second.lock()->set_param(params);
-	//k.add_task(sig->second);
 	return true;
 }
 
