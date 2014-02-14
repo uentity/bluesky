@@ -38,8 +38,9 @@ public:
 		: pyobj_(bp::borrowed< >(obj.ptr()))
 	{}
 
-	PyObject* get() const {
-		return pyobj_.get();
+	bp::object get() const {
+		//std::cout << "py_anyobj.get = " << pyobj_.get() << std::endl;
+		return bp::object(pyobj_);
 	}
 
 	void set(PyObject* obj) {
@@ -90,7 +91,7 @@ struct sp_anyobject_conv_traits {
 	}
 
 	static PyObject* to_python(type const& v) {
-		return v->release();
+		return v->get().ptr();
 	}
 };
 
@@ -107,7 +108,7 @@ struct anyobject_conv_traits {
 	}
 
 	static PyObject* to_python(type const& v) {
-		return v.release();
+		return v.get().ptr();
 	}
 };
 
@@ -116,7 +117,7 @@ struct spobj_spec_traits {
 	
 	static PyObject* to_python(type const& v) {
 		if(v->bs_resolve_type().stype_ == "py_anyobject")
-			return smart_ptr< py_anyobject >(v, bs_static_cast())->pyobj_.release();
+			return smart_ptr< py_anyobject >(v, bs_static_cast())->pyobj_.get();
 		else {
 			return bp::converter::registry::lookup(bp::type_id< sp_obj >()).to_python(
 				static_cast<void const*>(&v)
