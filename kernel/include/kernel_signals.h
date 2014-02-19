@@ -14,7 +14,7 @@
 #include "pp_param_list.h"
 #include <boost/preprocessor.hpp>
 #include <boost/function.hpp>
-#include <boost/signal.hpp>
+#include <boost/signals2.hpp>
 #include <boost/bind.hpp>
 #include <boost/mem_fn.hpp>
 
@@ -89,12 +89,12 @@ namespace blue_sky {
  * \param  p Tuple with signal parameters
  * \param  ps Tuple size
  * */
-#define DECL_SIGNAL_I(name, p, ps)                                                  \
-  typedef boost::function <void (TYPE_LIST (p, ps))>                                \
-    BOOST_PP_CAT (name, _functor_t);                                                \
-  typedef boost::signal <void (TYPE_LIST (p, ps))> BOOST_PP_CAT (name, _signal_t);  \
-  typedef boost::shared_ptr <BOOST_PP_CAT (name, _signal_t)>                        \
-    BOOST_PP_CAT (name, _sp_signal_t);                                              \
+#define DECL_SIGNAL_I(name, p, ps)                                                           \
+  typedef boost::function <void (TYPE_LIST (p, ps))>                                         \
+    BOOST_PP_CAT (name, _functor_t);                                                         \
+  typedef boost::signals2::signal <void (TYPE_LIST (p, ps))> BOOST_PP_CAT (name, _signal_t); \
+  typedef boost::shared_ptr <BOOST_PP_CAT (name, _signal_t)>                                 \
+    BOOST_PP_CAT (name, _sp_signal_t);                                                       \
   BOOST_PP_CAT (name, _sp_signal_t) BOOST_PP_CAT (name, _signal_);
 
 /**

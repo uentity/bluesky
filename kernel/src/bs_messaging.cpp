@@ -17,7 +17,7 @@
 #include "bs_object_base.h"
 #include "bs_kernel.h"
 
-#include "boost/signal.hpp"
+#include "boost/signals2.hpp"
 
 #define SLOT_EXEC_LAYER sync_layer
 
@@ -131,7 +131,9 @@ class bs_signal::signal_impl
 {
 public:
 	//send signal command
-	typedef boost::signal< void (const sp_mobj& sender, int signal_code, const sp_obj& param) > signal_engine;
+	typedef boost::signals2::signal<
+		void (const sp_mobj& sender, int signal_code, const sp_obj& param)
+	> signal_engine;
 
 	//default ctor
 	signal_impl() : signal_code_(0) {}
