@@ -143,7 +143,11 @@ public:
 
 	pointer data() {
 		if(buf_holder_)
+#ifdef BS_DISABLE_MT_LOCKS
+			return buf_holder_->data();
+#else
 			return buf_holder_.lock()->data();
+#endif
 		else
 			return NULL;
 	}
