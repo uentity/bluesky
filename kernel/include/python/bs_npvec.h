@@ -132,7 +132,7 @@ public:
 	}
 
 	// shape manipulation
-	void reshape(int ndim, const npy_intp *dims) {
+	void reshape(size_type ndim, const npy_intp *dims) {
 		init(ndim, dims);
 	}
 
