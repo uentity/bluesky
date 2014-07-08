@@ -181,7 +181,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(STLPORT_PATH_)/stlport;$(ProjectDir)/include;$(ProjectDir)/include/python;$(LOKI_PATH)/include;$(BOOST_PATH);$(PYTHON_PATH)/include;$(NUMPY_PATH)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;NOMINMAX;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions);_SECURE_SCL=0; _SCL_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_CREATE_UNMANAGED_OBJECTS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;NOMINMAX;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions);_SECURE_SCL=0;_SCL_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <FloatingPointExceptions>true</FloatingPointExceptions>
@@ -211,7 +211,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(STLPORT_PATH_)/stlport;$(ProjectDir)/include;$(ProjectDir)/include/python;$(LOKI_PATH)/include;$(BOOST_PATH);$(PYTHON_PATH)/include;$(NUMPY_PATH)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;NOMINMAX;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions);_SECURE_SCL=0; _SCL_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING;BSPY_EXPORTING_PLUGIN;_STLP_USE_STATIC_LIB__;BS_DISABLE_MT_LOCKS;BS_CREATE_UNMANAGED_OBJECTS;BS_BOS_CORE_DEBUG_MEMORY;BS_EXCEPTION_USE_BOOST_FORMAT;NOMINMAX;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions);_SECURE_SCL=0;_SCL_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <FloatingPointExceptions>true</FloatingPointExceptions>
@@ -240,7 +240,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release_with_debug|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)/src;$(LOKI_PATH)/include;$(BOOST_PATH);$(LIBCONFIG_PATH);$(PYTHON_PATH)/include;$(NUMPY_PATH)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;%(PreprocessorDefinitions);_SECURE_SCL=0</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;BS_CREATE_UNMANAGED_OBJECTS;%(PreprocessorDefinitions);_SECURE_SCL=0</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <FloatingPointExceptions>true</FloatingPointExceptions>
@@ -269,7 +269,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release_with_debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)/src;$(LOKI_PATH)/include;$(BOOST_PATH);$(LIBCONFIG_PATH);$(PYTHON_PATH)/include;$(NUMPY_PATH)/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;%(PreprocessorDefinitions);_SECURE_SCL=0</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;BS_CREATE_UNMANAGED_OBJECTS;%(PreprocessorDefinitions);_SECURE_SCL=0</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <FloatingPointExceptions>true</FloatingPointExceptions>
