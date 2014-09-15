@@ -25,7 +25,7 @@ namespace blue_sky {
 typedef bs_array< int                , bs_npvec_shared > bs_npvec_shared_i;
 typedef bs_array< unsigned int       , bs_npvec_shared > bs_npvec_shared_ui;
 typedef bs_array< long               , bs_npvec_shared > bs_npvec_shared_l;
-typedef bs_array< long               , bs_npvec_shared > bs_npvec_shared_ll;
+typedef bs_array< long long          , bs_npvec_shared > bs_npvec_shared_ll;
 typedef bs_array< unsigned long      , bs_npvec_shared > bs_npvec_shared_ul;
 typedef bs_array< unsigned long long , bs_npvec_shared > bs_npvec_shared_ull;
 typedef bs_array< float              , bs_npvec_shared > bs_npvec_shared_f;
