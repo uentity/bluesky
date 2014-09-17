@@ -30,12 +30,9 @@ if (IsDebuggerPresent ()) \
 #define BREAK_HERE __asm__ __volatile__ ("int $0x3")
 #endif
 
-namespace blue_sky {
-namespace bs_assert {
+namespace blue_sky { namespace bs_assert {
 
-asserter::assert_state
-asserter::ask_user () const
-{
+asserter::assert_state asserter::ask_user() const {
 #ifdef _DEBUG
 #if defined (_WIN32)
 	int return_code = _CrtDbgReport (_CRT_ERROR, file, line, "", "Expression: %s\nValues: %s", cond_s, var_list.empty () ? "" : var_list.c_str ());
@@ -71,15 +68,12 @@ asserter::ask_user () const
 	return STATE_IGNORE;
 }
 
-bool
-asserter::handle () const
-{
+bool asserter::handle() const {
 	if (cond || ignore_all())
 		return true;
 
 	assert_state state = ask_user ();
-	switch (state)
-	{
+	switch (state) {
 		case STATE_KILL:
 			exit (1);
 			break;
@@ -95,15 +89,11 @@ asserter::handle () const
 	return false;
 }
 
-void
-asserter::break_here () const
-{
+void asserter::break_here() const {
 	BREAK_HERE;
 }
 
-asserter *
-asserter::make (bool b)
-{
+asserter* asserter::make(bool b) {
 	if (factory ())
 		return factory ()->make (b, file, line, cond_s);
 
@@ -112,24 +102,20 @@ asserter::make (bool b)
 	return asserter_.lock();
 }
 
-asserter *
-assert_factory::make (bool b, const char *file, int line, const char *cond_str)
-{
+asserter* assert_factory::make(
+	bool b, const char *file, int line, const char *cond_str
+) {
 	static smart_ptr< asserter > asserter_;
 	asserter_ = new asserter (b, file, line, cond_str);
 	return asserter_.lock();
 }
 
-assert_wrapper::assert_wrapper (asserter *pa)
-{
-	if (pa && !pa->handle ())
-	{
+assert_wrapper::assert_wrapper(asserter *pa) {
+	if (pa && !pa->handle()) {
 		pa->break_here ();
 	}
-
 	delete pa;
 }
 
-} // namespace bs_assert
-} // namespace blue_sky
+}} // namespace blue_sky::bs_assert
 

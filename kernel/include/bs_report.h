@@ -115,7 +115,7 @@ struct proxy_log {
 	}
 
 	inline std::string what () const {
-		return proxy_.what () + detail::get_str (what_);
+		return proxy_.what () + boost::lexical_cast< std::string >(what_);
 	}
 
 	template <typename T>
@@ -215,7 +215,7 @@ struct BS_API locked_channel {
 			const bs_channel::sp_stream_t &stream = ch_->output_streams_[i];
 			stream->write (bs_end (
 				"INVALID OUTPUT TO LOG: FILE (" + std::string (file_) + "), LINE (" +
-				detail::get_str (line_) + ")"
+				boost::lexical_cast< std::string >(line_) + ")"
 			));
 		}
 	}
