@@ -297,6 +297,7 @@
   <ItemGroup>
     <ClCompile Include="src\bs_abstract_storage.cpp" />
     <ClCompile Include="src\bs_array_serialize.cpp" />
+    <ClCompile Include="src\bs_arrbase.cpp" />
     <ClCompile Include="src\bs_command.cpp" />
     <ClCompile Include="src\bs_common.cpp" />
     <ClCompile Include="src\bs_exception.cpp" />
