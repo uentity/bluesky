@@ -7,6 +7,7 @@
 #ifndef BS_PY_OBJECT_HANDLER_9811dc51_fdc5_4a8b_b5b7_a05f45a2f51c_H_
 #define BS_PY_OBJECT_HANDLER_9811dc51_fdc5_4a8b_b5b7_a05f45a2f51c_H_
 
+#include <boost/python.hpp>
 #include "throw_exception.h"
 
 namespace blue_sky {
