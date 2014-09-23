@@ -45,6 +45,19 @@ BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_npvec_shared));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_npvec_shared));
 BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_npvec_shared));
 
+// explicit instantiations needed by VS when linking with clients
+// I think this is just to overcome compiler strange behaviour (bugs?)
+template class detail::bs_npvec_impl< bs_array_shared< int > >;
+template class detail::bs_npvec_impl< bs_array_shared< unsigned int > >;
+template class detail::bs_npvec_impl< bs_array_shared< long > >;
+template class detail::bs_npvec_impl< bs_array_shared< unsigned long > >;
+template class detail::bs_npvec_impl< bs_array_shared< long long > >;
+template class detail::bs_npvec_impl< bs_array_shared< unsigned long long > >;
+template class detail::bs_npvec_impl< bs_array_shared< float > >;
+template class detail::bs_npvec_impl< bs_array_shared< double > >;
+template class detail::bs_npvec_impl< bs_array_shared< std::string > >;
+template class detail::bs_npvec_impl< bs_array_shared< std::wstring > >;
+
 kernel::types_enum register_npvec_shared() {
 	kernel::types_enum te;
 	te.push_back(bs_npvec_shared_i::bs_type());
