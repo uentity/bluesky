@@ -12,6 +12,7 @@ kernel_cpp_list = Split("""
 	bs_abstract_storage.cpp
 	bs_array.cpp
 	bs_array_serialize.cpp
+	bs_arrbase.cpp
 	bs_assert.cpp
 	bs_command.cpp
 	bs_common.cpp
