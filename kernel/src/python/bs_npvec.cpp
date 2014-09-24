@@ -34,16 +34,16 @@ typedef bs_array< std::string        , bs_npvec > bs_npvec_s;
 typedef bs_array< std::wstring       , bs_npvec > bs_npvec_ws;
 
 // bs_array< T, bs_nparray > instantiations
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_npvec));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_npvec));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_npvec));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_npvec));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_npvec));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_npvec));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_npvec));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_npvec));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_npvec));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_npvec));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_npvec));
 
 kernel::types_enum register_npvec() {
 	kernel::types_enum te;

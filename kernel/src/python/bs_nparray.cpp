@@ -27,16 +27,16 @@ typedef bs_array< float, bs_nparray > bs_nparray_f;
 typedef bs_array< double, bs_nparray > bs_nparray_d;
 
 // bs_array< T, bs_nparray > instantiations
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_nparray));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_nparray));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_nparray));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_nparray));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_nparray));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_nparray));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_nparray));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_nparray));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_nparray));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_nparray));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_nparray));
 
 kernel::types_enum register_nparray() {
 	kernel::types_enum te;

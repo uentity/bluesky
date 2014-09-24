@@ -24,51 +24,51 @@ using namespace std;
 
 namespace blue_sky {
 // bs_array
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, vector_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, vector_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, vector_traits));
 
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_array_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_array_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_array_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_array_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_array_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_array_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_array_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_array_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_array_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_array_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_array_shared));
 
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_vector_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_vector_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_vector_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_vector_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_vector_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_vector_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_vector_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_vector_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_vector_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_vector_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_vector_shared));
 
 // bs_map
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (int, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (unsigned int, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (long, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (long long, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (unsigned long, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (unsigned long long, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (float, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (double, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (std::string, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (std::wstring, str_val_traits));
-BS_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (sp_obj, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (int, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (unsigned int, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (long, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (long long, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (unsigned long, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (unsigned long long, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (float, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (double, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (std::string, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (std::wstring, str_val_traits));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_map, 2, (sp_obj, str_val_traits));
 
 #ifdef BSPY_EXPORTING
 // forward declarations of Python-related array types

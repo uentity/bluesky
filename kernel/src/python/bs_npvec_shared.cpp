@@ -34,16 +34,16 @@ typedef bs_array< std::string        , bs_npvec_shared > bs_npvec_shared_s;
 typedef bs_array< std::wstring       , bs_npvec_shared > bs_npvec_shared_ws;
 
 // bs_array< T, bs_nparray > instantiations
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_npvec_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_npvec_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_npvec_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_npvec_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_npvec_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_npvec_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_npvec_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_npvec_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_npvec_shared));
-BS_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_npvec_shared));
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_npvec_shared));
 
 // explicit instantiations needed by VS when linking with clients
 // I think this is just to overcome compiler strange behaviour (bugs?)

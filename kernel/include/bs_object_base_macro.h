@@ -202,6 +202,18 @@ BLUE_SKY_TYPE_IMPL_T(T, base, #T, short_descr, "")
 #define BLUE_SKY_TYPE_IMPL_T_NOCOPY_SHORT(T, base, short_descr) \
 BLUE_SKY_TYPE_IMPL_T_NOCOPY(T, base, #T, short_descr, "")
 
+//---------------- templated implementation - for templates fully defined in header ------------------------------------
+// NOTE: T does NOT include full specialization! Pass specialization type as second parameter
+#define BLUE_SKY_TYPE_IMPL_T_MEM(T, spec_type) \
+BS_TYPE_IMPL_T_MEM(T, spec_type)               \
+template class T< spec_type >;
+
+//! surround your class's and base's defintions with round braces
+// difference from non-MEM macro is that we don't insert common implementation
+#define BLUE_SKY_TYPE_IMPL_T_EXT_MEM(T, spec_tup_size, spec_tup) \
+BS_TYPE_IMPL_T_EXT_MEM(T, spec_tup_size, spec_tup)               \
+template class T< BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(spec_tup_size, spec_tup)) >;
+
 // shortcut for quick declaration of smart_ptr to BS object
 #define BS_SP(T) smart_ptr< T, true >
 // shortcut for quick declaration of smart_ptr to generic object
