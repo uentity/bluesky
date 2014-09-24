@@ -38,9 +38,10 @@
 namespace blue_sky {
 namespace detail {
 
-template< class base_t >
-class BS_API bs_npvec_impl : public base_t {
+template< class vector_t >
+class BS_API bs_npvec_impl : public vector_t {
 public:
+	typedef vector_t base_t;
 	typedef typename base_t::value_type value_type;
 	typedef typename base_t::size_type  size_type;
 
