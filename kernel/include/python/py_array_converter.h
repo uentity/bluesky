@@ -122,7 +122,7 @@ struct array_converters {
 			if(!v)
 				return cont_t().to_python();
 			// create empty array and init it with copied data from v
-			cont_t proxy(backend_t(v->ndim(), v->dims()));
+			cont_t proxy(backend_t(int(v->ndim()), v->dims()));
 			std::copy(v->begin(), v->end(), proxy.begin());
 			return proxy.to_python();
 		}
@@ -213,7 +213,7 @@ struct array_converters {
 				array_converters::on_numpy_array_death);
 
 			// make numpy array that references raw data
-			backend_t proxy(v->ndim(), v->dims(), v->data());
+			backend_t proxy(int(v->ndim()), v->dims(), v->data());
 			// set array's BASE to opaque_ptr to correctly free resourses
 			PyArray_SetBaseObject(proxy.get_arobj(), opaque_ptr);
 			//PyArray_BASE(proxy.handle().get()) = opaque_ptr;
