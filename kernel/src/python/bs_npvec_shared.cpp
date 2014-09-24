@@ -18,6 +18,12 @@
 #include "py_bs_exports.h"
 #include "py_smart_ptr.h"
 
+// NOTE: explicit instantiations of bs_npvec_impl needed for VS
+// I think this is just to overcome compiler strange behaviour (bugs?)
+#define NPVEC_SHARED_IMPL(T)                                    \
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (T, bs_npvec_shared)) \
+template class detail::bs_npvec_impl< bs_array_shared< T > >;
+
 using namespace std;
 
 namespace blue_sky {
@@ -33,30 +39,17 @@ typedef bs_array< double             , bs_npvec_shared > bs_npvec_shared_d;
 typedef bs_array< std::string        , bs_npvec_shared > bs_npvec_shared_s;
 typedef bs_array< std::wstring       , bs_npvec_shared > bs_npvec_shared_ws;
 
-// bs_array< T, bs_nparray > instantiations
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_npvec_shared));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_npvec_shared));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_npvec_shared));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_npvec_shared));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_npvec_shared));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_npvec_shared));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_npvec_shared));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_npvec_shared));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_npvec_shared));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_npvec_shared));
-
-// explicit instantiations needed by VS when linking with clients
-// I think this is just to overcome compiler strange behaviour (bugs?)
-template class detail::bs_npvec_impl< bs_array_shared< int > >;
-template class detail::bs_npvec_impl< bs_array_shared< unsigned int > >;
-template class detail::bs_npvec_impl< bs_array_shared< long > >;
-template class detail::bs_npvec_impl< bs_array_shared< unsigned long > >;
-template class detail::bs_npvec_impl< bs_array_shared< long long > >;
-template class detail::bs_npvec_impl< bs_array_shared< unsigned long long > >;
-template class detail::bs_npvec_impl< bs_array_shared< float > >;
-template class detail::bs_npvec_impl< bs_array_shared< double > >;
-template class detail::bs_npvec_impl< bs_array_shared< std::string > >;
-template class detail::bs_npvec_impl< bs_array_shared< std::wstring > >;
+// instantiations
+NPVEC_SHARED_IMPL(int);
+NPVEC_SHARED_IMPL(unsigned int);
+NPVEC_SHARED_IMPL(long);
+NPVEC_SHARED_IMPL(long long);
+NPVEC_SHARED_IMPL(unsigned long);
+NPVEC_SHARED_IMPL(unsigned long long);
+NPVEC_SHARED_IMPL(float);
+NPVEC_SHARED_IMPL(double);
+NPVEC_SHARED_IMPL(std::string);
+NPVEC_SHARED_IMPL(std::wstring);
 
 kernel::types_enum register_npvec_shared() {
 	kernel::types_enum te;

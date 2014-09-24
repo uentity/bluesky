@@ -18,6 +18,12 @@
 #include "py_bs_exports.h"
 #include "py_smart_ptr.h"
 
+// NOTE: explicit instantiations of bs_npvec_impl needed for VS
+// I think this is just to overcome compiler strange behaviour (bugs?)
+#define NPVEC_IMPL(T)                                    \
+BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (T, bs_npvec)) \
+template class detail::bs_npvec_impl< bs_vecbase_impl< T, std::vector< T > > >;
+
 using namespace std;
 
 namespace blue_sky {
@@ -33,17 +39,17 @@ typedef bs_array< double             , bs_npvec > bs_npvec_d;
 typedef bs_array< std::string        , bs_npvec > bs_npvec_s;
 typedef bs_array< std::wstring       , bs_npvec > bs_npvec_ws;
 
-// bs_array< T, bs_nparray > instantiations
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (int, bs_npvec));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned int, bs_npvec));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long, bs_npvec));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (long long, bs_npvec));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long, bs_npvec));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (unsigned long long, bs_npvec));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (float, bs_npvec));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (double, bs_npvec));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::string, bs_npvec));
-BLUE_SKY_TYPE_IMPL_T_EXT_MEM(bs_array, 2, (std::wstring, bs_npvec));
+// instantiations
+NPVEC_IMPL(int);
+NPVEC_IMPL(unsigned int);
+NPVEC_IMPL(long);
+NPVEC_IMPL(unsigned long);
+NPVEC_IMPL(long long);
+NPVEC_IMPL(unsigned long long);
+NPVEC_IMPL(float);
+NPVEC_IMPL(double);
+NPVEC_IMPL(std::string);
+NPVEC_IMPL(std::wstring);
 
 kernel::types_enum register_npvec() {
 	kernel::types_enum te;
