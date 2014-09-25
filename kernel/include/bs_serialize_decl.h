@@ -17,6 +17,8 @@
 #define BS_SERIALIZE_DECL_AN05AGKZ
 
 #include "setup_plugin_api.h"
+#include <boost/mpl/bool.hpp>
+#include <boost/type_traits/integral_constant.hpp>
 
 namespace blue_sky {
 
