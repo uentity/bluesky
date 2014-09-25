@@ -52,11 +52,11 @@ BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, BOOST_PP_SEQ_NIL(), T))BOOST_PP_EXPR_IIF
 
 //================================ macro definitions ===================================================================
 // IFACE version declare only static functions
-#define BS_TYPE_DECL_IFACE                                           \
-public: static blue_sky::type_descriptor bs_type();                  \
-private: friend class blue_sky::type_descriptor;                     \
-static objbase* bs_create_instance(bs_type_ctor_param param = NULL); \
-static objbase* bs_create_copy(bs_type_cpy_ctor_param param = NULL);
+#define BS_TYPE_DECL_IFACE                                                               \
+public: static blue_sky::type_descriptor bs_type();                                      \
+private: friend class blue_sky::type_descriptor;                                         \
+static blue_sky::objbase* bs_create_instance(blue_sky::bs_type_ctor_param param = NULL); \
+static blue_sky::objbase* bs_create_copy(blue_sky::bs_type_cpy_ctor_param param = NULL);
 
 // normal decl = IFACE + bs_resolve_type()
 #define BS_TYPE_DECL      \
@@ -145,14 +145,14 @@ BS_RESOLVE_TYPE_IMPL_EXT_((template< >), BOOST_PP_TUPLE_TO_SEQ(T_tup_size, T_tup
 
 //------------------- templated implementation II - creates definition of bs_type --------------------------------------
 #define _OP(r, data, x) x
-#define BS_TYPE_IMPL_T_EXT_MEM(T, spec_tup_size, spec_tup) \
-template< > BS_API_PLUGIN blue_sky::type_descriptor \
-T< BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(spec_tup_size, spec_tup)) >::bs_type() \
-{ return td_maker(std::string("_") + BOOST_PP_STRINGIZE(BOOST_PP_SEQ_FOR_EACH(_OP, _, BOOST_PP_TUPLE_TO_SEQ(spec_tup_size, spec_tup)))); }
 
-#define BS_TYPE_IMPL_T_MEM(T, spec_type)                          \
-template< > BS_API_PLUGIN blue_sky::type_descriptor T< spec_type >::bs_type() { \
-    return td_maker(std::string("_") + #spec_type); }
+#define BS_TYPE_IMPL_T_EXT_MEM(T, spec_tup_size, spec_tup)                                                                                 \
+template< > BS_API_PLUGIN blue_sky::type_descriptor                                                                                        \
+T< BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(spec_tup_size, spec_tup)) >::bs_type()                                                          \
+{ return td_maker(std::string("_") + BOOST_PP_STRINGIZE(BOOST_PP_SEQ_FOR_EACH(_OP, _, BOOST_PP_TUPLE_TO_SEQ(spec_tup_size, spec_tup)))); } \
+
+#define BS_TYPE_IMPL_T_MEM(T, spec_type)  \
+BS_TYPE_IMPL_T_EXT_MEM(T, 1, (spec_type))
 
 //------------------- implementation of bs_resolve_type() functions for interface realizations--------------------------
 
