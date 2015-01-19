@@ -16,6 +16,7 @@
 #ifndef BS_SERIALIZE_MACRO_OS0F6LJB
 #define BS_SERIALIZE_MACRO_OS0F6LJB
 
+#include <boost/version.hpp>
 #include <boost/preprocessor/control/if.hpp>
 #include <boost/preprocessor/punctuation/comma_if.hpp>
 #include <boost/preprocessor/cat.hpp>
@@ -299,17 +300,33 @@ BS_CLASS_SERIALIZE_SPLIT_BODY_
 // needed for correct BS objects creation when they are serialized via pointers
 // (pointers contained in smart_ptr)
 // third param passed as a sequence
-#define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)                 \
-BS_CLASS_OVERL_IMPL_EMPTY_(load_construct_data, T, tpl_args_num, tpl_args_prefix) \
-namespace boost { namespace archive { namespace detail {                          \
-template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                       \
-struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {                     \
-    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                              \
-    typedef blue_sky::smart_ptr< type, true > sp_type;                            \
-    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                         \
-        sp_type t = BS_KERNEL.create_object(type::bs_type(), false);              \
-        return t.lock();                                                          \
+#if BOOST_VERSION / 100 % 1000 > 55
+#define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)                       \
+BS_CLASS_OVERL_IMPL_EMPTY_(load_construct_data, T, tpl_args_num, tpl_args_prefix)       \
+namespace boost { namespace archive { namespace detail {                                \
+template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                             \
+struct heap_allocation< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {                          \
+    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                                    \
+    typedef blue_sky::smart_ptr< type, true > sp_type;                                  \
+    explicit heap_allocation() : p_(BS_KERNEL.create_object(type::bs_type(), false)) {} \
+    type* get() const { return const_cast< type* >(p_.get()); }                         \
+    type* release() { type* p = get(); p_.release(); return p; }                        \
+private:                                                                                \
+    sp_type p_;                                                                         \
+}; }}}
+#else
+#define BS_TYPE_SERIALIZE_DECL_(T, tpl_args_num, tpl_args_prefix)                       \
+BS_CLASS_OVERL_IMPL_EMPTY_(load_construct_data, T, tpl_args_num, tpl_args_prefix)       \
+namespace boost { namespace archive { namespace detail {                                \
+template< BS_ENUM_TPL_ARGS(tpl_args_num, tpl_args_prefix) >                             \
+struct heap_allocator< BS_MAKE_FULL_TYPE(T, tpl_args_num) > {                           \
+    typedef BS_MAKE_FULL_TYPE(T, tpl_args_num) type;                                    \
+    typedef blue_sky::smart_ptr< type, true > sp_type;                                  \
+    static BS_MAKE_FULL_TYPE(T, tpl_args_num)* invoke() {                               \
+        sp_type t = BS_KERNEL.create_object(type::bs_type(), false);                    \
+        return t.lock();                                                                \
 } }; }}}
+#endif
 
 // *_EXT macro accept third argument in enum form, i.e.
 // BLUE_SKY_TYPE_SERIALIZE_DECL(bs_array, 2, (class, template< class > class))
