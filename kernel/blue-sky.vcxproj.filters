@@ -1,0 +1,509 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Python wrappers">
+      <UniqueIdentifier>{853cebdb-2311-4b4e-8fcb-14015e462df0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="memory manager">
+      <UniqueIdentifier>{a8c005b6-7496-4941-be89-6d6ac181a997}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="assert">
+      <UniqueIdentifier>{789e6cf7-8e99-451a-9398-9b35483e48e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="config">
+      <UniqueIdentifier>{57f28e3f-e938-4dfb-ad57-614c99cb3065}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tools">
+      <UniqueIdentifier>{6ba8d8ed-7459-40b1-a2a0-afb9e7c75c62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tree">
+      <UniqueIdentifier>{36457d7c-7b2b-45b0-8408-8d8354176ab9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tree\python">
+      <UniqueIdentifier>{46010dcc-c86f-46b8-9915-8005646a8429}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="log">
+      <UniqueIdentifier>{d1d3335f-28f5-4797-acd3-1cc27e73a816}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="arrays">
+      <UniqueIdentifier>{ee7fe566-d496-4772-8f53-f77a0063ad91}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\bs_abstract_storage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_command.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_exception.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_kernel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_kernel_ston.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_messaging.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_misc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_object_base.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_prop_base.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_shell.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_type_info.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\smart_ptr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\thread_pool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\bs_import_common.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\bs_nparray.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\bs_python_import.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_anyobject.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_abstract_storage.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_command.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_kernel.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_messaging.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_object_base.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_shell.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_typed.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_common.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_kernel.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_link.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_messaging.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_object_base.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_tree.cpp">
+      <Filter>Python wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\memory_manager.cpp">
+      <Filter>memory manager</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_assert.cpp">
+      <Filter>assert</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_assert.cpp">
+      <Filter>assert</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_conf_reader.cpp">
+      <Filter>config</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_config_parser.cpp">
+      <Filter>config</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_kernel_tools.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_link.cpp">
+      <Filter>tree</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_tree.cpp">
+      <Filter>tree</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_link.cpp">
+      <Filter>tree\python</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_tree.cpp">
+      <Filter>tree\python</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_log_scribers.cpp">
+      <Filter>log</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_report.cpp">
+      <Filter>log</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\py_bs_log.cpp">
+      <Filter>log</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_array.cpp">
+      <Filter>arrays</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shared_array_allocator.cpp">
+      <Filter>arrays</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shared_vector.cpp">
+      <Filter>arrays</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\bs_npvec.cpp">
+      <Filter>arrays</Filter>
+    </ClCompile>
+    <ClCompile Include="src\python\bs_npvec_shared.cpp">
+      <Filter>arrays</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_serialize.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_array_serialize.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bs_arrbase.cpp">
+      <Filter>arrays</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\bs_abstract_storage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_command.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_conversion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_exception.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_fwd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_imessaging.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_kernel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_messaging.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_misc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_object_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_object_base_macro.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_plugin_common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_prop_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_refcounter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_shell.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_type_info.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_type_macro.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\force_plugin_import.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_object_handler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\setup_common_api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\setup_plugin_api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\smart_ptr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\stop_plugin_import.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\thread_pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\throw_exception.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\type_descriptor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\python\bs_import_common.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\bs_nparray.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\pyublas\numpy.hpp">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\python\print_python_exception.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_abstract_storage.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_command.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_converter.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\python\py_bs_exports.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_iterator.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_kernel.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_messaging.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_object_base.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_shell.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_list_converter.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_pair_converter.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_smart_ptr.h">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\pyublas\python_helpers.hpp">
+      <Filter>Python wrappers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\allocator_interface.h">
+      <Filter>memory manager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\backtrace_tools_unix.h">
+      <Filter>memory manager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\backtrace_tools_win.h">
+      <Filter>memory manager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hoard_allocator.h">
+      <Filter>memory manager</Filter>
+    </ClInclude>
+    <ClInclude Include="include\memory_manager.h">
+      <Filter>memory manager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\std_allocator.h">
+      <Filter>memory manager</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tlsf_allocator.h">
+      <Filter>memory manager</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_assert.h">
+      <Filter>assert</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_assert.h">
+      <Filter>assert</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bs_conf_reader.h">
+      <Filter>config</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_config_parser.h">
+      <Filter>config</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_kernel_tools.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pp_param_list.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_link.h">
+      <Filter>tree</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_tree.h">
+      <Filter>tree</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_link.h">
+      <Filter>tree\python</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_tree.h">
+      <Filter>tree\python</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_log_scribers.h">
+      <Filter>log</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_log_stream.h">
+      <Filter>log</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_report.h">
+      <Filter>log</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_bs_log.h">
+      <Filter>log</Filter>
+    </ClInclude>
+    <ClInclude Include="include\aligned_allocator.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\array_ext.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_array.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_array_shared.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_arrbase.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_vecbase.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_vector_shared.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\shared_array.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\shared_array_detail.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\shared_vector.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\bs_npvec.h">
+      <Filter>arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_macro.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_decl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_overl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_text.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_fixdata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_fixreal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_fixstr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_array_converter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\bs_npvec_serialize.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\bs_npvec_shared.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\python\py_string_converter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_array_serialize.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_report_thread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_fix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\bs_serialize_fixcont.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\declare_error_codes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\kernel_signals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\smart_ptr_serialize.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\st_smart_ptr_serialize.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tcmalloc_allocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\get_thread_id.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dlmalloc_allocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bs_named_type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bs_macro_private.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
