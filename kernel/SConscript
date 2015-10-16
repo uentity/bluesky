@@ -2,10 +2,10 @@ import os, os.path;
 
 # define helper functions
 def list_prefix(in_list, what) :
-    return [what + x for x in in_list];
+	return [what + x for x in in_list];
 
 def list_suffix(in_list, what) :
-    return [x + what for x in in_list];
+	return [x + what for x in in_list];
 
 # setup list of source files to compile
 kernel_cpp_list = Split("""
@@ -76,61 +76,61 @@ lib_name = 'blue_sky';
 tar_name = 'kernel';
 
 if ("tlsf" not in custom_vars.keys ()) :
-    custom_vars.Add ("tlsf", "Set to 1 to use TLSF allocator", "0")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("tlsf", "Set to 1 to use TLSF allocator", "0")
+	custom_vars.Update (custom_env)
 
 if ("hoard" not in custom_vars.keys ()) :
-    custom_vars.Add ("hoard", "Set to 1 to use Hoard allocator", "0")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("hoard", "Set to 1 to use Hoard allocator", "0")
+	custom_vars.Update (custom_env)
 
 if ("dlmalloc" not in custom_vars.keys ()) :
-    custom_vars.Add ("dlmalloc", "Set to 1 to use dlmalloc allocator", "0")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("dlmalloc", "Set to 1 to use dlmalloc allocator", "0")
+	custom_vars.Update (custom_env)
 
 if ("tcmalloc" not in custom_vars.keys ()) :
-    custom_vars.Add ("tcmalloc", "Set to 1 to use tcmalloc allocator", "0")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("tcmalloc", "Set to 1 to use tcmalloc allocator", "0")
+	custom_vars.Update (custom_env)
 
 if ("debug_info" not in custom_vars.keys ()) :
-    custom_vars.Add ("debug_info", "Set to 1 to compile with debug info in release mode", "0")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("debug_info", "Set to 1 to compile with debug info in release mode", "0")
+	custom_vars.Update (custom_env)
 
 if ("boost_suffix" not in custom_vars.keys ()) :
-    custom_vars.Add ("boost_suffix", "Set custom boost_suffix", "-mt")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("boost_suffix", "Set custom boost_suffix", "-mt")
+	custom_vars.Update (custom_env)
 
 if ("log_buffer" not in custom_vars.keys ()) :
-    custom_vars.Add ("log_buffer", "Set to 1 to use buffered output in log in release", "1")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("log_buffer", "Set to 1 to use buffered output in log in release", "1")
+	custom_vars.Update (custom_env)
 
 if ("log_buffer_force" not in custom_vars.keys ()) :
-    custom_vars.Add ("log_buffer_force", "Set to 1 to use buffered output in log in release and debug", "0")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("log_buffer_force", "Set to 1 to use buffered output in log in release and debug", "0")
+	custom_vars.Update (custom_env)
 
 if ("unmanaged" not in custom_vars.keys ()) :
-    custom_vars.Add ("unmanaged", "Set to 1 to direct kernel to unmanage created objects", "1")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("unmanaged", "Set to 1 to direct kernel to unmanage created objects", "1")
+	custom_vars.Update (custom_env)
 
 if ("debug_memory" not in custom_vars.keys ()) :
-    custom_vars.Add ("debug_memory", "Set to 1 to collect information about memory allocations", "0")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("debug_memory", "Set to 1 to collect information about memory allocations", "0")
+	custom_vars.Update (custom_env)
 
 if ("collect_memory_backtrace" not in custom_vars.keys ()) :
-    custom_vars.Add ("collect_memory_backtrace", "Set to 1 to collect backtrace information about memory allocations, valid only if debug_memory == 1", "0")
-    custom_vars.Update (custom_env)
+	custom_vars.Add ("collect_memory_backtrace", "Set to 1 to collect backtrace information about memory allocations, valid only if debug_memory == 1", "0")
+	custom_vars.Update (custom_env)
 
 # setup default build environment
 base_env = custom_env.Clone();
 base_env.AppendUnique(
-    CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN', "BS_EXCEPTION_COLLECT_BACKTRACE"],
-    CPPPATH = ['#kernel/include', '#kernel/src'],
-    LIBS = ['loki']
+	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN', "BS_EXCEPTION_COLLECT_BACKTRACE"],
+	CPPPATH = ['#kernel/include', '#kernel/src'],
+	LIBS = ['loki']
 );
 if base_env['platform'].startswith('lin') :
-    base_env.Append(LIBS = ['dl']);
+	base_env.Append(LIBS = ['dl']);
 
 # define boost lib names to include
-boost_libnames = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'locale'];
+kboost_libs = ['filesystem', 'regex', 'thread', 'signals', 'serialization'];
 
 # are we building with python support?
 if base_env['py'] == '1' :
@@ -140,47 +140,51 @@ if base_env['py'] == '1' :
 		LIBS = ['${python_name}']
 	);
 	kernel_cpp_list += py_kernel_cpp_list;
-	boost_libnames += ['python'];
-
-# build fully qualified boost lib names
-kernel_boost_libs = list_suffix(list_prefix(boost_libnames, 'boost_'), base_env["boost_suffix"]);
-kernel_boost_libs_dbg = list_suffix(kernel_boost_libs, '-d');
-Export('kernel_boost_libs');
-Export('kernel_boost_libs_dbg');
+	kboost_libs += ['python'];
 
 if (base_env["tlsf"] == "1") :
-    base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_TLSF_ALLOCATOR"], LIBS=["tlsf"], CPPPATH=tlsf["cpp_path"], LIBPATH=tlsf["lib_path"])
+	base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_TLSF_ALLOCATOR"], LIBS=["tlsf"], CPPPATH=tlsf["cpp_path"], LIBPATH=tlsf["lib_path"])
 
 if (base_env["hoard"] == "1") :
-    base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_HOARD_ALLOCATOR"], LIBS=["hoard"], CPPPATH=hoard["cpp_path"], LIBPATH=hoard["lib_path"])
+	base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_HOARD_ALLOCATOR"], LIBS=["hoard"], CPPPATH=hoard["cpp_path"], LIBPATH=hoard["lib_path"])
 
 if (base_env["dlmalloc"] == "1") :
-    base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_DLMALLOC_ALLOCATOR"], LIBS=["dlmalloc"], CPPPATH=dlmalloc["cpp_path"], LIBPATH=dlmalloc["lib_path"])
+	base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_DLMALLOC_ALLOCATOR"], LIBS=["dlmalloc"], CPPPATH=dlmalloc["cpp_path"], LIBPATH=dlmalloc["lib_path"])
 
 if (base_env["tcmalloc"] == "1") :
-    base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_TCMALLOC_ALLOCATOR"], LIBS=["tcmalloc"], CPPPATH=tcmalloc["cpp_path"], LIBPATH=tcmalloc["lib_path"])
+	base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_TCMALLOC_ALLOCATOR"], LIBS=["tcmalloc"], CPPPATH=tcmalloc["cpp_path"], LIBPATH=tcmalloc["lib_path"])
 
 if (base_env["debug_info"] == "1") :
-    base_env.AppendUnique (CCFLAGS = ["-ggdb"])
+	base_env.AppendUnique (CCFLAGS = ["-ggdb"])
 
 if (base_env["unmanaged"] == "1") :
-    base_env.AppendUnique (CPPDEFINES = ["BS_CREATE_UNMANAGED_OBJECTS"])
+	base_env.AppendUnique (CPPDEFINES = ["BS_CREATE_UNMANAGED_OBJECTS"])
 
 if (base_env["debug_memory"] == "1") :
-    base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_DEBUG_MEMORY"])
-    if (base_env["collect_memory_backtrace"] == "1") :
-        base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_COLLECT_BACKTRACE"])
+	base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_DEBUG_MEMORY"])
+	if (base_env["collect_memory_backtrace"] == "1") :
+		base_env.AppendUnique (CPPDEFINES = ["BS_BOS_CORE_COLLECT_BACKTRACE"])
 
 base_env.AppendUnique (CPPDEFINES = ["BS_LOG_USE_BUFFER=" + str (base_env["log_buffer"])])
 base_env.AppendUnique (CPPDEFINES = ["BS_LOG_USE_BUFFER_FORCE=" + str (base_env["log_buffer_force"])])
 
+# build fully qualified boost lib names
+#kernel_boost_libs = list_suffix(list_prefix(boost_libnames, 'boost_'), base_env["boost_suffix"]);
+#kernel_boost_libs_dbg = list_suffix(kernel_boost_libs, '-d');
+#Export('kernel_boost_libs');
+#Export('kernel_boost_libs_dbg');
+
 # finalize env construction
 if build_kind == 'debug' :
-    if base_env['platform'].startswith('lin') :
-        base_env.AppendUnique(LIBS = kernel_boost_libs_dbg);
-    lib_name += '_d';
+	#print 'boost_libnames_d', boost_libnames_d
+	#print 'LIBS w/o boost = ', base_env.subst('$LIBS')
+	if base_env['platform'].startswith('lin') :
+		for l in kboost_libs :
+			base_env.AppendUnique(LIBS = boost_libnames_d[l]);
+	lib_name += '_d';
 elif build_kind == 'release' and base_env['platform'].startswith('lin') :
-    base_env.AppendUnique(LIBS = kernel_boost_libs);
+	for l in kboost_libs :
+		base_env.AppendUnique(LIBS = boost_libnames[l]);
 
 # actaully build target
 bs_kernel = base_env.SharedLibrary(target = os.path.join(tar_exe_dir, lib_name), source = [os.path.join('src', x) for x in kernel_cpp_list]);
@@ -189,6 +193,6 @@ Export('bs_kernel');
 
 # Install step
 if base_env['install'] == '1':
-    inst_tar = base_env.Install('$prefix', bs_kernel);
-    Alias(tar_name, inst_tar);
+	inst_tar = base_env.Install('$prefix', bs_kernel);
+	Alias(tar_name, inst_tar);
 

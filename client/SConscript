@@ -27,10 +27,10 @@ boost_libs_dbg = list_suffix(boost_libs, '-d');
 
 # construct debug and release env
 if build_kind == 'debug' :
-	base_env.AppendUnique(LIBS = ['blue_sky_d', 'bs_cube_d', kernel_boost_libs_dbg, boost_libs_dbg]);
+	base_env.AppendUnique(LIBS = ['blue_sky_d', 'bs_cube_d', boost_libs_dbg]);
 	exe_name += '_d';
 else :
-	base_env.AppendUnique(LIBS = ['blue_sky', 'bs_cube', kernel_boost_libs, boost_libs]);
+	base_env.AppendUnique(LIBS = ['blue_sky', 'bs_cube', boost_libs]);
 
 # are we building with python support
 if base_env['py'] == '1' :

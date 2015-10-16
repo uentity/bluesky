@@ -1,4 +1,4 @@
-import os, sys, glob
+import os, sys
 
 def list_suffix (list, suffix) :
 	return [x + suffix for x in list];
@@ -72,4 +72,197 @@ Export ("files")
 Export ("bs_common_defines")
 Export ("print_config")
 Export ("config_h_build")
+
+#---------------- configure
+def CheckBoostVersion(context, version):
+	# Boost versions are in format major.minor.subminor
+	v_arr = version.split(".")
+	version_n = 0
+	if len(v_arr) > 0:
+		version_n += int(v_arr[0])*100000
+	if len(v_arr) > 1:
+		version_n += int(v_arr[1])*100
+	if len(v_arr) > 2:
+		version_n += int(v_arr[2])
+
+	context.Message('Checking for Boost version >= %s... ' % (version))
+	ret = context.TryCompile("""
+	#include <boost/version.hpp>
+	#if BOOST_VERSION < %d
+	#error Installed boost is too old!
+	#endif
+	int main()
+	{
+		return 0;
+	}
+	""" % version_n, '.cpp')
+	context.Result(ret)
+	return ret
+
+def CheckBoostLibrary(context, library, header) :
+	context.Message('Checking for Boost library %s... ' % (library))
+	test_src = """
+	#include <%s>
+	int main()
+	{
+		return 0;
+	}
+	""" % header;
+
+	#context.AppendLIBS(library);
+	print test_src
+	ret = context.TryCompile(test_src, '.cpp')
+	#if ret :
+	#	ret &= context.TryLink(test_src, '.cpp');
+	context.Result(ret)
+	return ret
+
+
+def FindBoostLibrary(conf, lib, path, postfix = ''):
+	def libfinder(lib, path, postfix) :
+		def select_fname(files) :
+			# FIXME: choose the best one.
+			# select fname with shortest length
+			lib_fname = '';
+			min_fname = 0;
+			#print files;
+			for i in range(len(files)) :
+				if min_fname == 0 or len(files[i]) < min_fname :
+					lib_fname = os.path.basename(files[i])[3:-3];
+					min_fname = len(files[i]);
+			return lib_fname;
+
+		import glob;
+		# direct form: e.g. libboost_iostreams.so
+		files = glob.glob(os.path.join(path, 'lib{0}{1}.so'.format(lib, postfix)));
+		if len(files) > 0 :
+			return select_fname(files);
+		# check things like libboost_iostreams-gcc.so
+		files = glob.glob(os.path.join(path, 'lib{0}-*{1}.so'.format(lib, postfix)));
+		if len(files) > 0 :
+			return select_fname(files);
+		# nothing is found
+		return '';
+
+	# look for boost libraries
+	conf.Message('Looking for library {0}{1}... '.format(lib, postfix))
+
+	# try to find library in given path
+	lib_fname = '';
+	if len(path) > 0 :
+		# prefer multithread versions
+		lib_fname = libfinder(lib, path, '*mt*' + postfix);
+		if len(lib_fname) == 0 :
+			# otherwise try to check non-mt lib
+			lib_fname = libfinder(lib, path, postfix);
+		if len(lib_fname) == 0 :
+			print "Warning! " + lib + " wasn't found in " + path;
+
+	if len(lib_fname) > 0 :
+		conf.Result('yes');
+		return lib_fname;
+
+	# nothing is found
+	conf.Result('no');
+	return '';
+
+def CheckBoost(conf) :
+	# helper to fill dictionary of lib alias -> lib name
+	def libdict_builder(alias, path, postfix, subst_dict = None) :
+		res = dict();
+		for lib in alias :
+			lib_defname = 'boost_' + lib;
+			lib_fname = [conf.FindBoostLibrary(lib_defname, path, postfix)];
+			if len(lib_fname[0]) == 0 :
+				if subst_dict is None :
+					# check for mt-version first
+					lib_fname = [lib_defname + '-mt' + postfix, lib_defname + postfix];
+				else :
+					lib_fname = [subst_dict[lib]];
+					#res[lib] = subst_dict[lib];
+			#res[lib] = lib_fname;
+
+		#for [lib, lib_fname] in res.items() :
+			# check that library exists
+			res[lib] = '';
+			for f in lib_fname :
+				#print 'header', 'boost/' + lib + '.hpp'
+				# CheckLib makes LIBS dirty, so save and restore it
+				orig_LIBS = conf.env.subst('$LIBS');
+				check_res = conf.CheckLib(f, language='CXX');
+				conf.env.Replace(LIBS = orig_LIBS);
+				#if conf.CheckCXXHeader('boost/' + lib + '.hpp') :
+				#if conf.CheckBoostLibrary(f, 'boost/' + lib + '.hpp') :
+				if check_res :
+					print lib + ' -> ' + f;
+					res[lib] = f;
+					break;
+			if len(res[lib]) == 0 :
+				# strange BUG with boost_python doen't detected, though it present!
+				if lib == 'python' and len(lib_fname) == 1 :
+					res[lib] = lib_fname[0];
+				else :
+					print 'Error! ' + lib_defname + ' library is required to build BlueSky!';
+					Exit(1);
+		return res;
+
+	boost_libpath = '';
+	# if BOOST_PATH env variable present, it overrides system path check
+	if 'BOOST_PATH' in os.environ :
+		print "BOOST_PATH found!";
+		print "Assume Boost headers in $BOOST_PATH, libraries in $BOOST_PATH/lib";
+		boost_libpath = os.path.join(os.environ['BOOST_PATH'], 'lib');
+		conf.env.AppendUnique(
+			CPPPATH = [os.environ['BOOST_PATH']],
+			LIBPATH = [boost_libpath],
+			RPATH = [boost_libpath]
+		);
+
+	# check Boost version
+	conf.AddTest('CheckBoostVersion', CheckBoostVersion);
+	if not conf.CheckBoostVersion('1.46') :
+		print 'Boost version >= 1.46 required to build BlueSky!'
+		Exit(1);
+
+	# make persistent dictionary of alias -> full library name
+	# both for release and debug builds
+	boost_libalias = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time'];
+	if (conf.env['py'] == '1') :
+		boost_libalias += ['python'];
+	#libdefname = list_prefix(boost_libalias, 'boost_');
+
+	# make dictionaries for debug and release builds
+	# for release build
+	conf.AddTest('FindBoostLibrary', FindBoostLibrary);
+	conf.AddTest('CheckBoostLibrary', CheckBoostLibrary);
+	boost_libnames = libdict_builder(boost_libalias, boost_libpath, '');
+	Export('boost_libnames');
+	# for debug builds
+	if 'debug' in conf.env['build_kinds'] :
+		boost_libnames_d = libdict_builder(boost_libalias, boost_libpath, '-d', boost_libnames);
+		Export('boost_libnames_d');
+
+def CheckLoki(conf) :
+	if 'LOKI_PATH' in os.environ :
+		print "LOKI_PATH found!";
+		print "Assume Loki headers in $LOKI_PATH/include, libraries in $LOKI_PATH/lib";
+		loki_libpath = os.path.join(os.environ['LOKI_PATH'], 'lib');
+		conf.env.AppendUnique(
+			CPPPATH = [os.path.join(os.environ['LOKI_PATH'], 'include')]
+			#, LIBPATH = [loki_libpath],
+			#, RPATH = [loki_libpath]
+		);
+
+	# Check headers
+	if not conf.CheckCXXHeader('loki/TypeManip.h') :
+		print "loki/TypeManip.h required to build BlueSky";
+		Exit(1);
+	if not conf.CheckCXXHeader('loki/Singleton.h') :
+		print "loki/Singleton.h required to build BlueSky";
+		Exit(1);
+	#conf.CheckLib('loki');
+
+Export("CheckBoost");
+Export("CheckLoki");
+
 
