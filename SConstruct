@@ -119,8 +119,8 @@ if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :
 	if not conf.CheckCXX() :
 		print('!! Your compiler and/or environment is not correctly configured.');
 		Exit(1);
-	CheckBoost(conf);
 	CheckLoki(conf);
+	CheckBoost(conf);
 	custom_env = conf.Finish();
 
 # save default custom_env
