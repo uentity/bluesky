@@ -147,20 +147,20 @@ namespace blue_sky {
 
 		vars_t () {
 #ifdef UNIX
-			char *userpath;
-			userpath = getenv("HOME");
-
 			config[0] = "/etc/blue-sky/blue-sky.conf";
-			config[1] = string(userpath) + string("/.blue-sky/blue-sky.conf");
+			config[1] = string(getenv("HOME")) + "/.blue-sky/blue-sky.conf";
 #else // !UNIX
-			string userappdata = getenv("APPDATA");
-			string appdata;
+			config[0] = string(getenv("APPDATA")) + "\\blue-sky\\blue-sky.conf";
+			config[1] = string(getenv("ALLUSERSPROFILE")) + "\\blue-sky\\blue-sky.conf";
 
-			get_leaf_win(appdata,userappdata);
-			appdata = string(getenv("ALLUSERSPROFILE")) + string("\\") + appdata;
+			//string userappdata = getenv("APPDATA");
+			//string appdata;
 
-			config[0] = appdata + "\\blue-sky\\blue-sky.conf";
-			config[1] = userappdata + "\\blue-sky\\blue-sky.conf";
+			//get_leaf_win(appdata,userappdata);
+			//appdata = string(getenv("ALLUSERSPROFILE")) + string("\\") + appdata;
+
+			//config[0] = appdata + "\\blue-sky\\blue-sky.conf";
+			//config[1] = userappdata + "\\blue-sky\\blue-sky.conf";
 #endif // UNIX
 		}
 	};
