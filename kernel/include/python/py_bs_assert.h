@@ -1,9 +1,12 @@
-/**
- * \file py_bs_assert.h
- * \brief python wrapper for bs_assert
- * \author Sergey Miryanov
- * \date 14.05.2008
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 14.05.2008
+/// @brief python wrapper for bs_assert
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef PY_BS_ASSERT_H_
 #define PY_BS_ASSERT_H_
 
