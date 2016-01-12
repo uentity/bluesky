@@ -1,9 +1,12 @@
-/**
- * \file print_python_exception.h
- * \brief
- * \author Sergey Miryanov
- * \date 21.10.2009
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 21.10.2009
+/// @brief 
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BLUE_SKY_PRINT_PYTHON_EXCEPTION_H_
 #define BLUE_SKY_PRINT_PYTHON_EXCEPTION_H_
 

@@ -1,9 +1,12 @@
-/**
- * \file pp_param_list.h
- * \brief converts sequence to list of parameters
- * \author Sergey Miryanov
- * \date 24.07.2008
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 24.07.2008
+/// @brief converts sequence to list of parameters
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BS_PP_PARAM_LIST_H_
 #define BS_PP_PARAM_LIST_H_
 

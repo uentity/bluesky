@@ -1,22 +1,11 @@
-/// @file bs_npvec.h
-/// @brief vector traits for bs_array with reshape and other numpy_array feautures support
+/// @file
 /// @author uentity
-/// @version 1.0
 /// @date 07.09.2011
-/// @copyright This file is part of BlueSky
-///            
-///            BlueSky is free software; you can redistribute it and/or
-///            modify it under the terms of the GNU Lesser General Public License
-///            as published by the Free Software Foundation; either version 3
-///            of the License, or (at your option) any later version.
-///            
-///            BlueSky is distributed in the hope that it will be useful,
-///            but WITHOUT ANY WARRANTY; without even the implied warranty of
-///            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-///            GNU General Public License for more details.
-///            
-///            You should have received a copy of the GNU General Public License
-///            along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
+/// @brief vector traits for bs_array with reshape and other numpy_array feautures support
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #ifndef BS_NPVEC_IC9OQ7JE
 #define BS_NPVEC_IC9OQ7JE

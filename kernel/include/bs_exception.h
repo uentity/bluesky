@@ -1,23 +1,12 @@
-// This file is part of BlueSky
-// 
-// BlueSky is free software; you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation; either version 3
-// of the License, or (at your option) any later version.
-// 
-// BlueSky is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
+/// @file
+/// @author NikonovMA a ka no_NaMe <__no_name__@rambler.ru>, uentity, Sergey Miryanov
+/// @date 12.01.2016
+/// @brief Contains BlueSky exception class declaration
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
 
-/*!
-  \file bs_exception.h
-  \brief Contains blue-sky exception class
-  \author NikonovMA a ka no_NaMe <__no_name__@rambler.ru>
- */
 #ifndef BS_EXCEPTION_H_
 #define BS_EXCEPTION_H_
 

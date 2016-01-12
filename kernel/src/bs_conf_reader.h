@@ -1,23 +1,11 @@
-// This file is part of BlueSky
-// 
-// BlueSky is free software; you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation; either version 3
-// of the License, or (at your option) any later version.
-// 
-// BlueSky is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
-
-/*!
- * \file bs_conf_reader.h
- * \brief Contains blue-sky library configs reader.
- * \author Nikonov Maxim aka no_NaMe
-*/
+/// @file
+/// @author Nikonov Maxim aka no_NaMe
+/// @date 12.01.2016
+/// @brief Contains BlueSky library configs reader
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #ifndef _BS_CONF_READER
 #define _BS_CONF_READER

@@ -1,9 +1,12 @@
-/** 
- * \file memory_manager.cpp
- * \brief impl of
- * \author Sergey Miryanov
- * \date 10.06.2009
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 10.06.2009
+/// @brief 
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #include "memory_manager.h"
 #include "bs_exception.h"
 #include "bs_assert.h"
