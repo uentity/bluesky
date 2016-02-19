@@ -1672,7 +1672,7 @@ struct signal_unlock< T, false > {
 
 template< class T, class R >
 bool inline operator ==(const bs_private::smart_ptr_base< T >& lp, const bs_private::smart_ptr_base< R >& rp) {
-	return (lp.get() == rp.get());
+	return ((void*)lp.get() == (void*)rp.get());
 }
 template< class T, class R >
 bool inline operator !=(const bs_private::smart_ptr_base< T >& lp, const bs_private::smart_ptr_base< R >& rp) {
@@ -1680,12 +1680,12 @@ bool inline operator !=(const bs_private::smart_ptr_base< T >& lp, const bs_priv
 }
 template< class T, class R >
 bool inline operator <(const bs_private::smart_ptr_base< T >& lp, const bs_private::smart_ptr_base< R >& rp) {
-	return (lp.get() < rp.get());
+	return ((void*)lp.get() < (void*)rp.get());
 }
 
 template< class T, class R >
 bool inline operator ==(const bs_private::smart_ptr_base< T >& lp, const R* rp) {
-	return (lp.get() == rp);
+	return ((void*)lp.get() == (void*)rp);
 }
 template< class T, class R >
 bool inline operator !=(const bs_private::smart_ptr_base< T >& lp, const R* rp) {
@@ -1693,12 +1693,12 @@ bool inline operator !=(const bs_private::smart_ptr_base< T >& lp, const R* rp) 
 }
 template< class T, class R >
 bool inline operator <(const bs_private::smart_ptr_base< T >& lp, const R* rp) {
-	return (lp.get() < rp);
+	return ((void*)lp.get() < (void*)rp);
 }
 
 template< class T, class R >
 bool inline operator ==(const T* lp, const bs_private::smart_ptr_base< R >& rp) {
-	return (lp == rp.get());
+	return ((void*)lp == (void*)rp.get());
 }
 template< class T, class R >
 bool inline operator !=(const T* lp, const bs_private::smart_ptr_base< R >& rp) {
@@ -1706,7 +1706,7 @@ bool inline operator !=(const T* lp, const bs_private::smart_ptr_base< R >& rp) 
 }
 template< class T, class R >
 bool inline operator <(const T* lp, const bs_private::smart_ptr_base< R >& rp) {
-	return (lp < rp.get());
+	return ((void*)lp < (void*)rp.get());
 }
 
 #if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
