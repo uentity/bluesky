@@ -51,6 +51,13 @@ public:
 	/// @param new_size -- new size of array
 	virtual void resize(size_type new_size) = 0;
 
+
+	/// @brief resize array with new initialization of new elements
+	///
+	/// @param new_size -- new size of array
+	/// @param init value of ew elements
+	virtual void resize(size_type new_size, value_type init) = 0;
+
 	/// @brief gain access to data buffer
 	///
 	/// @return pointer to raw data
@@ -233,6 +240,10 @@ public:
 
 	void resize(size_type new_size) {
 		container::resize(new_size);
+	}
+
+	void resize(size_type new_size, value_type init) {
+		container::resize(new_size, init);
 	}
 
 	pointer data() {

@@ -135,6 +135,11 @@ public:
 			buf_holder_->resize(n);
 	}
 
+	void resize(size_type n, value_type init) {
+		if(buf_holder_ && size() != n)
+			buf_holder_->resize(n, init);
+	}
+
 	pointer data() {
 		if(buf_holder_)
 #ifdef BS_DISABLE_MT_LOCKS
