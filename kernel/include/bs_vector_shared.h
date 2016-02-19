@@ -130,10 +130,10 @@ public:
 		pvec_->insert(pos, n, v);
 	}
 
-	//template< class input_iterator >
-	//void insert(iterator pos, input_iterator start, input_iterator finish) {
-	//	pvec_->insert(pos, start, finish);
-	//}
+	template< class input_iterator >
+	void insert(iterator pos, input_iterator start, input_iterator finish) {
+		pvec_->insert(pos, start, finish);
+	}
 
 	iterator erase(iterator pos) {
 		return pvec_->erase(pos);

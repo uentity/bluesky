@@ -111,6 +111,11 @@ public:
 		container::insert(ptr2iter(pos), n, v);
 	}
 
+	template< class inp_iterator>
+	void insert(iterator pos, inp_iterator from, inp_iterator to) {
+		container::insert(ptr2iter(pos), from, to);
+	}
+
 	void erase(const key_type& key)	{
 		container::erase(container::begin() + key);
 	}
