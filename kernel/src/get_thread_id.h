@@ -1,9 +1,12 @@
-/**
- * \file get_thread_id.h
- * \brief returns current thread id
- * \author Sergey Miryanov
- * \date 14.08.2009
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 14.08.2009
+/// @brief returns current thread id
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BS_GET_THREAD_ID_H_
 #define BS_GET_THREAD_ID_H_
 

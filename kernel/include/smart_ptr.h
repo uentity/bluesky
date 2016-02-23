@@ -1,23 +1,12 @@
-// This file is part of BlueSky
-// 
-// BlueSky is free software; you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation; either version 3
-// of the License, or (at your option) any later version.
-// 
-// BlueSky is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
+/// @file
+/// @author uentity
+/// @date 12.01.2016
+/// @brief BlueSky smart pointers machinery
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
 
-/*!
- * \file smart_ptr.h
- * \brief contains blue-sky smart pointers
- * \author uentity
- */
 #ifndef _SMART_PTR_H
 #define _SMART_PTR_H
 
@@ -1683,7 +1672,7 @@ struct signal_unlock< T, false > {
 
 template< class T, class R >
 bool inline operator ==(const bs_private::smart_ptr_base< T >& lp, const bs_private::smart_ptr_base< R >& rp) {
-	return (lp.get() == rp.get());
+	return ((void*)lp.get() == (void*)rp.get());
 }
 template< class T, class R >
 bool inline operator !=(const bs_private::smart_ptr_base< T >& lp, const bs_private::smart_ptr_base< R >& rp) {
@@ -1691,12 +1680,12 @@ bool inline operator !=(const bs_private::smart_ptr_base< T >& lp, const bs_priv
 }
 template< class T, class R >
 bool inline operator <(const bs_private::smart_ptr_base< T >& lp, const bs_private::smart_ptr_base< R >& rp) {
-	return (lp.get() < rp.get());
+	return ((void*)lp.get() < (void*)rp.get());
 }
 
 template< class T, class R >
 bool inline operator ==(const bs_private::smart_ptr_base< T >& lp, const R* rp) {
-	return (lp.get() == rp);
+	return ((void*)lp.get() == (void*)rp);
 }
 template< class T, class R >
 bool inline operator !=(const bs_private::smart_ptr_base< T >& lp, const R* rp) {
@@ -1704,12 +1693,12 @@ bool inline operator !=(const bs_private::smart_ptr_base< T >& lp, const R* rp) 
 }
 template< class T, class R >
 bool inline operator <(const bs_private::smart_ptr_base< T >& lp, const R* rp) {
-	return (lp.get() < rp);
+	return ((void*)lp.get() < (void*)rp);
 }
 
 template< class T, class R >
 bool inline operator ==(const T* lp, const bs_private::smart_ptr_base< R >& rp) {
-	return (lp == rp.get());
+	return ((void*)lp == (void*)rp.get());
 }
 template< class T, class R >
 bool inline operator !=(const T* lp, const bs_private::smart_ptr_base< R >& rp) {
@@ -1717,7 +1706,7 @@ bool inline operator !=(const T* lp, const bs_private::smart_ptr_base< R >& rp) 
 }
 template< class T, class R >
 bool inline operator <(const T* lp, const bs_private::smart_ptr_base< R >& rp) {
-	return (lp < rp.get());
+	return ((void*)lp < (void*)rp.get());
 }
 
 #if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)

@@ -1,9 +1,12 @@
-/**
- * \file shared_array_detail.h
- * \brief
- * \author Sergey Miryanov
- * \date 06.11.2009
- * */
+/// @file
+/// @author uentity
+/// @date 06.11.2009
+/// @brief Sergey Miryanov
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BS_SHARED_ARRAY_DETAIL_H_
 #define BS_SHARED_ARRAY_DETAIL_H_
 

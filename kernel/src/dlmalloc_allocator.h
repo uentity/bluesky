@@ -1,9 +1,12 @@
-/**
- * \file dlmalloc_allocator.h
- * \brief
- * \author Sergey Miryanov
- * \date 06.07.2009
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 06.07.2009
+/// @brief 
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BS_BOS_CORE_DLMALLOC_ALLOCATOR_H_
 #define BS_BOS_CORE_DLMALLOC_ALLOCATOR_H_
 

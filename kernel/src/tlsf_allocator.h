@@ -1,9 +1,12 @@
-/**
- * \file tlsf_allocator.h
- * \brief wrapper to adapt TLSF allocator to use as an allocator in bs_bos_core::memory_manager
- * \author Sergey Miryanov
- * \date 11.06.2009
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 11.06.2009
+/// @brief wrapper to adapt TLSF allocator to use as an allocator in bs_bos_core::memory_manager
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BS_BOS_CORE_BASE_TLSF_ALLOCATOR_H_
 #define BS_BOS_CORE_BASE_TLSF_ALLOCATOR_H
 

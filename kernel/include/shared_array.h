@@ -1,9 +1,12 @@
-/**
- * \file shared_array.h
- * \brief shared array
- * \author Sergey Miryanov
- * \date 28.05.2009
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 28.05.2009
+/// @brief shared array declaration
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BS_TOOLS_SHARED_ARRAY_H_
 #define BS_TOOLS_SHARED_ARRAY_H_
 

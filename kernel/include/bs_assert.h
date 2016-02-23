@@ -1,9 +1,12 @@
-/**
- * \file bs_assert.h
- * \brief smart assertation, based on Alexandrescu's ideas
- * \author Sergey Miryanov
- * \date 14.05.2008
- */
+/// @file
+/// @author Sergey Miryanov
+/// @date 14.05.2008
+/// @brief Smart assertation, based on Alexandrescu's ideas
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BS_ASSERT_H_
 #define BS_ASSERT_H_
 

@@ -1,13 +1,14 @@
-/**
- *       \file  kernel_signals.h
- *      \brief  New version of synchronious signal system, for each
- *              signal allocated boost::signal with 'right' type and
- *              signature
- *     \author  Sergey Miryanov (sergey-miryanov), sergey.miryanov@gmail.com
- *       \date  16.12.2009
- *  \copyright  This source code is released under the terms of 
- *              the BSD License. See LICENSE for more details.
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 16.12.2009
+/// @brief New version of synchronious signal system, for each
+///              signal allocated boost::signal with 'right' type and
+///              signature
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BLUE_SKY_KERNEL_SIGNALS_H_
 #define BLUE_SKY_KERNEL_SIGNALS_H_
 

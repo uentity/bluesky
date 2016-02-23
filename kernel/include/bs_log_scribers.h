@@ -1,9 +1,12 @@
-/**
- * \file bs_log_scribers.h
- * \brief scribers for log channels
- * \author Sergey Miryanov
- * \date 07.07.2009
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 07.07.2009
+/// @brief Scribers for log channels
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BS_LOG_SCRIBERS_H_
 #define BS_LOG_SCRIBERS_H_
 

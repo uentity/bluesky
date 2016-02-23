@@ -1,9 +1,12 @@
-/**
- * \file declare_error_codes.h
- * \brief tools to declare blue-sky kernel error codes
- * \author Sergey Miryanov
- * \date 08.07.2009
- * */
+/// @file
+/// @author Sergey Miryanov
+/// @date 08.07.2009
+/// @brief Tools to declare BlueSky kernel error codes
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+
 #ifndef BS_DECLARE_ERROR_CODES_H_
 #define BS_DECLARE_ERROR_CODES_H_
 

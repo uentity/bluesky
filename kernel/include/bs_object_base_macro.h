@@ -1,22 +1,11 @@
-// This file is part of BlueSky
-// 
-// BlueSky is free software; you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation; either version 3
-// of the License, or (at your option) any later version.
-// 
-// BlueSky is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
-
-/// @file bs_object_base_macro.h
-/// @brief Main macro definitions to ease creating new BlueSky object
-/// @author Alexander Gagarin aka uentity
-/// @date 2009-06-26
+/// @file
+/// @author uentity
+/// @date 26.06.2009
+/// @brief Main macro definitions to ease defining new BlueSky object
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #ifndef _BS_OBJECT_BASE_MACRO_H
 #define _BS_OBJECT_BASE_MACRO_H

@@ -76,7 +76,9 @@ Export ("config_h_build")
 
 #---------------- configure
 # Boost library aliases (short names)
-boost_libalias = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time', 'python', 'locale'];
+boost_libalias = [
+	'system', 'filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time', 'python', 'locale'
+];
 boost_libnames = dict(zip(boost_libalias, ['']*len(boost_libalias)));
 boost_libnames_d = dict(zip(boost_libalias, ['']*len(boost_libalias)));
 
@@ -230,7 +232,8 @@ def CheckBoost(conf) :
 	for L in boost_libnames.keys() :
 		boost_libnames[L] = conf.FindBoostLibrary(L);
 	# for debug builds
-	if 'build_kinds' in conf.env and 'debug' in conf.env['build_kinds'] :
+	if ('build_kinds' in conf.env and 'debug' in conf.env['build_kinds']) or \
+		("debug" in conf.env and conf.env["debug"] == "1") :
 		for L in boost_libnames_d.keys() :
 			boost_libnames_d[L] = conf.FindBoostLibrary(L, postfix = "-d");
 
