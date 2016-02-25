@@ -62,13 +62,12 @@ using namespace boost;
  *-----------------------------------------------------------------------------*/
 BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs");
 
-//std::less specialization for plugin_descriptor
+// compare plugin_descriptors by name
 namespace std {
-	template< >
-	bool less< blue_sky::plugin_descriptor >::operator ()(
+	bool operator<(
 		const blue_sky::plugin_descriptor& lhs,
-		const blue_sky::plugin_descriptor& rhs) const
-	{
+		const blue_sky::plugin_descriptor& rhs
+	) {
 		return (lhs.name_ < rhs.name_);
 	}
 }
