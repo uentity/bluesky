@@ -6,6 +6,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <deque>
 
 namespace blue_sky {
 struct wcfg;
@@ -14,12 +15,12 @@ class BS_API bs_cfg_p {
 public:
 	friend struct wcfg;
 
-	typedef std::vector<std::string>     vstr_t;
-	typedef std::map<std::string,vstr_t> map_t;
+	typedef std::deque< std::string >      vstr_t;
+	typedef std::map< std::string, vstr_t > map_t;
 
 
 	void parse_strings (const std::string &str, bool append = false);
-	void read_file (const char *filename);
+	bool read_file (const char *filename);
 	void clear_env_map ();
 	const map_t &env() const;
 	vstr_t getenv(const char *e);
