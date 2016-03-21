@@ -62,16 +62,6 @@ using namespace boost;
  *-----------------------------------------------------------------------------*/
 BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs");
 
-// compare plugin_descriptors by name
-namespace std {
-	bool operator<(
-		const blue_sky::plugin_descriptor& lhs,
-		const blue_sky::plugin_descriptor& rhs
-	) {
-		return (lhs.name_ < rhs.name_);
-	}
-}
-
 // hidden implementation stuff
 namespace {
 /*-----------------------------------------------------------------------------
@@ -82,6 +72,16 @@ using namespace blue_sky;
 // tags for kernel & runtime types plugin_descriptor
 struct __kernel_types_pd_tag__ {};
 struct __runtime_types_pd_tag__ {};
+
+// compare plugin_descriptors by name
+struct cmp_pd_by_name {
+	bool operator()(
+		const blue_sky::plugin_descriptor& lhs,
+		const blue_sky::plugin_descriptor& rhs
+	) {
+		return (lhs.name_ < rhs.name_);
+	}
+};
 
 /*-----------------------------------------------------------------------------
  *  Shared library descriptor
@@ -485,7 +485,12 @@ public:
 	//! plugin_descriptor <-> lib_descriptor 1-to-1 relation
 	typedef fast_pool_allocator< pair< plugin_descriptor, lib_descriptor >, default_user_allocator_new_delete,
 		details::pool::null_mutex > libs_allocator;
-	typedef map< plugin_descriptor, lib_descriptor, less< plugin_descriptor >, libs_allocator > pl_enum;
+	typedef map<
+		plugin_descriptor, lib_descriptor,
+		cmp_pd_by_name,
+		//less< plugin_descriptor >,
+		libs_allocator
+	> pl_enum;
 
 	//! plugin_descriptors sorted by name
 	typedef fast_pool_allocator< pd_ptr, default_user_allocator_new_delete, details::pool::null_mutex > pl_dict_allocator;
