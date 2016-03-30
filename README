@@ -1,0 +1,22 @@
+BlueSky integration platform
+
+To build BlueSky kernel you need:
+ 1. Python (>=2.5)
+ 2. Boost libraries (>=1.46)
+ 3. Loki library
+ 4. SCons - build system
+
+1) To build kernel without python support to exe/debug simply run:
+scons -u
+2) To build release:
+scons -u build_kinds=release
+Build debug similar:
+scons -u build_kinds=debug
+Both release and debug:
+scons -u build_kinds=debug,release
+3) To add python support:
+scons ... py=1
+4) To make install somewhere:
+scons ... install=1 prefix=[kernel_prefix] [plugin_prefix=[...]]
+5) In order to customize build, setup library paths, etc, you'll need to create/edit
+scons_env.custom and possibly scons_vars.custom scripts.

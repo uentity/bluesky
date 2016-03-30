@@ -1,0 +1,275 @@
+# -*- coding: utf-8 -*
+import os
+
+def list_suffix (list, suffix) :
+	return [x + suffix for x in list];
+
+def list_prefix(in_list, what) :
+	return [what + x for x in in_list];
+
+def add_suffix (x, suffix) :
+	if (len (x) == 0) :
+		return x
+	else :
+		return x + suffix
+
+class files :
+	def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"]) :
+		def super_glob (inc = Split ("."), excludes = []) :
+			file_list = []
+			for e in ext :
+				for p in inc :
+					file_list.extend ([str (x) for x in Glob (os.path.join (p, e))])
+
+			for f in excludes :
+				if (f in file_list) :
+					file_list.remove (f)
+
+			file_list.sort ()
+			return file_list
+
+		self.root = ""
+		for p in root :
+			if (p <> ".") :
+				self.root = os.path.join (self.root, p)
+
+		sources = super_glob ([os.path.join (self.root, "src")], [str (Glob (os.path.join (self.root, "src", ex))[0]) for ex in excludes])
+
+		self.sources = [os.path.join ("src", os.path.split (x)[1]) for x in sources]
+
+def bs_common_defines(custom_env) :
+	custom_env.AppendUnique(CPPDEFINES = ["BS_EXPORTING_PLUGIN"]);
+	if custom_env['py'] == '1' :
+		custom_env.AppendUnique(CPPDEFINES = ["BSPY_EXPORTING_PLUGIN"]);
+
+def print_config(msg, two_dee_iterable):
+	# this function is handy and can be used for other configuration-printing tasks
+	print
+	print msg
+	print
+	for key, val in two_dee_iterable:
+		print "    %-20s %s" % (key, val)
+	print
+
+def config_h_build(target, source, config_h_defines, env):
+	config_h_defines = {};
+	if "config_h_defines" in env :
+		config_h_defines = env["config_h_defines"];
+	print_config("Generating " + target + " with the following settings:",
+		config_h_defines.items())
+	if len(config_h_defines) == 0 : return;
+
+	for a_target, a_source in zip(target, source):
+		config_h = file(str(a_target), "w")
+		config_h_in = file(str(a_source), "r")
+		config_h.write(config_h_in.read() % config_h_defines)
+		config_h_in.close()
+		config_h.close()
+
+Export ("list_prefix")
+Export ("list_suffix")
+Export ("add_suffix")
+Export ("files")
+Export ("bs_common_defines")
+Export ("print_config")
+Export ("config_h_build")
+
+#---------------- configure
+# Boost library aliases (short names)
+boost_libalias = [
+	'system', 'filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time', 'python', 'locale'
+];
+boost_libnames = dict(zip(boost_libalias, ['']*len(boost_libalias)));
+boost_libnames_d = dict(zip(boost_libalias, ['']*len(boost_libalias)));
+
+def CheckBoostVersion(context, version):
+	# Boost versions are in format major.minor.subminor
+	v_arr = version.split(".")
+	version_n = 0
+	if len(v_arr) > 0:
+		version_n += int(v_arr[0])*100000
+	if len(v_arr) > 1:
+		version_n += int(v_arr[1])*100
+	if len(v_arr) > 2:
+		version_n += int(v_arr[2])
+
+	context.Message('Checking for Boost version >= %s... ' % (version))
+	ret = context.TryCompile("""
+	#include <boost/version.hpp>
+	#if BOOST_VERSION < %d
+	#error Installed boost is too old!
+	#endif
+	int main()
+	{
+		return 0;
+	}
+	""" % version_n, '.cpp')
+	context.Result(ret)
+	return ret
+
+def CheckBoostLibrary(context, library, header = '') :
+	if not header :
+		header = "version.hpp";
+
+	context.Message('Checking Boost library %s... ' % (library))
+	test_src = """
+	#include <boost/%s>
+	int main()
+	{
+		return 0;
+	}
+	""" % header;
+
+	#context.AppendLIBS(library);
+	#print test_src
+	ret = context.TryCompile(test_src, '.cpp')
+	if ret :
+		ret = context.TryLink(test_src, '.cpp');
+	context.Result(ret)
+	return ret
+
+def FindBoostLibrary(context, lib, path = '', postfix = '', header = ''):
+	def libfinder(lib, path, postfix) :
+		def select_fname(files) :
+			# FIXME: choose the best one.
+			# select fname with shortest length
+			lib_fname = '';
+			min_fname = 0;
+			#print files;
+			for i in range(len(files)) :
+				if min_fname == 0 or len(files[i]) < min_fname :
+					lib_fname = os.path.basename(files[i])[3:-3];
+					min_fname = len(files[i]);
+			return lib_fname;
+
+		import glob;
+		# direct form: e.g. libboost_iostreams.so
+		files = glob.glob(os.path.join(path, 'lib{0}{1}.so'.format(lib, postfix)));
+		if len(files) > 0 :
+			return select_fname(files);
+		# check things like libboost_iostreams-gcc.so
+		files = glob.glob(os.path.join(path, 'lib{0}*{1}.so'.format(lib, postfix)));
+		if len(files) > 0 :
+			return select_fname(files);
+		# nothing is found
+		return '';
+
+	# ensure we have "boost_" prefix
+	if not lib.startswith("boost_") :
+		lib = "boost_" + lib;
+	# check if we have suffix for Boost libs set
+	if len(postfix) == 0 and "boost_suffix" in context.env :
+		postfix = context.env["boost_suffix"];
+	# check if we have BOOST_PATH variable and can extract path
+	if len(path) == 0 and 'BOOST_PATH' in os.environ :
+		path = os.path.join(os.environ['BOOST_PATH'], 'lib');
+
+	# look for boost libraries
+	context.Message('Looking for Boost library {0}{1}... '.format(lib, postfix))
+
+	# for help just return successfully
+	#if context.env.GetOption('help') :
+	#	context.Result(True);
+	#	return lib;
+
+	# try to find library in given path
+	lib_fname = '';
+	if len(path) > 0 :
+		# first check as is
+		lib_fname = libfinder(lib, path, postfix);
+		if len(lib_fname) == 0 :
+			# try search without postfix
+			lib_fname = libfinder(lib, path, '');
+		if len(lib_fname) == 0 :
+			print "Warning! " + lib + " wasn't found in " + path;
+	if len(lib_fname) == 0 :
+		# fallback
+		lib_fname = lib;
+	else :
+		print lib + ' -> ' + lib_fname;
+
+	# check that we can link with library
+	res = CheckBoostLibrary(context, lib_fname, header);
+	#context.Result(res)
+	if not res :
+		# raise error
+		print 'Error! ' + lib + ' library is required to build BlueSky!';
+		Exit(1);
+
+	return lib_fname;
+
+def CheckBoost(conf) :
+	# Add some Boost-related test
+	conf.AddTest('CheckBoostVersion', CheckBoostVersion);
+	conf.AddTest('CheckBoostLibrary', CheckBoostLibrary);
+	conf.AddTest('FindBoostLibrary', FindBoostLibrary);
+
+	boost_libpath = '';
+	# if BOOST_PATH env variable present, it overrides system path check
+	if 'BOOST_PATH' in os.environ :
+		print "BOOST_PATH found!";
+		print "Assume Boost headers in $BOOST_PATH, libraries in $BOOST_PATH/lib";
+		boost_libpath = os.path.join(os.environ['BOOST_PATH'], 'lib');
+		conf.env.AppendUnique(
+			CPPPATH = [os.environ['BOOST_PATH']],
+			LIBPATH = [boost_libpath],
+			RPATH = [boost_libpath]
+		);
+
+	# check Boost version
+	if not conf.CheckBoostVersion('1.46') :
+		print 'Boost version >= 1.46 required to build BlueSky!'
+		Exit(1);
+
+	# make persistent dictionary of alias -> full library name
+	# both for release and debug builds
+	#boost_libalias = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time'];
+	#if (conf.env['py'] == '1') :
+	#	boost_libalias += ['python'];
+
+	# make dictionaries for debug and release builds
+	# for release build
+	for L in boost_libnames.keys() :
+		boost_libnames[L] = conf.FindBoostLibrary(L);
+	# for debug builds
+	if ('build_kinds' in conf.env and 'debug' in conf.env['build_kinds']) or \
+		("debug" in conf.env and conf.env["debug"] == "1") :
+		for L in boost_libnames_d.keys() :
+			boost_libnames_d[L] = conf.FindBoostLibrary(L, postfix = "-d");
+
+def CheckLoki(conf) :
+	if 'LOKI_PATH' in os.environ :
+		print "LOKI_PATH found!";
+		print "Assume Loki headers in $LOKI_PATH/include, libraries in $LOKI_PATH/lib";
+		loki_libpath = os.path.join(os.environ['LOKI_PATH'], 'lib');
+		conf.env.AppendUnique(
+			CPPPATH = [os.path.join(os.environ['LOKI_PATH'], 'include')]
+			, LIBPATH = [loki_libpath]
+			, RPATH = [loki_libpath]
+		);
+
+	# Check headers
+	if not conf.CheckCXXHeader('loki/TypeManip.h') :
+		print "loki/TypeManip.h required to build BlueSky";
+		Exit(1);
+	if not conf.CheckCXXHeader('loki/Singleton.h') :
+		print "loki/Singleton.h required to build BlueSky";
+		Exit(1);
+	# CheckLib makes LIBS dirty, so save and restore it
+	orig_LIBS = conf.env.subst('$LIBS');
+	check_res = conf.CheckLib('loki', language='CXX');
+	conf.env.Replace(LIBS = orig_LIBS);
+	if not check_res :
+		print 'Loki library link check failed!'
+		Exit(1);
+
+Export('boost_libalias');
+Export('boost_libnames');
+Export('boost_libnames_d');
+
+Export('CheckBoostVersion')
+Export('CheckBoostLibrary')
+Export('FindBoostLibrary')
+Export("CheckBoost");
+Export("CheckLoki");
+

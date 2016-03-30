@@ -1,0 +1,15 @@
+import os;
+Import('*');
+
+custom_env.AppendUnique(
+	CPPDEFINES = ['UNIX'],
+	CCFLAGS = ['-std=c++14', '-W', '-Wall', '-Wno-deprecated', '-fvisibility-inlines-hidden', '-pipe', '-Wno-unknown-pragmas', '-Wno-unused-parameter', '-Wno-unused-value'],
+	CPPPATH = ['/usr/include/${python_name}']
+);
+
+if build_kind == 'debug' :
+	custom_env.AppendUnique(CCFLAGS = ['-O0', '-g']);
+elif build_kind == 'release' :
+	custom_env.AppendUnique(CCFLAGS = ['-O3', '-mtune=native', '-ftree-vectorize']);
+Export('custom_env');
+
