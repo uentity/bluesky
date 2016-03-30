@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*
 import os
+import os.path as osp
 
 def list_suffix (list, suffix) :
 	return [x + suffix for x in list];
@@ -14,16 +15,30 @@ def add_suffix (x, suffix) :
 		return x + suffix
 
 class files :
-	def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"]) :
+	# if relative_to is not None -- build file list relative to given point
+	def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"], relative_to = None) :
 		def super_glob (inc = Split ("."), excludes = []) :
-			file_list = []
-			for e in ext :
-				for p in inc :
-					file_list.extend ([str (x) for x in Glob (os.path.join (p, e))])
+			# return True if file match filtering criteria
+			def check_fname(fname) :
+				# check excludes
+				for ef in excludes :
+					if fname.endswith(ef) :
+						return False;
+				# check extension
+				return osp.splitext(fname)[1] in [osp.splitext(x)[1] for x in ext];
 
-			for f in excludes :
-				if (f in file_list) :
-					file_list.remove (f)
+			file_list = []
+			for p in inc :
+				# calc inc path relative to project root
+				for root, dirs, files in os.walk(p) :
+					for name in files :
+						full_name = osp.join(root, name);
+						if check_fname(full_name) :
+							if relative_to is not None :
+								file_list.append(osp.relpath(full_name, relative_to));
+							else :
+								file_list.append(osp.relpath(full_name, p));
+			#print "source files = ", file_list;
 
 			file_list.sort ()
 			return file_list
@@ -32,10 +47,9 @@ class files :
 		for p in root :
 			if (p <> ".") :
 				self.root = os.path.join (self.root, p)
+		#self.root = osp.join(self.root, "src");
 
-		sources = super_glob ([os.path.join (self.root, "src")], [str (Glob (os.path.join (self.root, "src", ex))[0]) for ex in excludes])
-
-		self.sources = [os.path.join ("src", os.path.split (x)[1]) for x in sources]
+		self.sources = super_glob ([self.root], [str(Glob(os.path.join(self.root, ex))[0]) for ex in excludes])
 
 def bs_common_defines(custom_env) :
 	custom_env.AppendUnique(CPPDEFINES = ["BS_EXPORTING_PLUGIN"]);
