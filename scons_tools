@@ -16,7 +16,7 @@ def add_suffix (x, suffix) :
 
 class files :
 	# if relative_to is not None -- build file list relative to given point
-	def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"], relative_to = None) :
+	def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"], relative_to = None, recursive = True) :
 		def super_glob (inc = Split ("."), excludes = []) :
 			# return True if file match filtering criteria
 			def check_fname(fname) :
@@ -38,7 +38,7 @@ class files :
 								file_list.append(osp.relpath(full_name, relative_to));
 							else :
 								file_list.append(osp.relpath(full_name, p));
-			#print "source files = ", file_list;
+					if not recursive : break;
 
 			file_list.sort ()
 			return file_list
