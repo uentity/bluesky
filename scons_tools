@@ -16,7 +16,7 @@ def add_suffix (x, suffix) :
 
 class files :
 	# if relative_to is not None -- build file list relative to given point
-	def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"], relative_to = None, recursive = True) :
+	def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"], recursive = True) : #, relative_to = None) :
 		def super_glob (inc = Split ("."), excludes = []) :
 			# return True if file match filtering criteria
 			def check_fname(fname) :
@@ -29,16 +29,13 @@ class files :
 
 			file_list = []
 			for p in inc :
-				# calc inc path relative to project root
-				for root, dirs, files in os.walk(p) :
-					for name in files :
-						full_name = osp.join(root, name);
-						if check_fname(full_name) :
-							if relative_to is not None :
-								file_list.append(osp.relpath(full_name, relative_to));
-							else :
-								file_list.append(osp.relpath(full_name, p));
-					if not recursive : break;
+				cur_files = filter(
+					check_fname,
+					[str(x) for x in Glob(osp.join(p, '*'))]
+				);
+				file_list.extend(cur_files);
+
+				if not recursive : break;
 
 			file_list.sort ()
 			return file_list
