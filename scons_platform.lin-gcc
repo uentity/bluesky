@@ -1,15 +1,55 @@
 import os;
 Import('*');
 
-custom_env.AppendUnique(
-	CPPDEFINES = ['UNIX'],
-	CCFLAGS = ['-std=c++14', '-W', '-Wall', '-Wno-deprecated', '-fvisibility-inlines-hidden', '-pipe', '-Wno-unknown-pragmas', '-Wno-unused-parameter', '-Wno-unused-value'],
-	CPPPATH = ['/usr/include/${python_name}']
-);
+if build_kind == "init" :
+	# compiler variable
+	custom_vars.Add(
+		'compiler', 'Specify compiler, recognized values are: g++, clang, scan-build',
+		'g++'
+	);
+	custom_vars.Update(custom_env);
 
-if build_kind == 'debug' :
-	custom_env.AppendUnique(CCFLAGS = ['-O0', '-g']);
-elif build_kind == 'release' :
+	# base flags
+	custom_env.AppendUnique(
+		CPPDEFINES = ['UNIX'],
+		CCFLAGS = ['-std=c++14', '-W', '-Wall', '-Wno-deprecated', '-fvisibility-inlines-hidden', '-pipe', '-Wno-unknown-pragmas', '-Wno-unused-parameter', '-Wno-unused-value'],
+		CPPPATH = ['/usr/include/${python_name}'],
+		LIBS = ['${python_name}']
+	);
+
+	# python bits
+	if custom_env["py"] == "1" :
+		custom_env.AppendUnique(
+			CPPPATH = ['/usr/include/${python_name}'],
+			LIBS = ['${python_name}']
+		);
+
+	# compiler-related definitions
+	cpl = custom_env['compiler'];
+	if cpl != 'scan-build' :
+		custom_env.Replace(CXX = cpl, CC = cpl);
+		custom_env.AppendUnique(CCFLAGS = ['-fvisibility=hidden']);
+		if cpl == 'g++' :
+			custom_env.AppendUnique(CCFLAGS = ['-Wno-pragmas', '-Wno-unused-local-typedefs']);
+		elif cpl == "clang" :
+			custom_env.AppendUnique(CCFLAGS = ['-Wno-unused-local-typedefs']);
+		else :
+			custom_env.AppendUnique(CCFLAGS = ['-Wno-unused-function']);
+	else :
+		# retrive compile-related variables from environment
+		# for clang's scan-build
+		custom_env["CC"] = os.getenv("CC") or custom_env["CC"];
+		custom_env["CXX"] = os.getenv("CXX") or custom_env["CXX"];
+		custom_env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"));
+
+# release/debug base flags
+elif build_kind == 'debug' :
+	custom_env.AppendUnique(CCFLAGS = ['-O0']);
+elif build_kind.startswith('release') :
 	custom_env.AppendUnique(CCFLAGS = ['-O3', '-mtune=native', '-ftree-vectorize']);
-Export('custom_env');
+# add debug info
+if "debug" in build_kind :
+	custom_env.AppendUnique(CCFLAGS = ['-g']);
+
+Export('custom_env', 'custom_vars');
 
