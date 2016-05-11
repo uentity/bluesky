@@ -1,0 +1,75 @@
+import os, os.path;
+
+# import custom settings & custom variables
+Import('*');
+
+# init stage
+if build_kind == "init" :
+	if ("unmanaged" not in custom_vars.keys ()) :
+		custom_vars.Add ("unmanaged", "Set to 1 to force kernel skip tracking of created objects", "1")
+		custom_vars.Update (custom_env)
+	Return();
+
+# setup list of source files to compile
+#kernel_cpp_list = files(["src"], recursive = False).sources;
+kernel_cpp_list = [
+	"src/type_info.cpp",
+	"src/common.cpp",
+	"src/main.cpp"
+];
+print kernel_cpp_list;
+
+py_kernel_cpp_list = [os.path.join('python', x) for x in Split("""
+""")];
+
+lib_name = 'blue_sky';
+tar_name = 'kernel';
+
+# setup default build environment
+base_env = custom_env.Clone();
+base_env.AppendUnique(
+	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN'],
+	CPPPATH = ['#kernel/include', '#kernel/src'],
+	LIBS = ['loki']
+);
+if base_env['platform'].startswith('lin') :
+	base_env.Append(LIBS = ['dl']);
+
+if (base_env["unmanaged"] == "1") :
+	base_env.AppendUnique (CPPDEFINES = ["BS_CREATE_UNMANAGED_OBJECTS"])
+
+# list of Boost libs used by kernel
+kboost_libs = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'locale'];
+
+# are we building with python support?
+if base_env['py'] == '1' :
+	base_env.AppendUnique(
+		CPPDEFINES = ['BSPY_EXPORTING'],
+		LIBS = ['${python_name}']
+	);
+	kernel_cpp_list += py_kernel_cpp_list;
+	kboost_libs += ['python'];
+
+# link with Boost libraries
+if build_kind == 'debug' :
+	lib_name += '_d';
+	base_env.AppendUnique(LIBS = map(lambda x : boost_libnames_d[x], kboost_libs));
+	#map(lambda x : base_env.AppendUnique(LIBS = boost_libnames_d[x]), kboost_libs);
+else :
+	base_env.AppendUnique(LIBS = map(lambda x : boost_libnames[x], kboost_libs));
+	#map(lambda x : base_env.AppendUnique(LIBS = boost_libnames[x]), kboost_libs);
+
+# actaully build target
+bs_kernel = base_env.SharedLibrary(
+	target = os.path.join(tar_exe_dir, lib_name),
+	source = kernel_cpp_list
+	#source = [os.path.join('src', x) for x in kernel_cpp_list]
+);
+Alias(tar_name, bs_kernel);
+Export('bs_kernel');
+
+# Install step
+if base_env['install'] == '1':
+	inst_tar = base_env.Install('$prefix', bs_kernel);
+	Alias(tar_name, inst_tar);
+
