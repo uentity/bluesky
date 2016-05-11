@@ -15,6 +15,7 @@ if build_kind == "init" :
 kernel_cpp_list = [
 	"src/type_info.cpp",
 	"src/common.cpp",
+	"src/plugin_common.cpp",
 	"src/main.cpp"
 ];
 print kernel_cpp_list;

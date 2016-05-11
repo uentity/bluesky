@@ -11,6 +11,7 @@
 
 #include "setup_common_api.h"
 #include "type_info.h"
+#include "fwd.h"
 
 #include <string>
 
@@ -28,10 +29,6 @@ struct BS_API plugin_descriptor {
 
 	// ctor for searching in containers
 	plugin_descriptor(const char* name);
-
-#ifdef _DEBUG
-	~plugin_descriptor();
-#endif
 
 	// standard ctor for using in plugins
 	plugin_descriptor(
@@ -51,19 +48,17 @@ struct BS_API plugin_descriptor {
 
 private:
 	friend class kernel;
-	static unsigned int self_version();
 	BS_TYPE_INFO tag_;
 };
 
-class plugin_initializer {
+// TODO: later move to common.h
+class BS_API plugin_initializer {
 private:
 	friend class kernel;
 	plugin_initializer();
 
 public:
-	static unsigned int self_version();
-
-	kernel& k; //!< Reference to blue-sky kernel.
+	kernel* k; //!< Reference to blue-sky kernel.
 	plugin_descriptor const* pd; //!< Pointer to descriptor of plugin being loaded
 };
 
@@ -89,7 +84,7 @@ namespace {                                                                     
     class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_ {};                                      \
 }                                                                                            \
 BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {              \
-    static blue_sky::plugin_descriptor *plugin_info_ = new blue_sky::plugin_descriptor(      \
+    static ::blue_sky::plugin_descriptor *plugin_info_ = new ::blue_sky::plugin_descriptor(  \
         BS_GET_TI (_bs_this_plugin_tag_),                                                    \
         name, version, short_descr, long_descr, py_namespace                                 \
     );                                                                                       \
@@ -117,4 +112,8 @@ BS_C_API_PLUGIN bool bs_register_plugin(const blue_sky::plugin_initializer& bs_i
 
 //!	type of plugin register function (in libs)
 typedef bool (*BS_REGISTER_PLUGIN)(const blue_sky::plugin_initializer&);
+
+#define BLUE_SKY_INIT_PY_FUN \
+BS_C_API_PLUGIN void bs_init_py_subsystem()
+typedef void (*bs_init_py_fn)();
 
