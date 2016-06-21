@@ -205,10 +205,13 @@ void get_lib_list(list<lload> &lib_list) {
 			//for(int i		= 0; i < (int)cntr_.size(); ++i)
 			//	BSOUT << cnt	r_[i].first << " ___ " << cntr_[i].second << bs_end;
 
+			BSOUT << "--------" << bs_end;
+			BSOUT << "Found plugins:" << bs_end;
 			for(int i = 0; i < (int)vl.size(); ++i) {
 				lib_list.push_back(lload(cntr_[vl[i]]));
 				BSOUT << cntr_[vl[i]].first << " ::: " << cntr_[vl[i]].second << bs_end;
 			}
+			BSOUT << "--------" << bs_end;
 		}
 	} catch (const bs_exception &e) {
 		BSERROR << "Graph creation failed with exception! " << e.what() << bs_end;
@@ -243,7 +246,7 @@ blue_sky::error_code search_files(vector<string> &res, const char * what, const 
 		}
 	}
 	catch(const filesystem::filesystem_error &e) {
-		BSERROR << e.what() << bs_end;
+		//BSERROR << e.what() << bs_end;
 		return blue_sky::wrong_path;
 	}
 	return blue_sky::no_error;
@@ -388,16 +391,15 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_) {
 	sp_conf_reader cr = give_kernel::Instance().create_object(bs_conf_reader::bs_type());
 	vector<string> sp, lp;
 	edge_array_t edges;
-	const vector<string> &c_lib_dir = bs_config ()["BLUE_SKY_PLUGINS_PATH"];
+	const bs_cfg_p::vstr_t &c_lib_dir = bs_config ()["BLUE_SKY_PLUGINS_PATH"];
 
 	for (size_t i = 0; i < c_lib_dir.size (); ++i) {
-		search_files(sp,".cfg",c_lib_dir[i].c_str ());
-
+		search_files(sp, ".cfg", c_lib_dir[i].c_str ());
 #ifdef UNIX
-		search_files(lp,".so",c_lib_dir[i].c_str ());
+		search_files(lp, ".so", c_lib_dir[i].c_str ());
 #else
-		search_files(lp,".dll",c_lib_dir[i].c_str ());
-		search_files(lp,".pyd",c_lib_dir[i].c_str ());
+		search_files(lp, ".dll", c_lib_dir[i].c_str ());
+		search_files(lp, ".pyd", c_lib_dir[i].c_str ());
 #endif
 	}
 
@@ -432,11 +434,10 @@ blue_sky::error_code make_graph(load_graph &g, v_lload &cntr_) {
 				if (name != "")
 					BSERROR << "No library named \"" << name << "\";" << "graph creation failed!" << bs_end;
 				else
-					BSERROR << "You have been wrote something like \"libs: { load = ( {} ); };\"."
+					BSERROR << "You have wrote something like \"libs: { load = ( {} ); };\"."
 									<< " This is the wrong structure of config. Write \"libs: { load = ( ); };\"."
 									<< "Graph creation failed!" << bs_end;
 				return blue_sky::no_library;
-
 			}
 		}
 #ifdef _DEBUG

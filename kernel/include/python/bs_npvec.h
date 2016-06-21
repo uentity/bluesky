@@ -95,7 +95,7 @@ public:
 		resize_to_shape(new_size);
 	}
 
-	void resize(size_type new_size, const value_type& v) {
+	void resize(size_type new_size, value_type v) {
 		size_type old_size = this->size();
 		if(resize_to_shape(new_size))
 			std::fill(data() + std::min(new_size, old_size), data() + new_size, v);

@@ -127,7 +127,9 @@ public:
 		: name_(name), is_listening_(false)
 	{}
 
-	virtual sp_inode inode() const = 0;
+	virtual sp_inode inode() const {
+		return NULL;
+	}
 	//virtual void set_inode(const sp_inode& i) = 0;
 
 	virtual const std::string& name() const {

@@ -62,17 +62,6 @@ using namespace boost;
  *-----------------------------------------------------------------------------*/
 BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs");
 
-//std::less specialization for plugin_descriptor
-namespace std {
-	template< >
-	bool less< blue_sky::plugin_descriptor >::operator ()(
-		const blue_sky::plugin_descriptor& lhs,
-		const blue_sky::plugin_descriptor& rhs) const
-	{
-		return (lhs.name_ < rhs.name_);
-	}
-}
-
 // hidden implementation stuff
 namespace {
 /*-----------------------------------------------------------------------------
@@ -83,6 +72,16 @@ using namespace blue_sky;
 // tags for kernel & runtime types plugin_descriptor
 struct __kernel_types_pd_tag__ {};
 struct __runtime_types_pd_tag__ {};
+
+// compare plugin_descriptors by name
+struct cmp_pd_by_name {
+	bool operator()(
+		const blue_sky::plugin_descriptor& lhs,
+		const blue_sky::plugin_descriptor& rhs
+	) {
+		return (lhs.name_ < rhs.name_);
+	}
+};
 
 /*-----------------------------------------------------------------------------
  *  Shared library descriptor
@@ -486,7 +485,12 @@ public:
 	//! plugin_descriptor <-> lib_descriptor 1-to-1 relation
 	typedef fast_pool_allocator< pair< plugin_descriptor, lib_descriptor >, default_user_allocator_new_delete,
 		details::pool::null_mutex > libs_allocator;
-	typedef map< plugin_descriptor, lib_descriptor, less< plugin_descriptor >, libs_allocator > pl_enum;
+	typedef map<
+		plugin_descriptor, lib_descriptor,
+		cmp_pd_by_name,
+		//less< plugin_descriptor >,
+		libs_allocator
+	> pl_enum;
 
 	//! plugin_descriptors sorted by name
 	typedef fast_pool_allocator< pd_ptr, default_user_allocator_new_delete, details::pool::null_mutex > pl_dict_allocator;
@@ -747,14 +751,14 @@ public:
 		loaded_plugins_.clear();
 	}
 
-	pd_ptr register_plugin(const plugin_descriptor& pd, const lib_descriptor& ld) {
+	pair< pd_ptr, bool > register_plugin(const plugin_descriptor& pd, const lib_descriptor& ld) {
 		//enumerate plugin first
 		pair< pl_enum::iterator, bool > res = loaded_plugins_.insert(pl_enum::value_type(pd, ld));
 		pd_ptr ret = res.first->first;
 		//register plugin_descriptor in dictionary
 		if(res.second)
 			pl_dict_.insert(ret);
-		return ret;
+		return make_pair(ret, res.second);
 	}
 
 
@@ -775,7 +779,7 @@ public:
 		if(!is_inner_pd(pd)) {
 			// case for external plugin descriptor
 			// try to register it or find a match with existing pd
-			pdp = register_plugin(pd, lib_descriptor());
+			pdp = register_plugin(pd, lib_descriptor()).first;
 		}
 		//register obj in factory
 		res = obj_fab_.insert(fab_elem(pdp, td));
@@ -1091,8 +1095,12 @@ error_code kernel::kernel_impl::load_plugin(const string& fname, const string& v
 		if(*p_descr == kernel_pd_)
 			return blue_sky::no_library;
 
-		//enumerate plugin
-		register_plugin(*p_descr, lib);
+		// enumerate plugin
+		if(!register_plugin(*p_descr, lib).second) {
+			// plugin was already registered earlier
+			BSOUT << "LoadPlugins" << lib.fname_ << ": plugin is already registred, skipping..." << bs_end;
+			return blue_sky::no_library;
+		}
 
 		//pass plugin descriptor to registering function
 		plugin_init.pd_ = p_descr;
