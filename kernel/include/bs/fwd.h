@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 
 //this file contains forward declarations of BlueSky kernel types
 
@@ -38,8 +39,8 @@ namespace blue_sky {
 	class objbase;
 	class combase;
 	//smart pointers to them
-	typedef smart_ptr< objbase, true > sp_obj;
-	typedef smart_ptr< combase, true > sp_com;
+	typedef std::shared_ptr< objbase > sp_obj;
+	typedef std::shared_ptr< combase > sp_com;
 
 	//signals & slots
 	class bs_signal;
@@ -47,9 +48,9 @@ namespace blue_sky {
 	class bs_imessaging;
 	class bs_messaging;
 	//common used smart pointers to them
-	typedef smart_ptr< bs_signal, true > sp_signal;
-	typedef smart_ptr< bs_slot, true > sp_slot;
-	typedef smart_ptr< bs_imessaging, true > sp_mobj;
+	typedef std::shared_ptr< bs_signal > sp_signal;
+	typedef std::shared_ptr< bs_slot > sp_slot;
+	typedef std::shared_ptr< bs_imessaging > sp_mobj;
 
 	//kernel
 	class kernel;
@@ -84,10 +85,10 @@ namespace blue_sky {
 	class bs_shell;
 	class deep_iterator;
 	//common used smart pointers to them
-	typedef smart_ptr< bs_inode, true > sp_inode;
-	typedef smart_ptr< bs_link, true > sp_link;
-	typedef smart_ptr< bs_node, true > sp_node;
-	typedef smart_ptr< bs_shell, true > sp_shell;
+	typedef std::shared_ptr< bs_inode > sp_inode;
+	typedef std::shared_ptr< bs_link > sp_link;
+	typedef std::shared_ptr< bs_node > sp_node;
+	typedef std::shared_ptr< bs_shell > sp_shell;
 
 	namespace bs_private {
 		struct log_wrapper;
