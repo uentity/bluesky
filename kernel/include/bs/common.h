@@ -21,6 +21,8 @@
 #include "plugin_common.h"
 
 // common includes - used almost everywhere
+#include <cstddef>
+#include <memory>
 #include <vector>
 #include <string>
 #include <iosfwd>
