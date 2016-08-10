@@ -15,6 +15,7 @@ if build_kind == "init" :
 kernel_cpp_list = [
 	"src/type_info.cpp",
 	"src/common.cpp",
+	"src/kernel_ston.cpp",
 	"src/plugin_common.cpp",
 	"src/objbase.cpp",
 	"src/misc.cpp",

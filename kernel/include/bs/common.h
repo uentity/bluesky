@@ -62,5 +62,12 @@ namespace blue_sky {
 BS_C_API_PLUGIN void bs_init_py_subsystem()
 typedef void (*bs_init_py_fn)();
 
+/// BlueSky singleton template
+template< class T >
+class singleton {
+public:
+	static T& Instance();
+};
+
 } // eof blue_sky namespace
 
