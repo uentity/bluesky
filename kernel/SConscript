@@ -17,6 +17,7 @@ kernel_cpp_list = [
 	"src/common.cpp",
 	"src/plugin_common.cpp",
 	"src/objbase.cpp",
+	"src/misc.cpp",
 	"src/main.cpp"
 ];
 print kernel_cpp_list;
