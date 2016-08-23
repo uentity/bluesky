@@ -19,6 +19,7 @@
 #include "fwd.h"
 #include "type_info.h"
 #include "plugin_common.h"
+#include "detail/args.h"
 
 // common includes - used almost everywhere
 #include <cstddef>
