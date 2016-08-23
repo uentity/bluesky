@@ -15,13 +15,15 @@ if build_kind == "init" :
 kernel_cpp_list = [
 	"src/type_info.cpp",
 	"src/common.cpp",
-	"src/kernel_ston.cpp",
 	"src/plugin_common.cpp",
 	"src/objbase.cpp",
 	"src/misc.cpp",
+	"src/exception.cpp",
+	"src/kernel_ston.cpp",
+	"src/kernel.cpp",
 	"src/main.cpp"
 ];
-print kernel_cpp_list;
+#print kernel_cpp_list;
 
 py_kernel_cpp_list = [os.path.join('python', x) for x in Split("""
 """)];
@@ -33,7 +35,7 @@ tar_name = 'kernel';
 base_env = custom_env.Clone();
 base_env.AppendUnique(
 	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN'],
-	CPPPATH = ['#kernel/include', '#kernel/src'],
+	CPPPATH = ['#kernel/src'],
 	LIBS = ['loki']
 );
 if base_env['platform'].startswith('lin') :
