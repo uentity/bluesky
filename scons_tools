@@ -88,7 +88,8 @@ Export ("config_h_build")
 #---------------- configure
 # Boost library aliases (short names)
 boost_libalias = [
-	'system', 'filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time', 'python', 'locale'
+	'system', 'filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time', 'python', 'locale',
+	'unit_test_framework'
 ];
 boost_libnames = dict(zip(boost_libalias, ['']*len(boost_libalias)));
 boost_libnames_d = dict(zip(boost_libalias, ['']*len(boost_libalias)));
