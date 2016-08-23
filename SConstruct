@@ -41,6 +41,7 @@ def compare_env(env1, env2) :
 # add your sconscript only AFTER all dependent from it
 ss_tree = [
 	'kernel/SConscript',
+	'tests/SConscript',
 	'python/bspy_loader/SConscript'
 ];
 
@@ -150,7 +151,7 @@ print']';
 
 # add some global dependencies to build environment template
 custom_env.AppendUnique(
-	CPPPATH = [osp.join("third_party", "pybind11", "include")]
+	CPPPATH = ['#kernel/include', osp.join("third_party", "pybind11", "include")]
 );
 
 # 7. Configure
