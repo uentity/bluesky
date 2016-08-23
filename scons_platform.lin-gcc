@@ -12,9 +12,7 @@ if build_kind == "init" :
 	# base flags
 	custom_env.AppendUnique(
 		CPPDEFINES = ['UNIX'],
-		CCFLAGS = ['-std=c++14', '-W', '-Wall', '-Wno-deprecated', '-fvisibility-inlines-hidden', '-pipe', '-Wno-unknown-pragmas', '-Wno-unused-parameter', '-Wno-unused-value'],
-		CPPPATH = ['/usr/include/${python_name}'],
-		LIBS = ['${python_name}']
+		CCFLAGS = ['-std=c++14', '-W', '-Wall', '-Wno-deprecated', '-fvisibility-inlines-hidden', '-pipe', '-Wno-unknown-pragmas', '-Wno-unused-parameter', '-Wno-unused-value']
 	);
 
 	# python bits
