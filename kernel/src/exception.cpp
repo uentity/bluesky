@@ -77,8 +77,12 @@ const char* bs_exception::who() const noexcept {
 bs_kexception::bs_kexception(const char* message, const char* who, int err_code)
 	: bs_exception(
 		message,
-		(std::string("BlueSky kernel") + (strlen(who) > 0 ? std::string(":") + who : "")).c_str(), err_code
+		(std::string("kernel") + (strlen(who) > 0 ? std::string(":") + who : "")).c_str(), err_code
 	)
+{}
+
+bs_sys_exception::bs_sys_exception(int err_code, const char* who)
+	: bs_exception(system_message(err_code).c_str(), who, err_code)
 {}
 
 //  bs_system_exception::bs_system_exception (const std::string &who, error_code ec, const std::string &what)

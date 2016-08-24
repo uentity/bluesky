@@ -68,6 +68,12 @@ public:
 	using bs_exception::bs_exception;
 };
 
+class BS_API bs_sys_exception : public bs_exception {
+public:
+	bs_sys_exception(int err_code, const char* who = "");
+	using bs_exception::bs_exception;
+};
+
 //  /**
 //   * \brief blue-sky system exception
 //   * */
