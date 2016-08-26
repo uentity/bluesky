@@ -132,7 +132,7 @@ bool bs_cfg_p::read_file (const char *filename) {
 	while(!srcfile.eof()) {
 		string str;
 		getline(srcfile, str, '\n');
-		parse_strings(str, true);
+		parse_strings(str, false);
 	}
 	return true;
 }
