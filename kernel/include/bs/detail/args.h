@@ -52,7 +52,7 @@ struct bs_args {
 				typename TT::value_type tar_a, typename ArgT::value_type t,
 				typename Args::value_type... args
 			) {
-				return base_t::value(tar_a, args...);
+				return base_t::value(std::move(tar_a), std::move(args)...);
 			}
 		};
 
@@ -75,7 +75,7 @@ struct bs_args {
 				typename Args::value_type... args
 			) {
 				// erase ArgT from args
-				return get< TT, Args... >::value(tar_a, args...);
+				return get< TT, Args... >::value(std::move(tar_a), std::move(args)...);
 			}
 		};
 
@@ -95,23 +95,29 @@ struct bs_args {
 			typename T::value_type tar_a, typename ArgT1::value_type t,
 			typename Args::value_type... args
 		) {
-			return impl< T, ArgT1 >::value(tar_a, t, args...);
+			return impl< T, ArgT1 >::value(std::move(tar_a), std::move(t), std::move(args)...);
 		}
 	};
 
 	// sugar for simpl arguments -- 1st in list of each type
 	template< typename T, typename... Args >
-	static auto get_value(T&& tar_def_val, Args&&... args) {
+	static auto get_value(T tar_def_val, Args... args) {
 		return get< a< T >, a< Args >... >::value(
-			std::forward< T >(tar_def_val), std::forward< Args >(args)...
+			std::move(tar_def_val), std::move(args)...
 		);
 	}
+	//template< typename T, typename... Args >
+	//static auto get_value(T&& tar_def_val, Args&&... args) {
+	//	return get< a< T >, a< Args >... >::value(
+	//		std::forward< T >(tar_def_val), std::forward< Args >(args)...
+	//	);
+	//}
 
 	// extended version allows to specify type and position of argument in list
 	// using bs_args::a structures
 	template< typename T, typename... Args >
 	static auto get_value_ext(typename T::value_type tar_def_val, typename Args::value_type... args) {
-		return get< T, Args... >::value(tar_def_val, args...);
+		return get< T, Args... >::value(std::move(tar_def_val), std::move(args)...);
 	}
 };
 
