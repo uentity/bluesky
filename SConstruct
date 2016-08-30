@@ -151,8 +151,13 @@ print']';
 
 # add some global dependencies to build environment template
 custom_env.AppendUnique(
-	CPPPATH = ['#kernel/include', osp.join("third_party", "pybind11", "include")]
+	CPPPATH = [
+		'#kernel/include',
+		osp.join("#third_party", "spdlog", "include"),
+	]
 );
+if custom_env["py"] == '1' :
+	custom_env.Append(CPPPATH = [osp.join("#third_party", "pybind11", "include")]);
 
 # 7. Configure
 if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :
