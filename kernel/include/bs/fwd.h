@@ -56,10 +56,9 @@ namespace blue_sky {
 	class kernel;
 
 	//log
-	class bs_log;
-	class bs_channel;
-	//class bs_stream;
-	//class thread_log;
+	namespace log {
+		class bs_log;
+	}
 
 	//exception
 	class bs_exception;

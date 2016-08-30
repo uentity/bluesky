@@ -11,6 +11,7 @@
 
 #include "common.h"
 #include "objbase.h"
+#include "log.h"
 
 //#define BS_AUTOLOAD_PLUGINS
 
@@ -89,6 +90,8 @@ public:
 	void unload_plugin(const plugin_descriptor& pd);
 
 	std::string last_error() const;
+
+	static spdlog::logger& get_log(const char* name);
 
 private:
 	//! \brief Constructor of kernel

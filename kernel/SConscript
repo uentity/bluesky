@@ -21,6 +21,7 @@ kernel_cpp_list = [
 	"src/exception.cpp",
 	"src/kernel_ston.cpp",
 	"src/kernel.cpp",
+	"src/log.cpp",
 	"src/main.cpp"
 ];
 #print kernel_cpp_list;
