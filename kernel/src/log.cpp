@@ -30,37 +30,37 @@ bs_log& end(bs_log& l) {
 }
 
 bs_log& infol(bs_log& l) {
-	l.log().set_level(level_enum::info);
+	l.logger().set_level(level_enum::info);
 	return l;
 }
 
 bs_log& warnl(bs_log& l) {
-	l.log().set_level(level_enum::warn);
+	l.logger().set_level(level_enum::warn);
 	return l;
 }
 
 bs_log& errl(bs_log& l) {
-	l.log().set_level(level_enum::err);
+	l.logger().set_level(level_enum::err);
 	return l;
 }
 
 bs_log& critical(bs_log& l) {
-	l.log().set_level(level_enum::critical);
+	l.logger().set_level(level_enum::critical);
 	return l;
 }
 
 bs_log& offl(bs_log& l) {
-	l.log().set_level(level_enum::off);
+	l.logger().set_level(level_enum::off);
 	return l;
 }
 
 bs_log& debugl(bs_log& l) {
-	l.log().set_level(level_enum::debug);
+	l.logger().set_level(level_enum::debug);
 	return l;
 }
 
 bs_log& tracel(bs_log& l) {
-	l.log().set_level(level_enum::trace);
+	l.logger().set_level(level_enum::trace);
 	return l;
 }
 

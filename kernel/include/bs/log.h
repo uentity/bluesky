@@ -98,7 +98,18 @@ public:
 	friend decltype(auto)
 	operator <<(bs_log& lhs, const log_tape< Level, Args... >& rhs) {
 		return log_tape< Level, bs_log&, Args... >(
-			std::tuple_cat(std::tie(lhs), rhs.tape_)
+			std::tuple_cat(std::forward_as_tuple(lhs), rhs.tape_)
+		);
+	}
+
+	// overload for arbitrary type just costructs log_tape
+	// with 'info' level
+	template< class T >
+	friend decltype(auto) operator <<(bs_log& lhs, const T& rhs) {
+		return log_tape< level_enum::info, bs_log&, const T& >(
+			std::tuple_cat(
+				std::forward_as_tuple(lhs), std::forward_as_tuple(rhs)
+			)
 		);
 	}
 
@@ -111,10 +122,10 @@ public:
 	static spdlog::logger& get_logger(const char* name);
 
 	// access spdlog::logger backend
-	spdlog::logger& log() {
+	spdlog::logger& logger() {
 		return log_;
 	}
-	const spdlog::logger& log() const {
+	const spdlog::logger& loggger() const {
 		return log_;
 	}
 
@@ -253,7 +264,10 @@ BS_API log::bs_log& bsout();
 BS_API log::bs_log& bserr();
 
 #define BSOUT ::blue_sky::bsout()
-#define BSERR ::blue_sky::bserr()
+#define BSERROR ::blue_sky::bserr()
+
+// import log::end as bs_end
+#define bs_end ::blue_sky::log::end
 
 } /* namespace blue_sky */
 
