@@ -9,10 +9,12 @@
 
 #include <bs/kernel.h>
 #include "kernel_logging_subsyst.h"
+#include "kernel_plugins_subsyst.h"
 
 namespace blue_sky {
 
-class kernel::kernel_impl : public kernel_logging_subsyst {
+class kernel::kernel_impl : public detail::kernel_logging_subsyst, detail::kernel_plugins_subsyst
+{
 public:
 	static spdlog::logger& get_log(const char* name) {
 		// let's create C++11 thread-safe singleton

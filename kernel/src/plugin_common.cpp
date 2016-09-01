@@ -18,12 +18,12 @@ using namespace std;
 namespace blue_sky {
 
 //------------------------------plugin_initializer----------------------------------------------------------
-plugin_initializer::plugin_initializer()
-	:
-	k(NULL)
-	// TODO: uncoment later
-	//k_(give_kernel::Instance())
-{}
+//plugin_initializer::plugin_initializer()
+//	:
+//	k(NULL)
+//	// TODO: uncoment later
+//	//k_(give_kernel::Instance())
+//{}
 
 //------------------------------plugin_descriptor-----------------------------------------------------------
 plugin_descriptor::plugin_descriptor()
