@@ -9,10 +9,10 @@
 
 #include <bs/exception.h>
 #include <bs/misc.h>
+#include <bs/log.h>
+
 #include <cstring>
 #include <iostream>
-//#include "bs_report.h"
-//#include "bs_link.h"
 
 #ifdef _WIN32
   #include "windows.h"
@@ -74,6 +74,18 @@ const char* bs_exception::who() const noexcept {
 	}
 }
 
+// exception printing
+std::ostream& operator <<(std::ostream& os, const bs_exception& ex) {
+	return os << "[Exception] " << ex.what();
+}
+
+void bs_exception::print() const {
+	bserr() << log::E("[Exception] {}") << what() << log::end;
+}
+
+/*-----------------------------------------------------------------
+ * Kernel exception impl
+ *----------------------------------------------------------------*/
 bs_kexception::bs_kexception(const char* message, const char* who, int err_code)
 	: bs_exception(
 		message,
@@ -113,5 +125,6 @@ bs_sys_exception::bs_sys_exception(int err_code, const char* who)
 //    m_err_ = user_defined;
 //  }
 //#endif
-}
+
+} // eof blue_sky namespace
 

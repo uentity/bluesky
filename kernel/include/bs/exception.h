@@ -12,6 +12,7 @@
 #include "common.h"
 #include <exception>
 #include <boost/format.hpp>
+#include <ostream>
 
 namespace blue_sky {
 
@@ -53,6 +54,12 @@ public:
 		return err_code_;
 	}
 
+	// enable printing & loging facility
+	friend std::ostream& operator <<(std::ostream& os, const bs_exception& ex);
+
+	// write exeption to kernel error log
+	void print() const;
+
 protected:
 	std::string who_;  //!< source
 	std::string what_; //!< full description
@@ -64,14 +71,14 @@ protected:
 * */
 class BS_API bs_kexception : public bs_exception {
 public:
-	bs_kexception(const char* message, const char* who = "", int err_code = -1);
-	using bs_exception::bs_exception;
+	//using bs_exception::bs_exception;
+	bs_kexception(const char* message, const char* ksubsyst = "", int err_code = -1);
 };
 
 class BS_API bs_sys_exception : public bs_exception {
 public:
+	//using bs_exception::bs_exception;
 	bs_sys_exception(int err_code, const char* who = "");
-	using bs_exception::bs_exception;
 };
 
 //  /**
@@ -117,4 +124,6 @@ public:
 //  };
 
 }  // eof blue_sky namespace
+
+BS_API std::ostream& operator <<(std::ostream& os, const blue_sky::bs_exception& ex);
 
