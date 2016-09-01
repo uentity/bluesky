@@ -10,43 +10,18 @@
 #pragma once
 
 #include <bs/common.h>
-#include <spdlog/spdlog.h>
+#include <spdlog/logger.h>
 #include <unordered_map>
 
-// hide implementation
-namespace blue_sky { namespace {
+namespace blue_sky { namespace detail {
 
-struct kernel_logging_subsyst {
+struct BS_HIDDEN_API kernel_logging_subsyst {
 	std::unordered_map< std::string, std::shared_ptr< spdlog::logger > > logs_;
-	//std::shared_ptr< spdlog::logger > bs_out;
-	//std::shared_ptr< spdlog::logger > bs_err;
 
-	template< typename... Sinks >
-	auto register_logger(const char* log_name, Sinks... sinks) {
-		spdlog::sink_ptr S[] = { sinks... };
-		std::shared_ptr< spdlog::logger > L(std::make_shared< spdlog::logger >(
-			log_name, begin(S), end(S)
-		));
-		spdlog::register_logger(L);
-		return L;
-	}
+	kernel_logging_subsyst();
 
-	kernel_logging_subsyst() :
-		logs_({
-		{"out", register_logger("out",
-			std::make_shared< spdlog::sinks::stdout_sink_mt >(),
-			std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky", "log", 1024*1024*5, 1)
-		)},
-		{"err", register_logger("err",
-			std::make_shared< spdlog::sinks::stderr_sink_mt >(),
-			std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky_err", "log", 1024*1024*5, 1)
-		)}})
-	{}
-
-	spdlog::logger& get_log(const char* log_name = "out") {
-		return *logs_.at(log_name);
-	}
+	spdlog::logger& get_log(const char* log_name = "out");
 };
 	
-}} /* namespace blue_sky */
+}} /* namespace blue_sky::detail */
 
