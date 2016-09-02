@@ -10,7 +10,7 @@
 #pragma once
 
 #include <bs/kernel.h>
-#include"lib_descriptor.h"
+#include <bs/detail/lib_descriptor.h>
 #include <boost/pool/pool_alloc.hpp>
 #include <map>
 
