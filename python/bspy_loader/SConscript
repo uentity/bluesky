@@ -1,0 +1,46 @@
+import os, os.path;
+
+# import custom settings
+Import('*');
+
+if build_kind == "init" :
+	Return();
+
+# fiilelist
+cpp_list = Split("""
+	main.cpp
+""");
+
+# directories
+lib_name = 'bs';
+tar_name = 'bspy_loader';
+
+# construct base environ
+base_env = custom_env.Clone();
+base_env.AppendUnique(
+	CPPDEFINES = ['TARGET_NAME=bs'],
+	CPPPATH = ['src', '#kernel/include', '#kernel/include/python'],
+	LIBS = ['blue_sky']
+);
+# remove any lib prefix
+base_env['SHLIBPREFIX'] = '';
+
+# actually build target
+bspy_loader = base_env.SharedLibrary(
+	target = os.path.join(tar_exe_dir, lib_name),
+	source = [os.path.join('src', x) for x in cpp_list]
+);
+
+# do we ignore dependencies?
+if base_env['deps'] == 'off' :
+	Ignore(bspy_loader, bs_kernel);
+elif base_env['deps'] == 'explicit' :
+	Depends(bspy_loader, bs_kernel);
+base_env.Alias(tar_name, bspy_loader);
+Export('bspy_loader');
+
+# 	Install step
+if base_env['install'] == '1':
+	inst_tar = base_env.Install('$prefix', bspy_loader);
+	Alias(tar_name, inst_tar);
+
