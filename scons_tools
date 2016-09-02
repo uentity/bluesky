@@ -17,7 +17,7 @@ def add_suffix (x, suffix) :
 class files :
 	# if relative_to is not None -- build file list relative to given point
 	def __init__ (self, root = ["."], excludes = [], ext = ["*.cpp"], recursive = True) : #, relative_to = None) :
-		def super_glob (inc = Split ("."), excludes = []) :
+		def super_glob (inc = Split("."), excludes = []) :
 			# return True if file match filtering criteria
 			def check_fname(fname) :
 				# check excludes
@@ -31,7 +31,7 @@ class files :
 			for p in inc :
 				cur_files = filter(
 					check_fname,
-					[str(x) for x in Glob(osp.join(p, '*'))]
+					Glob(osp.join(p, '*'), strings = True)
 				);
 				file_list.extend(cur_files);
 
@@ -87,12 +87,25 @@ Export ("config_h_build")
 
 #---------------- configure
 # Boost library aliases (short names)
-boost_libalias = [
-	'system', 'filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time', 'python', 'locale',
-	'unit_test_framework'
-];
-boost_libnames = dict(zip(boost_libalias, ['']*len(boost_libalias)));
-boost_libnames_d = dict(zip(boost_libalias, ['']*len(boost_libalias)));
+boost_libalias = set();
+boost_libnames = dict();
+boost_libnames_d = dict();
+
+#boost_libalias = set([
+#	'system', 'filesystem', 'regex', 'thread', 'signals', 'serialization', 'date_time', 'python', 'locale',
+#	'unit_test_framework'
+#]);
+#boost_libnames = dict(zip(boost_libalias, ['']*len(boost_libalias)));
+#boost_libnames_d = dict(zip(boost_libalias, ['']*len(boost_libalias)));
+
+# append Boost lib alias in reuired set on init stage
+def boost_require(aliases) :
+	map(lambda x : boost_libalias.add(str(x).split('boost_')[-1]), aliases);
+
+# obtain discovered lib names for given aliases
+def boost_get_libnames(aliases, build_kind = 'release') :
+	tar_names = boost_libnames if build_kind != "debug" else boost_libnames_d;
+	return map(lambda x : tar_names[x] if x in tar_names else '', aliases);
 
 def CheckBoostVersion(context, version):
 	# Boost versions are in format major.minor.subminor
@@ -134,9 +147,9 @@ def CheckBoostLibrary(context, library, header = '') :
 
 	#context.AppendLIBS(library);
 	#print test_src
-	ret = context.TryCompile(test_src, '.cpp')
-	if ret :
-		ret = context.TryLink(test_src, '.cpp');
+	#ret = context.TryCompile(test_src, '.cpp')
+	#if ret :
+	ret = context.TryLink(test_src, '.cpp');
 	context.Result(ret)
 	return ret
 
@@ -219,9 +232,9 @@ def CheckBoost(conf) :
 	boost_libpath = '';
 	# if BOOST_PATH env variable present, it overrides system path check
 	if 'BOOST_PATH' in os.environ :
-		print "BOOST_PATH found!";
-		print "Assume Boost headers in $BOOST_PATH, libraries in $BOOST_PATH/lib";
 		boost_libpath = os.path.join(os.environ['BOOST_PATH'], 'lib');
+		print "BOOST_PATH =", os.environ['BOOST_PATH'], " found!";
+		print "Assume Boost headers in ", os.environ['BOOST_PATH'], " libraries in ", boost_libpath;
 		conf.env.AppendUnique(
 			CPPPATH = [os.environ['BOOST_PATH']],
 			LIBPATH = [boost_libpath],
@@ -240,13 +253,13 @@ def CheckBoost(conf) :
 	#	boost_libalias += ['python'];
 
 	# make dictionaries for debug and release builds
-	# for release build
-	for L in boost_libnames.keys() :
+	for L in boost_libalias :
 		boost_libnames[L] = conf.FindBoostLibrary(L);
+
 	# for debug builds
 	if ('build_kinds' in conf.env and 'debug' in conf.env['build_kinds']) or \
 		("debug" in conf.env and conf.env["debug"] == "1") :
-		for L in boost_libnames_d.keys() :
+		for L in boost_libalias :
 			boost_libnames_d[L] = conf.FindBoostLibrary(L, postfix = "-d");
 
 def CheckLoki(conf) :
@@ -261,9 +274,9 @@ def CheckLoki(conf) :
 		);
 
 	# Check headers
-	if not conf.CheckCXXHeader('loki/TypeManip.h') :
-		print "loki/TypeManip.h required to build BlueSky";
-		Exit(1);
+	#if not conf.CheckCXXHeader('loki/TypeManip.h') :
+	#	print "loki/TypeManip.h required to build BlueSky";
+	#	Exit(1);
 	if not conf.CheckCXXHeader('loki/Singleton.h') :
 		print "loki/Singleton.h required to build BlueSky";
 		Exit(1);
@@ -278,6 +291,9 @@ def CheckLoki(conf) :
 Export('boost_libalias');
 Export('boost_libnames');
 Export('boost_libnames_d');
+
+Export('boost_require')
+Export('boost_get_libnames');
 
 Export('CheckBoostVersion')
 Export('CheckBoostLibrary')

@@ -157,7 +157,10 @@ custom_env.AppendUnique(
 	]
 );
 if custom_env["py"] == '1' :
-	custom_env.Append(CPPPATH = [osp.join("#third_party", "pybind11", "include")]);
+	custom_env.AppendUnique(
+		CPPPATH = [osp.join("#third_party", "pybind11", "include")],
+		LIBS = ['${python_name}']
+	);
 
 # 7. Configure
 if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :

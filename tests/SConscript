@@ -4,23 +4,24 @@ import os;
 # import custom settings & custom variables
 Import('*');
 
+# list of Boost libs used by test library
+utest_boost_lib = ['unit_test_framework'];
+
 # skip init stage
-if build_kind == "init" : Return();
+if build_kind == "init" :
+	boost_require(utest_boost_lib);
+	Return();
 
 exe_name = "bs_tests";
 test_units = files(["."]).sources;
-# list of Boost libs used by test library
-utest_boost_lib = ['unit_test_framework'];
 
 # setup default build environment
 tests_env = custom_env.Clone();
 
 # link with libraries
-if build_kind == 'debug' :
-	tests_env.AppendUnique(LIBS = map(lambda x : boost_libnames_d[x], utest_boost_lib) + ['blue_sky_d']);
-else :
-	tests_env.AppendUnique(LIBS = map(lambda x : boost_libnames[x], utest_boost_lib) + ['blue_sky']);
+tests_env.AppendUnique(LIBS = ['blue_sky'] + boost_get_libnames(utest_boost_lib));
 
+# build
 bs_tests = tests_env.Program(
 	target = osp.join(tar_exe_dir, exe_name), source = test_units
 );
@@ -31,7 +32,7 @@ run_tests = tests_env.Command(
 	target = "bs_tests.log",
 	source = osp.join(tar_exe_dir, exe_name),
 	action = [
-		"-LD_LIBRARY_PATH=$EXE_DIR $EXE_DIR/" + exe_name + " 2>&1 1>$EXE_DIR/bs_tests.log",
+		"-LD_LIBRARY_PATH=$EXE_DIR $EXE_DIR/" + exe_name + " 1>$EXE_DIR/bs_tests.log 2>&1",
 		"cat $EXE_DIR/bs_tests.log",
 	]
 );
