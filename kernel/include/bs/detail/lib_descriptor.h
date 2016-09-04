@@ -11,7 +11,7 @@ namespace blue_sky { namespace detail {
 /*-----------------------------------------------------------------------------
  *  Shared library descriptor
  *-----------------------------------------------------------------------------*/
-struct BS_HIDDEN_API lib_descriptor {
+struct BS_API lib_descriptor {
 	std::string fname_; //!< path to dynamic library
 	// seems to be the same in both UNIX and Windows
 	void* handle_;
