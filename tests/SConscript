@@ -13,7 +13,7 @@ if build_kind == "init" :
 	Return();
 
 exe_name = "bs_tests";
-test_units = files(["."]).sources;
+test_units = files(["."], excludes=["test_pymod.cpp"]).sources;
 
 # setup default build environment
 tests_env = custom_env.Clone();
@@ -24,6 +24,13 @@ tests_env.AppendUnique(LIBS = ['blue_sky'] + boost_get_libnames(utest_boost_lib)
 # build
 bs_tests = tests_env.Program(
 	target = osp.join(tar_exe_dir, exe_name), source = test_units
+);
+
+# library for testing Python module
+tests_env['SHLIBPREFIX'] = '';
+test_pymod = tests_env.SharedLibrary(
+	target = osp.join(tar_exe_dir, 'test_pymod'),
+	source = 'test_pymod.cpp'
 );
 
 # run test cases
@@ -39,6 +46,9 @@ run_tests = tests_env.Command(
 Depends(run_tests, bs_tests);
 AlwaysBuild(run_tests);
 
-Alias('tests', [bs_tests, run_tests]);
+Alias('bs_tests', bs_tests);
+Alias('test_pymod', test_pymod);
+Alias('run_tests', run_tests);
+Alias('tests', [bs_tests, test_pymod, run_tests]);
 Export('bs_tests');
 
