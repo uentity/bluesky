@@ -12,6 +12,7 @@
 #endif
 
 #include "kernel_plugins_subsyst.h"
+#include "kernel_plugins_discover.h"
 #include <bs/exception.h>
 #include <bs/log.h>
 
@@ -20,13 +21,13 @@
 /*-----------------------------------------------------------------------------
  *  BS kernel plugin descriptor
  *-----------------------------------------------------------------------------*/
-BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel types tag", "", "bs");
+BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel module", "", "bs");
 
 // hide implementation
 namespace blue_sky { namespace {
 
 // tags for kernel & runtime types plugin_descriptor
-struct __kernel_types_pd_tag__ {};
+//struct __kernel_types_pd_tag__ {};
 struct __runtime_types_pd_tag__ {};
 
 std::string extract_root_name(const std::string& full_name) {
@@ -48,23 +49,25 @@ std::string extract_root_name(const std::string& full_name) {
 	return pyl_name;
 }
 
+} // eof hidden namespace
+
+namespace detail {
+
 #ifdef BSPY_EXPORTING
-struct bspy_module {
-	typedef void (*init_function_t)();
+struct kernel_plugins_subsyst::bspy_module {
+	bspy_module(const pybind11::module& root_mod) : root_module_(root_mod) {}
 
-	bspy_module() : root_(NULL) {}
-
-	bool init_kernel_subsyst(const std::string& root_ns) {
+	bool init_kernel_subsyst() {
+		namespace py = pybind11;
 		// find kernel's Python initialization function
-		init_function_t init_py;
-		lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
+		bs_init_py_fn init_py;
+		detail::lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
+		const plugin_descriptor* kpd = bs_get_plugin_descriptor();
 		if(init_py) {
-			root_ = boost::python::detail::init_module(root_ns.c_str(), init_py);
-			//create bs_scope exporting
+			init_py(root_module_);
+
 			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace "
-				<< root_ns << bs_end;
-			// save name
-			root_ns_ = root_ns;
+				<< kpd->py_namespace << bs_end;
 			return true;
 		}
 		else {
@@ -73,54 +76,27 @@ struct bspy_module {
 		}
 	}
 
-	scope root_scope() {
-		if(!root_) {
-			bs_throw_exception (boost::format ("load_plugin: No BS kernel module in namespace %s")
-					% root_ns_);
-		}
-		return scope(object(((borrowed_reference_t*)root_)));
+	void init_plugin_subsyst(const char* plugin_namespace, const char* doc, bs_init_py_fn f) {
+		// create submodule
+		auto plugin_mod = root_module_.def_submodule(plugin_namespace, doc);
+		// invoke init function
+		f(plugin_mod);
 	}
 
-	string init_plugin_subsyst(const string& nested_scope, init_function_t f) {
-		//the following code is originaly taken from boost::python::detail::init_module
-		//and slightly modified to allow scope changing BEFORE plugin's python subsystem is initialized
-		scope bs_root = root_scope();
-
-		// create plugin's module & scope
-		string nested_namespace = root_ns_ + "." + nested_scope;
-		PyObject *nested_module = Py_InitModule (nested_namespace.c_str(), initial_methods());
-		if (!nested_module) {
-			bs_throw_exception (boost::format ("bspy_init_plugin: Can't create plugin module in namespace %s") % nested_namespace);
-		}
-		scope nested(object (((borrowed_reference_t *)nested_module)));
-		bs_root.attr(nested_scope.c_str ()) = nested;
-
-		handle_exception(f);
-		return nested_namespace;
-	}
-
-	static PyMethodDef* initial_methods() {
-		static PyMethodDef m[] = { { 0, 0, 0, 0 } };
-		return m;
-	}
-
-	PyObject* root_;
-	string root_ns_;
+	pybind11::module root_module_;
 };
 #endif
 
-} // eof hidden namespace
-
-namespace detail {
-
 kernel_plugins_subsyst::kernel_plugins_subsyst()
-	: kernel_pd_(
-		BS_GET_TI(__kernel_types_pd_tag__), "Kernel types", KERNEL_VERSION,
-		"BlueSky kernel types tag", "", "bs")
+	: kernel_pd_(*bs_get_plugin_descriptor())
+		//BS_GET_TI(__kernel_types_pd_tag__), "Kernel types", KERNEL_VERSION,
+		//"BlueSky kernel types tag", "", "bs")
 	, runtime_pd_(
-		BS_GET_TI(__runtime_types_pd_tag__), "Runtime types", KERNEL_VERSION,
-		"BlueSky runtime types tag", "", "bs")
+		BS_GET_TI(__runtime_types_pd_tag__), "BlueSky virtual plugin for runtime types", KERNEL_VERSION,
+		"BlueSky virtual plugin for runtime types", "", "bs")
 {}
+
+kernel_plugins_subsyst::~kernel_plugins_subsyst() {}
 
 std::pair< pd_ptr, bool >
 kernel_plugins_subsyst::register_plugin(const plugin_descriptor& pd, const lib_descriptor& ld) {
@@ -261,20 +237,23 @@ int kernel_plugins_subsyst::load_plugin(
 			lib.load_sym("bs_init_py_subsystem", init_py_fn);
 			if(!init_py_fn)
 				// TODO: enable logging
-				bserr() << E("{}: Python subsystem wasn't found in plugin {}"
+				bserr() << log::E("{}: Python subsystem wasn't found in plugin {}")
 					<< who << lib.fname_ << log::end;
 			else {
 				//DEBUG
 				//cout << "Python subsystem of plugin " << lib.fname_ << " is to be initiaized" << endl;
-				if(p_descr->py_namespace_ == "") {
-					p_descr->py_namespace_ = extract_root_name(lib.fname_);
+				if(p_descr->py_namespace == "") {
+					p_descr->py_namespace = extract_root_name(lib.fname_);
 					// update reference information
 					loaded_plugins_.erase(*p_descr);
 					register_plugin(*p_descr, lib);
 				}
 
 				// init python subsystem
-				py_scope = pymod_.init_plugin_subsyst(p_descr->py_namespace_, init_py_fn);
+				pymod_->init_plugin_subsyst(
+					p_descr->py_namespace.c_str(), p_descr->short_descr.c_str(), init_py_fn
+				);
+				py_scope = kernel_pd_.py_namespace + '.' + p_descr->py_namespace;
 			}
 		}
 #else
@@ -309,6 +288,41 @@ int kernel_plugins_subsyst::load_plugin(
 
 	return retval;
 }
+
+int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
+	// init kernel Python subsystem
+#ifdef BSPY_EXPORTING
+	if(py_root_module) {
+		pymod_.reset(new bspy_module(*static_cast< pybind11::module* >(py_root_module)));
+		pymod_->init_kernel_subsyst();
+	}
+#else
+	(void)init_py_subsyst;
+#endif
+
+	// discover and load plugins
+	std::size_t plugin_cnt = 0;
+	for(const auto& plugin_fname : plugins_discover().go()) {
+		load_plugin(plugin_fname, bool(py_root_module));
+		++plugin_cnt;
+	}
+
+//#ifdef BSPY_EXPORTING
+//	// register converter for any Python object
+//	// should be at the end of boost::python registry
+//	if(init_py_subsyst) {
+//		boost::python::scope bs_root = pymod_.root_scope();
+//		blue_sky::python::py_bind_anyobject();
+//	}
+//#endif
+
+	//if (lib_cnt == 0) {
+	//	BSERROR << log::E("BlueSky: no plugins were loaded") << bs_end;
+	//	return -1;
+	//}
+	return 0;
+}
+
 
 }} // eof blue_sky::detail namespace
 

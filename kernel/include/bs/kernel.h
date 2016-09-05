@@ -79,15 +79,14 @@ public:
 	//! Call it to force system cleaning, although all should be cleaned automatically
 	ulong tree_gc() const;
 
-	//! \brief Load blue-sky plugins method
-	int load_plugins(bool init_py_subsyst = false) const;
-	//! \brief Unload blue-sky plugins method
-	void unload_plugins() const;
 	//! \brief Dynamically loads particular plugin
-	//! \param version - desired plugin version, if left blank no version checking is performed
-	int load_plugin(const std::string& fname, const std::string version, bool init_py_subsyst = false);
+	int load_plugin(const std::string& fname, bool init_py_subsyst);
+	//! \brief Load blue-sky plugins method
+	int load_plugins(void* py_root_module = nullptr);
 	//! \brief Unloads plugin
 	void unload_plugin(const plugin_descriptor& pd);
+	//! \brief Unload blue-sky plugins method
+	void unload_plugins();
 
 	std::string last_error() const;
 

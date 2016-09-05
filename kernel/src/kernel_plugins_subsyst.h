@@ -205,8 +205,14 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	factory_t obj_fab_;
 	types_dict_t types_resolver_;
 
+#ifdef BSPY_EXPORTING
+	struct bspy_module;
+	std::unique_ptr< bspy_module > pymod_;
+#endif
+
 	// ctor
 	kernel_plugins_subsyst();
+	~kernel_plugins_subsyst();
 
 	void clean_plugin_types(const plugin_descriptor& pd);
 
@@ -217,7 +223,13 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	std::pair< pd_ptr, bool > register_plugin(const plugin_descriptor& pd, const lib_descriptor& ld);
 
 	int load_plugin(const std::string& fname, bool init_py_subsyst);
+
+	int load_plugins(void* py_root_module);
+
+	// Plugin filename pair. first: plugin's path, second: plugin's version
+	//using plugin_file_t = std::pair<std::string, std::string>;
+	//std::list< plugin_file_t > discover_plugins();
 };
 
-}} // eof hidden namespace
+}} // eof blue_sky::detail namespace
 

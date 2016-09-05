@@ -24,5 +24,21 @@ spdlog::logger& kernel::get_log(const char* name) {
 	return kernel_impl::get_log(name);
 }
 
+int kernel::load_plugin(const std::string& fname, bool init_py_subsyst) {
+	return pimpl_->load_plugin(fname, init_py_subsyst);
+}
+
+int kernel::load_plugins(void* py_root_module) {
+	return pimpl_->load_plugins(py_root_module);
+}
+
+void kernel::unload_plugin(const plugin_descriptor& pd) {
+	pimpl_->unload_plugin(pd);
+}
+
+void kernel::unload_plugins() {
+	pimpl_->unload_plugins();
+}
+
 } /* namespace blue_sky */
 

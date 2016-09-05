@@ -48,7 +48,7 @@ struct wrapper_kernel {
 
 #ifdef BS_AUTOLOAD_PLUGINS
 		// load plugins
-		k_.LoadPlugins();
+		k_.load_plugins();
 #endif
 #ifdef BSPY_EXPORTING
 		// if we build with Python support
