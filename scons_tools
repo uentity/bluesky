@@ -46,7 +46,9 @@ class files :
 				self.root = os.path.join (self.root, p)
 		#self.root = osp.join(self.root, "src");
 
-		self.sources = super_glob ([self.root], [str(Glob(os.path.join(self.root, ex))[0]) for ex in excludes])
+		self.sources = super_glob(
+			[self.root], [Glob(os.path.join(self.root, ex), strings = True)[0] for ex in excludes]
+		)
 
 def bs_common_defines(custom_env) :
 	custom_env.AppendUnique(CPPDEFINES = ["BS_EXPORTING_PLUGIN"]);
