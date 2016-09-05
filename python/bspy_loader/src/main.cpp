@@ -39,21 +39,21 @@ using namespace std;
 namespace py = pybind11;
 
 PYBIND11_PLUGIN(TARGET_NAME) {
-	auto m = py::module(S_TARGET_NAME);
-
-	//search for BlueSky's kernel plugin descriptor
+	// search for BlueSky's kernel plugin descriptor
 	BS_GET_PLUGIN_DESCRIPTOR get_pd_fn;
 	if(detail::lib_descriptor::load_sym_glob("bs_get_plugin_descriptor", get_pd_fn) != 0 || !get_pd_fn) {
 		BSERROR << log::E("BlueSky kernel descriptor wasn't found or invalid!") << log::end;
-		return m.ptr();
+		return nullptr;
 		//throw std::runtime_error("BlueSky kernel descriptor wasn't found");
 	}
 	plugin_descriptor* kernel_pd = get_pd_fn();
-	//correct global namespace to match TARGET_NAME (otherwise Python throws an error)
+	// correct global namespace to match TARGET_NAME (otherwise Python throws an error)
 	kernel_pd->py_namespace = S_TARGET_NAME;
 
+	auto m = py::module(S_TARGET_NAME, kernel_pd->short_descr.c_str());
+
 	//load plugins with Python subsystem
-	//give_kernel::Instance().LoadPlugins(true);
+	give_kernel::Instance().load_plugins(&m);
 
 	return m.ptr();
 }
