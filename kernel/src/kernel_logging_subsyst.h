@@ -11,16 +11,13 @@
 
 #include <bs/common.h>
 #include <spdlog/logger.h>
-#include <unordered_map>
 
 namespace blue_sky { namespace detail {
 
 struct BS_HIDDEN_API kernel_logging_subsyst {
-	std::unordered_map< std::string, std::shared_ptr< spdlog::logger > > logs_;
 
-	kernel_logging_subsyst();
+	static spdlog::logger& get_log(const char* log_name = "out");
 
-	spdlog::logger& get_log(const char* log_name = "out");
 };
 	
 }} /* namespace blue_sky::detail */

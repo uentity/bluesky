@@ -13,16 +13,11 @@
 
 namespace blue_sky {
 
-class kernel::kernel_impl : public detail::kernel_logging_subsyst, detail::kernel_plugins_subsyst
+class kernel::kernel_impl : public detail::kernel_plugins_subsyst
 {
 public:
 	static spdlog::logger& get_log(const char* name) {
-		// let's create C++11 thread-safe singleton
-		// static variable should be initialized only in one thread!
-		// we need to use VS2015 to support this
-		static kernel_logging_subsyst klog;
-
-		return klog.get_log(name);
+		return detail::kernel_logging_subsyst::get_log(name);
 	}
 };
 

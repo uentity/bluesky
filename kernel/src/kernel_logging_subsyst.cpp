@@ -9,6 +9,7 @@
 
 #include "kernel_logging_subsyst.h"
 #include <spdlog/spdlog.h>
+#include <unordered_map>
 
 using namespace blue_sky::detail;
 
@@ -26,19 +27,20 @@ auto register_logger(const char* log_name, Sinks... sinks) {
 
 }
 
-kernel_logging_subsyst::kernel_logging_subsyst() :
-	logs_({
-	{"out", register_logger("out",
-		std::make_shared< spdlog::sinks::stdout_sink_mt >(),
-		std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky", "log", 1024*1024*5, 1)
-	)},
-	{"err", register_logger("err",
-		std::make_shared< spdlog::sinks::stderr_sink_mt >(),
-		std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky_err", "log", 1024*1024*5, 1)
-	)}})
-{}
-
 spdlog::logger& kernel_logging_subsyst::get_log(const char* log_name) {
-	return *logs_.at(log_name);
+	// let's create C++11 thread-safe singleton as static variable
+	// static variable would be initialized only in one thread!
+	// we need to use VS2015 to support this
+	static std::unordered_map< std::string, std::shared_ptr< spdlog::logger > > logs({
+		{"out", register_logger("out",
+			std::make_shared< spdlog::sinks::stdout_sink_mt >(),
+			std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky", "log", 1024*1024*5, 1)
+		)},
+		{"err", register_logger("err",
+			std::make_shared< spdlog::sinks::stderr_sink_mt >(),
+			std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky_err", "log", 1024*1024*5, 1)
+	)}});
+
+	return *logs.at(log_name);
 }
 
