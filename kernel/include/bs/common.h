@@ -11,6 +11,12 @@
 
 #define LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT
 
+// prevent warnings about macro redeifinition - include Python.h
+// at the very beginning
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+#include <Python.h>
+#endif
+
 // local BS includes
 // API macro definitions
 #include "setup_common_api.h"
@@ -28,9 +34,6 @@
 #include <string>
 #include <iosfwd>
 #include <algorithm>
-
-// third-party libraries
-#include <loki/TypeManip.h>
 
 //#define TO_STR(s) #s //!< To string convertion macro
 
@@ -56,12 +59,6 @@ namespace blue_sky {
 //	((not_permited_operation,   "not_permited_operation"))
 //	((boost_error,              "boost_error"))
 //);
-
-//! \defgroup loading_plugins loading plugins - classes for load plugins in blue-sky
-
-#define BLUE_SKY_INIT_PY_FUN \
-BS_C_API_PLUGIN void bs_init_py_subsystem()
-typedef void (*bs_init_py_fn)();
 
 /// BlueSky singleton template
 template< class T >
