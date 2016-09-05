@@ -111,7 +111,7 @@ struct plugins_discover {
 		}
 	}
 
-	bool read_conf_file (const char *filename, bool append = false) {
+	bool read_conf_file(const char *filename, bool append = false) {
 		std::ifstream srcfile(filename);
 
 		if(!srcfile) {
@@ -127,13 +127,28 @@ struct plugins_discover {
 		return true;
 	}
 
-	void add_paths(const std::string& key, const vstr_t& what, bool append = true) {
-		if(append) {
-			vstr_t& dest = bs_path_[key];
-			dest.insert(dest.end(), what.begin(), what.end());
+	template< typename key_t, typename paths_t >
+	void add_paths(key_t&& key, const paths_t& what, bool push_front = false, bool replace = false) {
+		vstr_t& dest = bs_path_[std::forward< key_t >(key)];
+		if(replace)
+			dest.clear();
+
+		for(const auto& path : what) {
+			add_path(dest, path, push_front);
 		}
+	}
+
+	template< typename value_t >
+	void add_path(vstr_t& dest, value_t&& value, bool push_front = false) {
+		//vstr_t& dest = bs_path_[std::forward< key_t >(key)];
+		// skip repeating paths
+		if(std::find(dest.begin(), dest.end(), std::forward< value_t >(value)) != dest.end())
+			return;
+		// insert value
+		if(push_front)
+			dest.emplace_front(std::forward< value_t >(value));
 		else
-			bs_path_[key] = what;
+			dest.emplace_back(std::forward< value_t >(value));
 	}
 
 	void init_conf_path() {
@@ -158,7 +173,7 @@ struct plugins_discover {
 	void init_plugins_path() {
 		// 1. Read paths from config file
 		BSOUT << "--------" << bs_end;
-		BSOUT << "Try load config file from following paths:" << bs_end;
+		BSOUT << "Try to load following config files:" << bs_end;
 		for(const auto& path : conf_path_) {
 			BSOUT << "{} - {}" << path
 				<< (read_conf_file(path.c_str()) ? "OK" : "Fail") << bs_end;
@@ -171,7 +186,7 @@ struct plugins_discover {
 		for(auto var : env_vars) {
 			pprefix = ::getenv(var);
 			if(pprefix)
-				add_paths(var, split_path_list(trim(pprefix)));
+				add_paths(var, split_path_list(trim(pprefix)), true);
 		}
 
 		// TODO: discover path to kernel library as fallback
@@ -183,14 +198,14 @@ struct plugins_discover {
 		// 3. Add some predefined paths as a fallback - lowest priority
 		vstr_t& plugins_paths = bs_path_["BLUE_SKY_PLUGINS_PATH"];
 #ifdef UNIX
-		plugins_paths.push_back(getenv_def("HOME") + "/.blue-sky/plugins");
-		plugins_paths.push_back("/usr/share/blue-sky/plugins");
+		add_path(plugins_paths, getenv_def("HOME") + "/.blue-sky/plugins");
+		add_path(plugins_paths, "/usr/share/blue-sky/plugins");
 #else // WINDOWS
-		plugins_paths.push_back(getenv_def("ALLUSERSPROFILE") + "\\Application Data\\blue-sky\\plugins");
-		plugins_paths.push_back(getenv_def("APPDATA") + "\\blue-sky\\plugins");
+		add_path(plugins_paths, getenv_def("ALLUSERSPROFILE") + "\\Application Data\\blue-sky\\plugins");
+		add_path(plugins_paths, getenv_def("APPDATA") + "\\blue-sky\\plugins");
 #endif // UNIX
-		//current dir as fallback
-		plugins_paths.push_back(".");
+		//current dir as fallback -- disabled
+		//add_path(plugins_paths, ".");
 
 		// print some info
 		BSOUT << "--------" << bs_end;
@@ -223,7 +238,7 @@ struct plugins_discover {
 			}
 		}
 		catch(const filesystem::filesystem_error &e) {
-			BSERROR << log::E(e.what()) << bs_end;
+			BSERROR << log::W(e.what()) << bs_end;
 		}
 	}
 

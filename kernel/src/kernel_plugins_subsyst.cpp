@@ -300,9 +300,20 @@ int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
 	(void)init_py_subsyst;
 #endif
 
-	// discover and load plugins
+	// discover plugins
+	auto plugins = plugins_discover().go();
+	BSOUT << "--------" << bs_end;
+	if(!plugins.size())
+		BSOUT << "No plugins were found!" << bs_end;
+	else {
+		BSOUT << "Found plugins:" << bs_end;
+		for(const auto& plugin : plugins)
+			BSOUT << "{}" << plugin << bs_end;
+		BSOUT << "--------" << bs_end;
+	}
+
 	std::size_t plugin_cnt = 0;
-	for(const auto& plugin_fname : plugins_discover().go()) {
+	for(const auto& plugin_fname : plugins) {
 		load_plugin(plugin_fname, bool(py_root_module));
 		++plugin_cnt;
 	}
