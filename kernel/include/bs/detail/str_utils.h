@@ -9,8 +9,12 @@
 
 #pragma once
 
-#include "../common.h"
+#include <bs/common.h>
 #include <string>
+#include <algorithm>
+#include <functional>
+#include <cctype>
+#include <locale>
 
 namespace blue_sky {
 
@@ -22,6 +26,34 @@ ignoreLine(std::basic_istream <charT, traits>& strm)
 {
 	strm.ignore(0x7fff, strm.widen('\n'));
 	return strm;
+}
+
+// trim from start
+static inline std::string ltrim(const std::string& S) {
+	std::string s = S;
+	s.erase(s.begin(), std::find_if(
+		s.begin(), s.end(),
+		std::not1(std::ptr_fun<int, int>(std::isspace))
+	));
+	return s;
+}
+
+// trim from end
+static inline std::string rtrim(const std::string& S) {
+	std::string s = S;
+	s.erase(
+		std::find_if(
+			s.rbegin(), s.rend(),
+			std::not1(std::ptr_fun<int, int>(std::isspace))
+		).base(),
+		s.end()
+	);
+	return s;
+}
+
+// trim from both ends
+static inline std::string trim(const std::string& s) {
+	return ltrim(rtrim(s));
 }
 
 // functions to convert string <-> wstring using given locale name in POSIX format
