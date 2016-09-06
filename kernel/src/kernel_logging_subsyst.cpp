@@ -28,19 +28,36 @@ auto register_logger(const char* log_name, Sinks... sinks) {
 }
 
 spdlog::logger& kernel_logging_subsyst::get_log(const char* log_name) {
+	struct logs_container {
+		// construct and set default logs formaat
+		logs_container() :
+			logs({
+				{"out", register_logger("out",
+					std::make_shared< spdlog::sinks::stdout_sink_mt >(),
+					std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky", "log", 1024*1024*5, 1)
+				)},
+				{"err", register_logger("err",
+					std::make_shared< spdlog::sinks::stderr_sink_mt >(),
+					std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky_err", "log", 1024*1024*5, 1)
+			)}})
+		{
+			for(auto& log : logs) {
+				log.second->set_pattern("[%Y-%m-%d %T.%e] [%L] %v");
+			}
+		}
+
+		spdlog::logger& operator[](const char* name) {
+			return *logs.at(name);
+		}
+
+		std::unordered_map< std::string, std::shared_ptr< spdlog::logger > > logs;
+	};
+
 	// let's create C++11 thread-safe singleton as static variable
 	// static variable would be initialized only in one thread!
 	// we need to use VS2015 to support this
-	static std::unordered_map< std::string, std::shared_ptr< spdlog::logger > > logs({
-		{"out", register_logger("out",
-			std::make_shared< spdlog::sinks::stdout_sink_mt >(),
-			std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky", "log", 1024*1024*5, 1)
-		)},
-		{"err", register_logger("err",
-			std::make_shared< spdlog::sinks::stderr_sink_mt >(),
-			std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky_err", "log", 1024*1024*5, 1)
-	)}});
+	static logs_container logs;
 
-	return *logs.at(log_name);
+	return logs[log_name];
 }
 
