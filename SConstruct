@@ -149,19 +149,6 @@ for x in ss_tree :
 	print x;
 print']';
 
-# add some global dependencies to build environment template
-custom_env.AppendUnique(
-	CPPPATH = [
-		'#kernel/include',
-		osp.join("#third_party", "spdlog", "include"),
-	]
-);
-if custom_env["py"] == '1' :
-	custom_env.AppendUnique(
-		CPPPATH = [osp.join("#third_party", "pybind11", "include")],
-		LIBS = ['${python_name}']
-	);
-
 # 7. Configure
 if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :
 	# HACK: replace compiler with platform default
@@ -178,6 +165,22 @@ if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :
 	# restore user-defined compiler
 	custom_env.Replace(CXX = cxx_save);
 	custom_env = conf.Finish();
+
+# add some global dependencies to build environment template
+custom_env.AppendUnique(
+	CPPPATH = [
+		osp.join("#kernel", "include"),
+		osp.join("#third_party", "spdlog", "include"),
+		osp.join("#third_party", "actor-framework", "libcaf_core")
+	],
+	LIBPATH = [osp.join("#third_party", "actor-framework", "build", "lib")],
+	LIBS = ["caf_core", "caf_io"]
+);
+if custom_env["py"] == '1' :
+	custom_env.AppendUnique(
+		CPPPATH = [osp.join("#third_party", "pybind11", "include")],
+		LIBS = ['${python_name}']
+	);
 
 # save default custom_env
 custom_env_def = custom_env.Clone();
