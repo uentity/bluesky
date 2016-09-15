@@ -153,8 +153,12 @@ struct array_converters {
 			// desctructor function that will explicitly decrement refcounter
 			const bs_refcounter* data_rc = static_cast< const bs_refcounter* >(v->get_container().get());
 			data_rc->add_ref();
-			PyObject* opaque_ptr = PyCObject_FromVoidPtr((void*)data_rc,
-				array_converters::on_numpy_array_death);
+			PyObject* opaque_ptr =
+#if PY_MAJOR_VERSION >= 3
+				PyCapsule_New((void*)data_rc, NULL, array_converters::on_numpy_array_death);
+#else
+				PyCObject_FromVoidPtr((void*)data_rc, array_converters::on_numpy_array_death);
+#endif
 
 			// build numpy array around raw data
 			cont_t proxy(v->begin(), v->size());
@@ -203,8 +207,12 @@ struct array_converters {
 			// desctructor function that will explicitly decrement refcounter
 			const bs_refcounter* data_rc = static_cast< const bs_refcounter* >(v->get_container().get());
 			data_rc->add_ref();
-			PyObject* opaque_ptr = PyCObject_FromVoidPtr((void*)data_rc,
-				array_converters::on_numpy_array_death);
+			PyObject* opaque_ptr =
+#if PY_MAJOR_VERSION >= 3
+				PyCapsule_New((void*)data_rc, NULL, array_converters::on_numpy_array_death);
+#else
+				PyCObject_FromVoidPtr((void*)data_rc, array_converters::on_numpy_array_death);
+#endif
 
 			// make numpy array that references raw data
 			backend_t proxy(int(v->ndim()), v->dims(), v->data());
@@ -243,11 +251,22 @@ struct array_converters {
 		}
 	};
 
+#if PY_MAJOR_VERSION >= 3
+	static void on_numpy_array_death(PyObject* p_obj) {
+		void* p_refcnt = PyCapsule_GetPointer(p_obj, NULL);
+		if(!p_refcnt)
+			return;
+		const bs_refcounter* data_rc = static_cast< const bs_refcounter* >(p_refcnt);
+		if(data_rc)
+			data_rc->del_ref();
+	}
+#else
 	static void on_numpy_array_death(void* p_refcnt) {
 		const bs_refcounter* data_rc = static_cast< const bs_refcounter* >(p_refcnt);
-		data_rc->del_ref();
+		if(data_rc)
+			data_rc->del_ref();
 	}
-
+#endif
 
 	template< class conv_traits >
 	static void make_helper() {

@@ -235,7 +235,8 @@ struct bspy_module {
 		init_function_t init_py;
 		lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
 		if(init_py) {
-			root_ = boost::python::detail::init_module(root_ns.c_str(), init_py);
+			root_ = create_pymodule(root_ns.c_str());
+			handle_exception(init_py);
 			//create bs_scope exporting
 			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace "
 				<< root_ns << bs_end;
@@ -264,7 +265,7 @@ struct bspy_module {
 
 		// create plugin's module & scope
 		string nested_namespace = root_ns_ + "." + nested_scope;
-		PyObject *nested_module = Py_InitModule (nested_namespace.c_str(), initial_methods());
+		PyObject *nested_module = create_pymodule(nested_namespace.c_str());
 		if (!nested_module) {
 			bs_throw_exception (boost::format ("bspy_init_plugin: Can't create plugin module in namespace %s") % nested_namespace);
 		}
@@ -278,6 +279,20 @@ struct bspy_module {
 	static PyMethodDef* initial_methods() {
 		static PyMethodDef m[] = { { 0, 0, 0, 0 } };
 		return m;
+	}
+
+	static PyObject* create_pymodule(const std::string& name, const std::string& doc = "") {
+#if PY_MAJOR_VERSION >= 3
+		PyModuleDef *def = new PyModuleDef();
+		memset(def, 0, sizeof(PyModuleDef));
+		def->m_name = name.c_str();
+		def->m_doc = doc.c_str();
+		def->m_size = -1;
+		Py_INCREF(def);
+		return PyModule_Create(def);
+#else
+		return Py_InitModule3(name.c_str(), nullptr, doc.c_str());
+#endif
 	}
 
 	PyObject* root_;
