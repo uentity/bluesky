@@ -30,7 +30,10 @@ kernel_cpp_list = [
 	"src/kernel.cpp",
 	"src/lib_descriptor.cpp",
 	"src/log.cpp",
-	"src/main.cpp"
+	"src/main.cpp",
+	"src/link.cpp",
+	"src/hard_link.cpp",
+	"src/node.cpp"
 ];
 #print kernel_cpp_list;
 
