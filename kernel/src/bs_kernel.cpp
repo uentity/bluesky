@@ -26,6 +26,7 @@
 #include "bs_tree.h"
 #include "bs_report.h"
 #include "bs_log_scribers.h"
+#include "wrapper_kernel.h"
 
 #include <stdio.h>
 //#include <iostream>
@@ -448,7 +449,6 @@ struct sp_sig_comp {
 };
 
 } 	// end if hidden namespace
-
 
 /*-----------------------------------------------------------------------------
  *  blue_sky namespace related implementation details
@@ -1237,6 +1237,14 @@ blue_sky::error_code kernel::kernel_impl::load_plugins(bool init_py_subsyst) {
 	}
 	return blue_sky::no_error;
 }
+
+
+#ifdef BSPY_EXPORTING
+// obtain kernel's Python module
+PyObject* bs_private::wrapper_kernel::k_py_module() {
+	return k_.pimpl_->pymod_.root_;
+}
+#endif
 
 //===============================================================================================
 /*-----------------------------------------------------------------------------
