@@ -37,8 +37,10 @@
 #define S_TARGET_NAME BOOST_PP_STRINGIZE(TARGET_NAME)
 #if PY_MAJOR_VERSION >= 3
 #define INIT_FN_NAME PyObject* BOOST_PP_CAT(PyInit_, TARGET_NAME)
+#define RETURN return nullptr
 #else
 #define INIT_FN_NAME void BOOST_PP_CAT(init, TARGET_NAME)
+#define RETURN return
 #endif
 
 using namespace blue_sky;
@@ -97,7 +99,7 @@ BS_C_API_PLUGIN INIT_FN_NAME() {
 	BS_GET_PLUGIN_DESCRIPTOR get_pd_fn;
 	if(load_sym_glob("bs_get_plugin_descriptor", get_pd_fn) != 0 || !get_pd_fn) {
 		BSERROR << "BlueSky kernel descriptor wasn't found or invalid!" << bs_end;
-		return;
+		RETURN;
 		//throw std::runtime_error("BlueSky kernel descriptor wasn't found");
 	}
 	plugin_descriptor* kernel_pd = get_pd_fn();
@@ -113,7 +115,7 @@ BS_C_API_PLUGIN INIT_FN_NAME() {
 	if(load_sym_glob("bs_get_kernel_python_module", get_pymod_fn) == 0) {
 		return get_pymod_fn();
 	}
-	return nullptr;
+	RETURN;
 #endif
 }
 
