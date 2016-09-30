@@ -236,9 +236,20 @@ struct bspy_module {
 		init_function_t init_py;
 		lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
 		if(init_py) {
-			root_ = create_pymodule(root_ns.c_str());
-			handle_exception(init_py);
-			//create bs_scope exporting
+#if PY_MAJOR_VERSION >= 3
+			static PyModuleDef root_moddef = {
+				PyModuleDef_HEAD_INIT,
+				root_ns.c_str(),
+				NULL,
+				-1,
+				initial_methods(),
+				0, 0, 0, 0
+			};
+			root_ = boost::python::detail::init_module(root_moddef, init_py);
+#else
+			root_ = boost::python::detail::init_module(root_ns.c_str(), init_py);
+#endif
+
 			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace "
 				<< root_ns << bs_end;
 			// save name
@@ -253,47 +264,31 @@ struct bspy_module {
 
 	scope root_scope() {
 		if(!root_) {
-			bs_throw_exception (boost::format ("load_plugin: No BS kernel module in namespace %s")
-					% root_ns_);
+			bs_throw_exception(
+				boost::format ("load_plugin: No BS kernel module in namespace %s") % root_ns_
+			);
 		}
 		return scope(object(((borrowed_reference_t*)root_)));
 	}
 
 	string init_plugin_subsyst(const string& nested_scope, init_function_t f) {
-		//the following code is originaly taken from boost::python::detail::init_module
-		//and slightly modified to allow scope changing BEFORE plugin's python subsystem is initialized
-		scope bs_root = root_scope();
-
-		// create plugin's module & scope
+		// construct plugin's full namespace
 		string nested_namespace = root_ns_ + "." + nested_scope;
-		PyObject *nested_module = create_pymodule(nested_namespace.c_str());
-		if (!nested_module) {
-			bs_throw_exception (boost::format ("bspy_init_plugin: Can't create plugin module in namespace %s") % nested_namespace);
-		}
-		scope nested(object (((borrowed_reference_t *)nested_module)));
-		bs_root.attr(nested_scope.c_str ()) = nested;
+		PyObject *nested_module = PyImport_AddModule(nested_namespace.c_str());
 
+		// construct scope
+		scope nested( object(((borrowed_reference_t*)nested_module)) );
 		handle_exception(f);
+
+		// remember scope in kernel's one
+		root_scope().attr(nested_scope.c_str()) = nested;
+
 		return nested_namespace;
 	}
 
 	static PyMethodDef* initial_methods() {
 		static PyMethodDef m[] = { { 0, 0, 0, 0 } };
 		return m;
-	}
-
-	static PyObject* create_pymodule(const std::string& name, const std::string& doc = "") {
-#if PY_MAJOR_VERSION >= 3
-		PyModuleDef *def = new PyModuleDef();
-		memset(def, 0, sizeof(PyModuleDef));
-		def->m_name = name.c_str();
-		def->m_doc = doc.c_str();
-		def->m_size = -1;
-		Py_INCREF(def);
-		return PyModule_Create(def);
-#else
-		return Py_InitModule3(name.c_str(), nullptr, doc.c_str());
-#endif
 	}
 
 	PyObject* root_;
