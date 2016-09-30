@@ -162,8 +162,7 @@ kboost_libs = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'loc
 if base_env['py'] == '1' :
 	base_env.AppendUnique(
 		CPPDEFINES = ['BSPY_EXPORTING'],
-		CPPPATH = ['include/python'],
-		LIBS = ['${python_name}']
+		CPPPATH = ["#kernel/include/python"]
 	);
 	kernel_cpp_list += py_kernel_cpp_list;
 	kboost_libs += ['python'];
