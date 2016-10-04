@@ -35,7 +35,13 @@
 #endif
 
 #define S_TARGET_NAME BOOST_PP_STRINGIZE(TARGET_NAME)
-#define INIT_FN_NAME BOOST_PP_CAT(init, TARGET_NAME)
+#if PY_MAJOR_VERSION >= 3
+#define INIT_FN_NAME PyObject* BOOST_PP_CAT(PyInit_, TARGET_NAME)
+#define RETURN return nullptr
+#else
+#define INIT_FN_NAME void BOOST_PP_CAT(init, TARGET_NAME)
+#define RETURN return
+#endif
 
 using namespace blue_sky;
 using namespace std;
@@ -88,12 +94,12 @@ int load_sym_glob(const char* sym_name, sym_t& sym) {
 #endif
 }
 
-BS_C_API_PLUGIN void INIT_FN_NAME() {
+BS_C_API_PLUGIN INIT_FN_NAME() {
 	//search for BlueSky's kernel plugin descriptor
 	BS_GET_PLUGIN_DESCRIPTOR get_pd_fn;
 	if(load_sym_glob("bs_get_plugin_descriptor", get_pd_fn) != 0 || !get_pd_fn) {
 		BSERROR << "BlueSky kernel descriptor wasn't found or invalid!" << bs_end;
-		return;
+		RETURN;
 		//throw std::runtime_error("BlueSky kernel descriptor wasn't found");
 	}
 	plugin_descriptor* kernel_pd = get_pd_fn();
@@ -102,5 +108,14 @@ BS_C_API_PLUGIN void INIT_FN_NAME() {
 
 	//load plugins with Python subsystem
 	give_kernel::Instance().LoadPlugins(true);
+
+#if PY_MAJOR_VERSION >= 3
+	// for Python 3 we should return kernel's module
+	PyObject* (*get_pymod_fn)();
+	if(load_sym_glob("bs_get_kernel_python_module", get_pymod_fn) == 0) {
+		return get_pymod_fn();
+	}
+	RETURN;
+#endif
 }
 

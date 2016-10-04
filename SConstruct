@@ -36,7 +36,7 @@ custom_vars.Add(PathVariable('prefix', 'Point where to install BlueSky kernel', 
 custom_vars.Add(PathVariable('plugins_prefix', 'Point where to install BlueSky plugins', '$prefix/plugins',
 	PathVariable.PathAccept));
 
-custom_vars.Add('python_name', 'Put full Python interpreter name with version here, ex. python2.5', 'python2.5');
+custom_vars.Add('python_name', 'Put full Python interpreter name with version here, ex. python2.7', 'python2.7');
 # add variable to decide whether to build with python support
 custom_vars.Add('py', 'Set to 1 to build with Python support', '0');
 
@@ -155,6 +155,7 @@ for i in range(len(build_kinds)) :
 
 	# reset custom_env to default values
 	custom_env = custom_env_def.Clone();
+	bs_common_defines(custom_env);
 	Export('custom_env');
 	# invoke tuning scripts
 	if len(platform) > 0 :

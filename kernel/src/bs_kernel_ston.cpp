@@ -12,6 +12,7 @@
 #include "bs_report.h"
 #include "bs_log_scribers.h"
 #include "bs_kernel_tools.h"
+#include "wrapper_kernel.h"
 
 //#define LOKI_CLASS_LEVEL_THREADING
 #include "loki/Singleton.h"
@@ -103,59 +104,51 @@ typedef SingletonHolder < thread_log_wrapper, CreateUsingNew, PhoenixSingleton >
 
 namespace blue_sky {
 namespace bs_private {
-//static bool kernel_alive = false;
 
-/// @brief Wrapper allowing to do some initialization on first give_kernel()::Instance() call
-/// just after the kernel class is created
-struct wrapper_kernel {
-	kernel k_;
+/*-----------------------------------------------------------------
+ * wrapper_kernel implementation
+ *----------------------------------------------------------------*/
+// constructor
+wrapper_kernel::wrapper_kernel()
+	: ref_fun_(&wrapper_kernel::initial_kernel_getter)
+{
+	bs_log_wrapper::kernel_alive = true;
+}
 
-	kernel& (wrapper_kernel::*ref_fun_)();
+// normal getter - just returns kernel reference
+kernel& wrapper_kernel::usual_kernel_getter() {
+	return k_;
+}
 
-	static void kernel_cleanup();
-
-	// constructor
-	wrapper_kernel()
-		: ref_fun_(&wrapper_kernel::initial_kernel_getter)
-	{
-		bs_log_wrapper::kernel_alive = true;
-	}
-
-	// normal getter - just returns kernel reference
-	kernel& usual_kernel_getter() {
-		return k_;
-	}
-
-	// when kernel reference is obtained for the first time
-	kernel& initial_kernel_getter() {
-		// first switch to usual getter to avoid infinite constructor recursion during load_plugins()
-		ref_fun_ = &wrapper_kernel::usual_kernel_getter;
-		// initialize kernel
-		k_.init();
+// when kernel reference is obtained for the first time
+kernel& wrapper_kernel::initial_kernel_getter() {
+	// first switch to usual getter to avoid infinite constructor recursion during load_plugins()
+	ref_fun_ = &wrapper_kernel::usual_kernel_getter;
+	// initialize kernel
+	k_.init();
 
 #ifdef BS_AUTOLOAD_PLUGINS
-		// load plugins
-		k_.LoadPlugins();
+	// load plugins
+	k_.LoadPlugins();
 #endif
 #ifdef BSPY_EXPORTING
-		// if we build with Python support
-		// register function that cleans up kernel
-		// when Python interpreter exits
-		//Py_AtExit(&kernel_cleanup);
+	// if we build with Python support
+	// register function that cleans up kernel
+	// when Python interpreter exits
+	//Py_AtExit(&kernel_cleanup);
 #endif
-		// return reference
-		return k_;
-	}
+	// return reference
+	return k_;
+}
 
-	kernel& k_ref() {
-		return (this->*ref_fun_)();
-	}
+kernel& wrapper_kernel::k_ref() {
+	return (this->*ref_fun_)();
+}
 
-	~wrapper_kernel() {
-		// signal that it is destroyed
-		bs_log_wrapper::kernel_alive = false;
-	}
-};
+wrapper_kernel::~wrapper_kernel() {
+	// signal that it is destroyed
+	bs_log_wrapper::kernel_alive = false;
+}
 
 }	// eof bs_private namespace
 
@@ -201,6 +194,13 @@ worker_thread_pool& singleton< worker_thread_pool >::Instance() {
 //		give_wtp::Instance().add_command(task);
 //	}
 
+#ifdef BSPY_EXPORTING
+/// define function that makes it possible to obtain kernel's Python module object
+/// without modifying kernel interface
+BS_C_API PyObject* bs_get_kernel_python_module() {
+	return kernel_holder::Instance().k_py_module();
+}
+#endif
 
 /*-----------------------------------------------------------------------------
  *  log singletons instantiation

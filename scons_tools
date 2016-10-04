@@ -40,7 +40,11 @@ class files :
 def bs_common_defines(custom_env) :
 	custom_env.AppendUnique(CPPDEFINES = ["BS_EXPORTING_PLUGIN"]);
 	if custom_env['py'] == '1' :
-		custom_env.AppendUnique(CPPDEFINES = ["BSPY_EXPORTING_PLUGIN"]);
+		custom_env.AppendUnique(
+			CPPDEFINES = ["BSPY_EXPORTING_PLUGIN"],
+			CPPPATH = ['/usr/include/${python_name}'],
+			LIBS = ['${python_name}']
+		);
 
 def print_config(msg, two_dee_iterable):
 	# this function is handy and can be used for other configuration-printing tasks
@@ -230,12 +234,18 @@ def CheckBoost(conf) :
 	# make dictionaries for debug and release builds
 	# for release build
 	for L in boost_libnames.keys() :
-		boost_libnames[L] = conf.FindBoostLibrary(L);
+		if L == "python" and "3." in conf.env['python_name'] :
+			boost_libnames[L] = conf.FindBoostLibrary("python3");
+		else :
+			boost_libnames[L] = conf.FindBoostLibrary(L);
 	# for debug builds
 	if ('build_kinds' in conf.env and 'debug' in conf.env['build_kinds']) or \
 		("debug" in conf.env and conf.env["debug"] == "1") :
 		for L in boost_libnames_d.keys() :
-			boost_libnames_d[L] = conf.FindBoostLibrary(L, postfix = "-d");
+			if L == "python" and "3." in conf.env['python_name'] :
+				boost_libnames_d[L] = conf.FindBoostLibrary("python3", postfix = "-d");
+			else :
+				boost_libnames_d[L] = conf.FindBoostLibrary(L, postfix = "-d");
 
 def CheckLoki(conf) :
 	if 'LOKI_PATH' in os.environ :

@@ -26,6 +26,7 @@
 #include "bs_tree.h"
 #include "bs_report.h"
 #include "bs_log_scribers.h"
+#include "wrapper_kernel.h"
 
 #include <stdio.h>
 //#include <iostream>
@@ -235,8 +236,20 @@ struct bspy_module {
 		init_function_t init_py;
 		lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
 		if(init_py) {
+#if PY_MAJOR_VERSION >= 3
+			static PyModuleDef root_moddef = {
+				PyModuleDef_HEAD_INIT,
+				root_ns.c_str(),
+				NULL,
+				-1,
+				initial_methods(),
+				0, 0, 0, 0
+			};
+			root_ = boost::python::detail::init_module(root_moddef, init_py);
+#else
 			root_ = boost::python::detail::init_module(root_ns.c_str(), init_py);
-			//create bs_scope exporting
+#endif
+
 			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace "
 				<< root_ns << bs_end;
 			// save name
@@ -251,27 +264,25 @@ struct bspy_module {
 
 	scope root_scope() {
 		if(!root_) {
-			bs_throw_exception (boost::format ("load_plugin: No BS kernel module in namespace %s")
-					% root_ns_);
+			bs_throw_exception(
+				boost::format ("load_plugin: No BS kernel module in namespace %s") % root_ns_
+			);
 		}
 		return scope(object(((borrowed_reference_t*)root_)));
 	}
 
 	string init_plugin_subsyst(const string& nested_scope, init_function_t f) {
-		//the following code is originaly taken from boost::python::detail::init_module
-		//and slightly modified to allow scope changing BEFORE plugin's python subsystem is initialized
-		scope bs_root = root_scope();
-
-		// create plugin's module & scope
+		// construct plugin's full namespace
 		string nested_namespace = root_ns_ + "." + nested_scope;
-		PyObject *nested_module = Py_InitModule (nested_namespace.c_str(), initial_methods());
-		if (!nested_module) {
-			bs_throw_exception (boost::format ("bspy_init_plugin: Can't create plugin module in namespace %s") % nested_namespace);
-		}
-		scope nested(object (((borrowed_reference_t *)nested_module)));
-		bs_root.attr(nested_scope.c_str ()) = nested;
+		PyObject *nested_module = PyImport_AddModule(nested_namespace.c_str());
 
+		// construct scope
+		scope nested( object(((borrowed_reference_t*)nested_module)) );
 		handle_exception(f);
+
+		// remember scope in kernel's one
+		root_scope().attr(nested_scope.c_str()) = nested;
+
 		return nested_namespace;
 	}
 
@@ -433,7 +444,6 @@ struct sp_sig_comp {
 };
 
 } 	// end if hidden namespace
-
 
 /*-----------------------------------------------------------------------------
  *  blue_sky namespace related implementation details
@@ -1222,6 +1232,14 @@ blue_sky::error_code kernel::kernel_impl::load_plugins(bool init_py_subsyst) {
 	}
 	return blue_sky::no_error;
 }
+
+
+#ifdef BSPY_EXPORTING
+// obtain kernel's Python module
+PyObject* bs_private::wrapper_kernel::k_py_module() {
+	return k_.pimpl_->pymod_.root_;
+}
+#endif
 
 //===============================================================================================
 /*-----------------------------------------------------------------------------
