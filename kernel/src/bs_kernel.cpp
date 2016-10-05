@@ -79,7 +79,7 @@ struct cmp_pd_by_name {
 	bool operator()(
 		const blue_sky::plugin_descriptor& lhs,
 		const blue_sky::plugin_descriptor& rhs
-	) {
+	) const {
 		return (lhs.name_ < rhs.name_);
 	}
 };
