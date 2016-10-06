@@ -75,7 +75,7 @@ class BS_API bs_hard_link : public bs_link {
 public:
 
 	/// ctor -- additionaly accepts a pointer to object
-	bs_hard_link(std::string name, sp_obj data);
+	bs_hard_link(std::string name, const sp_obj& data);
 
 	/// implement link's API
 	sp_obj data() const override;
