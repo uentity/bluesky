@@ -174,6 +174,7 @@ custom_env.AppendUnique(
 		osp.join("#third_party", "actor-framework", "libcaf_core")
 	],
 	LIBPATH = [osp.join("#third_party", "actor-framework", "build", "lib")],
+	RPATH = [Dir(osp.join("#third_party", "actor-framework", "build", "lib")).get_abspath()],
 	LIBS = ["caf_core", "caf_io"]
 );
 if custom_env["py"] == '1' :
