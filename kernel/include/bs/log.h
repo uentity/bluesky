@@ -69,7 +69,7 @@ public:
 		void flush() const {
 			//using params_tape_t = typename rem_tape_head< Args... >::type;
 			bs_log& L = std::get<0>(tape_);
-			invoke(
+			apply(
 				rem_tape_head< Args... >::write_overl,
 				std::tuple_cat(
 					std::forward_as_tuple(L.log_),
