@@ -72,7 +72,10 @@ protected:
 class BS_API bs_kexception : public bs_exception {
 public:
 	//using bs_exception::bs_exception;
+
 	bs_kexception(const char* message, const char* ksubsyst = "", int err_code = -1);
+
+	bs_kexception(const boost::format& message, const char* who = "", int err_code = -1);
 };
 
 class BS_API bs_sys_exception : public bs_exception {

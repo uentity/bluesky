@@ -93,6 +93,13 @@ bs_kexception::bs_kexception(const char* message, const char* who, int err_code)
 	)
 {}
 
+bs_kexception::bs_kexception(const boost::format& message, const char* who, int err_code)
+	: bs_exception(
+		message,
+		(std::string("kernel") + (strlen(who) > 0 ? std::string(":") + who : "")).c_str(), err_code
+	)
+{}
+
 bs_sys_exception::bs_sys_exception(int err_code, const char* who)
 	: bs_exception(system_message(err_code).c_str(), who, err_code)
 {}
