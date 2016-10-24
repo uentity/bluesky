@@ -8,11 +8,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #define BOOST_TEST_DYN_LINK
-#include <boost/test/unit_test.hpp>
-#include <iostream>
-
 #include <bs/exception.h>
 #include <bs/log.h>
+
+#include <boost/test/unit_test.hpp>
+#include <iostream>
 
 struct example {
 	friend std::ostream& operator <<(std::ostream& os, const example& ex) {

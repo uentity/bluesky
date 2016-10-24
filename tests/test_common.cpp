@@ -8,10 +8,10 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #define BOOST_TEST_DYN_LINK
+#include <bs/exception.h>
+
 #include <boost/test/unit_test.hpp>
 #include <iostream>
-
-#include <bs/exception.h>
 
 using namespace blue_sky;
 using namespace boost::unit_test;
