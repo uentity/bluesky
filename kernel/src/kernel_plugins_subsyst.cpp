@@ -21,7 +21,7 @@
 /*-----------------------------------------------------------------------------
  *  BS kernel plugin descriptor
  *-----------------------------------------------------------------------------*/
-BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel module", "", "bs");
+BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel module", "bs");
 
 // hide implementation
 namespace blue_sky { namespace {
@@ -62,7 +62,7 @@ kernel_plugins_subsyst::kernel_plugins_subsyst()
 		//"BlueSky kernel types tag", "", "bs")
 	, runtime_pd_(
 		BS_GET_TI(__runtime_types_pd_tag__), "BlueSky virtual plugin for runtime types", KERNEL_VERSION,
-		"BlueSky virtual plugin for runtime types", "", "bs")
+		"BlueSky virtual plugin for runtime types", "bs")
 {}
 
 kernel_plugins_subsyst::~kernel_plugins_subsyst() {}
@@ -254,7 +254,7 @@ int kernel_plugins_subsyst::load_plugin(
 
 				// init python subsystem
 				pymod_->init_plugin_subsyst(
-					p_descr->py_namespace.c_str(), p_descr->short_descr.c_str(), init_py_fn
+					p_descr->py_namespace.c_str(), p_descr->description.c_str(), init_py_fn
 				);
 				py_scope = kernel_pd_.py_namespace + '.' + p_descr->py_namespace;
 			}

@@ -36,9 +36,9 @@ plugin_descriptor::plugin_descriptor(const char* name_)
 
 plugin_descriptor::plugin_descriptor(
 	const BS_TYPE_INFO& plugin_tag, const char* name_, const char* version_,
-	const char* short_descr_, const char* long_descr_, const char* py_namespace_
+	const char* description_, const char* py_namespace_
 ) :
-	name(name_), version(version_), short_descr(short_descr_), long_descr(long_descr_),
+	name(name_), version(version_), description(description_),
 	py_namespace(py_namespace_), tag_(plugin_tag)
 {}
 
