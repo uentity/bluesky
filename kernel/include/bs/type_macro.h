@@ -9,22 +9,21 @@
 
 #pragma once
 
-#include "boost/preprocessor/cat.hpp"
+#include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/slot/counter.hpp>
-#include "boost/preprocessor/punctuation/comma_if.hpp"
-#include "boost/preprocessor/control/iif.hpp"
+#include <boost/preprocessor/punctuation/comma_if.hpp>
+#include <boost/preprocessor/control/iif.hpp>
 #include <boost/preprocessor/control/expr_iif.hpp>
-#include "boost/preprocessor/facilities/empty.hpp"
-#include "boost/preprocessor/tuple/to_seq.hpp"
+#include <boost/preprocessor/facilities/empty.hpp>
 #include <boost/preprocessor/seq/seq.hpp>
-#include "boost/preprocessor/seq/enum.hpp"
-#include "boost/preprocessor/seq/for_each_i.hpp"
-#include "boost/preprocessor/seq/size.hpp"
-#include "boost/preprocessor/seq/cat.hpp"
-#include "boost/preprocessor/seq/push_back.hpp"
-#include "boost/preprocessor/seq/to_array.hpp"
+#include <boost/preprocessor/seq/enum.hpp>
+#include <boost/preprocessor/seq/for_each_i.hpp>
+#include <boost/preprocessor/seq/size.hpp>
+#include <boost/preprocessor/seq/cat.hpp>
 #include <boost/preprocessor/logical/compl.hpp>
 #include <boost/preprocessor/identity.hpp>
+#include <boost/preprocessor/tuple/to_seq.hpp>
+#include <boost/preprocessor/tuple/enum.hpp>
 
 // trick to overcome M$VC c4003 warnings
 #include <boost/preprocessor/array/data.hpp>
@@ -42,29 +41,26 @@ BOOST_PP_SEQ_ENUM(BOOST_PP_IIF(is_decl, BOOST_PP_SEQ_NIL(), T))BOOST_PP_EXPR_IIF
 /*-----------------------------------------------------------------
  * declaration
  *----------------------------------------------------------------*/
-// IFACE version declare only static functions
-#define BS_TYPE_DECL_IFACE                                 \
+// declarations for non-template types
+#define BS_TYPE_DECL                                       \
+BS_RESOLVE_TYPE_IMPL_MEM                                   \
 public: static const blue_sky::type_descriptor& bs_type(); \
 private: friend class blue_sky::type_descriptor;
 
-// normal decl = IFACE + bs_resolve_type()
-#define BS_TYPE_DECL      \
-BS_RESOLVE_TYPE_IMPL_MEM  \
-BS_TYPE_DECL_IFACE
-
+// definitions for non-template types
 #define BS_TYPE_DECL_MEM \
-BS_TYPE_IMPL_MEM         \
 BS_RESOLVE_TYPE_IMPL_MEM \
+BS_TYPE_IMPL_MEM         \
 private: friend class blue_sky::type_descriptor;
 
-// for templates we include bs_resolve_type() definition in class body
-// so there is no specific *_IFACE macro
+// for templates we include implementation in class body
 #define BS_TYPE_DECL_T_MEM(T, base, type_name_prefix, descr, add_std_create, add_std_copy) \
 BS_RESOLVE_TYPE_IMPL_MEM                                                                   \
 public: static const blue_sky::type_descriptor& bs_type();                                 \
-private: friend class type_descriptor;                                                     \
-static const type_descriptor& td_maker(const std::string& tname_postfix) {                 \
-    static blue_sky::type_descriptor td< T, base >(                                        \
+private: friend class blue_sky::type_descriptor;                                           \
+static const blue_sky::type_descriptor& td_maker(const std::string& tname_postfix) {       \
+    static blue_sky::type_descriptor td(                                                   \
+        identity< T >(), identity< base >(),                                               \
         std::string(type_name_refix) + tname_postfix, descr, add_std_create, add_std_copy  \
     );                                                                                     \
     return td;                                                                             \
@@ -73,16 +69,16 @@ static const type_descriptor& td_maker(const std::string& tname_postfix) {      
 /*-----------------------------------------------------------------
  * bs_type() implementation
  *----------------------------------------------------------------*/
-#define BS_TD_IMPL(T, base, type_name, descr, add_std_create, add_std_copy)          \
-blue_sky::type_descriptor< T, base >(type_name, descr, add_std_copy, add_std_create)
+#define BS_TD_IMPL(T, base, type_name, descr, add_std_create, add_std_copy)                          \
+blue_sky::type_descriptor td(blue_sky::identity< BOOST_PP_SEQ_ENUM(T) >(),                           \
+    blue_sky::identity< BOOST_PP_SEQ_ENUM(base) >(), type_name, descr, add_std_create, add_std_copy);
 
-#define BS_TYPE_IMPL_EXT_(prefix, T, base, type_name, descr, add_std_create, add_std_copy, is_decl)          \
-BOOST_PP_SEQ_ENUM(prefix) const blue_sky::type_descriptor& BS_FMT_TYPE_SPEC(T, is_decl)                      \
-bs_type() { static  blue_sky::type_descriptor< T, base > td(type_name, descr, add_std_copy, add_std_create); \
-    return td; }
+#define BS_TYPE_IMPL_EXT_(prefix, T, base, type_name, descr, add_std_create, add_std_copy, is_decl) \
+BOOST_PP_SEQ_ENUM(prefix) const blue_sky::type_descriptor& BS_FMT_TYPE_SPEC(T, is_decl) bs_type()   \
+{ static BS_TD_IMPL(T, base, type_name, descr, add_std_create, add_std_copy); return td; }
 
 #define BS_TYPE_IMPL(T, base, type_name, descr, add_std_create, add_std_copy) \
-BS_TYPE_IMPL_EXT_(BS_SEQ_NIL(), (T), (base), type_name, descr, add_std_create, add_std_copy, false, 0)
+BS_TYPE_IMPL_EXT_(BS_SEQ_NIL(), (T), (base), type_name, descr, add_std_create, add_std_copy, 0)
 
 #define BS_TYPE_IMPL_MEM(T, base, type_name, descr, add_std_create, add_std_copy) \
 BS_TYPE_IMPL_EXT_((public: static), T, base, type_name, descr, add_std_create, add_std_copy, 1)
@@ -155,18 +151,18 @@ BS_TYPE_IMPL_T_EXT_MEM(T, 1, (spec_type))
  *----------------------------------------------------------------*/
 // create unqiue static int variables
 // registration code is executed during variables initialization
-#define BLUE_SKY_TYPE_STD_CREATE_EXT(T, ctor_args_num, ctor_args_tuple)                                                    \
-namespace { #include BOOST_PP_UPDATE_COUNTER()                                                                             \
-static int BOOST_PP_CAT(reg_create, BOOST_PP_COUNTER) = [](){                                                              \
-T::bs_type()::add_constructor< T BOOST_PP_COMMA_IF(ctor_args_num) BOOST_PP_TUPLE_ENUM(ctor_args_num, ctor_args_tuple) >(); \
+#define BS_TYPE_ADD_CONSTRUCTOR(T, ctor_args_num, ctor_args_tuple)                                                         \
+namespace {                                                                                                                \
+static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){                                                                 \
+T::bs_type().add_constructor< T BOOST_PP_COMMA_IF(ctor_args_num) BOOST_PP_TUPLE_ENUM(ctor_args_num, ctor_args_tuple) >(); \
     return 0; }(); }
 
-#define BLUE_SKY_TYPE_STD_CREATE(T)    \
-BLUE_SKY_TYPE_STD_CREATE_EXT(T, 0, ())
+#define BS_TYPE_ADD_EMPTY_CONSTRUCTOR(T) \
+BS_TYPE_ADD_CONSTRUCTOR(T, 0, ())
 
-#define BLUE_SKY_TYPE_STD_COPY(T)                           \
-namespace { #include BOOST_PP_UPDATE_COUNTER()              \
-static int BOOST_PP_CAT(reg_copy, BOOST_PP_COUNTER) = [](){ \
-T::bs_type()::add_copy_constructor< T >();                  \
+#define BS_TYPE_ADD_COPY_CONSTRUCTOR(T)                          \
+namespace {                                                      \
+static int BOOST_PP_CAT(_bs_reg_copy_, BOOST_PP_COUNTER) = [](){ \
+T::bs_type().add_copy_constructor< T >();                        \
     return 0; }(); }
 

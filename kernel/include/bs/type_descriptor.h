@@ -22,7 +22,7 @@
 
 namespace blue_sky {
 
-typedef const std::shared_ptr< objbase > bs_type_ctor_result;
+typedef std::shared_ptr< objbase > bs_type_ctor_result;
 typedef const std::shared_ptr< objbase >& bs_type_copy_param;
 //typedef objbase* (*BS_TYPE_CREATION_FUN)(const std::shared_ptr< objbase >&);
 typedef bs_type_ctor_result (*BS_TYPE_COPY_FUN)(bs_type_copy_param);
@@ -45,14 +45,14 @@ private:
 
 	BS_TYPE_INFO bs_ti_;
 	std::string type_name_; //!< string type name
+	std::string description_; //!< Short description of type
+
+	mutable BS_GET_TD_FUN parent_td_fun_;
+	mutable BS_TYPE_COPY_FUN copy_fun_;
 
 	//BS_TYPE_CREATION_FUN creation_fun_;
 	// map type of params tuple -> typeless creation function
-	std::unordered_map< std::type_index, std::pair< void*, void*> > creators_;
-
-	BS_TYPE_COPY_FUN copy_fun_;
-	BS_GET_TD_FUN parent_td_fun_;
-	std::string description_; //!< Short description of type
+	mutable std::unordered_map< std::type_index, std::pair< void(*)(), void*> > creators_;
 
 	template< class T, class unused = void >
 	struct extract_tdfun {
@@ -79,6 +79,25 @@ private:
 		}
 	};
 
+	// std::shared_ptr support casting only using explicit call to std::static_pointer_cast
+	// this helper allows to avoid lengthy typing and auto-cast pointer from objbase
+	// to target type
+	struct shared_ptr_cast {
+		shared_ptr_cast() : ptr_(nullptr) {}
+		// only move semantics allowed
+		shared_ptr_cast(const shared_ptr_cast&) = delete;
+		shared_ptr_cast(shared_ptr_cast&&) = default;
+		// accept only rvalues and move them to omit ref incrementing
+		shared_ptr_cast(std::shared_ptr< objbase>&& rhs) : ptr_(std::move(rhs)) {}
+
+		template< typename T >
+		operator std::shared_ptr< T >() const {
+			return std::static_pointer_cast< T, objbase >(ptr_);
+		}
+
+		bs_type_ctor_result ptr_;
+	};
+
 	// helper to find out parameters pack tuple type
 	template< typename... Args >
 	using args_pack = std::tuple< std::decay_t< Args >... >;
@@ -86,19 +105,19 @@ private:
 	// type of object construction callback
 	template< typename... Args >
 	using creator_callback = bs_type_ctor_result (*)(
-		void*, std::add_lvalue_reference_t< std::decay_t< Args > >...
+		void*, std::add_lvalue_reference_t< const std::decay_t< Args > >...
 	);
 
 public:
 	// default constructor - type_descriptor points to nil
 	type_descriptor() :
 		bs_ti_(nil_type_info()), type_name_(BS_NIL_TYPE_TAG),
-		copy_fun_(nullptr), parent_td_fun_(nullptr)
+		parent_td_fun_(nullptr), copy_fun_(nullptr)
 	{}
 
 	// Nil constructor for temporary tasks (searching etc)
 	type_descriptor(const std::string& type_name) :
-		bs_ti_(nil_type_info()), type_name_(type_name), copy_fun_(nullptr), parent_td_fun_(nullptr)
+		bs_ti_(nil_type_info()), type_name_(type_name), parent_td_fun_(nullptr), copy_fun_(nullptr)
 	{}
 
 	// standard constructor
@@ -106,36 +125,38 @@ public:
 		const BS_TYPE_INFO& ti, const char* type_name, const BS_TYPE_COPY_FUN& cp_fn,
 		const BS_GET_TD_FUN& parent_td_fn, const char* description = ""
 	) :
-		bs_ti_(ti), type_name_(type_name), copy_fun_(cp_fn), parent_td_fun_(parent_td_fn),
-		description_(description)
+		bs_ti_(ti), type_name_(type_name), description_(description),
+		parent_td_fun_(parent_td_fn), copy_fun_(cp_fn)
 	{}
 
 	// templated ctor for BlueSky types
 	template< class T, class base = nil, class typename_t = std::nullptr_t >
 	type_descriptor(
+		identity< T >, identity< base >,
 		typename_t type_name = nullptr, const char* description = nullptr,
 		bool add_std_construct = false, bool add_std_copy = false
 	) :
-		bs_ti_(BS_GET_TI(T)), type_name_(extract_typename< T >::go(type_name)),
-		copy_fun_(nullptr), parent_td_fun_(extract_tdfun< base >::go()),
-		description_(description)
+		bs_ti_(BS_GET_TI(T)), type_name_(extract_typename< T >::go(type_name)), description_(description),
+		parent_td_fun_(extract_tdfun< base >::go()), copy_fun_(nullptr)
 	{
 		if(add_std_construct)
 			add_constructor< T >();
 		if(add_std_copy)
-			set_copy_constructor< T >();
+			add_copy_constructor< T >();
 	}
 
 	/*-----------------------------------------------------------------
 	 * create new instance
 	 *----------------------------------------------------------------*/
 	// vanilla fucntion pointer as type constructor
-	template< typename... Args >
-	void add_constructor(bs_type_ctor_result (*f)(Args&&...)) {
+	template< typename T, typename... Args >
+	void add_constructor(bs_type_ctor_result (*f)(Args&&...)) const {
 		creators_[typeid(args_pack< Args... >)] = std::make_pair(
-			reinterpret_cast< void* >(
-				[](void* ff, std::add_lvalue_reference_t< std::decay_t< Args > >... args) {
-					return (*static_cast< decltype(f) >(ff))(args...);
+			reinterpret_cast< void(*)() >((creator_callback< Args... >)
+				[](void* ff, std::add_lvalue_reference_t< const std::decay_t< Args > >... args) {
+					return std::static_pointer_cast< objbase, T >(
+						(*static_cast< decltype(f) >(ff))(args...)
+					);
 				}
 			),
 			static_cast< void* >(f)
@@ -145,11 +166,11 @@ public:
 	// std type construction
 	// enumerate constructor argument types
 	template< typename T, typename... Args >
-	void add_constructor() {
+	void add_constructor() const {
 		creators_[typeid(args_pack< Args... >)] = std::make_pair(
-			reinterpret_cast< void* >(
-				[](void*, std::add_lvalue_reference_t< std::decay_t< Args > >... args) {
-					return std::make_shared< T >(args...);
+			reinterpret_cast< void(*)() >((creator_callback< Args... >)
+				[](void*, std::add_lvalue_reference_t< const std::decay_t< Args > >... args) {
+					return std::static_pointer_cast< objbase, T >(std::make_shared< T >(args...));
 				}
 			),
 			nullptr
@@ -159,19 +180,19 @@ public:
 	// std type constructor
 	// deduce argument types from passed tuple
 	template< typename T, typename... Args >
-	void add_constructor(std::tuple< Args... >* = nullptr) {
+	void add_constructor(std::tuple< Args... >*) const {
 		add_constructor< T, Args... >();
 	}
 
 	// make new instance
 	template< typename... Args >
-	bs_type_ctor_result construct(Args&&... args) const {
+	shared_ptr_cast construct(Args&&... args) const {
 		auto creator = creators_.find(typeid(args_pack< Args... >));
 		if(creator != creators_.end()) {
 			auto callback = reinterpret_cast< creator_callback< Args...> >(creator->second.first);
 			return callback(creator->second.second, std::forward< Args >(args)...);
 		}
-		return nullptr;
+		return {};
 	}
 
 	/*-----------------------------------------------------------------
@@ -179,22 +200,24 @@ public:
 	 *----------------------------------------------------------------*/
 	// construct copy using copy constructor
 	template< typename T >
-	void add_copy_constructor() {
+	void add_copy_constructor() const {
 		copy_fun_ = [](bs_type_copy_param src) {
-			return std::make_shared< T >(*src);
+			return std::static_pointer_cast< objbase, T >(
+				std::make_shared< T >(static_cast< const T& >(*src))
+			);
 		};
 	}
 
 	// construct copy using vanilla function
-	void add_copy_constructor(BS_TYPE_COPY_FUN f) {
+	void add_copy_constructor(BS_TYPE_COPY_FUN f) const {
 		copy_fun_ = f;
 	}
 
 	// make instance copy
-	bs_type_ctor_result clone(bs_type_copy_param src) {
+	shared_ptr_cast clone(bs_type_copy_param src) const {
 		if(copy_fun_)
 			return (*copy_fun_)(src);
-		return nullptr;
+		return {};
 	}
 
 	/// read access to base fields
