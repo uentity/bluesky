@@ -27,14 +27,23 @@ class BS_API objbase {
 	friend class bs_inode;
 	//friend class bs_link;
 
-	BS_COMMON_DECL(objbase)
+	//BS_COMMON_DECL(objbase)
 
 public:
-	//! swap function needed to provide assignment ability
-	void swap(objbase& rhs);
+	/// default ctor
+	objbase(); //= default;
+
+	/// default copy ctor
+	objbase(const objbase&); //= default;
+
+	/// default move ctor
+	objbase(objbase&&) = default;
 
 	// virtual destructor
 	virtual ~objbase();
+
+	//! swap function needed to provide assignment ability
+	void swap(objbase& rhs);
 
 	// signals list
 	//BLUE_SKY_SIGNALS_DECL_BEGIN(bs_messaging)
@@ -43,14 +52,16 @@ public:
 	//BLUE_SKY_SIGNALS_DECL_END
 
 	//! type_descriptor of objbase class
-	static type_descriptor bs_type();
+	static const type_descriptor& bs_type();
 
 	/*!
 	\brief Type descriptor resolver for derived class.
 	This method should be overridden by childs.
 	\return reference to const type_descriptor
 	*/
-	virtual type_descriptor bs_resolve_type() const = 0;
+	virtual const type_descriptor& bs_resolve_type() const {
+		return bs_type();
+	}
 
 	// register this instance in kernel instances list
 	int bs_register_this() const;
@@ -58,7 +69,7 @@ public:
 	int bs_free_this() const;
 
 	// default object deletion method - executes 'delete this'
-	virtual void dispose() const;
+	//virtual void dispose() const;
 
 	/*!
 	\brief Access to corresponding inode object
@@ -73,6 +84,9 @@ protected:
 	//BS_COMMON_DECL(objbase);
 	//BS_LOCK_THIS_DECL(objbase);
 };
+
+// alias
+using sp_obj = std::shared_ptr< objbase >;
 
 }	//namespace blue_sky
 

@@ -26,7 +26,7 @@ namespace blue_sky {
  * \brief Default constructor
  */
 
-objbase::objbase(bs_type_ctor_param)
+objbase::objbase()
 	:  inode_(NULL)
 {}
 
@@ -49,19 +49,35 @@ void objbase::swap(objbase& rhs) {
 objbase::~objbase()
 {}
 
-void objbase::dispose() const {
-	delete this;
-}
+//void objbase::dispose() const {
+//	delete this;
+//}
 
 const bs_inode* objbase::inode() const {
 	return inode_;
 }
 
-type_descriptor objbase::bs_type() {
-	return type_descriptor(
-		BS_GET_TI(objbase), NULL, NULL, NULL, "blue_sky::objbase",
-		"Base class of all BlueSky types"
+const type_descriptor& objbase::bs_type() {
+	// 1st implementation
+	//static struct td_init {
+	//	td_init() : type(
+	//		BS_GET_TI(objbase), "objbase", NULL, NULL,
+	//		"Base class of all BlueSky types"
+	//	) {
+	//		type.add_constructor< objbase >();
+	//		type.add_copy_constructor< objbase >();
+	//	}
+
+	//	type_descriptor type;
+	//} td;
+	//return td.type;
+	
+	// 2nd impl
+	static type_descriptor td(
+		identity< objbase >(), identity< nil >(),
+		"objbase", "Base class of all BlueSky types", true, true
 	);
+	return td;
 }
 
 int objbase::bs_register_this() const {
