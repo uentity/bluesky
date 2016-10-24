@@ -12,6 +12,7 @@
 #include "common.h"
 #include "objbase.h"
 #include "log.h"
+#include "type_descriptor.h"
 
 //#define BS_AUTOLOAD_PLUGINS
 
@@ -40,8 +41,8 @@ struct type_tuple {
 	typedef plugin_descriptor first_type;
 	typedef type_descriptor second_type;
 
-	plugin_descriptor pd;
-	type_descriptor td;
+	const plugin_descriptor& pd;
+	const type_descriptor& td;
 
 	type_tuple(const plugin_descriptor& pd_, const type_descriptor& td_)
 		: pd(pd_), td(td_)
@@ -92,11 +93,26 @@ public:
 
 	static spdlog::logger& get_log(const char* name);
 
+	bool register_type(const type_descriptor& td, const plugin_descriptor* pd = nullptr);
+
+	// create instance of object
+	template< typename Obj_type_spec, typename... Args >
+	auto create_object(Obj_type_spec&& obj_type, Args&&... ctor_args) {
+		const type_descriptor td = demand_type(type_descriptor(std::forward< Obj_type_spec >(obj_type)));
+		return td.construct(std::forward< Args >(ctor_args)...);
+	}
+
+	// clone object
+	auto create_object_copy(bs_type_copy_param source) const {
+		return source->bs_resolve_type().clone(source);
+	}
+
 private:
 	//! \brief Constructor of kernel
 	kernel();
 	//! \brief Copy constructor of kernel
-	kernel(const kernel& k);
+	kernel(const kernel&) = delete;
+	kernel(kernel&&) = delete;
 	//! \brief Destructor.
 	~kernel();
 
@@ -108,6 +124,9 @@ private:
 	void init();
 	// called before kernel dies
 	void cleanup();
+
+	// extract type_descriptor for given type from internal kernel storage
+	const type_descriptor& demand_type(const type_descriptor& obj_type);
 };
 
 //! \brief singleton for accessing the instance of kernel

@@ -40,5 +40,13 @@ void kernel::unload_plugins() {
 	pimpl_->unload_plugins();
 }
 
+const type_descriptor& kernel::demand_type(const type_descriptor& obj_type) {
+	return *pimpl_->demand_type(obj_type).td_;
+}
+
+bool kernel::register_type(const type_descriptor& td, const plugin_descriptor* pd) {
+	return pimpl_->register_type(td, pd);
+}
+
 } /* namespace blue_sky */
 
