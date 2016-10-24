@@ -67,5 +67,8 @@ public:
 	static T& Instance();
 };
 
+// identity utility template to pass params to templated constructors
+template< class T > struct identity { using type = T; };
+
 } // eof blue_sky namespace
 
