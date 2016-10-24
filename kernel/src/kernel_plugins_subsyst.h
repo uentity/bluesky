@@ -15,8 +15,6 @@
 #include <map>
 
 namespace blue_sky { namespace detail {
-// hidden details
-namespace {
 /*-----------------------------------------------------------------------------
  *  helper wrapper for storing objects in kernel dictionary
  *  designed to have specific valid nill element
@@ -24,21 +22,26 @@ namespace {
 template< class T >
 struct elem_ptr {
 	typedef T elem_t;
-	//nil ctor
-	elem_ptr() : p_(&nil_el) {}
+	// nil ctor
+	elem_ptr() : p_(&nil_el()) {}
 
 	elem_ptr(const T& el) : p_(&el) {}
 
-	elem_ptr (const T *el) : p_ (el) {}
+	elem_ptr (const T* el) : p_(el ? el : &nil_el()) {}
 
 	elem_ptr& operator =(const T& el) {
 		p_ = &el;
 		return *this;
 	}
+	elem_ptr& operator =(const T* el) {
+		p_ = el ? el : &nil_el();
+		return *this;
+	}
 
 	const T* operator ->() const { return p_; }
 
-	//conversion to elem_t
+	// conversion to elem_t
+	const T* get() const { return p_; }
 	const T& elem() const { return *p_; }
 	const T& operator *() const { return *p_; }
 
@@ -50,14 +53,20 @@ struct elem_ptr {
 		return !is_nil();
 	}
 
-	static const T nil_el;
+	static const T& nil_el() {
+		// here we rely on gact that if elem_ptr has external linkage (it should)
+		// then there's only one copy on nil_obj that will be shared
+		// among all translation units
+		static const T nil_obj;
+		return nil_obj;
+	}
 
 private:
 	const T* p_;
 };
 // alias
 using pd_ptr = elem_ptr< plugin_descriptor >;
-template< > const plugin_descriptor pd_ptr::nil_el = plugin_descriptor();
+using td_ptr = elem_ptr< type_descriptor >;
 
 /*-----------------------------------------------------------------------------
  *  main type factory element
@@ -71,7 +80,15 @@ struct fab_elem {
 	fab_elem(const pd_ptr& pd, const type_descriptor& td)
 		: pd_(pd), td_(td)
 	{}
-	//the same but from tuple
+
+	fab_elem(const type_descriptor& td)
+		: td_(td)
+	{}
+
+	fab_elem(const plugin_descriptor& pd)
+		: pd_(pd)
+	{}
+
 	fab_elem(const type_tuple& tt)
 		: pd_(tt.pd), td_(tt.td)
 	{}
@@ -79,8 +96,7 @@ struct fab_elem {
 	fab_elem(const pd_ptr& pd)
 		: pd_(pd)
 	{}
-
-	fab_elem(const type_descriptor& td)
+	fab_elem(const td_ptr& td)
 		: td_(td)
 	{}
 
@@ -93,63 +109,42 @@ struct fab_elem {
 	}
 
 	operator type_tuple() const {
-		return type_tuple(*pd_, td_);
+		return type_tuple(*pd_, *td_);
 	};
 
 	pd_ptr pd_;
-	type_descriptor td_;
+	td_ptr td_;
 };
 // alias
 using fe_ptr = elem_ptr< fab_elem >;
-// static nil elements for fab_elem
-template< > const fab_elem fe_ptr::nil_el = fab_elem();
 
 // pd_ptrs comparison by name
 struct pdp_comp_name {
 	bool operator()(const pd_ptr& lhs, const pd_ptr& rhs) const {
-		return (lhs->name < rhs->name);
+		return lhs->name < rhs->name;
 	}
 };
 
 // fab_elem sorting order by bs_type_info
 struct fe_comp_ti {
 	bool operator()(const fab_elem& lhs, const fab_elem& rhs) const {
-		return (lhs.td_ < rhs.td_);
-	}
-};
-
-// fab_elem pointers comparison functions for sorting in containers
-struct fep_comp_ti {
-	bool operator()(const fe_ptr& lhs, const fe_ptr& rhs) const {
-		return (lhs->td_ < rhs->td_);
+		return lhs.td_ < rhs.td_;
 	}
 };
 
 // fab element comparison by string typename
-struct fep_comp_stype {
-	bool operator()(const fe_ptr& lhs, const fe_ptr& rhs) const {
-		return (lhs->td_.type_name() < rhs->td_.type_name());
+struct fe_comp_typename {
+	bool operator()(const fab_elem& lhs, const fab_elem& rhs) const {
+		return lhs.td_->type_name() < rhs.td_->type_name();
 	}
 };
 
 // fab elements comparison by plugin name
-struct fep_comp_pd {
-	bool operator()(const fe_ptr& lhs, const fe_ptr& rhs) const {
-		return (lhs->pd_->name < rhs->pd_->name);
+struct fe_comp_pd {
+	bool operator()(const fab_elem& lhs, const fab_elem& rhs) const {
+		return (lhs.pd_->name < rhs.pd_->name);
 	}
 };
-
-// compare plugin_descriptors by name
-struct cmp_pd_by_name {
-	bool operator()(
-		const blue_sky::plugin_descriptor& lhs,
-		const blue_sky::plugin_descriptor& rhs
-	) {
-		return (lhs.name < rhs.name);
-	}
-};
-
-} // eof hidden namespace
 
 /*-----------------------------------------------------------------
  * Kernel plugins loading subsystem definition
@@ -161,21 +156,21 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 
 	//! plugin_descriptor -> lib_descriptor 1-to-1 relation
 	using plugins_enum_t = std::map<
-		plugin_descriptor, lib_descriptor, cmp_pd_by_name,
+		pd_ptr, lib_descriptor, pdp_comp_name,
 		boost::fast_pool_allocator<
-			std::pair< plugin_descriptor, lib_descriptor >,
+			std::pair< const plugin_descriptor&, lib_descriptor >,
 			boost::default_user_allocator_new_delete,
 			boost::details::pool::null_mutex
 		>
 	>;
 
 	//! plugin_descriptors sorted by name
-	using plugins_dict_t = std::multiset<
-		pd_ptr, pdp_comp_name,
-		boost::fast_pool_allocator<
-			pd_ptr, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
-		>
-	>;
+	//using plugins_dict_t = std::multiset<
+	//	pd_ptr, pdp_comp_name,
+	//	boost::fast_pool_allocator<
+	//		pd_ptr, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
+	//	>
+	//>;
 
 	//! types factory: fab_elements sorted by BS_TYPE_INFO
 	using factory_t = std::set<
@@ -187,19 +182,19 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 
 	//! types dictionary: fe_ptrs sorted by string type
 	using types_dict_alloc_t = boost::fast_pool_allocator<
-		fe_ptr, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
+		fab_elem, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
 	>;
 	using types_dict_t = std::set<
-		fe_ptr, fep_comp_stype, types_dict_alloc_t
+		fab_elem, fe_comp_typename, types_dict_alloc_t
 	>;
 
 	//! loaded plugins: pointers to type_tuples sorted by plugins names
 	using plugin_types_enum_t = std::multiset<
-		fe_ptr, fep_comp_pd, types_dict_alloc_t
+		fab_elem, fe_comp_pd, types_dict_alloc_t
 	>;
 
 	plugins_enum_t loaded_plugins_;
-	plugins_dict_t plugins_dict_;
+	//plugins_dict_t plugins_dict_;
 	plugin_types_enum_t plugin_types_;
 
 	factory_t obj_fab_;
@@ -214,6 +209,9 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	kernel_plugins_subsyst();
 	~kernel_plugins_subsyst();
 
+	/*-----------------------------------------------------------------
+	 * plugins managing
+	 *----------------------------------------------------------------*/
 	void clean_plugin_types(const plugin_descriptor& pd);
 
 	void unload_plugin(const plugin_descriptor& pd);
@@ -226,9 +224,29 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 
 	int load_plugins(void* py_root_module);
 
-	// Plugin filename pair. first: plugin's path, second: plugin's version
-	//using plugin_file_t = std::pair<std::string, std::string>;
-	//std::list< plugin_file_t > discover_plugins();
+	/*-----------------------------------------------------------------
+	 * types management
+	 *----------------------------------------------------------------*/
+	bool is_inner_pd(const plugin_descriptor& pd) {
+		return (pd == kernel_pd_ || pd == runtime_pd_);
+	}
+
+	bool register_kernel_type(const type_descriptor& td, fab_elem* tp_ref = NULL) {
+		return register_type(td, &kernel_pd_, tp_ref);
+	}
+
+	bool register_rt_type(const type_descriptor& td, fab_elem* tp_ref = NULL) {
+		return register_type(td, &runtime_pd_, tp_ref);
+	}
+
+	// register given type
+	// return registered type in tp_ref, if not null
+	bool register_type(
+		const type_descriptor& td, const plugin_descriptor* pd = nullptr, fab_elem* tp_ref = nullptr
+	);
+
+	// extract type information from stored factory, register as runtime type if wasn't found
+	fab_elem demand_type(const fab_elem& obj_t);
 };
 
 }} // eof blue_sky::detail namespace

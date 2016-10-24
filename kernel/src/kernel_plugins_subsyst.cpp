@@ -53,6 +53,20 @@ std::string extract_root_name(const std::string& full_name) {
 
 namespace detail {
 
+// static nil elements for pd_ptr
+//template< > const plugin_descriptor pd_ptr::nil_el = plugin_descriptor();
+
+kernel_plugins_subsyst::kernel_plugins_subsyst()
+	: kernel_pd_(*bs_get_plugin_descriptor())
+		//BS_GET_TI(__kernel_types_pd_tag__), "Kernel types", KERNEL_VERSION,
+		//"BlueSky kernel types tag", "", "bs")
+	, runtime_pd_(
+		BS_GET_TI(__runtime_types_pd_tag__), "BlueSky virtual plugin for runtime types", KERNEL_VERSION,
+		"BlueSky virtual plugin for runtime types", "", "bs")
+{}
+
+kernel_plugins_subsyst::~kernel_plugins_subsyst() {}
+
 #ifdef BSPY_EXPORTING
 struct kernel_plugins_subsyst::bspy_module {
 	bspy_module(const pybind11::module& root_mod) : root_module_(root_mod) {}
@@ -87,25 +101,14 @@ struct kernel_plugins_subsyst::bspy_module {
 };
 #endif
 
-kernel_plugins_subsyst::kernel_plugins_subsyst()
-	: kernel_pd_(*bs_get_plugin_descriptor())
-		//BS_GET_TI(__kernel_types_pd_tag__), "Kernel types", KERNEL_VERSION,
-		//"BlueSky kernel types tag", "", "bs")
-	, runtime_pd_(
-		BS_GET_TI(__runtime_types_pd_tag__), "BlueSky virtual plugin for runtime types", KERNEL_VERSION,
-		"BlueSky virtual plugin for runtime types", "", "bs")
-{}
-
-kernel_plugins_subsyst::~kernel_plugins_subsyst() {}
-
 std::pair< pd_ptr, bool >
 kernel_plugins_subsyst::register_plugin(const plugin_descriptor& pd, const lib_descriptor& ld) {
 	// enumerate plugin first
 	auto res = loaded_plugins_.insert(std::make_pair(pd, ld));
 	pd_ptr ret = res.first->first;
 	// register plugin_descriptor in dictionary
-	if(res.second)
-		plugins_dict_.insert(ret);
+	//if(res.second)
+	//	plugins_dict_.insert(ret);
 	return std::make_pair(ret, res.second);
 }
 
@@ -115,8 +118,8 @@ void kernel_plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
 
 	auto plug_types = plugin_types_.equal_range(fab_elem(pd));
 	for(auto ptype = plug_types.first; ptype != plug_types.second; ++ptype) {
-		types_resolver_.erase(ptype);
-		obj_fab_.erase(**ptype);
+		types_resolver_.erase(*ptype);
+		obj_fab_.erase(*ptype);
 	}
 	plugin_types_.erase(plug_types.first, plug_types.second);
 }
@@ -128,7 +131,7 @@ void kernel_plugins_subsyst::unload_plugin(const plugin_descriptor& pd) {
 	if(plug == loaded_plugins_.end()) return;
 
 	clean_plugin_types(pd);
-	plugins_dict_.erase(pd);
+	//plugins_dict_.erase(pd);
 	loaded_plugins_[pd].unload();
 	loaded_plugins_.erase(pd);
 }
@@ -136,7 +139,7 @@ void kernel_plugins_subsyst::unload_plugin(const plugin_descriptor& pd) {
 // unloads all plugins
 void kernel_plugins_subsyst::unload_plugins() {
 	for(auto p : loaded_plugins_) {
-		unload_plugin(p.first);
+		unload_plugin(*p.first);
 	}
 }
 
@@ -333,7 +336,6 @@ int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
 	//}
 	return 0;
 }
-
 
 }} // eof blue_sky::detail namespace
 
