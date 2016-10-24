@@ -9,8 +9,6 @@
 
 #pragma once
 
-#define LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT
-
 // prevent warnings about macro redeifinition - include Python.h
 // at the very beginning
 #if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
@@ -24,7 +22,7 @@
 
 #include "fwd.h"
 #include "type_info.h"
-#include "plugin_common.h"
+#include "plugin_descriptor.h"
 #include "detail/args.h"
 
 // common includes - used almost everywhere

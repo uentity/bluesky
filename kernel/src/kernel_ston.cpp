@@ -9,6 +9,7 @@
 
 #include <bs/kernel.h>
 
+#define LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT
 //#define LOKI_CLASS_LEVEL_THREADING
 #include <loki/Singleton.h>
 
