@@ -29,13 +29,15 @@ kernel_cpp_list = [
 	"src/kernel_plugins_subsyst.cpp",
 	"src/kernel_types_factory.cpp",
 	"src/kernel.cpp",
+	"src/kernel_tools.cpp",
 	"src/lib_descriptor.cpp",
 	"src/log.cpp",
 	"src/main.cpp",
 	"src/link.cpp",
 	"src/hard_link.cpp",
 	"src/node.cpp",
-	"src/compat/messaging.cpp"
+	"src/compat/messaging.cpp",
+	"src/compat/bs_array.cpp"
 ];
 #print kernel_cpp_list;
 
