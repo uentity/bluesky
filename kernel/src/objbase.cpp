@@ -38,7 +38,7 @@ objbase::objbase()
 //}
 
 objbase::objbase(const objbase& obj)
-	: inode_(NULL)
+	: enable_shared_from_this(obj), inode_(NULL)
 {}
 
 void objbase::swap(objbase& rhs) {
@@ -75,7 +75,7 @@ const type_descriptor& objbase::bs_type() {
 	// 2nd impl
 	static type_descriptor td(
 		identity< objbase >(), identity< nil >(),
-		"objbase", "Base class of all BlueSky types", true, true
+		"objbase", "Base class of all BlueSky types", std::true_type(), std::true_type()
 	);
 	return td;
 }

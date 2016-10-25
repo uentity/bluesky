@@ -56,14 +56,15 @@ private: friend class blue_sky::type_descriptor;
 // prefix can be specified by user and name tail is concatenation of spec types
 // this macro is intended to be used with multiple BS_TYPE_IMPL_INL_EXT for each specialization
 // in cpp file
-#define BS_TYPE_DECL_INL_BEGIN(T, base, type_name_prefix, descr, add_def_create, add_def_copy) \
-BS_RESOLVE_TYPE_IMPL_INL                                                                       \
-public: static const blue_sky::type_descriptor& bs_type();                                     \
-private: friend class blue_sky::type_descriptor;                                               \
-static const blue_sky::type_descriptor& td_maker(const std::string& tname_postfix) {           \
-    static blue_sky::type_descriptor td(                                                       \
-        identity< T >(), identity< base >(),                                                   \
-        std::string(type_name_prefix) + tname_postfix, descr, add_def_create, add_def_copy     \
+#define BS_TYPE_DECL_INL_BEGIN(T, base, type_name_prefix, descr, add_def_create, add_def_copy)           \
+BS_RESOLVE_TYPE_IMPL_INL                                                                                 \
+public: static const blue_sky::type_descriptor& bs_type();                                               \
+private: friend class blue_sky::type_descriptor;                                                         \
+static const blue_sky::type_descriptor& td_maker(const std::string& tname_postfix) {                     \
+    static blue_sky::type_descriptor td(                                                                 \
+        identity< T >(), identity< base >(),                                                             \
+        std::string(type_name_prefix) + tname_postfix, descr,                                            \
+        std::integral_constant< bool, add_def_create >(), std::integral_constant< bool, add_def_copy >() \
     );
 // you can additionally modify td between BEGIN and END, for ex. add constructor
 // td.add_constructor< ... >(...)
@@ -77,9 +78,10 @@ BS_TYPE_DECL_INL_END
  * bs_type() implementation
  *----------------------------------------------------------------*/
 // assume that types T and base are passed as tuples
-#define BS_TD_IMPL(T_tup, base_tup, type_name, descr, add_def_create, add_def_copy)                         \
-blue_sky::type_descriptor td(blue_sky::identity< BOOST_PP_TUPLE_ENUM(T_tup) >(),                            \
-    blue_sky::identity< BOOST_PP_TUPLE_ENUM(base_tup) >(), type_name, descr, add_def_create, add_def_copy);
+#define BS_TD_IMPL(T_tup, base_tup, type_name, descr, add_def_create, add_def_copy)                    \
+blue_sky::type_descriptor td(blue_sky::identity< BOOST_PP_TUPLE_ENUM(T_tup) >(),                       \
+    blue_sky::identity< BOOST_PP_TUPLE_ENUM(base_tup) >(), type_name, descr,                           \
+    std::integral_constant< bool, add_def_create >(), std::integral_constant< bool, add_def_copy >());
 // prefix is also a tuple
 #define BS_TYPE_IMPL_(prefix_tup, T_tup, base_tup, type_name, descr, add_def_create, add_def_copy, is_decl) \
 BOOST_PP_TUPLE_ENUM(prefix_tup) const blue_sky::type_descriptor& BS_FMT_TYPE_SPEC(T_tup, is_decl) bs_type() \
@@ -226,11 +228,11 @@ BS_TYPE_ADD_COPY_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
  * auto-register type in BS kernel
  *----------------------------------------------------------------*/
 // type passed as tuple
-#define BS_REGISTER_TYPE_(T_tup)                                         \
-extern const ::blue_sky::plugin_descriptor* bs_get_plugin_descriptor();  \
-namespace { static int BOOST_PP_CAT(_bs_reg_type_, __LINE__) =           \
-[]() { ::blue_sky::give_kernel::Instance().register_type(                \
-    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), ::bs_get_plugin_descriptor()); \
+#define BS_REGISTER_TYPE_(T_tup)                                            \
+extern "C" const ::blue_sky::plugin_descriptor* bs_get_plugin_descriptor(); \
+namespace { static int BOOST_PP_CAT(_bs_reg_type_, __LINE__) =              \
+[]() { ::blue_sky::give_kernel::Instance().register_type(                   \
+    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), ::bs_get_plugin_descriptor());    \
     return 0; }(); }
 
 // non-templated types and types with 1 template parameter

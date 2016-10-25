@@ -105,6 +105,22 @@ private:
 		void*, std::add_lvalue_reference_t< const std::decay_t< Args > >...
 	);
 
+	// should we add default ctor?
+	template< typename T, bool Enable >
+	void add_def_constructor(std::enable_if_t< !Enable >* = nullptr) {}
+	template< typename T, bool Enable >
+	void add_def_constructor(std::enable_if_t< Enable >* = nullptr) {
+		add_constructor< T >();
+	}
+
+	// should we add default copy?
+	template< typename T, bool Enable >
+	void add_def_copy_constructor(std::enable_if_t< !Enable >* = nullptr) {}
+	template< typename T, bool Enable >
+	void add_def_copy_constructor(std::enable_if_t< Enable >* = nullptr) {
+		add_copy_constructor< T >();
+	}
+
 public:
 	// default constructor - type_descriptor points to nil
 	type_descriptor() :
@@ -129,19 +145,21 @@ public:
 	// templated ctor for BlueSky types
 	// if add_def_construct is set -- add default (empty) type's constructor
 	// if add_def_copy is set -- add copy constructor
-	template< class T, class base = nil, class typename_t = std::nullptr_t >
+	template<
+		class T, class base = nil, class typename_t = std::nullptr_t,
+		bool add_def_ctor = false, bool add_def_copy = false
+	>
 	type_descriptor(
 		identity< T >, identity< base >,
 		typename_t type_name = nullptr, const char* description = nullptr,
-		bool add_def_construct = false, bool add_def_copy = false
+		std::integral_constant< bool, add_def_ctor > = std::false_type(),
+		std::integral_constant< bool, add_def_copy > = std::false_type()
 	) :
 		bs_ti_(BS_GET_TI(T)), type_name_(extract_typename< T >::go(type_name)), description_(description),
 		parent_td_fun_(extract_tdfun< base >::go()), copy_fun_(nullptr)
 	{
-		if(add_def_construct)
-			add_constructor< T >();
-		if(add_def_copy)
-			add_copy_constructor< T >();
+		add_def_constructor< T, add_def_ctor >();
+		add_def_copy_constructor< T, add_def_copy >();
 	}
 
 	/*-----------------------------------------------------------------
