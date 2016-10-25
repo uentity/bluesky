@@ -7,3 +7,6 @@
 [submodule "third_party/actor-framework"]
 	path = third_party/actor-framework
 	url = https://github.com/actor-framework/actor-framework.git
+[submodule "third_party/eigen"]
+	path = third_party/eigen
+	url = https://github.com/RLovelett/eigen.git
