@@ -27,7 +27,9 @@ struct BS_API plugin_descriptor {
 	plugin_descriptor();
 
 	// ctor for searching in containers
-	plugin_descriptor(const char* name);
+	template< typename T >
+	plugin_descriptor(T&& name_)
+		: name(std::forward< T >(name_)), tag_(nil_type_info()) {}
 
 	// standard ctor for using in plugins
 	plugin_descriptor(

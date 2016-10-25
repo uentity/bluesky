@@ -30,9 +30,9 @@ plugin_descriptor::plugin_descriptor()
 	: name(BS_NIL_PLUGIN_TAG), tag_(nil_type_info())
 {}
 
-plugin_descriptor::plugin_descriptor(const char* name_)
-	: name(name_), tag_(nil_type_info())
-{}
+//plugin_descriptor::plugin_descriptor(const char* name_)
+//	: name(name_), tag_(nil_type_info())
+//{}
 
 plugin_descriptor::plugin_descriptor(
 	const BS_TYPE_INFO& plugin_tag, const char* name_, const char* version_,
