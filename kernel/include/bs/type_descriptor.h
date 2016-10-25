@@ -130,18 +130,20 @@ public:
 	{}
 
 	// templated ctor for BlueSky types
+	// if add_def_construct is set -- add default (empty) type's constructor
+	// if add_def_copy is set -- add copy constructor
 	template< class T, class base = nil, class typename_t = std::nullptr_t >
 	type_descriptor(
 		identity< T >, identity< base >,
 		typename_t type_name = nullptr, const char* description = nullptr,
-		bool add_std_construct = false, bool add_std_copy = false
+		bool add_def_construct = false, bool add_def_copy = false
 	) :
 		bs_ti_(BS_GET_TI(T)), type_name_(extract_typename< T >::go(type_name)), description_(description),
 		parent_td_fun_(extract_tdfun< base >::go()), copy_fun_(nullptr)
 	{
-		if(add_std_construct)
+		if(add_def_construct)
 			add_constructor< T >();
-		if(add_std_copy)
+		if(add_def_copy)
 			add_copy_constructor< T >();
 	}
 
@@ -164,7 +166,7 @@ public:
 	}
 
 	// std type construction
-	// enumerate constructor argument types
+	// explicit constructor arguments types
 	template< typename T, typename... Args >
 	void add_constructor() const {
 		creators_[typeid(args_pack< Args... >)] = std::make_pair(
@@ -177,8 +179,8 @@ public:
 		);
 	}
 
-	// std type constructor
-	// deduce argument types from passed tuple
+	// std type's constructor
+	// deduce constructor arguments types from passed tuple
 	template< typename T, typename... Args >
 	void add_constructor(std::tuple< Args... >*) const {
 		add_constructor< T, Args... >();
@@ -198,7 +200,7 @@ public:
 	/*-----------------------------------------------------------------
 	 * create copy of instance
 	 *----------------------------------------------------------------*/
-	// construct copy using copy constructor
+	// register type's copy constructor
 	template< typename T >
 	void add_copy_constructor() const {
 		copy_fun_ = [](bs_type_copy_param src) {
