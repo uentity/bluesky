@@ -34,7 +34,8 @@ kernel_cpp_list = [
 	"src/main.cpp",
 	"src/link.cpp",
 	"src/hard_link.cpp",
-	"src/node.cpp"
+	"src/node.cpp",
+	"src/compat/messaging.cpp"
 ];
 #print kernel_cpp_list;
 

@@ -50,7 +50,7 @@ namespace blue_sky {
 	//common used smart pointers to them
 	typedef std::shared_ptr< bs_signal > sp_signal;
 	typedef std::shared_ptr< bs_slot > sp_slot;
-	typedef std::shared_ptr< bs_imessaging > sp_mobj;
+	typedef std::shared_ptr< const bs_imessaging > sp_mobj;
 
 	//kernel
 	class kernel;
