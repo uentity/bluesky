@@ -50,7 +50,7 @@ PYBIND11_PLUGIN(TARGET_NAME) {
 	// correct global namespace to match TARGET_NAME (otherwise Python throws an error)
 	kernel_pd->py_namespace = S_TARGET_NAME;
 
-	auto m = py::module(S_TARGET_NAME, kernel_pd->short_descr.c_str());
+	auto m = py::module(S_TARGET_NAME, kernel_pd->description.c_str());
 
 	//load plugins with Python subsystem
 	give_kernel::Instance().load_plugins(&m);
