@@ -168,26 +168,41 @@ BS_RESOLVE_TYPE_IMPL_((template< >), (T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), 0)
 // pass constructor arguments types as tuple
 // ctor_has_args flag is needed, because empty tuple is considered to have size = 1
 // so we need to additionally indicate that constructor have > 0 agruments
-#define BS_TYPE_ADD_CONSTRUCTOR_(T_tup, ctor_args_tuple, ctor_has_args) \
-namespace {                                                             \
-static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){              \
-    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_constructor<              \
-    BOOST_PP_TUPLE_ENUM(T_tup) BOOST_PP_COMMA_IF(ctor_has_args)         \
-    BOOST_PP_TUPLE_ENUM(ctor_args_tuple) >(); return 0; }(); }
+#define BS_TYPE_ADD_CONSTRUCTOR_(T_tup, ctor_args_tup, ctor_has_args, f_tup)           \
+namespace {                                                                            \
+static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){                             \
+    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_constructor<                             \
+    BOOST_PP_TUPLE_ENUM(T_tup) BOOST_PP_COMMA_IF(ctor_has_args)                        \
+    BOOST_PP_TUPLE_ENUM(ctor_args_tup) >(BOOST_PP_TUPLE_ENUM(f_tup)); return 0; }(); }
 
 // for simple types (<= 1 template params) ctors with non-zero arguments
-#define BS_TYPE_ADD_CONSTRUCTOR(T, ctor_args_tuple) \
-BS_TYPE_ADD_CONSTRUCTOR_((T), ctor_args_tuple, 1)
+#define BS_TYPE_ADD_CONSTRUCTOR(T, ctor_args_tup) \
+BS_TYPE_ADD_CONSTRUCTOR_((T), ctor_args_tup, 1, ())
 // add default ctor with no arguments
 #define BS_TYPE_ADD_DEF_CONSTRUCTOR(T) \
-BS_TYPE_ADD_CONSTRUCTOR_((T), (), 0)
+BS_TYPE_ADD_CONSTRUCTOR_((T), (), 0, ())
 
 // for templated types (> 1 template params) ctors with non-zero arguments
-#define BS_TYPE_ADD_CONSTRUCTOR_T(T, T_spec_tup, ctor_args_tuple) \
-BS_TYPE_ADD_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), ctor_args_tuple, 1)
+#define BS_TYPE_ADD_CONSTRUCTOR_T(T, T_spec_tup, ctor_args_tup) \
+BS_TYPE_ADD_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), ctor_args_tup, 1, ())
 // add default ctor with no arguments
 #define BS_TYPE_ADD_DEF_CONSTRUCTOR_T(T, T_spec_tup) \
 BS_TYPE_ADD_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), (), 0)
+
+// add constructor as free function
+#define BS_TYPE_ADD_CONSTRUCTOR_F_(T_tup, f_tup)                                         \
+namespace {                                                                              \
+static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){                               \
+    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_constructor< BOOST_PP_TUPLE_ENUM(T_tup) >( \
+    BOOST_PP_TUPLE_ENUM(f_tup)); return 0; }(); }
+
+// for simple types and factory functions (<= 1 template params)
+#define BS_TYPE_ADD_CONSTRUCTOR_F(T, f) \
+BS_TYPE_ADD_CONSTRUCTOR_F_((T), (f))
+// for templated types and factory functions (> 1 template params)
+// NOTE: assume that factory function is also templated!
+#define BS_TYPE_ADD_CONSTRUCTOR_T_F(T, T_spec_tup, f, f_spec_tup) \
+BS_TYPE_ADD_CONSTRUCTOR_F_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), (f< BOOST_PP_TUPLE_ENUM(f_spec_tup) >))
 
 /*-----------------------------------------------------------------
  * auto-register type copy constructors
