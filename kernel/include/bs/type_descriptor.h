@@ -24,14 +24,12 @@ namespace blue_sky {
 
 typedef std::shared_ptr< objbase > bs_type_ctor_result;
 typedef const std::shared_ptr< objbase >& bs_type_copy_param;
-//typedef objbase* (*BS_TYPE_CREATION_FUN)(const std::shared_ptr< objbase >&);
+
 typedef bs_type_ctor_result (*BS_TYPE_COPY_FUN)(bs_type_copy_param);
 typedef const blue_sky::type_descriptor& (*BS_GET_TD_FUN)();
 
-typedef std::set< std::shared_ptr< objbase > > bs_objinst_holder;
-typedef std::shared_ptr< bs_objinst_holder > sp_objinst;
-
-template< class BST > struct gen_type_descriptor;
+//typedef std::set< std::shared_ptr< objbase > > bs_objinst_holder;
+//typedef std::shared_ptr< bs_objinst_holder > sp_objinst;
 
 /*!
 \struct type_descriptor
@@ -45,12 +43,11 @@ private:
 
 	BS_TYPE_INFO bs_ti_;
 	std::string type_name_; //!< string type name
-	std::string description_; //!< Short description of type
+	std::string description_; //!< arbitrary type description
 
 	mutable BS_GET_TD_FUN parent_td_fun_;
 	mutable BS_TYPE_COPY_FUN copy_fun_;
 
-	//BS_TYPE_CREATION_FUN creation_fun_;
 	// map type of params tuple -> typeless creation function
 	mutable std::unordered_map< std::type_index, std::pair< void(*)(), void*> > creators_;
 
@@ -151,17 +148,17 @@ public:
 	 * create new instance
 	 *----------------------------------------------------------------*/
 	// vanilla fucntion pointer as type constructor
+	// NOTE: if Args&& used as function params then args types auto-deduction fails
+	// for templated functions
 	template< typename T, typename... Args >
-	void add_constructor(bs_type_ctor_result (*f)(Args&&...)) const {
+	void add_constructor(bs_type_ctor_result (*f)(Args...)) const {
 		creators_[typeid(args_pack< Args... >)] = std::make_pair(
 			reinterpret_cast< void(*)() >((creator_callback< Args... >)
 				[](void* ff, std::add_lvalue_reference_t< const std::decay_t< Args > >... args) {
-					return std::static_pointer_cast< objbase, T >(
-						(*static_cast< decltype(f) >(ff))(args...)
-					);
+					return (*reinterpret_cast< decltype(f) >(ff))(args...);
 				}
 			),
-			static_cast< void* >(f)
+			reinterpret_cast< void* >(f)
 		);
 	}
 
@@ -302,31 +299,6 @@ struct BS_API upcastable_eq : public std::binary_function<
 {
 	bool operator()(const type_descriptor& td1, const type_descriptor& td2) const;
 };
-
-//  namespace bs {
-//
-//    template <typename T>
-//    std::string 
-//    type_name ()
-//    {
-//      return T::bs_type ().stype_;
-//    }
-//
-//    template <typename T>
-//    std::string 
-//    type_name (const T &t)
-//    {
-//      return t.bs_resolve_type ().stype_;
-//    }
-//
-//    template <typename T, bool F>
-//    std::string 
-//    type_name (const smart_ptr <T, F> &p)
-//    {
-//      return p->bs_resolve_type ().stype_;
-//    }
-//
-//  } // namespace bs
 
 }	// eof blue_sky namespace
 
