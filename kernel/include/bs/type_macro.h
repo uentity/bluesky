@@ -232,7 +232,7 @@ BS_TYPE_ADD_COPY_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
 extern "C" const ::blue_sky::plugin_descriptor* bs_get_plugin_descriptor(); \
 namespace { static int BOOST_PP_CAT(_bs_reg_type_, __LINE__) =              \
 []() { ::blue_sky::give_kernel::Instance().register_type(                   \
-    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), ::bs_get_plugin_descriptor());    \
+    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), bs_get_plugin_descriptor());      \
     return 0; }(); }
 
 // non-templated types and types with 1 template parameter
