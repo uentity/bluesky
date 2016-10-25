@@ -163,6 +163,7 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 			boost::details::pool::null_mutex
 		>
 	>;
+	plugins_enum_t loaded_plugins_;
 
 	//! plugin_descriptors sorted by name
 	//using plugins_dict_t = std::multiset<
@@ -171,6 +172,7 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	//		pd_ptr, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
 	//	>
 	//>;
+	//plugins_dict_t plugins_dict_;
 
 	//! types factory: fab_elements sorted by BS_TYPE_INFO
 	using factory_t = std::set<
@@ -179,6 +181,7 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 			fab_elem, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
 		>
 	>;
+	factory_t obj_fab_;
 
 	//! types dictionary: fe_ptrs sorted by string type
 	using types_dict_alloc_t = boost::fast_pool_allocator<
@@ -187,18 +190,13 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	using types_dict_t = std::set<
 		fab_elem, fe_comp_typename, types_dict_alloc_t
 	>;
+	types_dict_t types_resolver_;
 
 	//! loaded plugins: pointers to type_tuples sorted by plugins names
 	using plugin_types_enum_t = std::multiset<
 		fab_elem, fe_comp_pd, types_dict_alloc_t
 	>;
-
-	plugins_enum_t loaded_plugins_;
-	//plugins_dict_t plugins_dict_;
 	plugin_types_enum_t plugin_types_;
-
-	factory_t obj_fab_;
-	types_dict_t types_resolver_;
 
 #ifdef BSPY_EXPORTING
 	struct bspy_module;
