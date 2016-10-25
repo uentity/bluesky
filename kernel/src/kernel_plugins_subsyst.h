@@ -128,7 +128,7 @@ struct pdp_comp_name {
 // fab_elem sorting order by bs_type_info
 struct fe_comp_ti {
 	bool operator()(const fab_elem& lhs, const fab_elem& rhs) const {
-		return lhs.td_ < rhs.td_;
+		return *lhs.td_ < *rhs.td_;
 	}
 };
 
