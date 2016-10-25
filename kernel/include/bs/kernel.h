@@ -47,15 +47,19 @@ struct type_tuple {
 	type_tuple(const plugin_descriptor& pd_, const type_descriptor& td_)
 		: pd(pd_), td(td_)
 	{}
+
+	type_tuple() = delete;
+	type_tuple(const type_tuple&) = default;
+	type_tuple(type_tuple&&) = default;
+
+	friend bool operator ==(const type_tuple& tl, const type_tuple& tr) {
+		return (tl.pd == tr.pd && tl.td == tl.td);
+	}
+
+	friend bool operator !=(const type_tuple& tl, const type_tuple& tr) {
+		return !(tl == tr);
+	}
 };
-
-inline bool operator ==(const type_tuple& tl, const type_tuple& tr) {
-	return (tl.pd == tr.pd && tl.td == tl.td);
-}
-
-inline bool operator !=(const type_tuple& tl, const type_tuple& tr) {
-	return !(tl.pd == tr.pd && tl.td == tl.td);
-}
 
 /*! \class kernel
 	*  \ingroup kernel_group
@@ -68,12 +72,8 @@ class BS_API kernel {
 	friend struct detail::wrapper_kernel;
 
 public:
-	typedef std::vector< plugin_descriptor > plugins_enum;
-	typedef std::vector< type_descriptor > types_enum;
-
-	//access to plugins & types from them
-	//! \brief loaded plugins
-	plugins_enum loaded_plugins() const;
+	using plugins_enum = std::vector< plugin_descriptor >;
+	using types_enum = std::vector< type_descriptor >;
 
 	//! \brief Deletes all dangling objects that aren't contained in data storage
 	//! This is a garbage collection method
@@ -106,6 +106,15 @@ public:
 	auto create_object_copy(bs_type_copy_param source) const {
 		return source->bs_resolve_type().clone(source);
 	}
+
+	// access to plugins & types from them
+	//! \brief registered type infos of objects
+	std::vector< type_tuple > registered_types() const;
+	//! \brief loaded plugins
+	plugins_enum loaded_plugins() const;
+	//! \brief types of plugin (by plugin descriptor)
+	types_enum plugin_types(const plugin_descriptor& pd) const;
+	types_enum plugin_types(const std::string& plugin_name) const;
 
 private:
 	//! \brief Constructor of kernel
