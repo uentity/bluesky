@@ -12,8 +12,6 @@
 #include "common.h"
 #include "type_descriptor.h"
 #include "objbase_macro.h"
-//#include "messaging.h"
-//#include "objbase_macro.h"
 
 namespace blue_sky {
 /*!
@@ -21,7 +19,7 @@ namespace blue_sky {
 	\ingroup object_base
 	\brief This is a base class for all objects.
 */
-class BS_API objbase {
+class BS_API objbase : public std::enable_shared_from_this< objbase > {
 	friend class kernel;
 	//friend class combase;
 	friend class bs_inode;
@@ -75,6 +73,16 @@ public:
 	\brief Access to corresponding inode object
 	*/
 	const blue_sky::bs_inode* inode() const;
+
+	template< class Derived >
+	decltype(auto) bs_shared_this() const {
+		return std::static_pointer_cast< const Derived, const objbase >(this->shared_from_this());
+	}
+
+	template< class Derived >
+	decltype(auto) bs_shared_this() {
+		return std::static_pointer_cast< Derived, objbase >(this->shared_from_this());
+	}
 
 protected:
 	// associated inode
