@@ -45,10 +45,19 @@ public:
 };
 using sp_person = std::shared_ptr< bs_person >;
 
+// define free function that returns bs_person singleton
+sp_obj create_single_person() {
+	static bs_person P("[SINGLE]");
+	auto noop_del = [](const bs_person*) {};
+	return std::shared_ptr< bs_person >(&P, noop_del);
+}
+
 BS_TYPE_IMPL(bs_person, objbase, "bs_person", "BS Person", false, false)
-BS_TYPE_ADD_DEF_CONSTRUCTOR(bs_person)
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (const char*))
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (double))
+// add free function constructor
+//BS_TYPE_ADD_DEF_CONSTRUCTOR(bs_person)
+BS_TYPE_ADD_CONSTRUCTOR_F(bs_person, create_single_person)
 
 // these two should coincide
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (const std::string&))
@@ -117,7 +126,7 @@ public:
 		os << "Uber type: " << bs_type().type_name() << "; Uber name = " << s.name_ <<
 			" has elements [" << s.storage_.size() << "]: ";
 		for(auto& v : s.storage_) {
-			os << v;
+			os << v << ' ';
 		}
 		return os;
 	}
@@ -132,12 +141,29 @@ public:
 	BS_TYPE_DECL_INL_END
 };
 template< class T >
-using sp_uber = std::shared_ptr< uber_type< T, my_strategy< T > > >;
+using uber_t = uber_type< T, my_strategy< T > >;
+template< class T >
+using sp_uber = std::shared_ptr< uber_t< T > >;
+
+// define free function that returns bs_person singleton
+template< class T >
+sp_obj create_single_uber(T val) {
+	using uber_t = uber_type< T, my_strategy< T > >;
+	static uber_t P("[SINGLE]");
+	P.add_value(val);
+
+	auto noop_del = [](const uber_t*) {};
+	return std::shared_ptr< uber_t >(&P, noop_del);
+}
 
 BS_TYPE_IMPL_INL_T(uber_type, (int, my_strategy< int >))
 BS_TYPE_IMPL_INL_T(uber_type, (double, my_strategy< double >))
 BS_TYPE_ADD_CONSTRUCTOR_T(uber_type, (int, my_strategy< int >), (std::string))
 BS_TYPE_ADD_CONSTRUCTOR_T(uber_type, (double, my_strategy< double >), (std::string))
+
+// add free function constructors
+BS_TYPE_ADD_CONSTRUCTOR_T_F(uber_type, (int, my_strategy< int >), create_single_uber, (int))
+BS_TYPE_ADD_CONSTRUCTOR_T_F(uber_type, (double, my_strategy< double >), create_single_uber, (double))
 
 BS_REGISTER_TYPE_T(uber_type, (int, my_strategy< int >))
 BS_REGISTER_TYPE_T(uber_type, (double, my_strategy< double >))
@@ -198,6 +224,12 @@ BOOST_AUTO_TEST_CASE(test_type_descriptor) {
 	ud->add_value(42.);
 	BOOST_TEST(ud);
 	if(ud) std::cout << *ud << std::endl;
-	//bsout() << *ud << bs_end;
+
+	// test using free function
+	ud = BS_KERNEL.create_object("uber double my_strategy< double >", 27.5);
+	BOOST_TEST(ud);
+	ud = BS_KERNEL.create_object("uber double my_strategy< double >", 42.);
+	BOOST_TEST(ud);
+	if(ud) std::cout << *ud << std::endl;
 }
 
