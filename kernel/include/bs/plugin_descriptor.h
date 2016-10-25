@@ -73,16 +73,16 @@ struct BS_API plugin_initializer {
 	\param description = description of the plugin
 	\param py_namespace = plugin's namespace in Python
 */
-#define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, description, py_namespace)       \
-namespace {                                                                            \
-    class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_ {};                                \
-}                                                                                      \
-BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {        \
-    static ::blue_sky::plugin_descriptor plugin_info_ = ::blue_sky::plugin_descriptor( \
-        BS_GET_TI (_bs_this_plugin_tag_),                                              \
-        name, version, description, py_namespace                                       \
-    );                                                                                 \
-    return &plugin_info_;                                                              \
+#define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, description, py_namespace) \
+namespace {                                                                      \
+    class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_ {};                          \
+}                                                                                \
+BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {  \
+    static ::blue_sky::plugin_descriptor plugin_info_(                           \
+        BS_GET_TI (_bs_this_plugin_tag_),                                        \
+        name, version, description, py_namespace                                 \
+    );                                                                           \
+    return &plugin_info_;                                                        \
 }
 
 #define BLUE_SKY_PLUGIN_DESCRIPTOR(name, version, description) \
