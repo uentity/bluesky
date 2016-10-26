@@ -1,7 +1,7 @@
 /// @file
 /// @author uentity
 /// @date 12.01.2016
-/// @brief 
+/// @brief bs_array specializations and registering
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -47,17 +47,28 @@ BS_REGISTER_TYPE_T(bs_array, (std::wstring, vector_traits));
 //BS_TYPE_IMPL_INL_T(bs_array, (double, bs_array_shared));
 //BS_TYPE_IMPL_INL_T(bs_array, (std::string, bs_array_shared));
 //BS_TYPE_IMPL_INL_T(bs_array, (std::wstring, bs_array_shared));
-//
-//BS_TYPE_IMPL_INL_T(bs_array, (int, bs_vector_shared));
-//BS_TYPE_IMPL_INL_T(bs_array, (unsigned int, bs_vector_shared));
-//BS_TYPE_IMPL_INL_T(bs_array, (long, bs_vector_shared));
-//BS_TYPE_IMPL_INL_T(bs_array, (long long, bs_vector_shared));
-//BS_TYPE_IMPL_INL_T(bs_array, (unsigned long, bs_vector_shared));
-//BS_TYPE_IMPL_INL_T(bs_array, (unsigned long long, bs_vector_shared));
-//BS_TYPE_IMPL_INL_T(bs_array, (float, bs_vector_shared));
-//BS_TYPE_IMPL_INL_T(bs_array, (double, bs_vector_shared));
-//BS_TYPE_IMPL_INL_T(bs_array, (std::string, bs_vector_shared));
-//BS_TYPE_IMPL_INL_T(bs_array, (std::wstring, bs_vector_shared));
+
+BS_TYPE_IMPL_INL_T(bs_array, (int, bs_vector_shared));
+BS_TYPE_IMPL_INL_T(bs_array, (unsigned int, bs_vector_shared));
+BS_TYPE_IMPL_INL_T(bs_array, (long, bs_vector_shared));
+BS_TYPE_IMPL_INL_T(bs_array, (long long, bs_vector_shared));
+BS_TYPE_IMPL_INL_T(bs_array, (unsigned long, bs_vector_shared));
+BS_TYPE_IMPL_INL_T(bs_array, (unsigned long long, bs_vector_shared));
+BS_TYPE_IMPL_INL_T(bs_array, (float, bs_vector_shared));
+BS_TYPE_IMPL_INL_T(bs_array, (double, bs_vector_shared));
+BS_TYPE_IMPL_INL_T(bs_array, (std::string, bs_vector_shared));
+BS_TYPE_IMPL_INL_T(bs_array, (std::wstring, bs_vector_shared));
+
+BS_REGISTER_TYPE_T(bs_array, (int, bs_vector_shared));
+BS_REGISTER_TYPE_T(bs_array, (unsigned int, bs_vector_shared));
+BS_REGISTER_TYPE_T(bs_array, (long, bs_vector_shared));
+BS_REGISTER_TYPE_T(bs_array, (long long, bs_vector_shared));
+BS_REGISTER_TYPE_T(bs_array, (unsigned long, bs_vector_shared));
+BS_REGISTER_TYPE_T(bs_array, (unsigned long long, bs_vector_shared));
+BS_REGISTER_TYPE_T(bs_array, (float, bs_vector_shared));
+BS_REGISTER_TYPE_T(bs_array, (double, bs_vector_shared));
+BS_REGISTER_TYPE_T(bs_array, (std::string, bs_vector_shared));
+BS_REGISTER_TYPE_T(bs_array, (std::wstring, bs_vector_shared));
 
 //BS_TYPE_IMPL_INL_T(bs_map, (int, str_val_traits));
 //BS_TYPE_IMPL_INL_T(bs_map, (unsigned int, str_val_traits));

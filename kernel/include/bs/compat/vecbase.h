@@ -20,11 +20,11 @@ namespace blue_sky {
 template< class T >
 class BS_API bs_vecbase {
 public:
-	typedef bs_arrbase< T >              arrbase;
-	typedef typename arrbase::key_type   key_type;
-	typedef typename arrbase::value_type value_type;
-	typedef typename arrbase::size_type  size_type;
-	typedef typename arrbase::iterator   iterator;
+	using arrbase    = bs_arrbase< T >;
+	using key_type   = typename arrbase::key_type;
+	using value_type = typename arrbase::value_type;
+	using size_type  = typename arrbase::size_type;
+	using iterator   = typename arrbase::iterator;
 
 	virtual bool insert(const key_type& key, const value_type& value) = 0;
 	virtual bool insert(const value_type& value) = 0;
@@ -43,15 +43,6 @@ public:
 
 	/// @brief empty destructor
 	virtual ~bs_vecbase() {};
-
-	// assign for different type array
-	template< class R >
-	void assign(const bs_arrbase< R >& rhs) {
-		size_type n = rhs.size();
-		if(this->size() != n) this->resize(n);
-		if((void*)this->begin() != (void*)rhs.begin())
-			std::copy(rhs.begin(), rhs.begin() + std::min(n, this->size()), this->begin());
-	}
 };
 
 /*-----------------------------------------------------------------
@@ -60,40 +51,32 @@ public:
 template< class T, class vector_t >
 class BS_API bs_vecbase_impl : public bs_arrbase_impl< T, vector_t >, public bs_vecbase< T > {
 public:
-	typedef vector_t container;
-	typedef bs_arrbase< T > arrbase;
-	typedef typename arrbase::sp_arrbase sp_arrbase;
-	typedef bs_vecbase_impl< T, vector_t > bs_array_base;
-	typedef bs_arrbase_impl< T, vector_t > base_t;
+	using base_t        = bs_arrbase_impl< T, vector_t >;
+    // traits for bs_array
+	using container     = vector_t;
+	using arrbase       = typename base_t::arrbase;
+	using bs_array_base = bs_vecbase_impl< T, vector_t >;
+	using typename arrbase::sp_arrbase;
 
 	// inherited from bs_arrbase class
-	typedef typename arrbase::value_type value_type;
-	typedef typename arrbase::key_type   key_type;
-	typedef typename arrbase::size_type  size_type;
+	using typename arrbase::value_type;
+	using typename arrbase::key_type;
+	using typename arrbase::size_type;
 
-	typedef typename arrbase::pointer                pointer;
-	typedef typename arrbase::reference              reference;
-	typedef typename arrbase::const_pointer          const_pointer;
-	typedef typename arrbase::const_reference        const_reference;
-	typedef typename arrbase::iterator               iterator;
-	typedef typename arrbase::const_iterator         const_iterator;
-	typedef typename arrbase::reverse_iterator       reverse_iterator;
-	typedef typename arrbase::const_reverse_iterator const_reverse_iterator;
+	using typename arrbase::pointer;
+	using typename arrbase::reference;
+	using typename arrbase::const_pointer;
+	using typename arrbase::const_reference;
+	using typename arrbase::iterator;
+	using typename arrbase::const_iterator;
+	using typename arrbase::reverse_iterator;
+	using typename arrbase::const_reverse_iterator;
 
 	using container::empty;
 
 	// vecbase doesn't need to be constructed, so make perfect forwarding ctor to bs_array_impl
 	template < typename... Args >
 	bs_vecbase_impl(Args&&... args) : base_t(std::forward< Args >(args)...) {}
-
-	//// default ctor
-	//bs_vecbase_impl() {}
-
-	//// ctor from vector copy
-	//bs_vecbase_impl(const container& c) : base_t(c) {}
-
-	//// given size & fill value
-	//bs_vecbase_impl(size_type sz, const value_type& v = value_type()) : base_t(sz, v) {}
 
 	bool insert(const key_type& key, const value_type& value) {
 		if(key > this->size()) return false;
@@ -149,8 +132,6 @@ public:
 
 	sp_arrbase clone() const {
 		return std::make_shared< bs_vecbase_impl >(*this);
-		//std::copy(this->begin(), this->end(), res->begin());
-		//return res;
 	}
 
 	void swap(bs_vecbase_impl& rhs) {

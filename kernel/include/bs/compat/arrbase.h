@@ -24,12 +24,11 @@ namespace blue_sky {
 template< class T >
 class BS_API bs_arrbase {
 public:
-	typedef bs_arrbase< T > this_t;
-	typedef std::shared_ptr< this_t > sp_arrbase;
+	typedef std::shared_ptr< bs_arrbase > sp_arrbase;
 
-	typedef T         value_type;
-	typedef ulong     size_type;
-	typedef size_type key_type;
+	typedef T           value_type;
+	typedef std::size_t size_type;
+	typedef size_type   key_type;
 
 	typedef T*                                      pointer;
 	typedef T&                                      reference;
@@ -63,7 +62,7 @@ public:
 	virtual pointer data() = 0;
 
 	virtual const_pointer data() const {
-		return const_cast< this_t* >(this)->data();
+		return const_cast< bs_arrbase* >(this)->data();
 	}
 
 	/// @brief truely copy array data
@@ -156,7 +155,7 @@ public:
 	template< class R >
 	void assign(const bs_arrbase< R >& rhs) {
 		size_type n = rhs.size();
-		this->resize(n);
+		if(this->size() != n) this->resize(n);
 		if((void*)this->begin() != (void*)rhs.begin())
 			std::copy(rhs.begin(), rhs.begin() + std::min(n, this->size()), this->begin());
 	}
@@ -196,30 +195,30 @@ public:
 template< class T, class array_t >
 class BS_API bs_arrbase_impl : public array_t, public bs_arrbase< T > {
 public:
-	typedef array_t container;
-	typedef bs_arrbase< T > arrbase;
-	typedef typename arrbase::sp_arrbase sp_arrbase;
-	typedef bs_arrbase_impl< T, array_t > bs_array_base;
+    // traits for bs_array
+	using container = array_t;
+	using arrbase = bs_arrbase< T >;
+	using bs_array_base = bs_arrbase_impl< T, array_t >;
+	using typename arrbase::sp_arrbase;
 
 	// inherited from bs_arrbase class
-	typedef typename arrbase::value_type value_type;
-	typedef typename arrbase::key_type   key_type;
-	typedef typename arrbase::size_type  size_type;
+	using typename arrbase::value_type;
+	using typename arrbase::key_type;
+	using typename arrbase::size_type;
 
-	typedef typename arrbase::pointer                pointer;
-	typedef typename arrbase::reference              reference;
-	typedef typename arrbase::const_pointer          const_pointer;
-	typedef typename arrbase::const_reference        const_reference;
-	typedef typename arrbase::iterator               iterator;
-	typedef typename arrbase::const_iterator         const_iterator;
-	typedef typename arrbase::reverse_iterator       reverse_iterator;
-	typedef typename arrbase::const_reverse_iterator const_reverse_iterator;
+	using typename arrbase::pointer;
+	using typename arrbase::reference;
+	using typename arrbase::const_pointer;
+	using typename arrbase::const_reference;
+	using typename arrbase::iterator;
+	using typename arrbase::const_iterator;
+	using typename arrbase::reverse_iterator;
+	using typename arrbase::const_reverse_iterator;
 
 	using arrbase::begin;
 	using arrbase::end;
 	using arrbase::rbegin;
 	using arrbase::rend;
-	using arrbase::assign;
 	using arrbase::clear;
 	using arrbase::back;
 	using arrbase::front;
@@ -227,15 +226,6 @@ public:
 	// arrbase doesn't need to be constructed, so make perfect forwarding ctor to array_t
 	template < typename... Args >
 	bs_arrbase_impl(Args&&... args) : array_t(std::forward< Args >(args)...) {}
-
-	// default ctor
-	//bs_arrbase_impl() {}
-
-	//// ctor for constructing from container copy
-	//bs_arrbase_impl(container c) : array_t(std::move(c)) {}
-
-	//// given size & fill value
-	//bs_arrbase_impl(size_type sz, const value_type& v = value_type()) : array_t(sz, v) {}
 
 	size_type size() const {
 		return static_cast< size_type >(container::size());
@@ -252,13 +242,19 @@ public:
 	pointer data() {
 		if(this->size())
 			return &this->operator[](0);
-		else return 0;
+		else return nullptr;
+	}
+
+	void clear() {
+		container::clear();
+	}
+
+	bool empty() const {
+		return container::empty();
 	}
 
 	sp_arrbase clone() const {
 		return std::make_shared< bs_arrbase_impl >(*this);
-		//std::copy(begin(), end(), res->begin());
-		//return res;
 	}
 
 	reference operator[](const key_type& key) {
@@ -267,10 +263,6 @@ public:
 
 	const_reference operator[](const key_type& key) const {
 		return container::operator[](key);
-	}
-
-	void dispose() const {
-		delete this;
 	}
 
 	void swap(bs_arrbase_impl& rhs) {
