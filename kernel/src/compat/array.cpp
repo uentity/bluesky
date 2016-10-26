@@ -7,7 +7,8 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/compat/bs_array.h>
+#include <bs/kernel.h>
+#include <bs/compat/array.h>
 //#include <bs_map.h>
 
 using namespace std;

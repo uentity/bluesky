@@ -9,12 +9,10 @@
 
 #pragma once
 
-#include "bs_vecbase.h"
-//#include "bs_array_shared.h"
-//#include "bs_vector_shared.h"
-#include "../kernel.h"
+#include "vecbase.h"
+#include "../type_descriptor.h"
 #include "../type_macro.h"
-//#include "shared_vector.h"
+#include "../objbase.h"
 #include <vector>
 
 #if !defined(BS_ARRAY_DEFAULT_TRAITS)
@@ -73,21 +71,6 @@ public:
 	// perfect forwarding ctor
 	template < typename... Args >
 	bs_array(Args&&... args) : base_t(std::forward< Args >(args)...) {}
-
-	// copy construct from container
-	//template< class R >
-	//bs_array(const R& rhs)
-	//	: base_t(rhs)
-	//{}
-
-	//// construct from given size & fill value
-	//bs_array(size_type sz, const value_type& v = value_type())
-	//	: base_t(sz, v)
-	//{}
-
-	//bs_array(const_iterator from, const_iterator to)
-	//	: base_t(std::move(from), std::move(to))
-	//{}
 
 	// ctor via init
 	template< class R >
