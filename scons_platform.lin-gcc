@@ -46,6 +46,8 @@ if build_kind == "init" :
 # release/debug base flags
 elif build_kind == 'debug' :
 	custom_env.AppendUnique(CCFLAGS = ['-O0']);
+elif build_kind == 'release-debug' and custom_env['compiler'] == "g++" :
+	custom_env.AppendUnique(CCFLAGS = ['-Og']);
 elif build_kind.startswith('release') :
 	custom_env.AppendUnique(CCFLAGS = ['-O3', '-mtune=native', '-ftree-vectorize']);
 # add debug info
