@@ -12,9 +12,18 @@
 #include <tuple>
 #include <utility>
 #include <type_traits>
-#include "invoke.h"
 
 namespace blue_sky {
+
+/*-----------------------------------------------------------------
+ * Constructs tuple with references to given arguments
+ * lvalue references in arguments are passed as is
+ * rvalue objects in arguments are passed as rvalue references
+ *----------------------------------------------------------------*/
+template <typename T>
+constexpr decltype(auto) forward_tuple(T&& t) {
+    return apply(std::forward_as_tuple, std::forward<T>(t));
+}
 
 /*-----------------------------------------------------------------
  * Helper to generaate integer sequence in given bounds
@@ -35,78 +44,10 @@ struct make_bounded_sequence {
 };
 
 /*-----------------------------------------------------------------
- * invoke given function with arguments unpacked from tuple
- *----------------------------------------------------------------*/
-// update: this should be available in C++17, so make implementation to match upcoming standard
-template< typename F, typename Tuple, size_t... I >
-constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
-	// missing std::invoke here
-	return invoke(std::forward<F>(f), std::get<I>(std::forward<Tuple>(t))...);
-}
-
-template< typename F, typename Tuple >
-constexpr decltype(auto) apply(F&& f, Tuple&& t) {
-	return apply_impl(
-		std::forward<F>(f), std::forward<Tuple>(t),
-		std::make_index_sequence<std::tuple_size<std::decay_t<Tuple>>::value>{}
-	);
-}
-
-template<
-	typename F, typename Tuple, std::size_t From = 0,
-	std::size_t To = std::tuple_size< std::decay_t< Tuple > >::value
->
-constexpr decltype(auto) apply_range(
-	F&& f, Tuple&& t,
-	std::integral_constant< std::size_t, From > = std::integral_constant< std::size_t, 0 >(),
-	std::integral_constant< std::size_t, To > = std::integral_constant<
-		std::size_t, std::tuple_size< std::decay_t< Tuple > >::value
-	>()
-) {
-	return apply_impl(
-		std::forward<F>(f), std::forward<Tuple>(t),
-		make_bounded_sequence< From, To >::value
-	);
-}
-
-//template<typename Func, typename Tup, std::size_t... index>
-//decltype(auto) invoke_helper(Func&& func, Tup&& tup, std::index_sequence<index...>) {
-//	return func(std::get<index>(std::forward<Tup>(tup))...);
-//}
-//
-//template<typename Func, typename Tup>
-//decltype(auto) invoke(Func&& func, Tup&& tup) {
-//	constexpr auto Size = std::tuple_size< std::decay_t<Tup> >::value;
-//	return invoke_helper(
-//		std::forward<Func>(func),
-//		std::forward<Tup>(tup),
-//		std::make_index_sequence<Size>{}
-//	);
-//}
-
-//template<
-//	typename Func, typename Tup, std::size_t From = 0,
-//	std::size_t To = std::tuple_size< std::decay_t< Tup > >::value
-//>
-//decltype(auto) invoke_range(
-//	Func&& func, Tup&& tup,
-//	std::integral_constant< std::size_t, From > = std::integral_constant< std::size_t, 0 >(),
-//	std::integral_constant< std::size_t, To > = std::integral_constant<
-//		std::size_t, std::tuple_size< std::decay_t< Tup > >::value
-//	>()
-//) {
-//	return invoke_helper(
-//		std::forward<Func>(func),
-//		std::forward<Tup>(tup),
-//		make_bounded_sequence< From, To >::value
-//	);
-//}
-
-/*-----------------------------------------------------------------
  * Helper to extract range of tuple args as new tuple
  *----------------------------------------------------------------*/
 template< typename Tup, std::size_t... index >
-decltype(auto) subtuple_helper(Tup&& tup, std::index_sequence<index...>) {
+constexpr decltype(auto) subtuple_helper(Tup&& tup, std::index_sequence<index...>) {
 	// use explicit tuple construction in order to save exact information about elem types
 	return std::tuple< std::tuple_element_t< index, std::decay_t< Tup > >... >(
 		std::get< index >(std::forward< Tup >(tup))...
@@ -117,7 +58,7 @@ template<
 	typename Tup, std::size_t From = 0,
 	std::size_t To = std::tuple_size< std::decay_t< Tup > >::value
 >
-decltype(auto) subtuple(
+constexpr decltype(auto) subtuple(
 	Tup&& tup,
 	std::integral_constant< std::size_t, From > from = std::integral_constant< std::size_t, 0 >(),
 	std::integral_constant< std::size_t, To > to = std::integral_constant<
