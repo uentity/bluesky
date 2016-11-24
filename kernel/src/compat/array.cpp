@@ -9,6 +9,7 @@
 
 #include <bs/kernel.h>
 #include <bs/compat/array.h>
+#include <bs/compat/array_eigen_traits.h>
 //#include <bs_map.h>
 
 using namespace std;
@@ -69,6 +70,28 @@ BS_REGISTER_TYPE_T(bs_array, (float, bs_vector_shared));
 BS_REGISTER_TYPE_T(bs_array, (double, bs_vector_shared));
 BS_REGISTER_TYPE_T(bs_array, (std::string, bs_vector_shared));
 BS_REGISTER_TYPE_T(bs_array, (std::wstring, bs_vector_shared));
+
+BS_TYPE_IMPL_INL_T(bs_array, (int, eigen_traits));
+BS_TYPE_IMPL_INL_T(bs_array, (unsigned int, eigen_traits));
+BS_TYPE_IMPL_INL_T(bs_array, (long, eigen_traits));
+BS_TYPE_IMPL_INL_T(bs_array, (long long, eigen_traits));
+BS_TYPE_IMPL_INL_T(bs_array, (unsigned long, eigen_traits));
+BS_TYPE_IMPL_INL_T(bs_array, (unsigned long long, eigen_traits));
+BS_TYPE_IMPL_INL_T(bs_array, (float, eigen_traits));
+BS_TYPE_IMPL_INL_T(bs_array, (double, eigen_traits));
+BS_TYPE_IMPL_INL_T(bs_array, (std::string, eigen_traits));
+BS_TYPE_IMPL_INL_T(bs_array, (std::wstring, eigen_traits));
+
+BS_REGISTER_TYPE_T(bs_array, (int, eigen_traits));
+BS_REGISTER_TYPE_T(bs_array, (unsigned int, eigen_traits));
+BS_REGISTER_TYPE_T(bs_array, (long, eigen_traits));
+BS_REGISTER_TYPE_T(bs_array, (long long, eigen_traits));
+BS_REGISTER_TYPE_T(bs_array, (unsigned long, eigen_traits));
+BS_REGISTER_TYPE_T(bs_array, (unsigned long long, eigen_traits));
+BS_REGISTER_TYPE_T(bs_array, (float, eigen_traits));
+BS_REGISTER_TYPE_T(bs_array, (double, eigen_traits));
+BS_REGISTER_TYPE_T(bs_array, (std::string, eigen_traits));
+BS_REGISTER_TYPE_T(bs_array, (std::wstring, eigen_traits));
 
 //BS_TYPE_IMPL_INL_T(bs_map, (int, str_val_traits));
 //BS_TYPE_IMPL_INL_T(bs_map, (unsigned int, str_val_traits));
