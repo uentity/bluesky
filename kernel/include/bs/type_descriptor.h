@@ -83,12 +83,14 @@ private:
 		shared_ptr_cast() : ptr_(nullptr) {}
 		// only move semantics allowed
 		shared_ptr_cast(const shared_ptr_cast&) = delete;
+		shared_ptr_cast& operator=(const shared_ptr_cast&) = delete;
 		shared_ptr_cast(shared_ptr_cast&&) = default;
 		// accept only rvalues and move them to omit ref incrementing
 		shared_ptr_cast(std::shared_ptr< objbase>&& rhs) : ptr_(std::move(rhs)) {}
 
+		// only allow imlicit conversion of rvalue shared_ptr_cast (&&)
 		template< typename T >
-		operator std::shared_ptr< T >() const {
+		operator std::shared_ptr< T >() const && {
 			return std::static_pointer_cast< T, objbase >(ptr_);
 		}
 
