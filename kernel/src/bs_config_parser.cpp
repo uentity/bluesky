@@ -154,6 +154,17 @@ struct conf_path {
 	std::vector< std::string > config;
 
 	conf_path() {
+		/*-----------------------------------------------------------------------------
+		 *  Logic here is the following
+		 *  1. Conf file from the latter path override previous one
+		 *  2. For UNIX order is the following:
+		 *  	/etc/blue-sky/blue-sky.conf
+		 *  	/home/$USER/.blue-sky/blue-sky.conf
+		 *  3. For Windows order is the following:
+		 *  	%ALLUSERSPROFILE%\blue-sky\blue-sky.conf (C:\ProgramData\...)
+		 *  	%APPDATA%\blue-sky\blue-sky.conf (C:\Users\%USER%\AppData\Roaming\...)
+		 *  4. blue-sky.conf from . dir is the last one
+		 *-----------------------------------------------------------------------------*/
 		std::string home_path;
 #ifdef UNIX
 		config.push_back("/etc/blue-sky/blue-sky.conf");
@@ -161,10 +172,10 @@ struct conf_path {
 		if(!home_path.empty())
 			config.push_back(home_path + "/.blue-sky/blue-sky.conf");
 #else // WINDOWS
-		home_path = ::getenv("APPDATA");
+		home_path = ::getenv("ALLUSERSPROFILE");
 		if(!home_path.empty())
 			config.push_back(home_path + "\\blue-sky\\blue-sky.conf");
-		home_path = ::getenv("ALLUSERSPROFILE");
+		home_path = ::getenv("APPDATA");
 		if(!home_path.empty())
 			config.push_back(home_path + "\\blue-sky\\blue-sky.conf");
 #endif // UNIX
@@ -241,6 +252,11 @@ struct wcfg {
 		plugins_paths.push_front(getenv_str("ALLUSERSPROFILE") + "\\Application Data\\blue-sky\\plugins");
 		plugins_paths.push_front(getenv_str("APPDATA") + "\\blue-sky\\plugins");
 #endif // UNIX
+
+		// now we literally need to reverse plugins paths order
+		// because LoadPlugins will start loading from FIRST path in list
+		// and skip all duplicates from tail paths
+		std::reverse(plugins_paths.begin(), plugins_paths.end());
 
 		// print some info
 		BSOUT << "--------" << bs_end;
