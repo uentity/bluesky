@@ -34,11 +34,11 @@ spdlog::logger& kernel_logging_subsyst::get_log(const char* log_name) {
 			logs({
 				{"out", register_logger("out",
 					std::make_shared< spdlog::sinks::stdout_sink_mt >(),
-					std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky", "log", 1024*1024*5, 1)
+					std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky", 1024*1024*5, 1)
 				)},
 				{"err", register_logger("err",
 					std::make_shared< spdlog::sinks::stderr_sink_mt >(),
-					std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky_err", "log", 1024*1024*5, 1)
+					std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky_err", 1024*1024*5, 1)
 			)}})
 		{
 			for(auto& log : logs) {
