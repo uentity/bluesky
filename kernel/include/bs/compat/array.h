@@ -65,7 +65,7 @@ public:
 
 	bs_array() = default;
 	bs_array(const bs_array&) = default;
-	bs_array(bs_array&&) = default;
+	//bs_array(bs_array&&) = default;
 
 	// perfect forwarding ctor
 	template < typename... Args >
@@ -87,6 +87,11 @@ public:
 	void swap(bs_array& arr) {
 		objbase::swap(arr);
 		base_t::swap(arr);
+	}
+
+	bs_array& operator=(const bs_array& rhs) {
+		this->assign(rhs);
+		return *this;
 	}
 
 	template< class R, template< class > class r_traits >

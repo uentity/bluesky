@@ -47,7 +47,10 @@ public:
 	using typename arrbase::const_reverse_iterator;
 
 	// default, copy and move ctors
-	bs_arrbase_shared_impl() = default;
+	bs_arrbase_shared_impl()
+		: shared_data_(std::make_shared< array_t >(0))
+	{}
+
 	bs_arrbase_shared_impl(const bs_arrbase_shared_impl&) = default;
 	bs_arrbase_shared_impl(bs_arrbase_shared_impl&&) = default;
 
