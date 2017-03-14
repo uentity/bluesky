@@ -14,6 +14,9 @@
 //! BlueSky kernel instance getter macro
 #define BS_KERNEL blue_sky::give_kernel::Instance()
 
+// shortcut for quick declaration of shared ptr to BS object
+#define BS_SP(T) std::shared_ptr< T >
+
 /*!
 \brief Very common declarations for both objbase and command types
 
@@ -201,9 +204,4 @@ template class T< spec_type >;
 #define BLUE_SKY_TYPE_IMPL_T_EXT_MEM(T, spec_tup_size, spec_tup) \
 BS_TYPE_IMPL_T_EXT_MEM(T, spec_tup_size, spec_tup)               \
 template class T< BOOST_PP_SEQ_ENUM(BOOST_PP_TUPLE_TO_SEQ(spec_tup_size, spec_tup)) >;
-
-// shortcut for quick declaration of smart_ptr to BS object
-#define BS_SP(T) smart_ptr< T, true >
-// shortcut for quick declaration of smart_ptr to generic object
-#define BS_SPG(T) smart_ptr< T, false >
 
