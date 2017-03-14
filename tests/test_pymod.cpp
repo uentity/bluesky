@@ -8,18 +8,38 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <pybind11/pybind11.h>
-
-int add(int i, int j) {
-	return i + j;
-}
+#include <iostream>
 
 namespace py = pybind11;
+
+namespace {
+
+int add(int x1, int x2) {
+	return x1 + x2;
+}
+
+int sub(int x1, int x2) {
+	return x1 + x2;
+}
+
+void reenter_module() {
+	//py::module m("test_pymod", "pybind11 example plugin");
+	py::module m("test_pymod");
+
+	auto subm = m.def_submodule("example");
+
+	subm.def("sub", &sub, "A function which subtracts two numbers");
+}
+
+}
 
 PYBIND11_PLUGIN(test_pymod) {
 	py::module m("test_pymod", "pybind11 example plugin");
 	auto subm = m.def_submodule("example");
 
 	subm.def("add", &add, "A function which adds two numbers");
+
+	reenter_module();
 
 	return m.ptr();
 }
