@@ -41,7 +41,8 @@ kernel_cpp_list = [
 ];
 #print kernel_cpp_list;
 
-py_kernel_cpp_list = [os.path.join('python', x) for x in Split("""
+py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in Split("""
+	py_array.cpp
 """)];
 
 lib_name = 'blue_sky';
