@@ -128,5 +128,3 @@ public:
 
 }  // eof blue_sky namespace
 
-BS_API std::ostream& operator <<(std::ostream& os, const blue_sky::bs_exception& ex);
-

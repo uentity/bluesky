@@ -75,7 +75,7 @@ const char* bs_exception::who() const noexcept {
 }
 
 // exception printing
-std::ostream& operator <<(std::ostream& os, const bs_exception& ex) {
+BS_API std::ostream& operator <<(std::ostream& os, const bs_exception& ex) {
 	return os << "[Exception] " << ex.what();
 }
 
