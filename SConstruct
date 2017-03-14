@@ -6,6 +6,7 @@ def custom_proc_call() :
 	# process custom settings
 	if osp.exists(custom_env['custom_script']) :
 		SConscript(custom_env['custom_script']);
+	Import('*');
 
 # auto serach for SConscripts
 def ss_search(root_dir, ss_prefix, ss_list) :
