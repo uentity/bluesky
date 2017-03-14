@@ -148,18 +148,6 @@ public:
 		std::fill(begin(), end(), v);
 	}
 
-	/// @brief assign from array of castable type
-	///
-	/// @tparam R type of rhs array
-	/// @param rhs source of assignment
-	template< class R >
-	void assign(const bs_arrbase< R >& rhs) {
-		size_type n = rhs.size();
-		if(this->size() != n) this->resize(n);
-		if((void*)this->begin() != (void*)rhs.begin())
-			std::copy(rhs.begin(), rhs.begin() + std::min(n, this->size()), this->begin());
-	}
-
 	/// @brief iterator version of assign - alias for std::copy
 	/// no bound-checking performed, make sure range(start, finish) <= dest array size
 	/// @tparam input_iterator

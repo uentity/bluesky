@@ -39,7 +39,7 @@ template< class T, template< class > class cont_traits = BS_ARRAY_DEFAULT_TRAITS
 class BS_API bs_array : public cont_traits< T >::bs_array_base, public objbase {
 public:
 	// traits
-	typedef cont_traits< T > cont_traits_t;
+	using cont_traits_t = cont_traits< T >;
 	using base_t    = typename cont_traits_t::bs_array_base;
 	using arrbase   = typename cont_traits_t::arrbase;
 	using container = typename cont_traits_t::container;
@@ -81,7 +81,9 @@ public:
 
 	// make array with copied data
 	sp_arrbase clone() const {
-		return std::make_shared< bs_array >(*this);
+		return std::make_shared< bs_array >(
+			*std::static_pointer_cast< base_t >(base_t::clone())
+		);
 	}
 
 	void swap(bs_array& arr) {
@@ -89,18 +91,57 @@ public:
 		base_t::swap(arr);
 	}
 
+	// if we assign arrays of same type - forward to trait's specific assignment operator
 	bs_array& operator=(const bs_array& rhs) {
-		this->assign(rhs);
+		assign_impl(rhs, std::true_type());
 		return *this;
 	}
 
 	template< class R, template< class > class r_traits >
 	bs_array& operator=(const bs_array< R, r_traits >& rhs) {
-		this->assign(rhs);
+		assign(rhs);
 		return *this;
 	}
 
+	/// @brief assign from array of castable type
+	///
+	/// @tparam R type of rhs array
+	/// @param rhs source of assignment
+	template< class R, template< class > class r_traits >
+	void assign(const bs_array< R, r_traits >& rhs) {
+		// dispatch if rhs trats is derived from cont_traits_t
+		assign_impl(
+			rhs,
+			typename std::is_base_of<std::decay<cont_traits_t>, std::decay_t<r_traits<R>>>::type()
+		);
+	}
+
 protected:
+	// if we assign arrays of same type and castable traits - forward to trait's specific assignment operator
+	template< class R, template< class > class r_traits >
+	void assign_impl(const bs_array< R, r_traits >& rhs, std::true_type) {
+		base_t::operator=(rhs);
+	}
+
+	/// @brief assign from array of castable type
+	///
+	/// @tparam R type of rhs array
+	/// @param rhs source of assignment
+	template< class R, template< class > class r_traits >
+	void assign_impl(const bs_array< R, r_traits >& rhs, std::false_type) {
+		// sanity
+		if((void*)this->begin() == (void*)rhs.begin()) return;
+
+		if(this->size() != rhs.size()) {
+			// assign through swap
+			bs_array(rhs.begin(), rhs.end()).swap(*this);
+		}
+		else {
+			std::copy(rhs.begin(), rhs.end(), this->begin());
+		}
+	}
+
+
 	BS_TYPE_DECL_INL_BEGIN(bs_array, objbase, "bs_array", \
 			"Array of values of the same type indexed by integral type", true, true)
 		td.add_constructor< bs_array, size_type >();
