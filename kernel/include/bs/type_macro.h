@@ -94,7 +94,7 @@ BS_TYPE_IMPL_(BS_SEQ_NIL(), (T), (base), type_name, descr, add_def_create, add_d
 // for T and base with 1 template parameter
 // T and base are template specializations, not tuples
 #define BS_TYPE_IMPL_T1(T, base, type_name, descr, add_def_create, add_def_copy) \
-BS_TYPE_IMPL_((template< > BS_API_PLUGIN), (T), (base), type_name, descr, add_def_create, add_def_copy)
+BS_TYPE_IMPL_((template< > BS_API_PLUGIN), (T), (base), type_name, descr, add_def_create, add_def_copy, 0)
 // most generic macro taking specializations of T and base as tuples
 // for templates with > 1 template parameters
 #define BS_TYPE_IMPL_T(T, T_spec_tup, base, base_spec_tup, type_name, descr, add_def_create, add_def_copy) \
