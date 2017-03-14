@@ -71,39 +71,32 @@ BS_REGISTER_TYPE_T(bs_array, (double, bs_vector_shared));
 BS_REGISTER_TYPE_T(bs_array, (std::string, bs_vector_shared));
 BS_REGISTER_TYPE_T(bs_array, (std::wstring, bs_vector_shared));
 
-BS_TYPE_IMPL_INL_T(bs_array, (int, eigen_traits));
-BS_TYPE_IMPL_INL_T(bs_array, (unsigned int, eigen_traits));
-BS_TYPE_IMPL_INL_T(bs_array, (long, eigen_traits));
-BS_TYPE_IMPL_INL_T(bs_array, (long long, eigen_traits));
-BS_TYPE_IMPL_INL_T(bs_array, (unsigned long, eigen_traits));
-BS_TYPE_IMPL_INL_T(bs_array, (unsigned long long, eigen_traits));
-BS_TYPE_IMPL_INL_T(bs_array, (float, eigen_traits));
-BS_TYPE_IMPL_INL_T(bs_array, (double, eigen_traits));
-BS_TYPE_IMPL_INL_T(bs_array, (std::string, eigen_traits));
-BS_TYPE_IMPL_INL_T(bs_array, (std::wstring, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (int, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (unsigned int, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (long, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (long long, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (unsigned long, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (unsigned long long, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (float, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (double, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (std::string, eigen_traits));
+//BS_TYPE_IMPL_INL_T(bs_array, (std::wstring, eigen_traits));
+//
+//BS_REGISTER_TYPE_T(bs_array, (int, eigen_traits));
+//BS_REGISTER_TYPE_T(bs_array, (unsigned int, eigen_traits));
+//BS_REGISTER_TYPE_T(bs_array, (long, eigen_traits));
+//BS_REGISTER_TYPE_T(bs_array, (long long, eigen_traits));
+//BS_REGISTER_TYPE_T(bs_array, (unsigned long, eigen_traits));
+//BS_REGISTER_TYPE_T(bs_array, (unsigned long long, eigen_traits));
+//BS_REGISTER_TYPE_T(bs_array, (float, eigen_traits));
+//BS_REGISTER_TYPE_T(bs_array, (double, eigen_traits));
+//BS_REGISTER_TYPE_T(bs_array, (std::string, eigen_traits));
+//BS_REGISTER_TYPE_T(bs_array, (std::wstring, eigen_traits));
 
-BS_REGISTER_TYPE_T(bs_array, (int, eigen_traits));
-BS_REGISTER_TYPE_T(bs_array, (unsigned int, eigen_traits));
-BS_REGISTER_TYPE_T(bs_array, (long, eigen_traits));
-BS_REGISTER_TYPE_T(bs_array, (long long, eigen_traits));
-BS_REGISTER_TYPE_T(bs_array, (unsigned long, eigen_traits));
-BS_REGISTER_TYPE_T(bs_array, (unsigned long long, eigen_traits));
-BS_REGISTER_TYPE_T(bs_array, (float, eigen_traits));
-BS_REGISTER_TYPE_T(bs_array, (double, eigen_traits));
-BS_REGISTER_TYPE_T(bs_array, (std::string, eigen_traits));
-BS_REGISTER_TYPE_T(bs_array, (std::wstring, eigen_traits));
 
-//BS_TYPE_IMPL_INL_T(bs_map, (int, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (unsigned int, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (long, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (long long, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (unsigned long, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (unsigned long long, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (float, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (double, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (std::string, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (std::wstring, str_val_traits));
-//BS_TYPE_IMPL_INL_T(bs_map, (sp_obj, str_val_traits));
+/*-----------------------------------------------------------------------------
+ *  Code from old BS
+ *-----------------------------------------------------------------------------*/
 
 //#ifdef BSPY_EXPORTING
 //// forward declarations of Python-related array types
