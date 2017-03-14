@@ -23,6 +23,7 @@
 #include "fwd.h"
 #include "type_info.h"
 #include "plugin_descriptor.h"
+#include "assert.h"
 #include "detail/args.h"
 
 // common includes - used almost everywhere

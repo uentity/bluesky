@@ -18,6 +18,7 @@ if build_kind == "init" :
 # setup list of source files to compile
 #kernel_cpp_list = files(["src"], recursive = False).sources;
 kernel_cpp_list = [
+	"src/assert.cpp",
 	"src/type_info.cpp",
 	"src/common.cpp",
 	"src/plugin_descriptor.cpp",
