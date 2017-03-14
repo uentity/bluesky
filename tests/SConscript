@@ -13,7 +13,7 @@ if build_kind == "init" :
 	Return();
 
 exe_name = "bs_tests";
-test_units = files(["."], excludes=["test_pymod.cpp"]).sources;
+test_units = files(["."], excludes=["test_pymod.cpp", "test_nparray.cpp"]).sources;
 
 # setup default build environment
 tests_env = custom_env.Clone();
@@ -33,6 +33,12 @@ test_pymod = tests_env.SharedLibrary(
 	source = 'test_pymod.cpp'
 );
 
+# library for testing Python numpy arrays
+test_nparray = tests_env.SharedLibrary(
+	target = osp.join(tar_exe_dir, 'test_nparray'),
+	source = 'test_nparray.cpp'
+);
+
 # run test cases
 tests_env["EXE_DIR"] = Dir(tar_exe_dir);
 run_tests = tests_env.Command(
@@ -48,6 +54,7 @@ AlwaysBuild(run_tests);
 
 Alias('bs_tests', bs_tests);
 Alias('test_pymod', test_pymod);
+Alias('test_nparray', test_nparray);
 Alias('run_tests', run_tests);
 Alias('tests', [bs_tests, test_pymod, run_tests]);
 Export('bs_tests');
