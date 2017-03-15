@@ -26,31 +26,54 @@
 NAMESPACE_BEGIN(blue_sky)
 
 template< typename T >
-class BS_API bs_nparray : public pybind11::array_t< T, pybind11::array::forcecast > {
+class BS_API bs_nparray_traits
+	: public bs_arrbase< T >, public pybind11::array_t< T, pybind11::array::forcecast > {
 public:
+    // traits for bs_array
+	using container = bs_nparray_traits< T >;
+	using arrbase = bs_arrbase< T >;
+	using bs_array_base = bs_nparray_traits;
+	using typename arrbase::sp_arrbase;
+
+	// inherited from bs_arrbase class
+	using typename arrbase::value_type;
+	using typename arrbase::key_type;
+	using typename arrbase::size_type;
+
+	using typename arrbase::pointer;
+	using typename arrbase::reference;
+	using typename arrbase::const_pointer;
+	using typename arrbase::const_reference;
+	using typename arrbase::iterator;
+	using typename arrbase::const_iterator;
+	using typename arrbase::reverse_iterator;
+	using typename arrbase::const_reverse_iterator;
+
+	using arrbase::begin;
+	using arrbase::end;
+
 	//using numpy_array_t = pybind11::array_t< T >;
 	using base_t = pybind11::array_t< T, pybind11::array::forcecast >;
-	using size_t = std::size_t;
 
-	// import ctors from base
+	// import ctors from pybind11 array_t
 	using base_t::base_t;
 
 	// ctors required by bs_array
-	bs_nparray() : base_t(0) {}
+	bs_nparray_traits() : base_t(0) {}
 
-	bs_nparray(size_t sz, const T& init_value) : base_t(sz) {
+	bs_nparray_traits(size_type sz, const T& init_value) : base_t(sz) {
 		std::fill(data(), data() + this->size(), init_value);
 	}
 
-	bs_nparray(const T* from, const T* to) : base_t(to > from ? to - from : 0) {
+	bs_nparray_traits(const T* from, const T* to) : base_t(to > from ? to - from : 0) {
 		if(to > from)
 			std::copy(from, to, data());
 	}
 
 	// specific implementation of resize
-	void resize(size_t new_size) {
+	void resize(size_type new_size) {
 		// resize isn't supported on binded arrays
-		throw blue_sky::bs_exception("array resize isn't supported", "bs_nparray");
+		throw blue_sky::bs_exception("array resize isn't supported", "bs_nparray_traits");
 
 		namespace py = pybind11;
 		using npy_intp = typename npy_api::npy_intp;
@@ -63,14 +86,14 @@ public:
 
 		// test if no array was created yet
 		if(this->ptr() == Py_None)
-			bs_nparray(new_size).swap(*this);
+			bs_nparray_traits(new_size).swap(*this);
 		if(new_size == this->size()) return;
 
 		// native resize
 		npy_intp new_dims[] = { npy_intp(new_size) };
 		PyArray_Dims d = { new_dims, 1};
 		//try {
-			bs_nparray mod_array(base_t::ensure(
+			bs_nparray_traits mod_array(base_t::ensure(
 				npy_api::get().PyArray_Resize_(this->ptr(), &d, 1, npy_api::NPY_ANYORDER)
 			));
 			if(mod_array.ptr() && mod_array.ptr() != Py_None && mod_array.ptr() != this->ptr())
@@ -82,7 +105,7 @@ public:
 		//}
 	}
 
-	void resize(size_t new_size, const T& init_value) {
+	void resize(size_type new_size, value_type init_value) {
 		auto old_size = this->size();
 
 		resize(new_size);
@@ -90,24 +113,36 @@ public:
 		std::fill(new_data + std::min(old_size, new_size), new_data + new_size, init_value);
 	}
 
-	void swap(bs_nparray& lhs) {
-		bs_nparray t(*this);
+	void swap(bs_nparray_traits& lhs) {
+		bs_nparray_traits t(*this);
 		*this = lhs;
 		lhs = t;
 	}
 
-	template< typename... Ix >
-	decltype(auto) data(Ix... idx) const {
-		return base_t::data(idx...);
+	pointer data() {
+		return base_t::mutable_data();
+	}
+	const_pointer data() const {
+		return base_t::data();
 	}
 
-	template< typename... Ix >
-	decltype(auto) data(Ix... idx) {
-		return base_t::mutable_data(idx...);
+	reference operator[](const key_type& k) {
+		return arrbase::operator[](k);
+	}
+	const_reference operator[](const key_type& k) const {
+		return arrbase::operator[](k);
+	}
+
+	size_type size() const {
+		return static_cast< size_type >(base_t::size());
+	}
+
+	sp_arrbase clone() const {
+		return std::make_shared< bs_nparray_traits >(begin(), end());
 	}
 
 private:
-	// bases on pybind11 code
+	// based on pybind11 code
 	struct npy_api {
 		using npy_intp = Py_intptr_t;
 
@@ -156,76 +191,7 @@ private:
 	};
 };
 
-template< class T >
-class bs_nparray_traits : public bs_arrbase< T >, public bs_nparray< T > {
-public:
-    // traits for bs_array
-	using container = bs_nparray< T >;
-	using arrbase = bs_arrbase< T >;
-	using bs_array_base = bs_nparray_traits;
-	using typename arrbase::sp_arrbase;
-
-	// inherited from bs_arrbase class
-	using typename arrbase::value_type;
-	using typename arrbase::key_type;
-	using typename arrbase::size_type;
-
-	using typename arrbase::pointer;
-	using typename arrbase::reference;
-	using typename arrbase::const_pointer;
-	using typename arrbase::const_reference;
-	using typename arrbase::iterator;
-	using typename arrbase::const_iterator;
-	using typename arrbase::reverse_iterator;
-	using typename arrbase::const_reverse_iterator;
-
-	using arrbase::begin;
-	using arrbase::end;
-	using arrbase::rbegin;
-	using arrbase::rend;
-	using arrbase::clear;
-	using arrbase::back;
-	using arrbase::front;
-
-	// import container's ctors
-	using container::container;
-
-	pointer data() {
-		return container::data();
-	}
-	const_pointer data() const {
-		return container::data();
-	}
-
-	reference operator[](const key_type& k) {
-		return arrbase::operator[](k);
-	}
-	const_reference operator[](const key_type& k) const {
-		return arrbase::operator[](k);
-	}
-
-	size_type size() const {
-		return static_cast< size_type >(container::size());
-	}
-
-	void resize(size_type new_size) {
-		container::resize(new_size);
-	}
-
-	void resize(size_type new_size, value_type init) {
-		container::resize(new_size, init);
-	}
-
-	sp_arrbase clone() const {
-		return std::make_shared< bs_nparray_traits >(*this);
-	}
-
-	void swap(bs_nparray_traits& rhs) {
-		container::swap(rhs);
-	}
-};
-
-//template< class T > using bs_nparray_traits = bs_arrbase_shared_impl< T, bs_nparray< T > >;
+// alias
 template< class T > using bs_numpy_array = bs_array< T, bs_nparray_traits >;
 
 NAMESPACE_END(blue_sky)
@@ -327,7 +293,7 @@ template< class T, template< class > class cont_traits >
 struct type_caster< std::shared_ptr< blue_sky::bs_array< T, cont_traits > > >
 	: public bs_array_caster< blue_sky::bs_array< T, cont_traits > > {};
 
-// Special case of bs_nparray traits
+// Special case of bs_nparray_traits
 template< class T >
 struct type_caster< std::shared_ptr< blue_sky::bs_array< T, blue_sky::bs_nparray_traits > > >
 	: public bs_array_caster< blue_sky::bs_array< T, blue_sky::bs_nparray_traits > >
