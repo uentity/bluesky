@@ -115,7 +115,7 @@ BS_TYPE_IMPL_((template< > BS_API_PLUGIN), (T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >
 #define BS_TYPE_IMPL_INL_T(T, T_spec_tup)                                                    \
 template< > BS_API_PLUGIN const blue_sky::type_descriptor&                                   \
 T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >::bs_type()                                              \
-{ return td_maker(std::string(" ") +                                                         \
+{ return td_maker(std::string(BOOST_PP_STRINGIZE(T)) + ' ' +                                 \
     BOOST_PP_STRINGIZE(BOOST_PP_SEQ_FOR_EACH(_OP, _, BOOST_PP_TUPLE_TO_SEQ(T_spec_tup)))); } \
 template BS_API_PLUGIN const blue_sky::type_descriptor&                                      \
 T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >::td_maker(const std::string&);
@@ -125,7 +125,7 @@ T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >::td_maker(const std::string&);
 #define BS_TYPE_IMPL_INL_T(T, T_spec_tup)                                                    \
 template< > BS_API_PLUGIN const blue_sky::type_descriptor&                                   \
 T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >::bs_type()                                              \
-{ return td_maker(std::string(" ") +                                                         \
+{ return td_maker(std::string(BOOST_PP_STRINGIZE(T)) + ' ' +                                 \
     BOOST_PP_STRINGIZE(BOOST_PP_SEQ_FOR_EACH(_OP, _, BOOST_PP_TUPLE_TO_SEQ(T_spec_tup)))); }
 
 #endif
@@ -230,10 +230,10 @@ BS_TYPE_ADD_COPY_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
 // type passed as tuple
 #define BS_REGISTER_TYPE_(T_tup)                                            \
 extern "C" const ::blue_sky::plugin_descriptor* bs_get_plugin_descriptor(); \
-namespace { static int BOOST_PP_CAT(_bs_reg_type_, __LINE__) =              \
-[]() { ::blue_sky::give_kernel::Instance().register_type(                   \
+namespace { static bool BOOST_PP_CAT(_bs_reg_type_, __LINE__) =             \
+[]() { return ::blue_sky::give_kernel::Instance().register_type(            \
     BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), bs_get_plugin_descriptor());      \
-    return 0; }(); }
+}(); }
 
 // non-templated types and types with 1 template parameter
 #define BS_REGISTER_TYPE(T) \
