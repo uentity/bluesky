@@ -266,7 +266,6 @@ struct plugins_discover {
 
 } //eof hidden namespace
 
-
-NAMESPACE_END(blue_sky)
 NAMESPACE_END(detail)
+NAMESPACE_END(blue_sky)
 

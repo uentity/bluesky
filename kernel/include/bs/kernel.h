@@ -74,6 +74,7 @@ class BS_API kernel {
 public:
 	using plugins_enum = std::vector< plugin_descriptor >;
 	using types_enum = std::vector< type_descriptor >;
+	using instances_enum = std::vector< sp_obj >;
 
 	//! \brief Deletes all dangling objects that aren't contained in data storage
 	//! This is a garbage collection method
@@ -115,6 +116,48 @@ public:
 	//! \brief types of plugin (by plugin descriptor)
 	types_enum plugin_types(const plugin_descriptor& pd) const;
 	types_enum plugin_types(const std::string& plugin_name) const;
+
+	// store and access instances of BS types
+	int register_instance(const sp_obj& obj);
+	template< class T > int register_instance(const std::shared_ptr< T >& obj) {
+		// check that T is inherited from objbase
+		static_assert(
+			std::is_base_of< objbase, T >::value,
+			"Only blue_sky::objbase derived instances can be registered!"
+		);
+		return register_instance(std::static_pointer_cast< objbase >(obj));
+	}
+	template< class T > int register_instance(T* obj) {
+		// check that T is inherited from objbase
+		static_assert(
+			std::is_base_of< objbase, T >::value,
+			"Only blue_sky::objbase derived instances can be registered!"
+		);
+		return register_instance(obj->shared_from_this());
+	}
+
+	int free_instance(const sp_obj& obj);
+	template< class T > int free_instance(const std::shared_ptr< T >& obj) {
+		// check that T is inherited from objbase
+		static_assert(
+			std::is_base_of< objbase, T >::value,
+			"Only blue_sky::objbase derived instances can be registered!"
+		);
+		return free_instance(std::static_pointer_cast< objbase >(obj));
+	}
+	template< class T > int free_instance(T* obj) {
+		// check that T is inherited from objbase
+		static_assert(
+			std::is_base_of< objbase, T >::value,
+			"Only blue_sky::objbase derived instances can be registered!"
+		);
+		return free_instance(obj->shared_from_this());
+	}
+
+	instances_enum instances(const BS_TYPE_INFO& obj_t) const;
+	template< typename T > instances_enum instances() const {
+		return instances(BS_GET_TI(T));
+	}
 
 private:
 	//! \brief Constructor of kernel

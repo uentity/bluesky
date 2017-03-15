@@ -10,10 +10,11 @@
 #include <bs/kernel.h>
 #include "kernel_logging_subsyst.h"
 #include "kernel_plugins_subsyst.h"
+#include "kernel_instance_subsyst.h"
 
 namespace blue_sky {
 
-class kernel::kernel_impl : public detail::kernel_plugins_subsyst
+class kernel::kernel_impl : public detail::kernel_plugins_subsyst, public detail::kernel_instance_subsyst
 {
 public:
 	static spdlog::logger& get_log(const char* name) {

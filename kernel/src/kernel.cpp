@@ -82,5 +82,17 @@ kernel::plugins_enum kernel::loaded_plugins() const {
 	return res;
 }
 
+int kernel::register_instance(const sp_obj& obj) {
+	return pimpl_->register_instance(obj);
+}
+
+int kernel::free_instance(const sp_obj& obj) {
+	return pimpl_->free_instance(obj);
+}
+
+kernel::instances_enum kernel::instances(const BS_TYPE_INFO& ti) const {
+	return pimpl_->instances(ti);
+}
+
 } /* namespace blue_sky */
 
