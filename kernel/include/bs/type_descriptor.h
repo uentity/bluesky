@@ -18,8 +18,6 @@
 #include <list>
 #include <boost/preprocessor/seq/for_each.hpp>
 
-#define BS_NIL_TYPE_TAG "__blue_sky_nil_type__"
-
 namespace blue_sky {
 
 typedef std::shared_ptr< objbase > bs_type_ctor_result;
@@ -27,9 +25,6 @@ typedef const std::shared_ptr< objbase >& bs_type_copy_param;
 
 typedef bs_type_ctor_result (*BS_TYPE_COPY_FUN)(bs_type_copy_param);
 typedef const blue_sky::type_descriptor& (*BS_GET_TD_FUN)();
-
-//typedef std::set< std::shared_ptr< objbase > > bs_objinst_holder;
-//typedef std::shared_ptr< bs_objinst_holder > sp_objinst;
 
 /*!
 \struct type_descriptor
@@ -126,7 +121,7 @@ private:
 public:
 	// default constructor - type_descriptor points to nil
 	type_descriptor() :
-		bs_ti_(nil_type_info()), type_name_(BS_NIL_TYPE_TAG),
+		bs_ti_(nil_type_info()), type_name_(nil().type_name_),
 		parent_td_fun_(nullptr), copy_fun_(nullptr)
 	{}
 
@@ -163,6 +158,9 @@ public:
 		add_def_constructor< T, add_def_ctor >();
 		add_def_copy_constructor< T, add_def_copy >();
 	}
+
+	// obtain Nil type_descriptor
+	static const type_descriptor& nil();
 
 	/*-----------------------------------------------------------------
 	 * create new instance
@@ -276,11 +274,11 @@ public:
 	}
 
 	//! retrieve type_descriptor of parent class
-	type_descriptor parent_td() const {
+	const type_descriptor& parent_td() const {
 		if(parent_td_fun_)
 			return (*parent_td_fun_)();
 		else
-			return type_descriptor();
+			return nil();
 	}
 };
 

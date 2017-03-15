@@ -21,20 +21,32 @@ namespace blue_sky { namespace detail {
  *-----------------------------------------------------------------------------*/
 template< class T >
 struct elem_ptr {
+	// obtain nil element for T
+	// moved to struct in order to be able to make partial specializations of it
+	struct nil {
+		static const T& elem() {
+			// here we rely on fact that if elem_ptr has external linkage (it should)
+			// then there's only one copy on nil_obj that will be shared
+			// among all translation units
+			static const T nil_obj;
+			return nil_obj;
+		}
+	};
+
 	typedef T elem_t;
 	// nil ctor
-	elem_ptr() : p_(&nil_el()) {}
+	elem_ptr() : p_(&nil::elem()) {}
 
 	elem_ptr(const T& el) : p_(&el) {}
 
-	elem_ptr (const T* el) : p_(el ? el : &nil_el()) {}
+	elem_ptr (const T* el) : p_(el ? el : &nil::elem()) {}
 
 	elem_ptr& operator =(const T& el) {
 		p_ = &el;
 		return *this;
 	}
 	elem_ptr& operator =(const T* el) {
-		p_ = el ? el : &nil_el();
+		p_ = el ? el : &nil::elem();
 		return *this;
 	}
 
@@ -53,17 +65,22 @@ struct elem_ptr {
 		return !is_nil();
 	}
 
+	// shorter access to nil element
 	static const T& nil_el() {
-		// here we rely on gact that if elem_ptr has external linkage (it should)
-		// then there's only one copy on nil_obj that will be shared
-		// among all translation units
-		static const T nil_obj;
-		return nil_obj;
+		return nil::elem();
 	}
 
 private:
 	const T* p_;
 };
+
+// we have specific nil element for type_descriptor
+template<> struct elem_ptr< type_descriptor >::nil {
+	static const type_descriptor& elem() {
+		return type_descriptor::nil();
+	}
+};
+
 // alias
 using pd_ptr = elem_ptr< plugin_descriptor >;
 using td_ptr = elem_ptr< type_descriptor >;

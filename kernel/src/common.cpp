@@ -30,5 +30,11 @@ bool upcastable_eq::operator()(const type_descriptor& td1, const type_descriptor
 	return false;
 }
 
+// obtain Nil type_descriptor instance
+const type_descriptor& type_descriptor::nil() {
+	static type_descriptor nil_td(BS_NIL_TYPE_TAG);
+	return nil_td;
+}
+
 }  // eof blue_sky namespace
 
