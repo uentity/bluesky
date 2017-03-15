@@ -88,7 +88,7 @@ struct my_strategy : public objbase {
 	}
 
 	// expect that only one strategy can exist
-	BS_TYPE_DECL_INL(my_strategy, objbase, "my_strategy", "Strategy", true, true)
+	BS_TYPE_DECL_INL(my_strategy, objbase, "", "Strategy", true, true)
 };
 template< class T >
 using sp_strat = std::shared_ptr< my_strategy< T > >;
@@ -135,7 +135,7 @@ public:
 	cont_T storage_;
 	std::string name_;
 
-	BS_TYPE_DECL_INL_BEGIN(uber_type, objbase, "uber", "Uber complex type", true, false)
+	BS_TYPE_DECL_INL_BEGIN(uber_type, objbase, "", "Uber complex type", true, false)
 		td.add_constructor< uber_type, const char* >();
 		td.add_copy_constructor< uber_type >();
 	BS_TYPE_DECL_INL_END
@@ -220,15 +220,15 @@ BOOST_AUTO_TEST_CASE(test_type_descriptor) {
 	BOOST_TEST(ui);
 	if(ui) std::cout << *ui << std::endl;
 
-	sp_uber< double > ud = BS_KERNEL.create_object("uber double my_strategy< double >", "I'm double");
+	sp_uber< double > ud = BS_KERNEL.create_object("uber_type double my_strategy< double >", "I'm double");
 	ud->add_value(42.);
 	BOOST_TEST(ud);
 	if(ud) std::cout << *ud << std::endl;
 
 	// test using free function
-	ud = BS_KERNEL.create_object("uber double my_strategy< double >", 27.5);
+	ud = BS_KERNEL.create_object("uber_type double my_strategy< double >", 27.5);
 	BOOST_TEST(ud);
-	ud = BS_KERNEL.create_object("uber double my_strategy< double >", 42.);
+	ud = BS_KERNEL.create_object("uber_type double my_strategy< double >", 42.);
 	BOOST_TEST(ud);
 	if(ud) std::cout << *ud << std::endl;
 }
