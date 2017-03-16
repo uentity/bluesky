@@ -39,7 +39,8 @@ kernel_cpp_list = [
 	"src/hard_link.cpp",
 	"src/node.cpp",
 	"src/compat/messaging.cpp",
-	"src/compat/array.cpp"
+	"src/compat/array.cpp",
+	"src/compat/array_serialize.cpp"
 ];
 #print kernel_cpp_list;
 
