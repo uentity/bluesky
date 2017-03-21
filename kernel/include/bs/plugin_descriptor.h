@@ -18,9 +18,9 @@
 namespace blue_sky {
 	
 struct BS_API plugin_descriptor {
-	std::string name;
-	std::string version;
-	std::string description;
+	const std::string name;
+	const std::string version;
+	const std::string description;
 	std::string py_namespace;
 
 	// nil plugin constructor
@@ -107,7 +107,14 @@ typedef bool (*BS_REGISTER_PLUGIN)(const blue_sky::plugin_initializer&);
 #include <pybind11/pybind11.h>
 
 #define BLUE_SKY_INIT_PY_FUN \
-BS_C_API_PLUGIN void bs_init_py_subsystem(pybind11::module&)
+BS_C_API_PLUGIN void bs_init_py_subsystem(pybind11::module& m)
 typedef void (*bs_init_py_fn)(pybind11::module&);
+
+#define BLUE_SKY_PY_PLUGIN(mod_name)                                                \
+PYBIND11_PLUGIN(mod_name) {                                                         \
+	pybind11::module m(#mod_name, bs_get_plugin_descriptor()->description.c_str()); \
+	bs_init_py_subsystem(m);                                                        \
+	return m.ptr();                                                                 \
+}
 
 #endif
