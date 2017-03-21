@@ -24,6 +24,7 @@ kernel_cpp_list = [
 	"src/plugin_descriptor.cpp",
 	"src/objbase.cpp",
 	"src/misc.cpp",
+	"src/str_utils.cpp",
 	"src/exception.cpp",
 	"src/kernel_ston.cpp",
 	"src/kernel_logging_subsyst.cpp",
