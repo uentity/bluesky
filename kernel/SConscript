@@ -4,7 +4,7 @@ import os, os.path;
 Import('*');
 
 # list of Boost libs used by kernel
-kboost_libs = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'locale'];
+kboost_libs = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'locale', 'serialization'];
 
 # init stage
 if build_kind == "init" :
