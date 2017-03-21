@@ -16,13 +16,14 @@
 #include <boost/serialization/split_free.hpp>
 #include <boost/archive/polymorphic_iarchive.hpp>
 #include <boost/archive/polymorphic_oarchive.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 #include "serialize/decl.h"
 #include "serialize/macro.h"
 #include "serialize/text.h"
 #include "serialize/fix.h"
 
-#include "serialize/array_serialize.h"
+#include "array_serialize.h"
 
 // add empty serialize fcn for objbase
 #include "../objbase.h"
