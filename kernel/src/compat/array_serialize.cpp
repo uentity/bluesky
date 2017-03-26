@@ -31,24 +31,26 @@ namespace boser = boost::serialization;
  * serialize bs_array
  *----------------------------------------------------------------*/
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(save, bs_array, 2, (class, template< class > class))
-	typedef typename type::const_iterator citerator;
+	//typedef typename type::const_iterator citerator;
 	// save array size
 	const ulong sz = t.size();
 	ar << sz;
 	// save data
-	for(citerator pd = t.begin(), end = t.end(); pd != end; ++pd)
-		ar << *pd;
+	//for(citerator pd = t.begin(), end = t.end(); pd != end; ++pd)
+	for(const auto& v : t)
+		ar << v;
 BLUE_SKY_CLASS_SRZ_FCN_END
 
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(load, bs_array, 2, (class, template< class > class))
-	typedef typename type::iterator iterator;
+	//typedef typename type::iterator iterator;
 	// restore size
 	ulong sz;
 	ar >> sz;
 	t.resize(sz);
 	// restore data
-	for(iterator pd = t.begin(), end = t.end(); pd != end; ++pd)
-		ar >> *pd;
+	//for(iterator pd = t.begin(), end = t.end(); pd != end; ++pd)
+	for(auto& v : t)
+		ar >> v;
 BLUE_SKY_CLASS_SRZ_FCN_END
 
 BLUE_SKY_CLASS_SRZ_FCN_BEGIN_EXT(serialize, blue_sky::bs_array, 2, (class, template< class > class))
