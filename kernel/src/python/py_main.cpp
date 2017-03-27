@@ -9,7 +9,7 @@
 
 #include <bs/bs.h>
 
-BLUE_SKY_INIT_PY_FUN {
+BS_INIT_PY(bs) {
 
 }
 

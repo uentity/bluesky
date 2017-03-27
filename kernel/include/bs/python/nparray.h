@@ -234,12 +234,12 @@ handle bs_array_encapsulate(const std::shared_ptr< Array >& src) {
 	//std::cout << "encapsulate bs_array at " << src.get() << std::endl;
 	// allocate new shared_ptr thar holds a reference to source array during numpy array lifetime
 	auto h = new std::shared_ptr< Array >(src);
-	capsule base(h, [](PyObject *o) {
+	capsule base(h, [](void *o) {
 		// DEBUG
 		//auto p_array = static_cast< std::shared_ptr< Array>* >(PyCapsule_GetPointer(o, nullptr))->get();
 		//std::cout << "release bs_array at " << p_array << std::endl;
 
-		delete static_cast< std::shared_ptr< Array>* >(PyCapsule_GetPointer(o, nullptr));
+		delete static_cast< std::shared_ptr< Array>* >(o);
 	});
 	return bs_ref_array(src, base);
 }

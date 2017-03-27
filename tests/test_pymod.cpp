@@ -22,13 +22,14 @@ int sub(int x1, int x2) {
 	return x1 + x2;
 }
 
-void reenter_module() {
+PyObject* reenter_module() {
 	//py::module m("test_pymod", "pybind11 example plugin");
-	py::module m("test_pymod");
+	py::module m("test_pymod1");
 
 	auto subm = m.def_submodule("example");
 
 	subm.def("sub", &sub, "A function which subtracts two numbers");
+	return m.ptr();
 }
 
 }
@@ -39,7 +40,8 @@ PYBIND11_PLUGIN(test_pymod) {
 
 	subm.def("add", &add, "A function which adds two numbers");
 
-	reenter_module();
+	auto testm = py::reinterpret_borrow< py::module >(reenter_module());
+	m.attr("testm") = testm;
 
 	return m.ptr();
 }

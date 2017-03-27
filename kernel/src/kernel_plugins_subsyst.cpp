@@ -21,7 +21,7 @@
 /*-----------------------------------------------------------------------------
  *  BS kernel plugin descriptor
  *-----------------------------------------------------------------------------*/
-BLUE_SKY_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel module", "bs");
+BS_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel module", "bs");
 
 // hide implementation
 namespace blue_sky { namespace {
@@ -78,7 +78,7 @@ struct kernel_plugins_subsyst::bspy_module {
 		detail::lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
 		const plugin_descriptor* kpd = bs_get_plugin_descriptor();
 		if(init_py) {
-			init_py(root_module_);
+			init_py(&root_module_);
 
 			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace "
 				<< kpd->py_namespace << bs_end;
@@ -94,7 +94,7 @@ struct kernel_plugins_subsyst::bspy_module {
 		// create submodule
 		auto plugin_mod = root_module_.def_submodule(plugin_namespace, doc);
 		// invoke init function
-		f(plugin_mod);
+		f(&plugin_mod);
 	}
 
 	pybind11::module root_module_;
@@ -156,7 +156,7 @@ int kernel_plugins_subsyst::load_plugin(
 	auto PU = [=](plugin_descriptor* pd) { this->unload_plugin(*pd); };
 	using delay_unplug = std::unique_ptr< plugin_descriptor, decltype(PU) >;
 
-	BS_REGISTER_PLUGIN bs_register_plugin; // pointer to fun_register (from temp DLL)
+	bs_register_plugin_fn bs_register_plugin; // pointer to fun_register (from temp DLL)
 	BS_GET_PLUGIN_DESCRIPTOR bs_plugin_descriptor;
 
 	// error message formatter

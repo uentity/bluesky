@@ -10,13 +10,8 @@
 #pragma once
 
 #include "common.h"
-#include "type_info.h"
-//#include "type_macro.h"
 
 #include <unordered_map>
-#include <set>
-#include <list>
-#include <boost/preprocessor/seq/for_each.hpp>
 
 namespace blue_sky {
 

@@ -10,6 +10,7 @@
 #pragma once
 
 #include <bs/kernel.h>
+#include <set>
 #include <boost/pool/pool_alloc.hpp>
 
 NAMESPACE_BEGIN(blue_sky)

@@ -13,6 +13,7 @@
 #include <bs/detail/lib_descriptor.h>
 #include <boost/pool/pool_alloc.hpp>
 #include <map>
+#include <set>
 
 namespace blue_sky { namespace detail {
 /*-----------------------------------------------------------------------------

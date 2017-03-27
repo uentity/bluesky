@@ -18,8 +18,3 @@
 // other things
 #include "misc.h"
 
-// for Python bindings include pybind11
-#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
-#include <pybind11/pybind11.h>
-#endif
-

@@ -13,6 +13,7 @@
 #include "objbase.h"
 #include "log.h"
 #include "type_descriptor.h"
+#include "plugin_descriptor.h"
 
 //#define BS_AUTOLOAD_PLUGINS
 

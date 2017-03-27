@@ -9,6 +9,10 @@
 
 #pragma once
 
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+#include <pybind11/pybind11.h>
+#endif
+
 #include "setup_common_api.h"
 #include "type_info.h"
 #include "fwd.h"
@@ -75,7 +79,7 @@ struct BS_API plugin_initializer {
 	\param description = description of the plugin
 	\param py_namespace = plugin's namespace in Python
 */
-#define BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, description, py_namespace) \
+#define BS_PLUGIN_DESCRIPTOR_EXT(name, version, description, py_namespace)       \
 namespace {                                                                      \
     class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_ {};                          \
 }                                                                                \
@@ -87,8 +91,8 @@ BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() { 
     return &plugin_info_;                                                        \
 }
 
-#define BLUE_SKY_PLUGIN_DESCRIPTOR(name, version, description) \
-BLUE_SKY_PLUGIN_DESCRIPTOR_EXT(name, version, description, #name)
+#define BS_PLUGIN_DESCRIPTOR(name, version, description) \
+BS_PLUGIN_DESCRIPTOR_EXT(name, version, description, #name)
 
 //! type of get plugin descrptor pointer function
 typedef blue_sky::plugin_descriptor* (*BS_GET_PLUGIN_DESCRIPTOR)();
@@ -96,25 +100,28 @@ typedef blue_sky::plugin_descriptor* (*BS_GET_PLUGIN_DESCRIPTOR)();
 /*!
 \brief Plugin register function.
 */
-#define BLUE_SKY_REGISTER_PLUGIN_FUN \
+#define BS_REGISTER_PLUGIN \
 BS_C_API_PLUGIN bool bs_register_plugin(const blue_sky::plugin_initializer& bs_init)
-
 //!	type of plugin register function
-typedef bool (*BS_REGISTER_PLUGIN)(const blue_sky::plugin_initializer&);
+typedef bool (*bs_register_plugin_fn)(const blue_sky::plugin_initializer&);
 
 // Python bindings
 #if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
-#include <pybind11/pybind11.h>
 
-#define BLUE_SKY_INIT_PY_FUN \
-BS_C_API_PLUGIN void bs_init_py_subsystem(pybind11::module& m)
-typedef void (*bs_init_py_fn)(pybind11::module&);
-
-#define BLUE_SKY_PY_PLUGIN(mod_name)                                                \
+#define BS_INIT_PY(mod_name)                                                        \
+extern "C" const blue_sky::plugin_descriptor* bs_get_plugin_descriptor();           \
+static void init_py_subsystem_impl(pybind11::module&);                              \
+BS_C_API_PLUGIN void bs_init_py_subsystem(void* py_plugin_module) {                 \
+	if(!py_plugin_module) return;                                                   \
+	init_py_subsystem_impl(*static_cast< pybind11::module* >(py_plugin_module));    \
+}                                                                                   \
 PYBIND11_PLUGIN(mod_name) {                                                         \
 	pybind11::module m(#mod_name, bs_get_plugin_descriptor()->description.c_str()); \
-	bs_init_py_subsystem(m);                                                        \
+	bs_init_py_subsystem(&m);                                                       \
 	return m.ptr();                                                                 \
-}
+}                                                                                   \
+void init_py_subsystem_impl(pybind11::module& m)
+
+typedef void (*bs_init_py_fn)(void*);
 
 #endif

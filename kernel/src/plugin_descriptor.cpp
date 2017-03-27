@@ -9,7 +9,7 @@
 
 #include <bs/common.h>
 #include <bs/type_descriptor.h>
-//#include <bs/kernel.h>
+#include <bs/plugin_descriptor.h>
 
 using namespace std;
 
