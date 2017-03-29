@@ -108,9 +108,11 @@ kernel_plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_d
 		pd_ptr(pd), ld
 	));
 	pd_ptr ret = res.first->first;
-	// register plugin_descriptor in dictionary
-	//if(res.second)
-	//	plugins_dict_.insert(ret);
+	// check if we need to update lib desriptor
+	if(!res.second && !res.first->second.handle_ && ld.handle_) {
+		res.first->second = ld;
+		return std::make_pair(ret, true);
+	}
 	return std::make_pair(ret, res.second);
 }
 
