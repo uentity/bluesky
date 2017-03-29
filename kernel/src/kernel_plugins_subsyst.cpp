@@ -69,7 +69,7 @@ kernel_plugins_subsyst::~kernel_plugins_subsyst() {}
 
 #ifdef BSPY_EXPORTING
 struct kernel_plugins_subsyst::bspy_module {
-	bspy_module(const pybind11::module& root_mod) : root_module_(root_mod) {}
+	bspy_module(pybind11::module& root_mod) : root_module_(root_mod) {}
 
 	bool init_kernel_subsyst() {
 		namespace py = pybind11;
@@ -80,7 +80,7 @@ struct kernel_plugins_subsyst::bspy_module {
 		if(init_py) {
 			init_py(&root_module_);
 
-			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace "
+			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace: {}"
 				<< kpd->py_namespace << bs_end;
 			return true;
 		}
@@ -97,7 +97,7 @@ struct kernel_plugins_subsyst::bspy_module {
 		f(&plugin_mod);
 	}
 
-	pybind11::module root_module_;
+	pybind11::module& root_module_;
 };
 #endif
 
@@ -267,7 +267,7 @@ int kernel_plugins_subsyst::load_plugin(
 		// finally everything is OK now
 		msg = "BlueSky plugin {} loaded";
 		if(py_scope.size())
-			msg += ", Python subsystem initialized (namespace {})";
+			msg += ", Python subsystem initialized, namespace: {}";
 		auto log_msg = bsout() << log::I(msg.c_str()) << lib.fname_;
 		if(py_scope.size())
 			log_msg << py_scope << log::end;
@@ -293,16 +293,6 @@ int kernel_plugins_subsyst::load_plugin(
 }
 
 int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
-	// init kernel Python subsystem
-#ifdef BSPY_EXPORTING
-	if(py_root_module) {
-		pymod_.reset(new bspy_module(*static_cast< pybind11::module* >(py_root_module)));
-		pymod_->init_kernel_subsyst();
-	}
-#else
-	(void)init_py_subsyst;
-#endif
-
 	// discover plugins
 	auto plugins = plugins_discover().go();
 	BSOUT << "--------" << bs_end;
@@ -314,6 +304,16 @@ int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
 			BSOUT << "{}" << plugin << bs_end;
 		BSOUT << "--------" << bs_end;
 	}
+
+	// init kernel Python subsystem
+#ifdef BSPY_EXPORTING
+	if(py_root_module) {
+		pymod_.reset(new bspy_module(*static_cast< pybind11::module* >(py_root_module)));
+		pymod_->init_kernel_subsyst();
+	}
+#else
+	(void)init_py_subsyst;
+#endif
 
 	std::size_t plugin_cnt = 0;
 	for(const auto& plugin_fname : plugins) {
