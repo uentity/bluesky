@@ -18,7 +18,7 @@
 #include <pybind11/numpy.h>
 //#include <numpy/arrayobject.h>
 // DEBUG
-#include <iostream>
+//#include <iostream>
 
 /*-----------------------------------------------------------------------------
  *  numpy traits for bs_array
@@ -73,43 +73,41 @@ public:
 	// specific implementation of resize
 	void resize(size_type new_size) {
 		// resize isn't supported on binded arrays
-		throw blue_sky::bs_exception("array resize isn't supported", "bs_nparray_traits");
+		//throw blue_sky::bs_exception("array resize isn't supported", "bs_nparray_traits");
+		//std::cout << "*** bs_nparray_traits.resize(" << new_size << ')' << std::endl;
+		//std::cout << "this array: " << this->ptr() << std::endl;
 
 		namespace py = pybind11;
 		using npy_intp = typename npy_api::npy_intp;
 		using PyArray_Dims = typename npy_api::PyArray_Dims;
 
-		//bs_nparray t(new_size);
-		//std::copy(this->data(), this->data() + std::max< size_t >(t.size(), this->size()), t.data());
-		//t.swap(*this);
-		//return;
-
-		// test if no array was created yet
-		if(this->ptr() == Py_None)
-			bs_nparray_traits(new_size).swap(*this);
-		if(new_size == this->size()) return;
-
-		// native resize
+		// resize will always result in plain vector
 		npy_intp new_dims[] = { npy_intp(new_size) };
 		PyArray_Dims d = { new_dims, 1};
-		//try {
-			bs_nparray_traits mod_array(base_t::ensure(
-				npy_api::get().PyArray_Resize_(this->ptr(), &d, 1, npy_api::NPY_ANYORDER)
-			));
-			if(mod_array.ptr() && mod_array.ptr() != Py_None && mod_array.ptr() != this->ptr())
-				mod_array.swap(*this);
-		//}
-		//catch(const py::error_already_set& /*e*/){
-		//	// if resize fails - do nothing
-		//	PyErr_Print();
-		//}
+		PyObject* new_array = Py_None;
+		// try to resize
+		new_array = npy_api::get().PyArray_Resize_(
+			py::detail::array_proxy(this->ptr()), &d, 0, npy_api::NPY_ANYORDER
+		);
+		// check if error happened
+		if(PyErr_Occurred()) {
+			throw py::error_already_set();
+		}
+
+		// if new_array is valid - swap with this (this = new array)
+		if(new_array && new_array != Py_None && new_array != this->ptr()) {
+			//bs_nparray_traits(py::reinterpret_borrow< py::object >(new_array)).swap(*this);
+			*this = py::reinterpret_borrow< py::object >(new_array);
+		}
 	}
 
 	void resize(size_type new_size, value_type init_value) {
 		auto old_size = this->size();
 
+		// resize can fail to actually resize array
 		resize(new_size);
 		auto new_data = this->data();
+		new_size = this->size();
 		std::fill(new_data + std::min(old_size, new_size), new_data + new_size, init_value);
 	}
 
@@ -162,7 +160,7 @@ private:
 			NPY_KEEPORDER=2
 		} NPY_ORDER;
 
-		PyObject* (*PyArray_Resize_)(PyObject*, PyArray_Dims*, int, NPY_ORDER);
+		PyObject* (*PyArray_Resize_)(pybind11::detail::PyArray_Proxy*, PyArray_Dims*, int, NPY_ORDER);
 
 		enum np_functions {
 			API_PyArray_Resize = 80,
@@ -204,7 +202,7 @@ NAMESPACE_BEGIN(detail)
 
 // Casts bs_array type to numpy array. If given a base, the numpy array references the src data,
 // otherwise it'll make a copy.  writeable lets you turn off the writeable flag for the array.
-template< class Array >
+template< typename Array >
 handle bs_array_cast(Array const& src, handle base = handle(), bool writeable = true) {
 	array a(src.size(), src.data(), base);
 	if (!writeable)
@@ -213,23 +211,46 @@ handle bs_array_cast(Array const& src, handle base = handle(), bool writeable = 
 	return a.release();
 }
 
+// following code is disabled -- tried to make specific casting for bs_arrays
+//template< typename Array >
+//struct bs_array_cast {
+//	static handle go(Array const& src, handle base = handle(), bool writeable = true) {
+//		array a(src.size(), src.data(), base);
+//		if (!writeable)
+//			array_proxy(a.ptr())->flags &= ~detail::npy_api::NPY_ARRAY_WRITEABLE_;
+//
+//		return a.release();
+//	}
+//};
+// specialization for native numpy bs_array
+//template< class T >
+//struct bs_array_cast< blue_sky::bs_array< T, blue_sky::bs_nparray_traits > > {
+//	using Array = blue_sky::bs_array< T, blue_sky::bs_nparray_traits >;
+//	static handle go(Array const& src, handle base = handle(), bool = true) {
+//		return src;
+//	}
+//};
+
+
 // Takes an lvalue ref to some bs_array type and a (python) base object, creating a numpy array that
 // reference the bs_array object's data with `base` as the python-registered base class (if omitted,
 // the base will be set to None, and lifetime management is up to the caller).  The numpy array is
 // non-writeable if the given type is const.
-template < typename Array >
-handle bs_ref_array(Array &src, handle parent = none()) {
-    // none here is to get past array's should-we-copy detection, which currently always
-    // copies when there is no base.  Setting the base to None should be harmless.
-    return bs_array_cast(*src, parent, !std::is_const< typename Array::element_type >::value);
+template< typename ArrayPtr >
+handle bs_ref_array(ArrayPtr &src, handle parent = none()) {
+	// none here is to get past array's should-we-copy detection, which currently always
+	// copies when there is no base.  Setting the base to None should be harmless.
+	return bs_array_cast(
+		*src, parent, !std::is_const< typename ArrayPtr::element_type >::value
+	);
 }
 
 // Takes a pointer to some bs_array type, builds a capsule around it, then returns a numpy
 // array that references the encapsulated data with a python-side reference to the capsule to tie
 // its destruction to that of any dependent python objects.  Const-ness is determined by whether or
 // not the Type of the pointer given is const.
-template < typename Array >
-handle bs_array_encapsulate(const std::shared_ptr< Array >& src) {
+template< typename Array >
+handle bs_array_encapsulate(const std::shared_ptr< Array > &src) {
 	// DEBUG
 	//std::cout << "encapsulate bs_array at " << src.get() << std::endl;
 	// allocate new shared_ptr thar holds a reference to source array during numpy array lifetime
@@ -238,7 +259,6 @@ handle bs_array_encapsulate(const std::shared_ptr< Array >& src) {
 		// DEBUG
 		//auto p_array = static_cast< std::shared_ptr< Array>* >(PyCapsule_GetPointer(o, nullptr))->get();
 		//std::cout << "release bs_array at " << p_array << std::endl;
-
 		delete static_cast< std::shared_ptr< Array>* >(o);
 	});
 	return bs_ref_array(src, base);
@@ -288,7 +308,7 @@ public:
 	template <typename> using cast_op_type = Array;
 };
 
-// Cast generic bs_array to Python. Special case of bs_nparray is specialized next
+// Cast generic bs_array to Python. Special case of bs_nparray_traits is specialized next
 template< class T, template< class > class cont_traits >
 struct type_caster< std::shared_ptr< blue_sky::bs_array< T, cont_traits > > >
 	: public bs_array_caster< blue_sky::bs_array< T, cont_traits > > {};

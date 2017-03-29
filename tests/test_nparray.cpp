@@ -59,7 +59,10 @@ void double_vec(const sp_dvector& X) {
 	dvector& x = *X;
 	std::cout << "Source: " << x << std::endl;
 	try {
-		x.resize(x.size() + 2, 15);
+		x.resize(x.size() + 2, 42.);
+	}
+	catch(const std::exception& e) {
+		std::cout << e.what() << std::endl;
 	}
 	catch(const bs_exception& e) {
 		std::cout << e << std::endl;
@@ -72,7 +75,9 @@ void double_vec(const sp_dvector& X) {
 }
 
 sp_dvector gen_vec() {
-	sp_dvector res = std::make_shared< dvector >(10);
+	//sp_dvector res = std::make_shared< dvector >(10);
+	sp_dvector res = std::make_shared< dvector >();
+	res->resize(10);
 	std::fill(res->begin(), res->end(), 42.);
 	return res;
 }
@@ -84,7 +89,6 @@ std::shared_ptr< ret_array_t > test_nparray(std::shared_ptr< inp_array_t > a, st
 	sp_dvector tmp = BS_KERNEL.create_object(dvector::bs_type());
 	std::cout << "tmp created = " << tmp->size() << std::endl;
 	tmp->resize(10);
-	tmp->resize(11);
 	std::cout << "tmp resized = " << tmp->size() << std::endl;
 
 	ulong sz = (ulong) std::min(a->size(), b->size());
@@ -97,7 +101,6 @@ std::shared_ptr< ret_array_t > test_nparray(std::shared_ptr< inp_array_t > a, st
 	for(ulong i = 0; i < sz; ++i)
 		(*res)[i] = (*a)[i] + (*b)[i];
 	(*res)[res->size() - 1] = 12345;
-	//res->insert(1.);
 	return res;
 }
 
