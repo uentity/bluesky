@@ -16,7 +16,7 @@
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 
-BLUE_SKY_PLUGIN_DESCRIPTOR("test_type_descriptor", "1.0", "Types factory unit test");
+BS_PLUGIN_DESCRIPTOR("test_type_descriptor", "1.0", "Types factory unit test");
 
 namespace blue_sky {
 
