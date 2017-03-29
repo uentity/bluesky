@@ -176,7 +176,7 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	using plugins_enum_t = std::map<
 		pd_ptr, lib_descriptor, pdp_comp_name,
 		boost::fast_pool_allocator<
-			std::pair< const plugin_descriptor&, lib_descriptor >,
+			std::pair< pd_ptr, lib_descriptor >,
 			boost::default_user_allocator_new_delete,
 			boost::details::pool::null_mutex
 		>
@@ -234,7 +234,7 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 
 	void unload_plugins();
 
-	std::pair< pd_ptr, bool > register_plugin(const plugin_descriptor& pd, const lib_descriptor& ld);
+	std::pair< pd_ptr, bool > register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld);
 
 	int load_plugin(const std::string& fname, bool init_py_subsyst);
 

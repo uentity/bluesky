@@ -44,7 +44,7 @@ bool kernel_plugins_subsyst::register_type(
 	if(!is_inner_pd(*pdp)) {
 		// case for external plugin descriptor
 		// try to register it or find a match with existing pd
-		pdp = register_plugin(*pdp, lib_descriptor()).first;
+		pdp = register_plugin(pdp.get(), lib_descriptor()).first;
 	}
 	// register obj in factory
 	res = obj_fab_.insert(fab_elem(pdp, td));

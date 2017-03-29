@@ -102,9 +102,11 @@ struct kernel_plugins_subsyst::bspy_module {
 #endif
 
 std::pair< pd_ptr, bool >
-kernel_plugins_subsyst::register_plugin(const plugin_descriptor& pd, const lib_descriptor& ld) {
+kernel_plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) {
 	// enumerate plugin first
-	auto res = loaded_plugins_.insert(std::make_pair(pd, ld));
+	auto res = loaded_plugins_.insert(std::make_pair(
+		pd_ptr(pd), ld
+	));
 	pd_ptr ret = res.first->first;
 	// register plugin_descriptor in dictionary
 	//if(res.second)
@@ -205,7 +207,7 @@ int kernel_plugins_subsyst::load_plugin(
 		}
 
 		// enumerate plugin
-		if(!register_plugin(*p_descr, lib).second) {
+		if(!register_plugin(p_descr, lib).second) {
 			// plugin was already registered earlier
 			delay_unload killer(&lib, LU);
 			bsout() << log::W("{}: {} plugin is already registred, skipping...")
@@ -249,7 +251,7 @@ int kernel_plugins_subsyst::load_plugin(
 					p_descr->py_namespace = extract_root_name(lib.fname_);
 					// update reference information
 					loaded_plugins_.erase(*p_descr);
-					register_plugin(*p_descr, lib);
+					register_plugin(p_descr, lib);
 				}
 
 				// init python subsystem
@@ -280,11 +282,11 @@ int kernel_plugins_subsyst::load_plugin(
 		retval = ex.err_code();
 	}
 	catch(const std::exception& ex) {
-		BSERROR << "[Std Exception] {}: {}" << who << ex.what() << bs_end;
+		BSERROR << log::E("[Std Exception] {}: {}") << who << ex.what() << bs_end;
 	}
 	catch(...) {
 		//something really serious happened
-		BSERROR << "[Unknown Exception] {}: Unknown error happened during plugins loading"
+		BSERROR << log::E("[Unknown Exception] {}: Unknown error happened during plugins loading")
 			<< who << bs_end;
 		throw;
 	}
