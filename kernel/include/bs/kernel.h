@@ -72,6 +72,15 @@ struct type_tuple : public std::tuple< const plugin_descriptor*, const type_desc
 	td_t td() const {
 		return *std::get< 1 >(*this);
 	}
+
+	// direct access to plugin & type names
+	// simplifies boost::multi_index_container key specification
+	const std::string& plug_name() const {
+		return pd().name;
+	}
+	const std::string& type_name() const {
+		return td().type_name();
+	}
 };
 
 /*! \class kernel

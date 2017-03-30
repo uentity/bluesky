@@ -16,14 +16,6 @@ NAMESPACE_BEGIN(detail)
 
 using namespace std;
 
-//bool kernel_plugins_subsyst::register_kernel_type(const type_descriptor& td, fab_elem* tp_ref) {
-//	return register_type(td, &kernel_pd_, tp_ref);
-//}
-//
-//bool kernel_plugins_subsyst::register_rt_type(const type_descriptor& td, fab_elem* tp_ref) {
-//	return register_type(td, &runtime_pd_, tp_ref);
-//}
-
 bool kernel_plugins_subsyst::register_type(
 	const type_descriptor& td, const plugin_descriptor* pd, type_tuple* tt_ref
 ) {
@@ -43,70 +35,38 @@ bool kernel_plugins_subsyst::register_type(
 		pdp = register_plugin(pdp, lib_descriptor()).first;
 	}
 	// register obj in factory
-	auto res = obj_fab_.insert(type_tuple(*pdp, td));
+	auto res = types_.insert(type_tuple{*pdp, td});
+	const type_tuple& tar_tt = *res.first;
+
+	// replace plugin_descriptor if passed one is not nil and differ from existing
+	if(!res.second && !pd->is_nil() && *pd != tar_tt.pd()) {
+		types_.replace(res.first, {*pd, tar_tt.td()});
+		res.second = true;
+	}
+	if(!res.second) {
+		// dump warning
+		bserr() << log::W("[kernel:factory] type '{}' already registered") << td.type_name() << bs_end;
+	}
+
 	// save registered type if asked for
-	if(tt_ref) *tt_ref = *res.first;
-
-	//register type in dictionaries
-	if(res.second) {
-		auto res_ref = types_resolver_.insert(*res.first);
-		if(!res_ref.second) {
-			//probably duplicating type name found
-			// dump error
-			bserr() << log::W("[kernel:factory] type '") << td.type_name()
-				<< "' cannot be registered because type with such name already exist" << bs_end;
-
-			obj_fab_.erase(res.first);
-			if(tt_ref) {
-				if(res_ref.first != types_resolver_.end())
-					*tt_ref = *res_ref.first;
-				else
-					//some unknown bad error happened
-					*tt_ref = type_tuple();
-			}
-			return false;
-		}
-
-		plugin_types_.insert(*res.first);
-		return true;
-	}
-	else if(*pdp != res.first->pd() && is_inner_pd(res.first->pd())) {
-		// current type was previously registered as inner
-		// replace with correct plugin d-tor now
-		// remove first from types_resolver_
-		types_resolver_.erase(*res.first);
-		// remove inner-type association
-		plugin_types_.erase(*res.first);
-		// now delete factory entry
-		obj_fab_.erase(res.first);
-
-		// register type with passed plugin_descriptor
-		res = obj_fab_.insert(type_tuple({*pd, td}));
-		types_resolver_.insert(*res.first);
-		plugin_types_.insert(*res.first);
-		return true;
-	}
-
-	// dump warning
-	bserr() << log::W("[kernel:factory] type '{}' already registered") << td.type_name() << bs_end;
-	return false;
+	if(tt_ref) *tt_ref = tar_tt;
+	return res.second;
 }
 
 type_tuple kernel_plugins_subsyst::demand_type(const type_tuple& obj_t) {
-	type_tuple tt_ref(obj_t);
+	//type_tuple tt_ref(obj_t);
+	type_tuple tt_ref;
 	if(obj_t.td().is_nil()) {
 		// if type is nil try to find it by name
-		auto tt = types_resolver_.find(tt_ref);
-		if(tt != types_resolver_.end())
+		auto tt = types_.get< type_name_key >().find(obj_t.td());
+		if(tt != types_.get< type_name_key >().end())
 			tt_ref = *tt;
 	}
 	else {
 		// otherwise try to find requested type using fast search in factory
-		auto tt = obj_fab_.find(tt_ref);
-		if(tt != obj_fab_.end())
+		auto tt = types_.get< type_key >().find(obj_t.td());
+		if(tt != types_.get< type_key >().end())
 			tt_ref = *tt;
-		else
-			tt_ref = type_tuple();
 	}
 	if(tt_ref.td().is_nil()) {
 		//type wasn't found - try to register it first
@@ -114,7 +74,7 @@ type_tuple kernel_plugins_subsyst::demand_type(const type_tuple& obj_t) {
 			register_rt_type(obj_t.td(), &tt_ref);
 		else
 			register_type(obj_t.td(), &obj_t.pd(), &tt_ref);
-		//still nil td means that serious error happened - type cannot be registered
+		// still nil td means that serious error happened - type cannot be registered
 		if(tt_ref.is_nil()) {
 			throw bs_kexception(boost::format(
 				"Type (%s) is nil or cannot be registered!") % obj_t.td().type_name(),

@@ -236,15 +236,11 @@ public:
 	BS_TYPE_INFO type() const {
 		return bs_ti_;
 	};
-	std::string type_name() const {
+	const std::string& type_name() const {
 		return type_name_;
 	}
-	std::string description() const {
+	const std::string& description() const {
 		return description_;
-	}
-	// TODO: remove this function!
-	std::string name() const {
-		return type_name_;
 	}
 
 	/// tests

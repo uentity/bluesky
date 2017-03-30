@@ -41,7 +41,7 @@ void kernel::unload_plugins() {
 }
 
 const type_descriptor& kernel::demand_type(const type_descriptor& obj_type) {
-	return pimpl_->demand_type(type_tuple(obj_type)).td();
+	return pimpl_->demand_type({obj_type}).td();
 }
 
 bool kernel::register_type(const type_descriptor& td, const plugin_descriptor* pd) {
@@ -50,27 +50,28 @@ bool kernel::register_type(const type_descriptor& td, const plugin_descriptor* p
 
 kernel::types_enum kernel::registered_types() const {
 	types_enum res;
-	for(const auto& elem : pimpl_->obj_fab_) {
+	for(const auto& elem : pimpl_->types_) {
 		res.emplace_back(elem);
 	}
 	return res;
 }
 
 kernel::types_enum kernel::plugin_types(const plugin_descriptor& pd) const {
-	types_enum res;
-	auto plt = pimpl_->plugin_types_.equal_range(pd);
-	for(auto pos = plt.first; pos != plt.second; ++pos)
-		res.emplace_back(*pos);
+	using plug_key = detail::kernel_plugins_subsyst::plug_key;
 
+	types_enum res;
+	auto plt = pimpl_->types_.get< plug_key >().equal_range(pd);
+	std::copy(plt.first, plt.second, std::back_inserter(res));
 	return res;
 }
 
 kernel::types_enum kernel::plugin_types(const std::string& plugin_name) const {
-	const plugin_descriptor key{plugin_name};
-	const auto plug_ptr = pimpl_->loaded_plugins_.find(&key);
-	if(plug_ptr != pimpl_->loaded_plugins_.end())
-		return plugin_types(*plug_ptr->first);
-	return {};
+	using plug_name_key = detail::kernel_plugins_subsyst::plug_name_key;
+
+	types_enum res;
+	auto plt = pimpl_->types_.get< plug_name_key >().equal_range(plugin_name);
+	std::copy(plt.first, plt.second, std::back_inserter(res));
+	return res;
 }
 
 kernel::plugins_enum kernel::loaded_plugins() const {

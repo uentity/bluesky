@@ -117,12 +117,7 @@ void kernel_plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
 	// we cannot clear kernel internal types
 	if(pd == kernel_pd_) return;
 
-	auto plug_types = plugin_types_.equal_range(pd);
-	for(auto ptype = plug_types.first; ptype != plug_types.second; ++ptype) {
-		types_resolver_.erase(*ptype);
-		obj_fab_.erase(*ptype);
-	}
-	plugin_types_.erase(plug_types.first, plug_types.second);
+	types_.get< plug_key >().erase(pd);
 }
 
 // unloas given plugin

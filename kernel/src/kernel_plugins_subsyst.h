@@ -15,7 +15,14 @@
 #include <map>
 #include <set>
 
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/mem_fun.hpp>
+//#include <boost/multi_index/member.hpp>
+//#include <boost/multi_index/identity.hpp>
+
 namespace blue_sky { namespace detail {
+namespace mi = boost::multi_index;
 
 // plugin descriptors order by name
 struct BS_HIDDEN_API pdp_comp_name {
@@ -64,27 +71,28 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	>;
 	plugins_enum_t loaded_plugins_;
 
-	// uentity: replaced fab_elem -> type_tuple
-	//! types factory: fab_elements sorted by BS_TYPE_INFO
+	// type_tuple allocator
 	using types_alloc_t = boost::fast_pool_allocator<
 		type_tuple, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
 	>;
-	using factory_t = std::set<
-		type_tuple, tt_comp_ti, types_alloc_t
-	>;
-	factory_t obj_fab_;
+	// tags for type_tuples storage keys
+	using type_key = mi::const_mem_fun< type_tuple, const type_descriptor&, &type_tuple::td >;
+	using plug_key = mi::const_mem_fun< type_tuple, const plugin_descriptor&, &type_tuple::pd >;
+	using type_name_key = mi::const_mem_fun< type_tuple, const std::string&, &type_tuple::type_name >;
+	using plug_name_key = mi::const_mem_fun< type_tuple, const std::string&, &type_tuple::plug_name >;
 
-	//! types dictionary: fe_ptrs sorted by string type
-	using types_dict_t = std::set<
-		type_tuple, tt_comp_typename, types_alloc_t
+	// type tuples storage type
+	using types_container_t = mi::multi_index_container<
+		type_tuple,
+		mi::indexed_by<
+			mi::ordered_unique< mi::tag< type_key >, type_key >,
+			mi::ordered_unique< mi::tag< type_name_key >, type_name_key >,
+			mi::ordered_non_unique< mi::tag< plug_key >, plug_key >,
+			mi::ordered_non_unique< mi::tag< plug_name_key >, plug_name_key >
+		>,
+		types_alloc_t
 	>;
-	types_dict_t types_resolver_;
-
-	//! loaded plugins: pointers to type_tuples sorted by plugins names
-	using plugin_types_enum_t = std::multiset<
-		type_tuple, tt_comp_pd, types_alloc_t
-	>;
-	plugin_types_enum_t plugin_types_;
+	types_container_t types_;
 
 #ifdef BSPY_EXPORTING
 	struct bspy_module;
