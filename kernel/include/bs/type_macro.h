@@ -15,8 +15,10 @@
 #include <boost/preprocessor/control/iif.hpp>
 #include <boost/preprocessor/control/expr_iif.hpp>
 #include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/facilities/expand.hpp>
 
-#include <boost/preprocessor/seq/for_each_i.hpp>
+#include <boost/preprocessor/seq/for_each.hpp>
+//#include <boost/preprocessor/seq/for_each_i.hpp>
 
 #include <boost/preprocessor/tuple/to_seq.hpp>
 #include <boost/preprocessor/tuple/enum.hpp>
@@ -106,27 +108,30 @@ BS_TYPE_IMPL_((template< > BS_API_PLUGIN), (T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >
  *----------------------------------------------------------------*/
 #define _OP(r, data, x) x
 
+#define _EXPAND_POSTFIX(T_spec_tup) \
+BOOST_PP_STRINGIZE(BOOST_PP_SEQ_FOR_EACH(_OP, _, BOOST_PP_TUPLE_TO_SEQ(T_spec_tup)))
+
 #if defined(_MSC_VER)
 
 // NOTE: it seems that VS compiler doesn't instantiate static template class members
 // even when class is explicitly instantiated.
 // So we need to add explicit instantiation for static member functions, declared in
 // class body.
-#define BS_TYPE_IMPL_INL_T(T, T_spec_tup)                                                    \
-template< > BS_API_PLUGIN const blue_sky::type_descriptor&                                   \
-T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >::bs_type()                                              \
-{ return td_maker(std::string(BOOST_PP_STRINGIZE(T)) + ' ' +                                 \
-    BOOST_PP_STRINGIZE(BOOST_PP_SEQ_FOR_EACH(_OP, _, BOOST_PP_TUPLE_TO_SEQ(T_spec_tup)))); } \
-template BS_API_PLUGIN const blue_sky::type_descriptor&                                      \
+#define BS_TYPE_IMPL_INL_T(T, T_spec_tup)                           \
+template< > BS_API_PLUGIN const blue_sky::type_descriptor&          \
+T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >::bs_type()                     \
+{ return td_maker(std::string(BOOST_PP_STRINGIZE(T)) + ' ' +        \
+    _EXPAND_POSTFIX(T_spec_tup)); }                                 \
+template BS_API_PLUGIN const blue_sky::type_descriptor&             \
 T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >::td_maker(const std::string&);
 
 #else
 
-#define BS_TYPE_IMPL_INL_T(T, T_spec_tup)                                                    \
-template< > BS_API_PLUGIN const blue_sky::type_descriptor&                                   \
-T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >::bs_type()                                              \
-{ return td_maker(std::string(BOOST_PP_STRINGIZE(T)) + ' ' +                                 \
-    BOOST_PP_STRINGIZE(BOOST_PP_SEQ_FOR_EACH(_OP, _, BOOST_PP_TUPLE_TO_SEQ(T_spec_tup)))); }
+#define BS_TYPE_IMPL_INL_T(T, T_spec_tup)                    \
+template< > BS_API_PLUGIN const blue_sky::type_descriptor&   \
+T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >::bs_type()              \
+{ return td_maker(std::string(BOOST_PP_STRINGIZE(T)) + ' ' + \
+    _EXPAND_POSTFIX(T_spec_tup)); }
 
 #endif
 
