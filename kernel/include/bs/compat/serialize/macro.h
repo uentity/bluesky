@@ -409,7 +409,7 @@ namespace boost { namespace serialization {                                     
 template< > BS_API_PLUGIN                                                                   \
 const char* guid< BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args) >() {                   \
     static std::string stype =                                                              \
-        BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)::bs_type().type_name().c_str();   \
+        BS_MAKE_FULL_TYPE_IMPL(T, tpl_args_num, tpl_args)::bs_type().name.c_str();          \
     return stype.c_str();                                                                   \
 } }}                                                                                        \
 namespace boost { namespace archive { namespace detail { namespace extra_detail {           \

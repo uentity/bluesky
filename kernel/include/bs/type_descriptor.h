@@ -29,13 +29,9 @@ typedef const blue_sky::type_descriptor& (*BS_GET_TD_FUN)();
 class BS_API type_descriptor {
 private:
 	friend class kernel;
-	static unsigned int self_version();
 
-	BS_TYPE_INFO bs_ti_;
-	std::string type_name_; //!< string type name
-	std::string description_; //!< arbitrary type description
-
-	mutable BS_GET_TD_FUN parent_td_fun_;
+	const BS_TYPE_INFO bs_ti_;
+	const BS_GET_TD_FUN parent_td_fun_;
 	mutable BS_TYPE_COPY_FUN copy_fun_;
 
 	// map type of params tuple -> typeless creation function
@@ -114,15 +110,19 @@ private:
 	}
 
 public:
+	const std::string name; //!< string type name
+	const std::string description; //!< arbitrary type description
+
 	// default constructor - type_descriptor points to nil
 	type_descriptor() :
-		bs_ti_(nil_type_info()), type_name_(nil().type_name_),
-		parent_td_fun_(nullptr), copy_fun_(nullptr)
+		bs_ti_(nil_type_info()), parent_td_fun_(nullptr), copy_fun_(nullptr),
+		name(nil().name)
 	{}
 
 	// Nil constructor for temporary tasks (searching etc)
 	type_descriptor(const std::string& type_name) :
-		bs_ti_(nil_type_info()), type_name_(type_name), parent_td_fun_(nullptr), copy_fun_(nullptr)
+		bs_ti_(nil_type_info()), parent_td_fun_(nullptr), copy_fun_(nullptr),
+		name(type_name)
 	{}
 
 	// standard constructor
@@ -130,8 +130,8 @@ public:
 		const BS_TYPE_INFO& ti, const char* type_name, const BS_TYPE_COPY_FUN& cp_fn,
 		const BS_GET_TD_FUN& parent_td_fn, const char* description = ""
 	) :
-		bs_ti_(ti), type_name_(type_name), description_(description),
-		parent_td_fun_(parent_td_fn), copy_fun_(cp_fn)
+		bs_ti_(ti), parent_td_fun_(parent_td_fn), copy_fun_(cp_fn),
+		name(type_name), description(description)
 	{}
 
 	// templated ctor for BlueSky types
@@ -147,8 +147,8 @@ public:
 		std::integral_constant< bool, add_def_ctor > = std::false_type(),
 		std::integral_constant< bool, add_def_copy > = std::false_type()
 	) :
-		bs_ti_(BS_GET_TI(T)), type_name_(extract_typename< T >::go(type_name)), description_(description),
-		parent_td_fun_(extract_tdfun< base >::go()), copy_fun_(nullptr)
+		bs_ti_(BS_GET_TI(T)), parent_td_fun_(extract_tdfun< base >::go()), copy_fun_(nullptr),
+		name(extract_typename< T >::go(type_name)), description(description)
 	{
 		add_def_constructor< T, add_def_ctor >();
 		add_def_copy_constructor< T, add_def_copy >();
@@ -236,12 +236,6 @@ public:
 	BS_TYPE_INFO type() const {
 		return bs_ti_;
 	};
-	const std::string& type_name() const {
-		return type_name_;
-	}
-	const std::string& description() const {
-		return description_;
-	}
 
 	/// tests
 	bool is_nil() const {
@@ -253,10 +247,10 @@ public:
 
 	/// conversions
 	operator std::string() const {
-		return type_name_;
+		return name;
 	}
 	operator const char*() const {
-		return type_name_.c_str();
+		return name.c_str();
 	}
 
 	//! by default type_descriptors are comparable by bs_type_info
@@ -275,15 +269,15 @@ public:
 
 // comparison with type string
 inline bool operator <(const type_descriptor& td, const std::string& type_string) {
-	return (td.type_name() < type_string);
+	return (td.name < type_string);
 }
 
 inline bool operator ==(const type_descriptor& td, const std::string& type_string) {
-	return (td.type_name() == type_string);
+	return (td.name == type_string);
 }
 
 inline bool operator !=(const type_descriptor& td, const std::string& type_string) {
-	return td.type_name() != type_string;
+	return td.name != type_string;
 }
 
 // comparison with bs_type_info

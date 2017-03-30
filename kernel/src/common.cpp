@@ -21,11 +21,11 @@ namespace blue_sky {
 bool upcastable_eq::operator()(const type_descriptor& td1, const type_descriptor& td2) const {
 	if(td1 == td2) return true;
 
-	type_descriptor cur_td = td2.parent_td();
-	while(!cur_td.is_nil()) {
-		if(td1 == cur_td)
+	const type_descriptor* cur_td = &td2.parent_td();
+	while(!cur_td->is_nil()) {
+		if(td1 == *cur_td)
 			return true;
-		cur_td = cur_td.parent_td();
+		cur_td = &cur_td->parent_td();
 	}
 	return false;
 }

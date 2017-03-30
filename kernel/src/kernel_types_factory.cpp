@@ -45,7 +45,7 @@ bool kernel_plugins_subsyst::register_type(
 	}
 	if(!res.second) {
 		// dump warning
-		bserr() << log::W("[kernel:factory] type '{}' already registered") << td.type_name() << bs_end;
+		bserr() << log::W("[kernel:factory] type '{}' already registered") << td.name << bs_end;
 	}
 
 	// save registered type if asked for
@@ -77,7 +77,7 @@ type_tuple kernel_plugins_subsyst::demand_type(const type_tuple& obj_t) {
 		// still nil td means that serious error happened - type cannot be registered
 		if(tt_ref.is_nil()) {
 			throw bs_kexception(boost::format(
-				"Type (%s) is nil or cannot be registered!") % obj_t.td().type_name(),
+				"Type (%s) is nil or cannot be registered!") % obj_t.td().name,
 				"kernel:factory"
 			);
 		}

@@ -25,7 +25,7 @@ std::string print_loaded_types() {
 		outs << "Plugin: " << plug->name << ", version " << plug->version << " {" << endl;
 		const auto& types = k.plugin_types(*plug);
 		for(const auto& t : types) {
-			outs << "	`" << t.td().type_name() << "` -> " << t.td().description() << endl;
+			outs << "	`" << t.td().name << "` -> " << t.td().description << endl;
 		}
 		outs << "}" << endl;
 	}

@@ -84,7 +84,7 @@ struct my_strategy : public objbase {
 
 	//template< class Ostream >
 	friend std::ostream& operator<<(std::ostream& os, const my_strategy& s) {
-		return os << "Strategy type : " << bs_type().type_name() << "; strategy name = " << s.name_;
+		return os << "Strategy type : " << bs_type().name << "; strategy name = " << s.name_;
 	}
 
 	// expect that only one strategy can exist
@@ -123,7 +123,7 @@ public:
 
 	//template< class Ostream >
 	friend std::ostream& operator<<(std::ostream& os, const uber_type& s) {
-		os << "Uber type: " << bs_type().type_name() << "; Uber name = " << s.name_ <<
+		os << "Uber type: " << bs_type().name << "; Uber name = " << s.name_ <<
 			" has elements [" << s.storage_.size() << "]: ";
 		for(auto& v : s.storage_) {
 			os << v << ' ';

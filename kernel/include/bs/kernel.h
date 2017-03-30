@@ -79,7 +79,7 @@ struct type_tuple : public std::tuple< const plugin_descriptor*, const type_desc
 		return pd().name;
 	}
 	const std::string& type_name() const {
-		return td().type_name();
+		return td().name;
 	}
 };
 
