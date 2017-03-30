@@ -28,7 +28,7 @@ namespace blue_sky { namespace {
 
 // tags for kernel & runtime types plugin_descriptor
 //struct __kernel_types_pd_tag__ {};
-struct __runtime_types_pd_tag__ {};
+struct BS_HIDDEN_API __runtime_types_pd_tag__ {};
 
 std::string extract_root_name(const std::string& full_name) {
 	using namespace std;
@@ -52,9 +52,6 @@ std::string extract_root_name(const std::string& full_name) {
 } // eof hidden namespace
 
 namespace detail {
-
-// static nil elements for pd_ptr
-//template< > const plugin_descriptor pd_ptr::nil_el = plugin_descriptor();
 
 kernel_plugins_subsyst::kernel_plugins_subsyst()
 	: kernel_pd_(*bs_get_plugin_descriptor())
@@ -101,26 +98,26 @@ struct kernel_plugins_subsyst::bspy_module {
 };
 #endif
 
-std::pair< pd_ptr, bool >
+std::pair< const plugin_descriptor*, bool >
 kernel_plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) {
-	// enumerate plugin first
+	// find or insert passed plugin_descriptor
 	auto res = loaded_plugins_.insert(std::make_pair(
-		pd_ptr(pd), ld
+		pd ? pd : &plugin_descriptor::nil(), ld
 	));
-	pd_ptr ret = res.first->first;
+	auto ret = res.first->first;
 	// check if we need to update lib desriptor
 	if(!res.second && !res.first->second.handle_ && ld.handle_) {
 		res.first->second = ld;
-		return std::make_pair(ret, true);
+		return {ret, true};
 	}
-	return std::make_pair(ret, res.second);
+	return {ret, res.second};
 }
 
 void kernel_plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
 	// we cannot clear kernel internal types
 	if(pd == kernel_pd_) return;
 
-	auto plug_types = plugin_types_.equal_range(fab_elem(pd));
+	auto plug_types = plugin_types_.equal_range(pd);
 	for(auto ptype = plug_types.first; ptype != plug_types.second; ++ptype) {
 		types_resolver_.erase(*ptype);
 		obj_fab_.erase(*ptype);
@@ -131,13 +128,13 @@ void kernel_plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
 // unloas given plugin
 void kernel_plugins_subsyst::unload_plugin(const plugin_descriptor& pd) {
 	// check if given plugin was registered
-	auto plug = loaded_plugins_.find(pd);
+	auto plug = loaded_plugins_.find(&pd);
 	if(plug == loaded_plugins_.end()) return;
 
 	clean_plugin_types(pd);
-	//plugins_dict_.erase(pd);
-	loaded_plugins_[pd].unload();
-	loaded_plugins_.erase(pd);
+	// unload and erase plugin
+	plug->second.unload();
+	loaded_plugins_.erase(plug);
 }
 
 // unloads all plugins
@@ -252,7 +249,7 @@ int kernel_plugins_subsyst::load_plugin(
 				if(p_descr->py_namespace == "") {
 					p_descr->py_namespace = extract_root_name(lib.fname_);
 					// update reference information
-					loaded_plugins_.erase(*p_descr);
+					loaded_plugins_.erase(p_descr);
 					register_plugin(p_descr, lib);
 				}
 

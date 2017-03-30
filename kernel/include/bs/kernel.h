@@ -37,28 +37,40 @@ namespace detail {
 }
 
 // type tuple - contains type information coupled with plugin information
-struct type_tuple {
-	// typedefs to look like std::pair
-	typedef plugin_descriptor first_type;
-	typedef type_descriptor second_type;
+struct type_tuple : public std::tuple< const plugin_descriptor*, const type_descriptor* > {
+	using base_t = std::tuple< const plugin_descriptor*, const type_descriptor* >;
+	using pd_t = const plugin_descriptor&;
+	using td_t = const type_descriptor&;
 
-	const plugin_descriptor& pd;
-	const type_descriptor& td;
+	// construct from lvalue refs to plugin_descriptor & type_descriptor
+	template<
+		typename P, typename T,
+		typename = std::enable_if_t<
+			!std::is_rvalue_reference<P&&>::value && !std::is_rvalue_reference<T&&>::value
+		>
+	>
+	type_tuple(P&& plug, T&& type) : base_t(&plug, &type) {}
 
-	type_tuple(const plugin_descriptor& pd_, const type_descriptor& td_)
-		: pd(pd_), td(td_)
-	{}
+	// ctors accepting only plugin_descriptor or only type_descriptor
+	// uninitialized value will be nil
+	type_tuple(pd_t plug) : base_t(&plug, &type_descriptor::nil()) {};
+	type_tuple(td_t type) : base_t(&plugin_descriptor::nil(), &type) {}
+	// deny constructing from rfavlue refs
+	type_tuple(plugin_descriptor&&) = delete;
+	type_tuple(type_descriptor&&) = delete;
 
-	type_tuple() = delete;
-	type_tuple(const type_tuple&) = default;
-	type_tuple(type_tuple&&) = default;
+	// empty ctor creates nil type_tuple
+	type_tuple() : base_t(&plugin_descriptor::nil(), &type_descriptor::nil()) {}
 
-	friend bool operator ==(const type_tuple& tl, const type_tuple& tr) {
-		return (tl.pd == tr.pd && tl.td == tl.td);
+	bool is_nil() const {
+		return pd().is_nil() && td().is_nil();
 	}
 
-	friend bool operator !=(const type_tuple& tl, const type_tuple& tr) {
-		return !(tl == tr);
+	pd_t pd() const {
+		return *std::get< 0 >(*this);
+	}
+	td_t td() const {
+		return *std::get< 1 >(*this);
 	}
 };
 
@@ -73,8 +85,8 @@ class BS_API kernel {
 	friend struct detail::wrapper_kernel;
 
 public:
-	using plugins_enum = std::vector< plugin_descriptor >;
-	using types_enum = std::vector< type_descriptor >;
+	using plugins_enum = std::vector< const plugin_descriptor* >;
+	using types_enum = std::vector< type_tuple >;
 	using instances_enum = std::vector< sp_obj >;
 
 	//! \brief Deletes all dangling objects that aren't contained in data storage
@@ -96,11 +108,13 @@ public:
 	static spdlog::logger& get_log(const char* name);
 
 	bool register_type(const type_descriptor& td, const plugin_descriptor* pd = nullptr);
+	// no way to register rvalue (temp) type_descriptor
+	bool register_type(type_descriptor&&, const plugin_descriptor* = nullptr) = delete;
 
 	// create instance of object
 	template< typename Obj_type_spec, typename... Args >
 	auto create_object(Obj_type_spec&& obj_type, Args&&... ctor_args) {
-		const type_descriptor td = demand_type(type_descriptor(std::forward< Obj_type_spec >(obj_type)));
+		const type_descriptor& td = demand_type(type_descriptor(std::forward< Obj_type_spec >(obj_type)));
 		return td.construct(std::forward< Args >(ctor_args)...);
 	}
 
@@ -110,10 +124,10 @@ public:
 	}
 
 	// access to plugins & types from them
-	//! \brief registered type infos of objects
-	std::vector< type_tuple > registered_types() const;
 	//! \brief loaded plugins
 	plugins_enum loaded_plugins() const;
+	//! \brief registered type infos of objects
+	types_enum registered_types() const;
 	//! \brief types of plugin (by plugin descriptor)
 	types_enum plugin_types(const plugin_descriptor& pd) const;
 	types_enum plugin_types(const std::string& plugin_name) const;

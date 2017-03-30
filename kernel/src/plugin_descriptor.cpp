@@ -43,7 +43,7 @@ plugin_descriptor::plugin_descriptor(
 {}
 
 bool plugin_descriptor::is_nil() const {
-	return ::blue_sky::is_nil(tag_);
+	return ::blue_sky::is_nil(tag_) && name == BS_NIL_PLUGIN_TAG;
 }
 
 bool plugin_descriptor::operator <(const plugin_descriptor& pd) const {
@@ -52,6 +52,11 @@ bool plugin_descriptor::operator <(const plugin_descriptor& pd) const {
 
 bool plugin_descriptor::operator ==(const plugin_descriptor& pd) const {
 	return tag_ == pd.tag_;
+}
+
+const plugin_descriptor& plugin_descriptor::nil() {
+	static plugin_descriptor nil_pd(nil_type_info(), BS_NIL_PLUGIN_TAG, "");
+	return nil_pd;
 }
 
 } // eof blue_sky namespace

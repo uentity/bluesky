@@ -64,9 +64,6 @@ void double_vec(const sp_dvector& X) {
 	catch(const std::exception& e) {
 		std::cout << e.what() << std::endl;
 	}
-	catch(const bs_exception& e) {
-		std::cout << e << std::endl;
-	}
 	std::transform(
 		x.begin(), x.end(), x.begin(),
 		[](double v){ return v*2; }

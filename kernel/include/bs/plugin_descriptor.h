@@ -41,6 +41,8 @@ struct BS_API plugin_descriptor {
 		const char* description = "", const char* py_namespace = ""
 	);
 
+	// obtain nil plugin descriptor
+	static const plugin_descriptor& nil();
 	// test if this is a nil plugin
 	bool is_nil() const;
 
