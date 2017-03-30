@@ -28,7 +28,7 @@ lib_descriptor::lib_descriptor()
 bool lib_descriptor::load(const char* fname) {
 	fname_ = fname;
 #ifdef UNIX
-	handle_ = dlopen(fname, RTLD_GLOBAL | RTLD_NOW);
+	handle_ = dlopen(fname, RTLD_DEEPBIND | RTLD_NOW);
 #else
 	handle_ = LoadLibrary(LPCSTR(fname));
 #endif
