@@ -22,10 +22,11 @@ std::string print_loaded_types() {
 	kernel::plugins_enum plugins = k.loaded_plugins();
 	kernel::types_enum tp;
 	for(const auto& plug : plugins) {
-		outs << "Plugin: " << plug->name << ", version " << plug->version << " {" << endl;
+		outs << "Plugin: [" << plug->name << "] [" << plug->description << "] [version "
+			<< plug->version << "] {" << endl;
 		const auto& types = k.plugin_types(*plug);
 		for(const auto& t : types) {
-			outs << "	`" << t.td().name << "` -> " << t.td().description << endl;
+			outs << "	[" << t.td().name << "] -> " << t.td().description << endl;
 		}
 		outs << "}" << endl;
 	}
