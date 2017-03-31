@@ -11,6 +11,10 @@
 
 #if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
 #include <pybind11/pybind11.h>
+namespace blue_sky { namespace python {
+namespace py = pybind11;
+using namespace pybind11::literals;
+}}
 #endif
 
 #include "setup_common_api.h"
@@ -94,7 +98,7 @@ BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() { 
 }
 
 #define BS_PLUGIN_DESCRIPTOR(name, version, description) \
-BS_PLUGIN_DESCRIPTOR_EXT(name, version, description, #name)
+BS_PLUGIN_DESCRIPTOR_EXT(name, version, description, name)
 
 //! type of get plugin descrptor pointer function
 typedef blue_sky::plugin_descriptor* (*BS_GET_PLUGIN_DESCRIPTOR)();
