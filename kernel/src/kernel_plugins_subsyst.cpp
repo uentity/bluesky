@@ -21,13 +21,16 @@
 /*-----------------------------------------------------------------------------
  *  BS kernel plugin descriptor
  *-----------------------------------------------------------------------------*/
-BS_PLUGIN_DESCRIPTOR_EXT("BlueSky kernel", KERNEL_VERSION, "BlueSky kernel module", "bs");
+BS_C_API const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {
+	return &blue_sky::detail::kernel_plugins_subsyst::kernel_pd_;
+}
 
+NAMESPACE_BEGIN(blue_sky)
 // hide implementation
-namespace blue_sky { namespace {
+namespace {
 
-// tags for kernel & runtime types plugin_descriptor
-//struct __kernel_types_pd_tag__ {};
+// tags for kernel & runtime types plugin_descriptors
+struct BS_HIDDEN_API __kernel_types_pd_tag__ {};
 struct BS_HIDDEN_API __runtime_types_pd_tag__ {};
 
 std::string extract_root_name(const std::string& full_name) {
@@ -51,16 +54,23 @@ std::string extract_root_name(const std::string& full_name) {
 
 } // eof hidden namespace
 
-namespace detail {
+NAMESPACE_BEGIN(detail)
 
-kernel_plugins_subsyst::kernel_plugins_subsyst()
-	: kernel_pd_(*bs_get_plugin_descriptor())
-		//BS_GET_TI(__kernel_types_pd_tag__), "Kernel types", KERNEL_VERSION,
-		//"BlueSky kernel types tag", "", "bs")
-	, runtime_pd_(
-		BS_GET_TI(__runtime_types_pd_tag__), "BlueSky virtual plugin for runtime types", KERNEL_VERSION,
-		"BlueSky virtual plugin for runtime types", "bs")
-{}
+// init kernel plugin descriptors
+const plugin_descriptor kernel_plugins_subsyst::kernel_pd_(
+	BS_GET_TI(__kernel_types_pd_tag__), "kernel", KERNEL_VERSION,
+	"BlueSky virtual kernel plugin", "bs"
+);
+const plugin_descriptor kernel_plugins_subsyst::runtime_pd_(
+	BS_GET_TI(__runtime_types_pd_tag__), "runtime", KERNEL_VERSION,
+	"BlueSky virtual plugin for runtime types", "bs"
+);
+
+kernel_plugins_subsyst::kernel_plugins_subsyst() {
+	// register kernel virtual plugins
+	register_plugin(&kernel_pd_, lib_descriptor());
+	register_plugin(&runtime_pd_, lib_descriptor());
+}
 
 kernel_plugins_subsyst::~kernel_plugins_subsyst() {}
 
@@ -73,12 +83,11 @@ struct kernel_plugins_subsyst::bspy_module {
 		// find kernel's Python initialization function
 		bs_init_py_fn init_py;
 		detail::lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
-		const plugin_descriptor* kpd = bs_get_plugin_descriptor();
 		if(init_py) {
 			init_py(&root_module_);
 
 			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace: {}"
-				<< kpd->py_namespace << bs_end;
+				<< PyModule_GetName(root_module_.ptr()) << bs_end;
 			return true;
 		}
 		else {
@@ -100,17 +109,45 @@ struct kernel_plugins_subsyst::bspy_module {
 
 std::pair< const plugin_descriptor*, bool >
 kernel_plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) {
+	// deny registering nil plugin descriptors
+	if(!pd) return {&plugin_descriptor::nil(), false};
+
 	// find or insert passed plugin_descriptor
-	auto res = loaded_plugins_.insert(std::make_pair(
-		pd ? pd : &plugin_descriptor::nil(), ld
-	));
-	auto ret = res.first->first;
-	// check if we need to update lib desriptor
-	if(!res.second && !res.first->second.handle_ && ld.handle_) {
-		res.first->second = ld;
-		return {ret, true};
+	auto res = loaded_plugins_.insert(std::make_pair(pd, ld));
+	auto pplug = res.first->first;
+
+	// if plugin with same name was already registered
+	if(!res.second) {
+		if(pplug->is_nil() && !pd->is_nil()) {
+			// replace temp nil plugin with same name
+			loaded_plugins_.erase(res.first);
+			res = loaded_plugins_.insert(std::make_pair(pd, ld));
+			pplug = res.first->first;
+		}
+		else if(!res.first->second.handle_ && ld.handle_) {
+			// update lib descriptor to valid one
+			res.first->second = ld;
+			return {pplug, true};
+		}
 	}
-	return {ret, res.second};
+
+	// for newly inserted valid (non-nill) plugin descriptor
+	// update types that previousely referenced it by name
+	if(res.second && !pplug->is_nil()) {
+		auto& plug_name_view = types_.get< plug_name_key >();
+		auto ptypes = plug_name_view.equal_range(pplug->name);
+		for(auto ptype = ptypes.first; ptype != ptypes.second; ++ptype) {
+			plug_name_view.replace(ptype, type_tuple{*pplug, ptype->td()});
+		}
+
+		// remove entry from temp plugins if any
+		// temp plugins are always nill
+		auto tplug = temp_plugins_.find(*pplug);
+		if(tplug != temp_plugins_.end())
+			temp_plugins_.erase(tplug);
+	}
+
+	return {pplug, res.second};
 }
 
 void kernel_plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
@@ -333,5 +370,6 @@ int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
 	return 0;
 }
 
-}} // eof blue_sky::detail namespace
+NAMESPACE_END(detail)
+NAMESPACE_END(blue_sky)
 

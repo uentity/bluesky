@@ -48,6 +48,10 @@ bool kernel::register_type(const type_descriptor& td, const plugin_descriptor* p
 	return pimpl_->register_type(td, pd);
 }
 
+bool kernel::register_type(const type_descriptor& td, const std::string& plug_name) {
+	return pimpl_->register_type(td, plug_name);
+}
+
 kernel::types_enum kernel::registered_types() const {
 	types_enum res;
 	for(const auto& elem : pimpl_->types_) {
@@ -78,8 +82,8 @@ kernel::plugins_enum kernel::loaded_plugins() const {
 	plugins_enum res;
 	for(const auto& plug_ptr : pimpl_->loaded_plugins_)
 		res.emplace_back(plug_ptr.first);
-	res.emplace_back(&pimpl_->kernel_pd_);
-	res.emplace_back(&pimpl_->runtime_pd_);
+	//res.emplace_back(&pimpl_->kernel_pd_);
+	//res.emplace_back(&pimpl_->runtime_pd_);
 	return res;
 }
 

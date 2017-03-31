@@ -21,19 +21,14 @@ bool kernel_plugins_subsyst::register_type(
 ) {
 	if(td.is_nil()) return false;
 
-	//pair< factory_t::iterator, bool > res;
-
-	// find correct plugin_descriptor
-	// pointer to registered plugin_descriptor
-	const plugin_descriptor* pdp = pd;
-	// if now plugin descriptor provided - register as runtime type
-	if(pdp->is_nil())
-		pdp = &runtime_pd_;
+	// if no plugin descriptor provided - register as runtime type
+	const plugin_descriptor* pdp = pd ? pd : &runtime_pd_;
 	if(!is_inner_pd(*pdp)) {
 		// case for external plugin descriptor
 		// try to register it or find a match with existing pd
 		pdp = register_plugin(pdp, lib_descriptor()).first;
 	}
+
 	// register obj in factory
 	auto res = types_.insert(type_tuple{*pdp, td});
 	const type_tuple& tar_tt = *res.first;
@@ -51,6 +46,23 @@ bool kernel_plugins_subsyst::register_type(
 	// save registered type if asked for
 	if(tt_ref) *tt_ref = tar_tt;
 	return res.second;
+}
+
+bool kernel_plugins_subsyst::register_type(
+	const type_descriptor& td, const std::string& plug_name, type_tuple* tt_ref
+) {
+	if(!plug_name.size()) return false;
+
+	// check if plugin with given name already registered
+	plugin_descriptor tplug(plug_name);
+	auto reg_plug = loaded_plugins_.find(&tplug);
+	if(reg_plug != loaded_plugins_.end()) {
+		return register_type(td, reg_plug->first, tt_ref);
+	}
+	// register temp plugin with given name
+	auto ttplug = temp_plugins_.insert(std::move(tplug));
+	// and finally register type
+	return register_type(td, &*ttplug.first, tt_ref);
 }
 
 type_tuple kernel_plugins_subsyst::demand_type(const type_tuple& obj_t) {

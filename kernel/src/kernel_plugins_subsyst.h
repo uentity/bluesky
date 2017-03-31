@@ -31,6 +31,12 @@ struct BS_HIDDEN_API pdp_comp_name {
 	}
 };
 
+struct BS_HIDDEN_API pd_comp_name {
+	bool operator()(const plugin_descriptor& lhs, const plugin_descriptor& rhs) const {
+		return lhs.name < rhs.name;
+	}
+};
+
 //// fab_elem sorting order by bs_type_info
 //struct BS_HIDDEN_API tt_comp_ti {
 //	bool operator()(const type_tuple& lhs, const type_tuple& rhs) const {
@@ -57,10 +63,13 @@ struct BS_HIDDEN_API pdp_comp_name {
  *----------------------------------------------------------------*/
 struct BS_HIDDEN_API kernel_plugins_subsyst {
 
-	const plugin_descriptor& kernel_pd_;       //! plugin descriptor for kernel types
-	const plugin_descriptor runtime_pd_;      //! plugin descriptor for runtime types
+	static const plugin_descriptor kernel_pd_;       //! plugin descriptor for kernel types
+	static const plugin_descriptor runtime_pd_;      //! plugin descriptor for runtime types
 
-	//! plugin_descriptor -> lib_descriptor 1-to-1 relation
+	// plugin_descriptor -> lib_descriptor 1-to-1 relation
+	// IMPORTANT: descriptors are stored by string name - thus allowing us
+	// to store multiple nil plugins with different names
+	// and later rebind to valid descriptor
 	using plugins_enum_t = std::map<
 		const plugin_descriptor*, lib_descriptor, pdp_comp_name,
 		boost::fast_pool_allocator<
@@ -70,6 +79,9 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 		>
 	>;
 	plugins_enum_t loaded_plugins_;
+
+	// storage for temp plugin descriptors created when only plugin name specified
+	std::set< plugin_descriptor, pd_comp_name > temp_plugins_;
 
 	// type_tuple allocator
 	using types_alloc_t = boost::fast_pool_allocator<
@@ -103,6 +115,9 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	kernel_plugins_subsyst();
 	~kernel_plugins_subsyst();
 
+	// allow obtain kernel's plugin descriptor
+	friend const plugin_descriptor* bs_get_plugin_descriptor();
+
 	/*-----------------------------------------------------------------
 	 * plugins managing
 	 *----------------------------------------------------------------*/
@@ -126,11 +141,11 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 		return (pd == kernel_pd_ || pd == runtime_pd_);
 	}
 
-	bool register_kernel_type(const type_descriptor& td, type_tuple* tt_ref = NULL) {
+	bool register_kernel_type(const type_descriptor& td, type_tuple* tt_ref = nullptr) {
 		return register_type(td, &kernel_pd_, tt_ref);
 	}
 
-	bool register_rt_type(const type_descriptor& td, type_tuple* tt_ref = NULL) {
+	bool register_rt_type(const type_descriptor& td, type_tuple* tt_ref = nullptr) {
 		return register_type(td, &runtime_pd_, tt_ref);
 	}
 
@@ -139,8 +154,12 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	bool register_type(
 		const type_descriptor& td, const plugin_descriptor* pd = nullptr, type_tuple* tp_ref = nullptr
 	);
+	bool register_type(
+		const type_descriptor& td, const std::string& plug_name, type_tuple* tp_ref = nullptr
+	);
 	// deny rvalue type descriptors registering
-	bool register_type(type_descriptor&&, const plugin_descriptor& = nullptr, type_tuple* = nullptr) = delete;
+	bool register_type(type_descriptor&&, const plugin_descriptor* = nullptr, type_tuple* = nullptr) = delete;
+	bool register_type(type_descriptor&&, const std::string&, type_tuple* = nullptr) = delete;
 
 	// extract type information from stored factory, register as runtime type if wasn't found
 	type_tuple demand_type(const type_tuple& obj_t);

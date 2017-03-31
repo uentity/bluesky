@@ -117,8 +117,12 @@ public:
 	static spdlog::logger& get_log(const char* name);
 
 	bool register_type(const type_descriptor& td, const plugin_descriptor* pd = nullptr);
+	// register type with plugin_descriptor specified by name
+	// types will bind to real plugin descriptor when it will be loaded
+	bool register_type(const type_descriptor& td, const std::string& plug_name);
 	// no way to register rvalue (temp) type_descriptor
 	bool register_type(type_descriptor&&, const plugin_descriptor* = nullptr) = delete;
+	bool register_type(type_descriptor&&, const std::string&) = delete;
 
 	// create instance of object
 	template< typename Obj_type_spec, typename... Args >
