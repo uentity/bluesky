@@ -66,7 +66,7 @@ BS_TYPE_ADD_CONSTRUCTOR(bs_person, (std::string))
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (const std::string&, double))
 BS_TYPE_ADD_COPY_CONSTRUCTOR(bs_person)
 
-BS_REGISTER_TYPE(bs_person)
+BS_REGISTER_TYPE("test_type_descriptor", bs_person)
 
 /*-----------------------------------------------------------------------------
  * test templated class
@@ -101,8 +101,8 @@ BS_TYPE_ADD_CONSTRUCTOR(my_strategy< double >, (const char*))
 BS_TYPE_ADD_CONSTRUCTOR(my_strategy< int >, (const std::string&))
 BS_TYPE_ADD_CONSTRUCTOR(my_strategy< double >, (const std::string&))
 
-BS_REGISTER_TYPE(my_strategy< int >)
-BS_REGISTER_TYPE(my_strategy< double >)
+BS_REGISTER_TYPE("test_type_descriptor", my_strategy< int >)
+BS_REGISTER_TYPE("test_type_descriptor", my_strategy< double >)
 
 /*-----------------------------------------------------------------------------
  * test complex templated class
@@ -165,8 +165,8 @@ BS_TYPE_ADD_CONSTRUCTOR_T(uber_type, (double, my_strategy< double >), (std::stri
 BS_TYPE_ADD_CONSTRUCTOR_T_F(uber_type, (int, my_strategy< int >), create_single_uber, (int))
 BS_TYPE_ADD_CONSTRUCTOR_T_F(uber_type, (double, my_strategy< double >), create_single_uber, (double))
 
-BS_REGISTER_TYPE_T(uber_type, (int, my_strategy< int >))
-BS_REGISTER_TYPE_T(uber_type, (double, my_strategy< double >))
+BS_REGISTER_TYPE_T("test_type_descriptor", uber_type, (int, my_strategy< int >))
+BS_REGISTER_TYPE_T("test_type_descriptor", uber_type, (double, my_strategy< double >))
 
 } // eof blue_sky namespace
 

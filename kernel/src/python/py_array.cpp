@@ -23,14 +23,14 @@ BS_TYPE_IMPL_INL_T1(bs_numpy_array, unsigned long long);
 BS_TYPE_IMPL_INL_T1(bs_numpy_array, float);
 BS_TYPE_IMPL_INL_T1(bs_numpy_array, double);
 
-BS_REGISTER_TYPE(bs_numpy_array<int>);
-BS_REGISTER_TYPE(bs_numpy_array<unsigned int>);
-BS_REGISTER_TYPE(bs_numpy_array<long>);
-BS_REGISTER_TYPE(bs_numpy_array<long long>);
-BS_REGISTER_TYPE(bs_numpy_array<unsigned long>);
-BS_REGISTER_TYPE(bs_numpy_array<unsigned long long>);
-BS_REGISTER_TYPE(bs_numpy_array<float>);
-BS_REGISTER_TYPE(bs_numpy_array<double>);
+BS_REGISTER_TYPE("kernel", bs_numpy_array<int>);
+BS_REGISTER_TYPE("kernel", bs_numpy_array<unsigned int>);
+BS_REGISTER_TYPE("kernel", bs_numpy_array<long>);
+BS_REGISTER_TYPE("kernel", bs_numpy_array<long long>);
+BS_REGISTER_TYPE("kernel", bs_numpy_array<unsigned long>);
+BS_REGISTER_TYPE("kernel", bs_numpy_array<unsigned long long>);
+BS_REGISTER_TYPE("kernel", bs_numpy_array<float>);
+BS_REGISTER_TYPE("kernel", bs_numpy_array<double>);
 
 } /* namespace blue_sky */
 

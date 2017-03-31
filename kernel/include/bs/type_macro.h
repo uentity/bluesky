@@ -233,19 +233,18 @@ BS_TYPE_ADD_COPY_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
  * auto-register type in BS kernel
  *----------------------------------------------------------------*/
 // type passed as tuple
-#define BS_REGISTER_TYPE_(T_tup)                                            \
-extern "C" const ::blue_sky::plugin_descriptor* bs_get_plugin_descriptor(); \
-namespace { static bool BOOST_PP_CAT(_bs_reg_type_, __LINE__) =             \
-[]() { return ::blue_sky::give_kernel::Instance().register_type(            \
-    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), bs_get_plugin_descriptor());      \
+#define BS_REGISTER_TYPE_(plugin, T_tup)                         \
+namespace { static bool BOOST_PP_CAT(_bs_reg_type_, __LINE__) =  \
+[]() { return ::blue_sky::give_kernel::Instance().register_type( \
+    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), plugin);               \
 }(); }
 
 // non-templated types and types with 1 template parameter
-#define BS_REGISTER_TYPE(T) \
-BS_REGISTER_TYPE_((T))
+#define BS_REGISTER_TYPE(plugin, T) \
+BS_REGISTER_TYPE_(plugin, (T))
 
 // templated type with > 1 parameters
 // pass specialization type as tuple
-#define BS_REGISTER_TYPE_T(T, T_spec_tup) \
-BS_REGISTER_TYPE_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
+#define BS_REGISTER_TYPE_T(plugin, T, T_spec_tup) \
+BS_REGISTER_TYPE_(plugin, (T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
 
