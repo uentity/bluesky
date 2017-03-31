@@ -131,6 +131,16 @@ void py_bind_common(py::module& m) {
 		.def(py::self != std::string())
 		.def("__repr__", [](const type_descriptor& td) { return td.name; })
 		;
+
+	// objebase binding
+	py::class_< objbase, std::shared_ptr< objbase > >(m, "objbase")
+		.def(py::init<>())
+		.def("swap", &objbase::swap)
+		.def_static("bs_type", [](py::object){ return objbase::bs_type(); })
+		.def("bs_resolve_type", &objbase::bs_resolve_type)
+		.def("bs_register_this", &objbase::bs_register_this)
+		.def("bs_free_this", &objbase::bs_free_this)
+	;
 }
 
 NAMESPACE_END(python)
