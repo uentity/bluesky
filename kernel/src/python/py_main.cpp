@@ -9,7 +9,13 @@
 
 #include <bs/bs.h>
 
-BS_INIT_PY(bs) {
+namespace blue_sky { namespace python {
+namespace py = pybind11;
 
+void py_bind_common(py::module& m);
+
+BS_INIT_PY(bs) {
+	py_bind_common(m);
 }
 
+}}

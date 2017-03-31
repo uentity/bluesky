@@ -47,6 +47,7 @@ kernel_cpp_list = [
 
 py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in Split("""
 	py_array.cpp
+	py_common.cpp
 	py_main.cpp
 """)];
 
