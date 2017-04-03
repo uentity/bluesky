@@ -55,7 +55,7 @@
 #endif
 
 //macro for plugin's API setup
-#define BS_SETUP_PLUGIN_API() "setup_plugin_api.h"
-#define BS_FORCE_PLUGIN_IMPORT() "force_plugin_import.h"
-#define BS_STOP_PLUGIN_IMPORT() "stop_plugin_import.h"
+#define BS_SETUP_PLUGIN_API() <bs/setup_plugin_api.h>
+#define BS_START_PLUGIN_IMPORT() <bs/force_plugin_import.h>
+#define BS_STOP_PLUGIN_IMPORT() <bs/stop_plugin_import.h>
 
