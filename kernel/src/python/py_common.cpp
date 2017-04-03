@@ -8,9 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/bs.h>
-#include <pybind11/stl.h>
-//#include <pybind11/stl_bind.h>
-#include <pybind11/operators.h>
 
 #include <ostream>
 #include <iostream>
@@ -77,7 +74,7 @@ void py_bind_common(py::module& m) {
 		.def(py::self <= py::self)
 		.def(py::self >= py::self)
 		.def("__repr__", &bs_type_info::name)
-		;
+	;
 
 	// plugin_descriptor binding
 	py::class_< plugin_descriptor >(m, "plugin_descriptor")
@@ -100,7 +97,7 @@ void py_bind_common(py::module& m) {
 		.def(py::self == py::self)
 		.def(py::self != py::self)
 		.def("__repr__", [](const plugin_descriptor& pd) { return pd.name; })
-		;
+	;
 
 	// type_desccriptor bind
 	py::class_< type_descriptor >(m, "type_descriptor")
@@ -118,7 +115,9 @@ void py_bind_common(py::module& m) {
 		.def("add_copy_constructor", (void (type_descriptor::*)(BS_TYPE_COPY_FUN) const)
 			&type_descriptor::add_copy_constructor, "copy_fun"_a
 		)
-		.def("clone", &type_descriptor::clone)
+		.def("clone", [](const type_descriptor& td, bs_type_copy_param src){
+			return (std::shared_ptr< objbase >)td.clone(src);
+		})
 		.def("type", &type_descriptor::type)
 		.def_property_readonly("is_nil", &type_descriptor::is_nil)
 		.def_property_readonly("is_copyable", &type_descriptor::is_copyable)
@@ -130,16 +129,16 @@ void py_bind_common(py::module& m) {
 		.def(py::self == std::string())
 		.def(py::self != std::string())
 		.def("__repr__", [](const type_descriptor& td) { return td.name; })
-		;
+	;
 
 	// objebase binding
 	py::class_< objbase, std::shared_ptr< objbase > >(m, "objbase")
+		BSPY_EXPORT_DEF(objbase)
 		.def(py::init<>())
-		.def("swap", &objbase::swap)
-		.def_static("bs_type", [](py::object){ return objbase::bs_type(); })
 		.def("bs_resolve_type", &objbase::bs_resolve_type)
 		.def("bs_register_this", &objbase::bs_register_this)
 		.def("bs_free_this", &objbase::bs_free_this)
+		.def("swap", &objbase::swap)
 	;
 }
 
