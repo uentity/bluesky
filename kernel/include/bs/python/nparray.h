@@ -70,6 +70,15 @@ public:
 			std::copy(from, to, data());
 	}
 
+	// copy-costruct from passed container
+	template<
+		typename Container,
+		typename = std::enable_if_t< std::is_class< Container >::value >
+	>
+	bs_nparray_traits(const Container& in) : base_t(std::distance(std::begin(in), std::end(in))) {
+		std::copy(std::begin(in), std::end(in), data());
+	}
+
 	// specific implementation of resize
 	void resize(size_type new_size) {
 		// resize isn't supported on binded arrays
