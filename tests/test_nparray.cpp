@@ -8,11 +8,9 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 
-#include <bs/kernel.h>
+#include <bs/bs.h>
 #include <bs/python/nparray.h>
-#include <bs/compat/array.h>
 
-#include <pybind11/pybind11.h>
 #include <iostream>
 #include <algorithm>
 
@@ -26,26 +24,6 @@ template< class T >
 struct test { T m_; };
 
 using tint = test< int >;
-
-//PYBIND11_DECLARE_HOLDER_TYPE(dvector, sp_dvector);
-
-//namespace pybind11 { namespace detail {
-//
-//template<> struct type_caster< sp_dvector > {
-//	typedef py::array_t< double > numpy_t;
-//	PYBIND11_TYPE_CASTER(sp_dvector, _("dvector"));
-//
-//	bool load(handle src, bool) {
-//		value = std::make_shared< dvector >(numpy_t::ensure(src));
-//		return static_cast< bool >(value.get());
-//	}
-//
-//	static handle cast(const sp_dvector& src, return_value_policy, handle) {
-//		return src.get() ? src->get_container()->inc_ref() : handle();
-//	}
-//};
-//
-//}}
 
 template< class Ostream, class T, template< class > class traits >
 Ostream& operator <<(Ostream& os, const bs_array< T, traits >& A) {

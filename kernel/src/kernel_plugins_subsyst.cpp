@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #ifdef BSPY_EXPORTING
-#include <pybind11/pybind11.h>
+#include <bs/python/common.h>
 #endif
 
 #include "kernel_plugins_subsyst.h"

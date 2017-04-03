@@ -18,3 +18,8 @@
 // other things
 #include "misc.h"
 
+// Python-related dclarations
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+#include "python/common.h"
+#endif
+

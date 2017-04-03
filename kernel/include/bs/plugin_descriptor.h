@@ -9,14 +9,6 @@
 
 #pragma once
 
-#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
-#include <pybind11/pybind11.h>
-namespace blue_sky { namespace python {
-namespace py = pybind11;
-using namespace pybind11::literals;
-}}
-#endif
-
 #include "setup_common_api.h"
 #include "type_info.h"
 #include "fwd.h"
@@ -111,23 +103,3 @@ BS_C_API_PLUGIN bool bs_register_plugin(const blue_sky::plugin_initializer& bs_i
 //!	type of plugin register function
 typedef bool (*bs_register_plugin_fn)(const blue_sky::plugin_initializer&);
 
-// Python bindings
-#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
-
-#define BS_INIT_PY(mod_name)                                                        \
-extern "C" const blue_sky::plugin_descriptor* bs_get_plugin_descriptor();           \
-static void init_py_subsystem_impl(pybind11::module&);                              \
-BS_C_API_PLUGIN void bs_init_py_subsystem(void* py_plugin_module) {                 \
-	if(!py_plugin_module) return;                                                   \
-	init_py_subsystem_impl(*static_cast< pybind11::module* >(py_plugin_module));    \
-}                                                                                   \
-PYBIND11_PLUGIN(mod_name) {                                                         \
-	pybind11::module m(#mod_name, bs_get_plugin_descriptor()->description.c_str()); \
-	bs_init_py_subsystem(&m);                                                       \
-	return m.ptr();                                                                 \
-}                                                                                   \
-void init_py_subsystem_impl(pybind11::module& m)
-
-typedef void (*bs_init_py_fn)(void*);
-
-#endif
