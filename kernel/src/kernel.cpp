@@ -99,5 +99,12 @@ kernel::instances_enum kernel::instances(const BS_TYPE_INFO& ti) const {
 	return pimpl_->instances(ti);
 }
 
+type_tuple kernel::find_type(const std::string& type_name) const {
+	using type_name_key = detail::kernel_plugins_subsyst::type_name_key;
+
+	auto tp = pimpl_->types_.get< type_name_key >().find(type_name);
+	return tp != pimpl_->types_.get< type_name_key >().end() ? *tp : type_tuple();
+}
+
 } /* namespace blue_sky */
 

@@ -123,6 +123,8 @@ public:
 	// no way to register rvalue (temp) type_descriptor
 	bool register_type(type_descriptor&&, const plugin_descriptor* = nullptr) = delete;
 	bool register_type(type_descriptor&&, const std::string&) = delete;
+	// Find type by type name
+	type_tuple find_type(const std::string& type_name) const;
 
 	// create instance of object
 	template< typename Obj_type_spec, typename... Args >
