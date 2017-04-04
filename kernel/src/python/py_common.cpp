@@ -102,7 +102,7 @@ void py_bind_common(py::module& m) {
 	// type_desccriptor bind
 	py::class_< type_descriptor >(m, "type_descriptor")
 		.def(py::init<>())
-		.def(py::init< const std::string& >(), "type_name"_a)
+		.def(py::init< const char* >(), "type_name"_a)
 		.def(py::init<
 				const bs_type_info&, const char*, const BS_TYPE_COPY_FUN&,const BS_GET_TD_FUN&, const char*
 			>(), "type_info"_a, "type_name"_a, "copy_fun"_a, "parent_td_fun"_a, "description"_a = ""

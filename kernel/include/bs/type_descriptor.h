@@ -119,10 +119,16 @@ public:
 		name(nil().name)
 	{}
 
-	// Nil constructor for temporary tasks (searching etc)
-	type_descriptor(const std::string& type_name) :
+	// constructor from string type name for temporary tasks (searching etc)
+	type_descriptor(const char* type_name) :
 		bs_ti_(nil_type_info()), parent_td_fun_(nullptr), copy_fun_(nullptr),
 		name(type_name)
+	{}
+
+	// constructor from BS_TYPE_INFO
+	type_descriptor(const BS_TYPE_INFO& ti) :
+		bs_ti_(ti), parent_td_fun_(nullptr), copy_fun_(nullptr),
+		name(nil().name)
 	{}
 
 	// standard constructor
