@@ -115,9 +115,29 @@ BOOST_AUTO_TEST_CASE(test_any_array) {
 	auto& kfoo_tbl1 = BS_KERNEL.pert_idx_any_array(foo::bs_type());
 	BOOST_CHECK(&kfoo_tbl == &kfoo_tbl1);
 
-	BOOST_CHECK(kfoo_tbl1.extract_values< int >().size() == 1u);
-	BOOST_CHECK(kfoo_tbl1.extract_values< std::string >().size() == 1u);
-	BOOST_CHECK(kfoo_tbl1.extract_values< const char* >().size() == 2u);
-	BOOST_CHECK(kfoo_tbl1.extract_values< double >().size() == 0u);
+	BOOST_CHECK(kfoo_tbl1.values< int >().size() == 1u);
+	BOOST_CHECK(kfoo_tbl1.values< std::string >().size() == 1u);
+	BOOST_CHECK(kfoo_tbl1.values< const char* >().size() == 2u);
+	BOOST_CHECK(kfoo_tbl1.values< double >().size() == 0u);
+
+	// print keys
+	std::cout << "test_any_foo array keys:";
+	for(auto& k : kfoo_tbl.keys())
+		std::cout << ' ' << k;
+	std::cout << std::endl;
+
+	// save state
+	auto str_state = kfoo_tbl.values_map< std::string >();
+	std::cout << "test_any_foo array std::string values:";
+	for(auto& k : str_state)
+		std::cout << " [" << k.first << ": " << k.second << "]";
+	std::cout << std::endl;
+
+	// modify state
+	kfoo_tbl.ss< std::string >(3) = "NO!";
+	BOOST_TEST(kfoo_tbl.ss< std::string >(3) == "NO!");
+	// restore state
+	kfoo_tbl = str_state;
+	BOOST_TEST(kfoo_tbl.ss< std::string >(3) == str_state[3]);
 }
 

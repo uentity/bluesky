@@ -37,20 +37,27 @@ private:
 	struct trait_impl {
 		using key_type = std::size_t;
 
-		static typename Cont::value_type& iter2val(const typename Cont::iterator& i) {
+		template< typename Iterator >
+		static auto& iter2val(const Iterator& i) {
 			return *i;
 		}
-		static const typename Cont::value_type& iter2val(const typename Cont::const_iterator& i) {
-			return *i;
+
+		template< class Iterator >
+		static key_type iter2key(const Cont& C, const Iterator& i) {
+			return std::distance(C.begin(), i);
 		}
 
 		// use bound-checking to simulate map behaviour and make comparison of returned iterator
 		// with C.end() valid
-		static typename Cont::iterator find(Cont& C, const key_type& k) {
-			return C.begin() + std::min(k, C.size());
+		template< typename Container >
+		static auto find(Container& C, const key_type& k) {
+			auto res = C.begin();
+			std::advance(res, std::min(k, C.size()));
+			return res;
 		}
-		static typename Cont::const_iterator find(const Cont& C, const key_type& k) {
-			return C.begin() + std::min(k, C.size());
+
+		static bool has_key(const Cont& C, const key_type& k) {
+			return k < C.size();
 		}
 	};
 
@@ -59,18 +66,23 @@ private:
 	struct trait_impl< Cont, typename std::enable_if_t< has_mapped_t< Cont >::value > > {
 		using key_type = typename Cont::key_type;
 
-		static typename Cont::mapped_type& iter2val(const typename Cont::iterator& i) {
-			return i->second;
-		}
-		static const typename Cont::mapped_type& iter2val(const typename Cont::const_iterator& i) {
+		template< typename Iterator >
+		static auto& iter2val(const Iterator& i) {
 			return i->second;
 		}
 
-		static typename Cont::iterator find(Cont& C, const key_type& k) {
+		template< class Iterator >
+		static const key_type& iter2key(const Cont& C, const Iterator& i) {
+			return i->first;
+		}
+
+		template< typename Container >
+		static auto find(Container& C, const key_type& k) {
 			return C.find(k);
 		}
-		static typename Cont::const_iterator find(const Cont& C, const key_type& k) {
-			return C.find(k);
+
+		static bool has_key(const Cont& C, const key_type& k) {
+			return C.find(k) != C.end();
 		}
 	};
 
@@ -115,6 +127,11 @@ public:
 				++res;
 		}
 		return res;
+	}
+
+	// test if array contain specified key
+	bool has_key(const key_type& k) const {
+		return trait::has_key(*this, k);
 	}
 
 	// return reference to value at specified index
@@ -168,9 +185,31 @@ public:
 		return res;
 	}
 
+	// extract all keys
+	std::vector< key_type > keys() const {
+		std::vector< key_type > res;
+		res.reserve(size());
+		for(auto pv = begin(); pv != end(); ++pv) {
+			res.emplace_back(trait::iter2key(*this, pv));
+		}
+		return res;
+	}
+
+	// extract keys of all values of specified type
+	template< typename T >
+	std::vector< key_type > keys() const {
+		std::vector< key_type > res;
+		res.reserve(size());
+		for(auto pv = begin(); pv != end(); ++pv) {
+			if(trait::iter2val(pv).type() == typeid(T))
+				res.emplace_back(trait::iter2key(*this, pv));
+		}
+		return res;
+	}
+
 	// extract all values of specified type and return them in vector
 	template< typename T >
-	std::vector< T > extract_values() const {
+	std::vector< T > values() const {
 		std::vector< T > res;
 		for(auto pv = begin(); pv != end(); ++pv) {
 			auto& val = trait::iter2val(pv);
@@ -179,6 +218,32 @@ public:
 		}
 		return res;
 	}
+
+	// extract all values of specified type and return them in map with corresponding keys
+	template< typename T >
+	auto values_map() const {
+		std::map< key_type, T > res;
+		for(auto pv = begin(); pv != end(); ++pv) {
+			auto& val = trait::iter2val(pv);
+			if(val.type() == typeid(T))
+				res[trait::iter2key(*this, pv)] = boost::any_cast< T >(val);
+		}
+		return res;
+	}
+
+	// assign from map of key-value pairs
+	// does check if key already exists in array
+	template< class Map >
+	any_array& operator =(const Map& rhs) {
+		for(const auto& v : rhs) {
+			auto pv = trait::find(*this, v.first);
+			if(pv != end()) {
+				trait::iter2val(pv) = v.second;
+			}
+		}
+		return *this;
+	}
+
 };
 
 // map-like any_array with std::string key
