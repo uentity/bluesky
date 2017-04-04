@@ -10,6 +10,7 @@
 #pragma once
 
 #include "common.h"
+#include "type_macro.h"
 
 #include <unordered_map>
 

@@ -242,9 +242,15 @@ namespace { static bool BOOST_PP_CAT(_bs_reg_type_, __LINE__) =  \
 // non-templated types and types with 1 template parameter
 #define BS_REGISTER_TYPE(plugin, T) \
 BS_REGISTER_TYPE_(plugin, (T))
+// register as runtime type if plugin isn't specified
+#define BS_REGISTER_RT_TYPE(T) \
+BS_REGISTER_TYPE_(nullptr, (T))
 
 // templated type with > 1 parameters
 // pass specialization type as tuple
 #define BS_REGISTER_TYPE_T(plugin, T, T_spec_tup) \
 BS_REGISTER_TYPE_(plugin, (T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
+// register as runtime type if plugin isn't specified
+#define BS_REGISTER_RT_TYPE_T(T, T_spec_tup) \
+BS_REGISTER_TYPE_(nullptr, (T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
 
