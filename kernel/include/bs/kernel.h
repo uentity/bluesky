@@ -14,30 +14,16 @@
 #include "log.h"
 #include "type_descriptor.h"
 #include "plugin_descriptor.h"
+#include "any_array.h"
 
-//#define BS_AUTOLOAD_PLUGINS
-
-/*!
-	\brief Macro for registering your objects in blue-sky.
-
-	Generates proper call to kernel's register_type function.
-
-	\param plugin_descr - descriptor of your plugin. Can be taken, for example, from plugin_initializer that is passed to bs_register_plugin
-	\param T = class name
-	\param creation_fun = creation function pointer
- */
-#define BLUE_SKY_REGISTER_TYPE(plugin_descr, T) \
-blue_sky::give_kernel::Instance().register_type(plugin_descr, T::bs_type())
-
-//! \defgroup kernel_group kernel group - kernel of blue-sky
-namespace blue_sky {
+NAMESPACE_BEGIN(blue_sky)
 
 namespace detail {
 	struct wrapper_kernel;
 }
 
 // type tuple - contains type information coupled with plugin information
-struct type_tuple : public std::tuple< const plugin_descriptor*, const type_descriptor* > {
+struct BS_API type_tuple : public std::tuple< const plugin_descriptor*, const type_descriptor* > {
 	using base_t = std::tuple< const plugin_descriptor*, const type_descriptor* >;
 	using pd_t = const plugin_descriptor&;
 	using td_t = const type_descriptor&;
@@ -189,6 +175,10 @@ public:
 		return instances(BS_GET_TI(T));
 	}
 
+	// access per-type storage that can contain arbitrary types
+	str_any_array& pert_str_any_array(const type_descriptor& master);
+	idx_any_array& pert_idx_any_array(const type_descriptor& master);
+
 private:
 	//! \brief Constructor of kernel
 	kernel();
@@ -214,5 +204,5 @@ private:
 //! \brief singleton for accessing the instance of kernel
 typedef singleton< kernel > give_kernel;
 
-} // eof blue_sky namespace
+NAMESPACE_END(blue_sky)
 

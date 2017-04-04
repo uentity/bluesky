@@ -100,10 +100,15 @@ kernel::instances_enum kernel::instances(const BS_TYPE_INFO& ti) const {
 }
 
 type_tuple kernel::find_type(const std::string& type_name) const {
-	using type_name_key = detail::kernel_plugins_subsyst::type_name_key;
+	return pimpl_->find_type(type_name);
+}
 
-	auto tp = pimpl_->types_.get< type_name_key >().find(type_name);
-	return tp != pimpl_->types_.get< type_name_key >().end() ? *tp : type_tuple();
+str_any_array& kernel::pert_str_any_array(const type_descriptor& master) {
+	return pimpl_->pert_str_any_array(master);
+}
+
+idx_any_array& kernel::pert_idx_any_array(const type_descriptor& master) {
+	return pimpl_->pert_idx_any_array(master);
 }
 
 } /* namespace blue_sky */
