@@ -10,27 +10,39 @@
 #include <bs/kernel.h>
 #include <bs/python/nparray.h>
 
-using namespace std;
+#define INSTANTIATE_NUMPY_ARRAY(T)                                                \
+BS_TYPE_IMPL_INL_T1(bs_numpy_array, T)                                            \
+BS_TYPE_ADD_CONSTRUCTOR(bs_numpy_array< T >, (const std::vector< std::size_t >&)) \
+BS_REGISTER_TYPE("kernel", bs_numpy_array<T>)
 
 namespace blue_sky {
 
-BS_TYPE_IMPL_INL_T1(bs_numpy_array, int);
-BS_TYPE_IMPL_INL_T1(bs_numpy_array, unsigned int);
-BS_TYPE_IMPL_INL_T1(bs_numpy_array, long);
-BS_TYPE_IMPL_INL_T1(bs_numpy_array, long long);
-BS_TYPE_IMPL_INL_T1(bs_numpy_array, unsigned long);
-BS_TYPE_IMPL_INL_T1(bs_numpy_array, unsigned long long);
-BS_TYPE_IMPL_INL_T1(bs_numpy_array, float);
-BS_TYPE_IMPL_INL_T1(bs_numpy_array, double);
+INSTANTIATE_NUMPY_ARRAY(int);
+INSTANTIATE_NUMPY_ARRAY(unsigned int);
+INSTANTIATE_NUMPY_ARRAY(long);
+INSTANTIATE_NUMPY_ARRAY(long long);
+INSTANTIATE_NUMPY_ARRAY(unsigned long);
+INSTANTIATE_NUMPY_ARRAY(unsigned long long);
+INSTANTIATE_NUMPY_ARRAY(float);
+INSTANTIATE_NUMPY_ARRAY(double);
 
-BS_REGISTER_TYPE("kernel", bs_numpy_array<int>);
-BS_REGISTER_TYPE("kernel", bs_numpy_array<unsigned int>);
-BS_REGISTER_TYPE("kernel", bs_numpy_array<long>);
-BS_REGISTER_TYPE("kernel", bs_numpy_array<long long>);
-BS_REGISTER_TYPE("kernel", bs_numpy_array<unsigned long>);
-BS_REGISTER_TYPE("kernel", bs_numpy_array<unsigned long long>);
-BS_REGISTER_TYPE("kernel", bs_numpy_array<float>);
-BS_REGISTER_TYPE("kernel", bs_numpy_array<double>);
+//BS_TYPE_IMPL_INL_T1(bs_numpy_array, int);
+//BS_TYPE_IMPL_INL_T1(bs_numpy_array, unsigned int);
+//BS_TYPE_IMPL_INL_T1(bs_numpy_array, long);
+//BS_TYPE_IMPL_INL_T1(bs_numpy_array, long long);
+//BS_TYPE_IMPL_INL_T1(bs_numpy_array, unsigned long);
+//BS_TYPE_IMPL_INL_T1(bs_numpy_array, unsigned long long);
+//BS_TYPE_IMPL_INL_T1(bs_numpy_array, float);
+//BS_TYPE_IMPL_INL_T1(bs_numpy_array, double);
+//
+//BS_REGISTER_TYPE("kernel", bs_numpy_array<int>);
+//BS_REGISTER_TYPE("kernel", bs_numpy_array<unsigned int>);
+//BS_REGISTER_TYPE("kernel", bs_numpy_array<long>);
+//BS_REGISTER_TYPE("kernel", bs_numpy_array<long long>);
+//BS_REGISTER_TYPE("kernel", bs_numpy_array<unsigned long>);
+//BS_REGISTER_TYPE("kernel", bs_numpy_array<unsigned long long>);
+//BS_REGISTER_TYPE("kernel", bs_numpy_array<float>);
+//BS_REGISTER_TYPE("kernel", bs_numpy_array<double>);
 
 } /* namespace blue_sky */
 
