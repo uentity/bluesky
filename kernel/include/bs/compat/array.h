@@ -44,22 +44,22 @@ public:
 	using arrbase   = typename cont_traits_t::arrbase;
 	using container = typename cont_traits_t::container;
 
-	using typename arrbase::sp_arrbase;
-	using sp_array = std::shared_ptr< bs_array >;
+	using sp_arrbase = typename arrbase::sp_arrbase;
+	using sp_array   = std::shared_ptr< bs_array >;
 
 	// inherited from bs_arrbase class
-	using typename arrbase::value_type;
-	using typename arrbase::key_type;
-	using typename arrbase::size_type;
+	using value_type = typename arrbase::value_type;
+	using key_type   = typename arrbase::key_type;
+	using size_type  = typename arrbase::size_type;
 
-	using typename arrbase::pointer;
-	using typename arrbase::reference;
-	using typename arrbase::const_pointer;
-	using typename arrbase::const_reference;
-	using typename arrbase::iterator;
-	using typename arrbase::const_iterator;
-	using typename arrbase::reverse_iterator;
-	using typename arrbase::const_reverse_iterator;
+	using pointer                = typename arrbase::pointer;
+	using reference              = typename arrbase::reference;
+	using const_pointer          = typename arrbase::const_pointer;
+	using const_reference        = typename arrbase::const_reference;
+	using iterator               = typename arrbase::iterator;
+	using const_iterator         = typename arrbase::const_iterator;
+	using reverse_iterator       = typename arrbase::reverse_iterator;
+	using const_reverse_iterator = typename arrbase::const_reverse_iterator;
 
 	using arrbase::assign;
 
