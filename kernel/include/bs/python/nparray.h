@@ -73,7 +73,10 @@ public:
 	// copy-costruct from passed container
 	template<
 		typename Container,
-		typename = std::enable_if_t< std::is_class< Container >::value >
+		typename = std::enable_if_t<
+			std::is_class< Container >::value &&
+			!std::is_base_of< base_t, Container >::value
+		>
 	>
 	bs_nparray_traits(const Container& in) : base_t(std::distance(std::begin(in), std::end(in))) {
 		std::copy(std::begin(in), std::end(in), data());
