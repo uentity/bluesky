@@ -22,6 +22,15 @@ typedef const std::shared_ptr< objbase >& bs_type_copy_param;
 typedef bs_type_ctor_result (*BS_TYPE_COPY_FUN)(bs_type_copy_param);
 typedef const blue_sky::type_descriptor& (*BS_GET_TD_FUN)();
 
+namespace detail {
+/// Convert lambda::operator() to bs type construct function pointer
+template <typename L> struct lam2bsctor {};
+template <typename C, typename R, typename... A>
+struct lam2bsctor<R (C::*)(A...)> { typedef bs_type_ctor_result type(A...); };
+template <typename C, typename R, typename... A>
+struct lam2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...); };
+}
+
 /*!
 \struct type_descriptor
 \ingroup blue_sky
@@ -170,7 +179,7 @@ public:
 	// vanilla fucntion pointer as type constructor
 	// NOTE: if Args&& used as function params then args types auto-deduction fails
 	// for templated functions
-	template< typename T, typename... Args >
+	template< typename... Args >
 	void add_constructor(bs_type_ctor_result (*f)(Args...)) const {
 		creators_[typeid(args_pack< Args... >)] = std::make_pair(
 			reinterpret_cast< void(*)() >((creator_callback< Args... >)
@@ -180,6 +189,13 @@ public:
 			),
 			reinterpret_cast< void* >(f)
 		);
+	}
+
+	// add stateless lambda as type constructor
+	template< typename Lambda >
+	void add_constructor(Lambda&& f) const {
+		using func_t = typename detail::lam2bsctor<decltype(&std::remove_reference<Lambda>::type::operator())>::type;
+		add_constructor((func_t*)f);
 	}
 
 	// std type construction

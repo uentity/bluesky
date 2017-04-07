@@ -197,10 +197,10 @@ BS_TYPE_ADD_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), ctor_args_tup, 
 BS_TYPE_ADD_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), (), 0)
 
 // add constructor as free function
-#define BS_TYPE_ADD_CONSTRUCTOR_F_(T_tup, f_tup)                                         \
-namespace {                                                                              \
-static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){                               \
-    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_constructor< BOOST_PP_TUPLE_ENUM(T_tup) >( \
+#define BS_TYPE_ADD_CONSTRUCTOR_F_(T_tup, f_tup)           \
+namespace {                                                \
+static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){ \
+    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_constructor( \
     BOOST_PP_TUPLE_ENUM(f_tup)); return 0; }(); }
 
 // for simple types and factory functions (<= 1 template params)
@@ -228,6 +228,19 @@ BS_TYPE_ADD_COPY_CONSTRUCTOR_((T))
 // for templated types (> 1 template params) ctors with non-zero arguments
 #define BS_TYPE_ADD_COPY_CONSTRUCTOR_T(T, T_spec_tup) \
 BS_TYPE_ADD_COPY_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
+
+// add copy constructor as free function
+#define BS_TYPE_ADD_COPY_CONSTRUCTOR_F_(T_tup, f)                                   \
+namespace {                                                                         \
+static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){                          \
+    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_copy_constructor(f); return 0; }(); }
+
+// for simple types and factory functions (<= 1 template params)
+#define BS_TYPE_ADD_COPY_CONSTRUCTOR_F(T, f) \
+BS_TYPE_ADD_COPY_CONSTRUCTOR_F_((T), f)
+// for templated types and factory functions (> 1 template params)
+#define BS_TYPE_ADD_COPY_CONSTRUCTOR_T_F(T, T_spec_tup, f, f_spec_tup) \
+BS_TYPE_ADD_COPY_CONSTRUCTOR_F_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), f)
 
 /*-----------------------------------------------------------------
  * auto-register type in BS kernel
