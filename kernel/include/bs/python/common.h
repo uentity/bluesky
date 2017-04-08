@@ -20,8 +20,8 @@
  *  helper macro definitions
  *-----------------------------------------------------------------------------*/
 #define BSPY_EXPORT_DEF(T)                     \
-.def_static("bs_type", &T::bs_type)
-//.def_property_readonly_static("bs_type", [](pybind11::object){ return T::bs_type(); })
+.def_property_readonly_static("bs_type", [](pybind11::object){ return T::bs_type(); })
+//.def_static("bs_type", &T::bs_type)
 
 #define BS_INIT_PY(mod_name)                                                        \
 extern "C" const blue_sky::plugin_descriptor* bs_get_plugin_descriptor();           \
