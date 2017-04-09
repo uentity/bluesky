@@ -307,8 +307,8 @@ public:
 	}
 
 	static PYBIND11_DESCR name() {
-		return _("numpy.ndarray[") + npy_format_descriptor< typename Array::arrbase::value_type >::name() +
-			_("]");
+		return type_descr(_("numpy.ndarray[") + npy_format_descriptor< typename Array::arrbase::value_type >::name() +
+			_("]"));
 	}
 
 	// Explicitly delete these: support python -> C++ conversion on these (i.e. these can be return
@@ -374,12 +374,8 @@ public:
 		return true;
 	}
 
-	operator sp_array*() { return &value; }
-	operator sp_array&() { return value; }
-	operator Array*() { return value.get(); }
-	operator Array&() { return *value; }
-
-	template <typename _T> using cast_op_type = pybind11::detail::cast_op_type<_T>;
+	operator sp_array() { return value; }
+	template <typename> using cast_op_type = sp_array;
 };
 
 
