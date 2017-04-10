@@ -56,6 +56,7 @@ public:
 
 	// import ctors from pybind11 array_t
 	using pyarray_t::pyarray_t;
+	using pyarray_t::m_ptr;
 
 	// ctors required by bs_array
 	bs_nparray_traits() : pyarray_t(0) {}
@@ -98,7 +99,7 @@ public:
 		PyObject* new_array = Py_None;
 		// try to resize
 		new_array = npy_api::get().PyArray_Resize_(
-			py::detail::array_proxy(this->ptr()), &d, 0, npy_api::NPY_ANYORDER
+			py::detail::array_proxy(m_ptr), &d, 0, npy_api::NPY_ANYORDER
 		);
 		// check if error happened
 		if(PyErr_Occurred()) {
@@ -136,10 +137,10 @@ public:
 	}
 
 	reference operator[](const key_type& k) {
-		return arrbase::operator[](k);
+		return data()[k];
 	}
 	const_reference operator[](const key_type& k) const {
-		return arrbase::operator[](k);
+		return data()[k];
 	}
 
 	size_type size() const {
@@ -222,27 +223,6 @@ handle bs_array_cast(Array const& src, handle base = handle(), bool writeable = 
 	return a.release();
 }
 
-// following code is disabled -- tried to make specific casting for bs_arrays
-//template< typename Array >
-//struct bs_array_cast {
-//	static handle go(Array const& src, handle base = handle(), bool writeable = true) {
-//		array a(src.size(), src.data(), base);
-//		if (!writeable)
-//			array_proxy(a.ptr())->flags &= ~detail::npy_api::NPY_ARRAY_WRITEABLE_;
-//
-//		return a.release();
-//	}
-//};
-// specialization for native numpy bs_array
-//template< class T >
-//struct bs_array_cast< blue_sky::bs_array< T, blue_sky::bs_nparray_traits > > {
-//	using Array = blue_sky::bs_array< T, blue_sky::bs_nparray_traits >;
-//	static handle go(Array const& src, handle base = handle(), bool = true) {
-//		return src;
-//	}
-//};
-
-
 // Takes an lvalue ref to some bs_array type and a (python) base object, creating a numpy array that
 // reference the bs_array object's data with `base` as the python-registered base class (if omitted,
 // the base will be set to None, and lifetime management is up to the caller).  The numpy array is
@@ -267,6 +247,15 @@ handle bs_array_encapsulate(const std::shared_ptr< Array > &src) {
 		delete static_cast< std::shared_ptr< Array>* >(o);
 	});
 	return bs_ref_array(src, base);
+}
+
+// Specialization for bs_nparray_traits - we don't need capsule and can pass source array directly
+// as base
+template< typename T >
+handle bs_array_encapsulate(
+	const std::shared_ptr< blue_sky::bs_array< T, blue_sky::bs_nparray_traits > >& src
+) {
+	return bs_ref_array(src, *src);
 }
 
 // Base class for casting bs_array objects back to python.
