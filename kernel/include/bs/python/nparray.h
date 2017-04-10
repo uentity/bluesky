@@ -52,20 +52,19 @@ public:
 	using arrbase::begin;
 	using arrbase::end;
 
-	//using numpy_array_t = pybind11::array_t< T >;
-	using base_t = pybind11::array_t< T, pybind11::array::forcecast >;
+	using pyarray_t = pybind11::array_t< T, pybind11::array::forcecast >;
 
 	// import ctors from pybind11 array_t
-	using base_t::base_t;
+	using pyarray_t::pyarray_t;
 
 	// ctors required by bs_array
-	bs_nparray_traits() : base_t(0) {}
+	bs_nparray_traits() : pyarray_t(0) {}
 
-	bs_nparray_traits(size_type sz, const T& init_value) : base_t(sz) {
+	bs_nparray_traits(size_type sz, const T& init_value) : pyarray_t(sz) {
 		std::fill(data(), data() + this->size(), init_value);
 	}
 
-	bs_nparray_traits(const T* from, const T* to) : base_t(to > from ? to - from : 0) {
+	bs_nparray_traits(const T* from, const T* to) : pyarray_t(to > from ? to - from : 0) {
 		if(to > from)
 			std::copy(from, to, data());
 	}
@@ -75,10 +74,10 @@ public:
 		typename Container,
 		typename = std::enable_if_t<
 			std::is_class< Container >::value &&
-			!std::is_base_of< base_t, Container >::value
+			!std::is_base_of< pyarray_t, Container >::value
 		>
 	>
-	bs_nparray_traits(const Container& in) : base_t(std::distance(std::begin(in), std::end(in))) {
+	bs_nparray_traits(const Container& in) : pyarray_t(std::distance(std::begin(in), std::end(in))) {
 		std::copy(std::begin(in), std::end(in), data());
 	}
 
@@ -109,7 +108,7 @@ public:
 		// if new_array is valid - swap with this (this = new array)
 		if(new_array && new_array != Py_None && new_array != this->ptr()) {
 			//bs_nparray_traits(py::reinterpret_borrow< py::object >(new_array)).swap(*this);
-			*this = py::reinterpret_borrow< py::object >(new_array);
+			*this = py::reinterpret_steal< py::object >(new_array);
 		}
 	}
 
@@ -130,10 +129,10 @@ public:
 	}
 
 	pointer data() {
-		return base_t::mutable_data();
+		return pyarray_t::mutable_data();
 	}
 	const_pointer data() const {
-		return base_t::data();
+		return pyarray_t::data();
 	}
 
 	reference operator[](const key_type& k) {
@@ -144,7 +143,7 @@ public:
 	}
 
 	size_type size() const {
-		return static_cast< size_type >(base_t::size());
+		return static_cast< size_type >(pyarray_t::size());
 	}
 
 	sp_arrbase clone() const {
@@ -263,14 +262,8 @@ handle bs_ref_array(ArrayPtr &src, handle parent = none()) {
 // not the Type of the pointer given is const.
 template< typename Array >
 handle bs_array_encapsulate(const std::shared_ptr< Array > &src) {
-	// DEBUG
-	//std::cout << "encapsulate bs_array at " << src.get() << std::endl;
-	// allocate new shared_ptr thar holds a reference to source array during numpy array lifetime
 	auto h = new std::shared_ptr< Array >(src);
 	capsule base(h, [](void *o) {
-		// DEBUG
-		//auto p_array = static_cast< std::shared_ptr< Array>* >(PyCapsule_GetPointer(o, nullptr))->get();
-		//std::cout << "release bs_array at " << p_array << std::endl;
 		delete static_cast< std::shared_ptr< Array>* >(o);
 	});
 	return bs_ref_array(src, base);
@@ -283,7 +276,7 @@ private:
 
 public:
 
-	// Directly referencing a ref/map's data is a bit dangerous (whatever the map/ref points to has
+	// Directly referencing a ref/map's data is a bit dangerous (whatever the map/ref points to hashas
 	// to stay around), but we'll allow it under the assumption that you know what you're doing (and
 	// have an appropriate keep_alive in place).  We return a numpy array pointing directly at the
 	// ref's data (The numpy array ends up read-only if the ref was to a const matrix type.) Note
@@ -317,7 +310,7 @@ public:
 	bool load(handle, bool) = delete;
 	operator Array() = delete;
 	operator sp_array() = delete;
-	template <typename> using cast_op_type = Array;
+	template <typename> using cast_op_type = sp_array;
 };
 
 // Cast generic bs_array to Python. Special case of bs_nparray_traits is specialized next
@@ -333,7 +326,7 @@ struct type_caster< std::shared_ptr< blue_sky::bs_array< T, blue_sky::bs_nparray
 	using Array = blue_sky::bs_array< T, blue_sky::bs_nparray_traits >;
 	using sp_array = std::shared_ptr< Array >;
 	using Scalar = typename Array::arrbase::value_type;
-	using numpy_array_t = array_t<Scalar, array::forcecast>;
+	using pyarray_t = typename Array::pyarray_t;
 
 	// Our array.  When possible, this is just a numpy array pointing to the source data, but
 	// sometimes we can't avoid copying (e.g. input is not a numpy array at all, has an incompatible
@@ -353,14 +346,20 @@ public:
 	bool load(handle src, bool convert) {
 		// First check whether what we have is already an array of the right type.  If not, we can't
 		// avoid a copy (because the copy is also going to do type conversion).
-		bool need_copy = !isinstance< numpy_array_t >(src);
+		bool need_copy = !isinstance< pyarray_t >(src);
 
 		if(!need_copy) {
-			Array aref = reinterpret_borrow< Array >(src);
+			pyarray_t aref = reinterpret_borrow< Array >(src);
 			if(aref && aref.writeable()) {
 				value = std::make_shared< Array >(std::move(aref));
 				return true;
 			}
+		}
+
+		// check if src is None, then assign nullptr to value and we're done
+		if(src == none()) {
+			value = nullptr;
+			return true;
 		}
 
 		// We need to copy: If we need a mutable reference, or we're not supposed to convert
@@ -368,7 +367,7 @@ public:
 		// instructed not to copy (via `py::arg().noconvert()`) we have to fail loading.
 		if (!convert) return false;
 
-		Array aref = Array::ensure(src);
+		pyarray_t aref = Array::ensure(src);
 		if(!aref) return false;
 		value = std::make_shared< Array >(std::move(aref));
 		return true;
