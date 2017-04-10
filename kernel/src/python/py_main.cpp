@@ -13,9 +13,11 @@ namespace blue_sky { namespace python {
 namespace py = pybind11;
 
 void py_bind_common(py::module& m);
+void py_bind_messaging(py::module& m);
 
 BS_INIT_PY(bs) {
 	py_bind_common(m);
+	py_bind_messaging(m);
 }
 
 }}

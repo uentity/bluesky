@@ -7,10 +7,8 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/bs.h>
 #include <bs/compat/messaging.h>
-#include <bs/objbase.h>
-#include <bs/kernel.h>
-#include <bs/exception.h>
 
 #include <boost/signals2.hpp>
 
@@ -258,6 +256,38 @@ ulong bs_messaging::num_slots(int signal_code) const {
 		return sig->second->num_slots();
 	else return 0;
 }
+
+ulong bs_messaging::clear() {
+	const ulong cnt = signals_.size();
+	signals_.clear();
+	return cnt;
+}
+
+#ifdef BSPY_EXPORTING
+NAMESPACE_BEGIN(python)
+
+void py_bind_signal(py::module& m) {
+	// bind bs_signal
+	// place it here, because py::class_ needs to acccess full definition of exported type
+	py::class_<
+		bs_signal,
+		std::shared_ptr< bs_signal >
+	>(m, "signal")
+		.def(py::init<int>())
+		//.def("__init__", [](bs_signal& sig, int sig_code) {
+		//	new (&sig) bs_signal(sig_code);
+		//})
+		.def("init", &bs_signal::init)
+		.def_property_readonly("get_code", &bs_signal::get_code)
+		.def("connect", &bs_signal::connect, "slot"_a, "sender"_a = nullptr)
+		.def("disconnect", &bs_signal::disconnect)
+		.def_property_readonly("num_slots", &bs_signal::num_slots)
+		.def("fire", &bs_signal::fire, "sender"_a = nullptr, "param"_a = nullptr)
+	;
+}
+
+NAMESPACE_END(python)
+#endif
 
 }	//end of namespace blue_sky
 
