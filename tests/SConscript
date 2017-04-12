@@ -39,6 +39,12 @@ test_nparray = tests_env.SharedLibrary(
 	source = 'test_nparray.cpp'
 );
 
+# library for testing different Python-bindings related things
+test_example = tests_env.SharedLibrary(
+	target = osp.join(tar_exe_dir, 'example'),
+	source = 'test_example.cpp'
+);
+
 # run test cases
 tests_env["EXE_DIR"] = Dir(tar_exe_dir);
 run_tests = tests_env.Command(
@@ -55,6 +61,7 @@ AlwaysBuild(run_tests);
 Alias('bs_tests', bs_tests);
 Alias('test_pymod', test_pymod);
 Alias('test_nparray', test_nparray);
+Alias('test_example', test_example);
 Alias('run_tests', run_tests);
 Alias('tests', [bs_tests, test_pymod, run_tests]);
 Export('bs_tests');
