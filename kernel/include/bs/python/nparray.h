@@ -54,9 +54,11 @@ public:
 
 	using pyarray_t = pybind11::array_t< T, pybind11::array::forcecast >;
 
-	// import ctors from pybind11 array_t
+	// import from base pybind11 array_t
 	using pyarray_t::pyarray_t;
 	using pyarray_t::m_ptr;
+	using pyarray_t::resize;
+	using pyarray_t::data;
 
 	// ctors required by bs_array
 	bs_nparray_traits() : pyarray_t(0) {}
@@ -83,43 +85,18 @@ public:
 	}
 
 	// specific implementation of resize
+	// disables refcheck - use with care
 	void resize(size_type new_size) {
-		// resize isn't supported on binded arrays
-		//throw blue_sky::bs_exception("array resize isn't supported", "bs_nparray_traits");
-		//std::cout << "*** bs_nparray_traits.resize(" << new_size << ')' << std::endl;
-		//std::cout << "this array: " << this->ptr() << std::endl;
-
-		namespace py = pybind11;
-		using npy_intp = typename npy_api::npy_intp;
-		using PyArray_Dims = typename npy_api::PyArray_Dims;
-
-		// resize will always result in plain vector
-		npy_intp new_dims[] = { npy_intp(new_size) };
-		PyArray_Dims d = { new_dims, 1};
-		PyObject* new_array = Py_None;
-		// try to resize
-		new_array = npy_api::get().PyArray_Resize_(
-			py::detail::array_proxy(m_ptr), &d, 0, npy_api::NPY_ANYORDER
-		);
-		// check if error happened
-		if(PyErr_Occurred()) {
-			throw py::error_already_set();
-		}
-
-		// if new_array is valid - swap with this (this = new array)
-		if(new_array && new_array != Py_None && new_array != this->ptr()) {
-			//bs_nparray_traits(py::reinterpret_borrow< py::object >(new_array)).swap(*this);
-			*this = py::reinterpret_steal< py::object >(new_array);
-		}
+		pyarray_t::resize({new_size}, false);
 	}
 
 	void resize(size_type new_size, value_type init_value) {
-		auto old_size = this->size();
+		auto old_size = size();
 
 		// resize can fail to actually resize array
 		resize(new_size);
-		auto new_data = this->data();
-		new_size = this->size();
+		auto new_data = data();
+		new_size = size();
 		std::fill(new_data + std::min(old_size, new_size), new_data + new_size, init_value);
 	}
 
@@ -150,55 +127,6 @@ public:
 	sp_arrbase clone() const {
 		return std::make_shared< bs_nparray_traits >(begin(), end());
 	}
-
-private:
-	// based on pybind11 code
-	struct npy_api {
-		using npy_intp = Py_intptr_t;
-
-		typedef struct {
-			npy_intp *ptr;
-			int len;
-		} PyArray_Dims;
-
-		typedef enum {
-			/* Fortran order if inputs are all Fortran, C otherwise */
-			NPY_ANYORDER=-1,
-			/* C order */
-			NPY_CORDER=0,
-			/* Fortran order */
-			NPY_FORTRANORDER=1,
-			/* An order as close to the inputs as possible */
-			NPY_KEEPORDER=2
-		} NPY_ORDER;
-
-		PyObject* (*PyArray_Resize_)(pybind11::detail::PyArray_Proxy*, PyArray_Dims*, int, NPY_ORDER);
-
-		enum np_functions {
-			API_PyArray_Resize = 80,
-		};
-
-		static npy_api lookup() {
-			namespace py = pybind11;
-			py::module m = py::module::import("numpy.core.multiarray");
-			auto c = m.attr("_ARRAY_API");
-#if PY_MAJOR_VERSION >= 3
-			void **api_ptr = (void **) PyCapsule_GetPointer(c.ptr(), NULL);
-#else
-			void **api_ptr = (void **) PyCObject_AsVoidPtr(c.ptr());
-#endif
-			npy_api api;
-#define DECL_NPY_API(Func) api.Func##_ = (decltype(api.Func##_)) api_ptr[API_##Func];
-			DECL_NPY_API(PyArray_Resize);
-#undef DECL_NPY_API
-			return api;
-		}
-
-		static npy_api& get() {
-			static npy_api api = lookup();
-			return api;
-		}
-	};
 };
 
 // alias
