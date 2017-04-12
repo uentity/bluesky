@@ -1,7 +1,10 @@
-import os, os.path;
+import os;
 
 # import custom settings & custom variables
 Import('*');
+
+lib_name = 'blue_sky';
+tar_name = 'kernel';
 
 # list of Boost libs used by kernel
 kboost_libs = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'locale', 'serialization'];
@@ -13,6 +16,7 @@ if build_kind == "init" :
 		custom_vars.Update (custom_env)
 	# query for reuired boost libs
 	boost_require(kboost_libs);
+	includes[tar_name] = os.path.join(tar_plugin_dir, "include");
 	Return();
 
 # setup list of source files to compile
@@ -51,9 +55,6 @@ py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in Split("""
 	py_main.cpp
 	py_messaging.cpp
 """)];
-
-lib_name = 'blue_sky';
-tar_name = 'kernel';
 
 # setup default build environment
 base_env = custom_env.Clone();

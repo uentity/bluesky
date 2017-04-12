@@ -124,23 +124,59 @@ build_dir = '#build';
 exe_dir = '#exe';
 Export('build_dir', 'exe_dir', 'plugin_dir');
 
+def process_sconscripts(src_env, build_kind) :
+	# inform everyone what are we building now
+	Export('build_kind');
+	# format root build and exe paths
+	tar_build_dir = osp.join(build_dir, build_kind);
+	tar_exe_dir = osp.join(exe_dir, build_kind);
+	# where plugin libs are expected to be after build?
+	tar_exe_plugin_dir = osp.join(tar_exe_dir, plugin_dir);
+	Export('tar_build_dir', 'tar_exe_dir', 'tar_exe_plugin_dir');
+
+	# invoke tuning scripts
+	platform = src_env['platform'];
+	if len(platform) > 0 :
+		SConscript('scons_platform.' + platform);
+	custom_proc_call();
+	custom_vars.Update(src_env);
+	Import('*');
+
+	# reset custom_env to default values
+	custom_env = src_env.Clone();
+	# add exe path to libraries search paths
+	custom_env.AppendUnique(LIBPATH = [tar_exe_dir, tar_exe_plugin_dir]);
+	if build_kind == 'debug' :
+		custom_env.AppendUnique(CPPDEFINES = ['_DEBUG']);
+	elif (build_kind.startswith('release')) :
+		custom_env.AppendUnique(CPPDEFINES = ['NDEBUG']);
+	Export('custom_env');
+	
+	# parse scons files
+	build_root = tar_build_dir;
+	for ss in ss_tree :
+		# build in separate dir
+		tar_plugin_dir = osp.abspath(osp.dirname(ss));
+		tar_build_dir = osp.join(build_root, osp.dirname(ss));
+		Export('tar_build_dir', 'tar_plugin_dir');
+		inst_path = SConscript(ss, variant_dir = tar_build_dir, duplicate = 0);
+		# install to specified location
+		#if not inst_path is None :
+		#Install(tar_build_dir, osp.join(tar_exe_dir, inst_path));
+		#if scons_env['install'] == '1' :
+
+	# Update template env with possibly cahnged build variables
+	custom_vars.Update(src_env);
+
 # import some useful tools
 SConscript('scons_tools');
 
 # 6. Initialization stage is for correcting invariants, such as ss_list, etc
 build_kind = 'init';
-Export('build_kind');
-# invoke tuning scripts
-platform = custom_env['platform'];
-if platform > 0 :
-	SConscript('scons_platform.' + platform);
-# custom script call
-custom_proc_call();
-custom_vars.Update(custom_env);
-# invoke iit stage for all sconscripts tree
-for ss in ss_tree :
-	SConscript(ss)
-	custom_vars.Update(custom_env);
+# store include dirs provided by plugins in a dictionary
+includes = dict();
+Export('includes');
+process_sconscripts(custom_env, "init");
 Import('*');
 
 # dump ss_tree
@@ -186,51 +222,11 @@ if custom_env["py"] == '1' :
 	);
 
 # save default custom_env
-custom_env_def = custom_env.Clone();
+#custom_env_def = custom_env.Clone();
 
 # 8. Start global build cycle for every build kind
 for build_kind in build_kinds :
-	# inform everyone what are we building now
-	#build_kind = build_kinds[i];
-	Export('build_kind');
-	# format root build and exe paths
-	tar_build_dir = osp.join(build_dir, build_kind);
-	tar_exe_dir = osp.join(exe_dir, build_kind);
-	# where plugin libs are expected to be after build?
-	tar_exe_plugin_dir = osp.join(tar_exe_dir, plugin_dir);
-	Export('tar_build_dir', 'tar_exe_dir', 'tar_exe_plugin_dir');
-
-	# reset custom_env to default values
-	custom_env = custom_env_def.Clone();
-	Export('custom_env');
-	# invoke tuning scripts
-	if len(platform) > 0 :
-		SConscript('scons_platform.' + platform);
-	custom_proc_call();
-	Import('*');
-
-	# add exe path to libraries search paths
-	custom_env.AppendUnique(LIBPATH = [tar_exe_dir, tar_exe_plugin_dir]);
-	if build_kind == 'debug' :
-		custom_env.AppendUnique(CPPDEFINES = ['_DEBUG']);
-	elif (build_kind.startswith('release')) :
-		custom_env.AppendUnique(CPPDEFINES = ['NDEBUG']);
-
-	Export('custom_env');
-	
-	# parse scons files
-	build_root = tar_build_dir;
-	for ss in ss_tree :
-		# build in separate dir
-		tar_build_dir = osp.join(build_root, osp.dirname(ss));
-		inst_path = SConscript(ss, variant_dir = tar_build_dir, duplicate = 0);
-		# install to specified location
-		#if not inst_path is None :
-		#Install(tar_build_dir, osp.join(tar_exe_dir, inst_path));
-		#if scons_env['install'] == '1' :
-
-	# Update template env with possibly cahnged build variables
-	custom_vars.Update(custom_env_def);
+	process_sconscripts(custom_env, build_kind);
 
 # generate help text
 Help(custom_vars.GenerateHelpText(custom_env));
