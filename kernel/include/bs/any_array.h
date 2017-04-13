@@ -136,13 +136,13 @@ public:
 
 	// return reference to value at specified index
 	// value type is specified explicitly
-	template< typename value_type, typename key_type >
+	template< typename value_type >
 	value_type& ss(const key_type& key) {
 		return boost::any_cast< value_type& >(
 			trait::iter2val(trait::find(*this, key))
 		);
 	}
-	template< typename value_type, typename key_type >
+	template< typename value_type >
 	const value_type& ss(const key_type& key) const {
 		return boost::any_cast< const value_type& >(
 			trait::iter2val(trait::find(*this, key))
@@ -151,7 +151,6 @@ public:
 
 	// value type is omitted - do lazy cast
 	// can only appear on right side of expression
-	template< typename key_type >
 	value_cast ss(const key_type& key) const {
 		return value_cast(
 			trait::iter2val(trait::find(*this, key))
@@ -161,7 +160,7 @@ public:
 	// tries to find value by given key
 	// if value isn't found, target value is not modified
 	// does not throw
-	template< typename key_type, typename value_type >
+	template< typename value_type >
 	bool extract(const key_type& key, value_type& target) const {
 		auto pval = trait::find(*this, key);
 		if(pval == end()) return false;
@@ -177,7 +176,7 @@ public:
 
 	// Safely extract and return COPY of some value by given key. If no such value found,
 	// default value is returned.
-	template< typename key_type, typename value_type >
+	template< typename value_type >
 	value_type at(const key_type& key, const value_type def_val = value_type()) const {
 		value_type res;
 		if(!extract(key, res))
