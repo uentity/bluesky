@@ -24,7 +24,7 @@ namespace blue_sky {
  * helper functions that serialize any BS type to/from str
  *----------------------------------------------------------------*/
 // R is a type that is actually serialized
-// there should exist ststic conversion between T and R
+// there should exist static conversion between T and R
 
 template< class T, class R = T >
 std::string serialize_to_str(const std::shared_ptr< T >& t) {
@@ -32,8 +32,9 @@ std::string serialize_to_str(const std::shared_ptr< T >& t) {
 	std::ostringstream os;
 	// ensure archive is destroyed before stream is closed
 	{
+		std::shared_ptr< R > tmp(std::static_pointer_cast< R >(t));
 		archive_t ar(os);
-		serialize_fix_data< archive_t >(ar) << std::static_pointer_cast< R >(t);
+		serialize_fix_data< archive_t >(ar) << tmp;
 	}
 	return os.str();
 }

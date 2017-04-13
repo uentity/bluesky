@@ -27,7 +27,5 @@
 
 // add empty serialize fcn for objbase
 #include "../objbase.h"
-//BLUE_SKY_CLASS_SRZ_FCN_DECL(serialize, blue_sky::objbase)
-
 BLUE_SKY_TYPE_SERIALIZE_GUID(blue_sky::objbase)
 

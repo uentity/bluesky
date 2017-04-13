@@ -10,10 +10,10 @@
 #pragma once
 
 #include "array.h"
-#include "../kernel.h"
-#include "serialize/macro.h"
+//#include "../kernel.h"
 #include "serialize/decl.h"
-#ifdef BSPY_EXPORTING
+#include "serialize/macro.h"
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
 #include "../python/nparray.h"
 #endif
 
@@ -59,7 +59,7 @@ BS_ARRAY_GUID_VALUE(float, bs_vector_shared)
 BS_ARRAY_GUID_VALUE(double, bs_vector_shared)
 BS_ARRAY_GUID_VALUE(std::string, bs_vector_shared)
 
-#ifdef BSPY_EXPORTING
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
 BS_ARRAY_GUID_VALUE(int                , bs_nparray_traits)
 BS_ARRAY_GUID_VALUE(unsigned int       , bs_nparray_traits)
 BS_ARRAY_GUID_VALUE(long               , bs_nparray_traits)
