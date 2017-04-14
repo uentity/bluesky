@@ -151,8 +151,8 @@ public:
 	}
 };
 
-void slot_tester(int c, const sp_slot& slot) {
-	slot->execute(NULL, c, NULL);
+void slot_tester(int c, const sp_slot& slot, const sp_obj& param ) {
+	slot->execute(nullptr, c, param);
 	//bs_type_info ti = BS_GET_TI(*slot);
 	//cout << &ti.get() << endl;
 	//cout << ti.name() << endl;

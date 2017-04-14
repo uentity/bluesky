@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <bs/objbase.h>
+#include <bs/exception.h>
 #include <pybind11/pybind11.h>
 // for auto-support of std containers
 #include <pybind11/stl.h>
@@ -45,6 +47,23 @@ NAMESPACE_BEGIN(python)
 
 namespace py = pybind11;
 using namespace pybind11::literals;
+
+///*-----------------------------------------------------------------------------
+// *  trampoline class for bindings for BS objects
+// *-----------------------------------------------------------------------------*/
+template<typename Object = objbase>
+class BS_API py_object : public Object {
+public:
+	using Object::Object;
+
+	const type_descriptor& bs_resolve_type() const override {
+		PYBIND11_OVERLOAD(
+			const type_descriptor&,
+			objbase,
+			bs_resolve_type
+		);
+	}
+};
 
 NAMESPACE_END(python)
 NAMESPACE_END(blue_sky)
