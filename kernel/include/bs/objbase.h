@@ -13,7 +13,7 @@
 #include "type_descriptor.h"
 #include "objbase_macro.h"
 
-namespace blue_sky {
+NAMESPACE_BEGIN(blue_sky)
 /*!
 	\class objbase
 	\ingroup object_base
@@ -87,14 +87,11 @@ public:
 protected:
 	// associated inode
 	const blue_sky::bs_inode* inode_;
-
-	//! Necessary declarations.
-	//BS_COMMON_DECL(objbase);
-	//BS_LOCK_THIS_DECL(objbase);
 };
 
 // alias
 using sp_obj = std::shared_ptr< objbase >;
+using sp_cobj = std::shared_ptr< const objbase >;
 
-}	//namespace blue_sky
+NAMESPACE_END(blue_sky)
 
