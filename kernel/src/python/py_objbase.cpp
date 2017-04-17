@@ -15,28 +15,11 @@ NAMESPACE_BEGIN(python)
 // hidden details
 namespace {
 
-// real trampoline class for objbase
-// can hold any Python type and is implicitly convertible from py::object
-class py_objbase : public py_object<objbase> {
-private:
-	py::object pyobj_ = py::none();
-
-public:
-	using py_object<objbase>::py_object;
-
-	// construct from any Python object
-	py_objbase(py::object o) : pyobj_(std::move(o)) {}
-
-	// access stored Python instance
-	py::object& pyobj() { return pyobj_; }
-	const py::object& pyobj() const { return pyobj_; }
-};
-
 sp_obj test_anyobj(const sp_obj& obj) {
 	std::cout << obj->bs_resolve_type().name << std::endl;
 	if(obj->bs_resolve_type().name == "objbase")
 		std::cout << "got Python object: "
-		<< py::str(std::static_pointer_cast<py_objbase>(obj)->pyobj().ptr()) << std::endl;
+		<< py::str(std::static_pointer_cast<py_object<>>(obj)->pyobj.ptr()) << std::endl;
 	return obj;
 }
 
@@ -44,7 +27,7 @@ sp_obj test_anyobj(const sp_obj& obj) {
 
 void py_bind_objbase(py::module& m) {
 	// objebase binding
-	py::class_< objbase, py_objbase, sp_obj >(m, "objbase")
+	py::class_< objbase, py_object<>, sp_obj >(m, "objbase", py::multiple_inheritance())
 		BSPY_EXPORT_DEF(objbase)
 		// use init_alias to always construct trampoline class and have valid pyobj property
 		.def(py::init_alias<>())
@@ -55,16 +38,19 @@ void py_bind_objbase(py::module& m) {
 		.def("swap", &objbase::swap)
 		.def_property("pyobj", [](const objbase& src) -> py::object {
 			if(src.bs_resolve_type() == objbase::bs_type()) {
-				return static_cast<const py_objbase&>(src).pyobj();
+				return static_cast<const py_object<>&>(src).pyobj;
 			}
 			return py::none();
 		}, [](objbase& src, py::object value) {
 			if(src.bs_resolve_type() == objbase::bs_type()) {
-				static_cast<py_objbase&>(src).pyobj() = std::move(value);
+				static_cast<py_object<>&>(src).pyobj = std::move(value);
 			}
 		})
+		// DEBUG
+		.def_property_readonly("refs", [](objbase& src) { return src.shared_from_this().use_count() - 1; })
 	;
 
+	// any Python instance can be converted to objbase
 	py::implicitly_convertible< py::object, objbase >();
 
 	m.def("test_anyobj", &test_anyobj);

@@ -153,7 +153,7 @@ bs_resolve_type() const { return bs_type(); }
 #define BS_RESOLVE_TYPE_IMPL_INL \
 BS_RESOLVE_TYPE_IMPL_((public:), BS_SEQ_NIL(), 1)
 
-// bs_resolce_type() is inlined in *_DECL macro family
+// bs_resolve_type() is defined in class body in *_DECL macro family
 // so the following macro are included only to make system more "complete"
 // implementation for non-template types
 #define BS_RESOLVE_TYPE_IMPL(T) \
