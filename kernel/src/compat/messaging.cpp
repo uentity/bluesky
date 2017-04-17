@@ -35,11 +35,11 @@ template< class slot_ptr >
 class sync_layer {
 public:
 	static void fire_slot(
-		const slot_ptr& slot, const sp_mobj& sender, int signal_code, const sp_obj& param
+		const slot_ptr& slot, sp_mobj&& sender, int signal_code, sp_obj&& param
 	) {
 		if(slot)
 			// directly execute slot
-			slot->execute(sender, signal_code, param);
+			slot->execute(std::move(sender), signal_code, std::move(param));
 	}
 };
 
@@ -47,12 +47,12 @@ public:
 template< class slot_ptr = sp_slot  >
 class slot_holder : public sync_layer< slot_ptr > {
 public:
-	typedef const bs_imessaging* sender_ptr;
+	typedef std::weak_ptr<const bs_imessaging> sender_ptr;
 	typedef sync_layer< slot_ptr > base_t;
 	using base_t::fire_slot;
 
-	slot_holder(const slot_ptr& slot, const sender_ptr& sender = NULL)
-		: slot_(slot), sender_(sender)
+	slot_holder(slot_ptr slot, const sp_mobj& sender = nullptr)
+		: slot_(std::move(slot)), sender_(sender)
 	{}
 
 	bool operator==(const slot_holder& rhs) const {
@@ -67,18 +67,21 @@ public:
 		return (slot_ < rhs.slot_);
 	}
 
-	void operator()(const sp_mobj& sender, int signal_code, sp_obj param) const {
-		if((!sender_) || (sender.get() == sender_))
-			fire_slot(slot_, sender, signal_code, param);
+	void operator()(const sp_mobj& sender, int signal_code, const sp_obj& param) const {
+		if(!sender_.expired() || (sender.get() == sender_.lock().get())) {
+			// right here NEW temp copies of sender and param will be created by compiler
+			// because fire_slot accepts only rvalue references
+			fire_slot(slot_, sp_mobj(sender), signal_code, sp_obj(param));
+		}
 	}
 
 protected:
 	slot_ptr slot_;
-	// if sender != NULL then only signals from this sender will be triggered
-	// if we store sp_mobj then object will live forever, because every slot holds smart pointer to sender
+	// if sender != nullptr then only signals from this sender will be triggered
+	// if we store sp_obj then object will live forever, because every slot holds smart pointer to sender
 	// thats why only pure pointer to object is stored
 	// when sender is deleted, all slot_holders will be destroyed and there will be no dead references
-	const bs_imessaging* sender_;
+	sender_ptr sender_;
 };
 
 /*-----------------------------------------------------------------
@@ -104,16 +107,16 @@ public:
 		my_signal_(sender, signal_code_, param);
 	}
 
-	// if sender != NULL then slot will be activated only for given sender
-	bool connect(const sp_slot& slot, const sp_mobj& sender = NULL) {
+	// if sender != nullptr then slot will be activated only for given sender
+	bool connect(const sp_slot& slot, const sp_mobj& sender = nullptr) {
 		if(!slot) return false;
-		my_signal_.connect(slot_holder< >(slot, sender.get()));
+		my_signal_.connect(slot_holder<>(slot, sender));
 		return true;
 	}
 
 	bool disconnect(const sp_slot& slot) {
 		if(!slot) return false;
-		my_signal_.disconnect(slot_holder< >(slot));
+		my_signal_.disconnect(slot_holder<>(slot));
 		return true;
 	}
 
@@ -138,7 +141,6 @@ void bs_signal::init(int signal_code) const {
 }
 
 void bs_signal::fire(const sp_mobj& sender, const sp_obj& param) const {
-	//lock during recepients call because boost:signals doesn't support mt
 	pimpl_->fire(sender, param);
 }
 
@@ -186,7 +188,7 @@ bool bs_messaging::fire_signal(int signal_code, const sp_obj& params) const {
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig == signals_.end()) return false;
 
-	sig->second->fire(bs_shared_this< bs_messaging >(), params);
+	sig->second->fire(bs_shared_this<const bs_messaging>(), params);
 	return true;
 }
 
@@ -234,7 +236,7 @@ bool bs_messaging::subscribe(int signal_code, const sp_slot& slot) const {
 	if(!slot) return false;
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig != signals_.end()) {
-		sig->second->connect(slot, bs_shared_this< bs_messaging >());
+		sig->second->connect(slot, bs_shared_this<const bs_messaging>());
 		return true;
 	}
 	return false;
@@ -274,9 +276,6 @@ void py_bind_signal(py::module& m) {
 		std::shared_ptr< bs_signal >
 	>(m, "signal")
 		.def(py::init<int>())
-		//.def("__init__", [](bs_signal& sig, int sig_code) {
-		//	new (&sig) bs_signal(sig_code);
-		//})
 		.def("init", &bs_signal::init)
 		.def_property_readonly("get_code", &bs_signal::get_code)
 		.def("connect", &bs_signal::connect, "slot"_a, "sender"_a = nullptr)

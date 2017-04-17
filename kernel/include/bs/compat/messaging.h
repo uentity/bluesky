@@ -24,11 +24,9 @@ class BS_API bs_slot {
 public:
 	typedef std::shared_ptr< bs_slot > sp_slot;
 
-	virtual void execute(const sp_mobj& sender, int signal_code, const sp_obj& param) const = 0;
+	virtual void execute(sp_mobj sender, int signal_code, sp_obj param) const = 0;
 };
-
-//! type of combase::sp_com
-typedef bs_slot::sp_slot sp_slot;
+using sp_slot = bs_slot::sp_slot;
 
 /*-----------------------------------------------------------------
  * Signal is a mechanism for delayed slots calling
@@ -40,22 +38,19 @@ public:
 	//! type of blue-sky smart pointer of command
 	typedef std::shared_ptr< bs_signal > sp_signal;
 
-	//signal constructor
 	bs_signal(int signal_code);
-	//dalyed initialization
+	// delayed initialization
 	void init(int signal_code) const;
-	//check if this signal is binded to a valid sender
-	//bool sender_binded() const;
-	//check signal code
+	// check signal code
 	int get_code() const;
 
-	// if sender != NULL then slot will be activated only for given sender
-	bool connect(const sp_slot& slot, const sp_mobj& sender = NULL) const;
+	// if sender != nullptr then slot will be activated only for given sender
+	bool connect(const sp_slot& slot, const sp_mobj& sender = nullptr) const;
 	bool disconnect(const sp_slot& slot) const;
 	ulong num_slots() const;
 
 	//call slots, connected to this signal
-	void fire(const sp_mobj& sender = NULL, const sp_obj& param = NULL) const;
+	void fire(const sp_mobj& sender = nullptr, const sp_obj& param = nullptr) const;
 
 private:
 	class signal_impl;
@@ -83,17 +78,15 @@ public:
 
 	typedef std::pair< int, int > sig_range_t;
 
-	virtual bool subscribe(int signal_code, const sp_slot& slot) const;
-	virtual bool unsubscribe(int signal_code, const sp_slot& slot) const;
-	virtual ulong num_slots(int signal_code) const;
-	virtual bool fire_signal(int signal_code, const sp_obj& param = sp_obj (NULL)) const;
+	bool subscribe(int signal_code, const sp_slot& slot) const;
+	bool unsubscribe(int signal_code, const sp_slot& slot) const;
+	ulong num_slots(int signal_code) const;
+	bool fire_signal(int signal_code, const sp_obj& param = nullptr) const;
 	std::vector< int > get_signal_list() const;
-
-	//bs_messaging& operator=(const bs_messaging& lhs);
 
 	// default ctor - doesn't add any signals
 	bs_messaging();
-	// ctor that adds all signals within given half-open range
+	// ctor that adds all signals within given range
 	bs_messaging(const sig_range_t& sig_range);
 	// copy ctor - copies signals from source object
 	bs_messaging(const bs_messaging&);

@@ -23,25 +23,27 @@ class py_bs_slot : public bs_slot {
 public:
 	using bs_slot::bs_slot;
 
-	void execute(const sp_mobj& sender, int signal_code, const sp_obj& param) const override {
+	void execute(sp_mobj sender, int signal_code, sp_obj param) const override {
 		PYBIND11_OVERLOAD_PURE(
 			void,
 			bs_slot,
 			execute,
-			sender, signal_code, param
+			std::move(sender), signal_code, std::move(param)
 		);
 	}
 };
 
 // bs_imessaging wrapper
-class py_bs_imessaging : public bs_imessaging {
+// template used to flatten trampoline hierarchy -- they don't support multiple inheritance
+template<typename Next = bs_imessaging>
+class py_bs_imessaging : public Next {
 public:
-	using bs_imessaging::bs_imessaging;
+	using Next::Next;
 
 	bool subscribe(int signal_code, const sp_slot& slot) const override {
 		PYBIND11_OVERLOAD_PURE(
 			bool,
-			bs_imessaging,
+			Next,
 			subscribe,
 			signal_code, slot
 		);
@@ -50,7 +52,7 @@ public:
 	bool unsubscribe(int signal_code, const sp_slot& slot) const override {
 		PYBIND11_OVERLOAD_PURE(
 			bool,
-			bs_imessaging,
+			Next,
 			unsubscribe,
 			signal_code, slot
 		);
@@ -59,7 +61,7 @@ public:
 	ulong num_slots(int signal_code) const override {
 		PYBIND11_OVERLOAD_PURE(
 			ulong,
-			bs_imessaging,
+			Next,
 			num_slots,
 			signal_code
 		);
@@ -68,7 +70,7 @@ public:
 	bool fire_signal(int signal_code, const sp_obj& param) const override {
 		PYBIND11_OVERLOAD_PURE(
 			bool,
-			bs_imessaging,
+			Next,
 			fire_signal,
 			signal_code, param
 		);
@@ -77,16 +79,16 @@ public:
 	std::vector< int > get_signal_list() const override {
 		PYBIND11_OVERLOAD_PURE(
 			std::vector< int >,
-			bs_imessaging,
+			Next,
 			get_signal_list
 		);
 	}
 };
 
-
-class py_bs_messaging : public bs_messaging {
+// resulting trampoline for bs_mesagins
+class py_bs_messaging : public py_bs_imessaging< py_object<bs_messaging> > {
 public:
-	using bs_messaging::bs_messaging;
+	using py_bs_imessaging<py_object<bs_messaging>>::py_bs_imessaging;
 
 	bool subscribe(int signal_code, const sp_slot& slot) const override {
 		PYBIND11_OVERLOAD(
@@ -153,19 +155,15 @@ public:
 
 void slot_tester(int c, const sp_slot& slot, const sp_obj& param ) {
 	slot->execute(nullptr, c, param);
-	//bs_type_info ti = BS_GET_TI(*slot);
-	//cout << &ti.get() << endl;
-	//cout << ti.name() << endl;
 }
 
-}
+} //eof hidden namespace
 
 // exporting function
 void py_bind_messaging(py::module& m) {
 	// export bs_slot wrapper
 	py::class_<
-		bs_slot, py_bs_slot,
-		std::shared_ptr< bs_slot >
+		bs_slot, py_bs_slot, std::shared_ptr<bs_slot>
 	>(m, "slot")
 		.def(py::init<>())
 		.def("execute", &bs_slot::execute)
@@ -176,28 +174,34 @@ void py_bind_messaging(py::module& m) {
 
 	// bs_imessaging abstract class
 	py::class_<
-		bs_imessaging, py_bs_imessaging,
-		std::shared_ptr< bs_imessaging >
+		bs_imessaging, py_bs_imessaging<>, std::shared_ptr<bs_imessaging>
 	>(m, "imessaging")
 		.def("subscribe"       , &bs_imessaging::subscribe)
 		.def("unsubscribe"     , &bs_imessaging::unsubscribe)
 		.def("num_slots"       , &bs_imessaging::num_slots)
-		.def("fire_signal"     , &bs_imessaging::fire_signal)
+		.def("fire_signal"     , &bs_imessaging::fire_signal,
+			"signal_code"_a, "param"_a = nullptr
+		)
 		.def("get_signal_list" , &bs_imessaging::get_signal_list)
 	;
 
 	// bs_messaging
 	bool (bs_messaging::*add_signal_ptr)(int) = &bs_messaging::add_signal;
+
 	py::class_<
-		bs_messaging, py_bs_messaging,
+		bs_messaging, bs_imessaging, objbase, py_bs_messaging,
 		std::shared_ptr< bs_messaging >
-	>(m, "messaging")
-		.def(py::init<>())
-		.def(py::init< bs_messaging::sig_range_t >())
+	>(m, "messaging", py::multiple_inheritance())
+		BSPY_EXPORT_DEF(bs_messaging)
+		BSPY_ENABLE_PYOBJ(bs_messaging)
+		.def(py::init_alias<>())
+		.def(py::init_alias< bs_messaging::sig_range_t >())
 		.def("subscribe"       , &bs_messaging::subscribe)
 		.def("unsubscribe"     , &bs_messaging::unsubscribe)
 		.def("num_slots"       , &bs_messaging::num_slots)
-		.def("fire_signal"     , &bs_messaging::fire_signal)
+		.def("fire_signal"     , &bs_messaging::fire_signal,
+			"signal_code"_a, "param"_a = nullptr
+		)
 		.def("add_signal"      , add_signal_ptr)
 		.def("remove_signal"   , &bs_messaging::remove_signal)
 		.def("get_signal_list" , &bs_messaging::get_signal_list)
