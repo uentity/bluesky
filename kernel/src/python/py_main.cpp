@@ -18,8 +18,8 @@ void py_bind_objbase(py::module& m);
 
 BS_INIT_PY(bs) {
 	py_bind_common(m);
-	py_bind_messaging(m);
 	py_bind_objbase(m);
+	py_bind_messaging(m);
 }
 
 }}
