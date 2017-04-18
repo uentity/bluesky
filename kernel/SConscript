@@ -55,6 +55,7 @@ py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in Split("""
 	py_main.cpp
 	py_messaging.cpp
 	py_objbase.cpp
+	py_misc.cpp
 """)];
 
 # setup default build environment
