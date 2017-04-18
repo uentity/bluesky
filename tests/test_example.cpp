@@ -4,7 +4,9 @@
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-// classes
+/*-----------------------------------------------------------------------------
+ *  objbase
+ *-----------------------------------------------------------------------------*/
 class objbase : public std::enable_shared_from_this< objbase > {
 	int prop_ = 42;
 public:
@@ -16,37 +18,6 @@ public:
 };
 using sp_obj = std::shared_ptr<objbase>;
 using sp_cobj = std::shared_ptr<const objbase>;
-
-class iface {
-public:
-	int n = 42;
-	virtual int f() const = 0;
-};
-
-class mytype : public iface, public objbase {
-public:
-	std::string name() const override {
-		return "mytype";
-	}
-	int f() const override {
-		return 42;
-	}
-};
-using sp_my = std::shared_ptr<mytype>;
-using sp_cmy = std::shared_ptr<const mytype>;
-
-// functors
-class myslot1 {
-public:
-	using Param = sp_cmy;
-	virtual void act(Param param) const = 0;
-};
-
-class myslot2 {
-public:
-	using Param = sp_cobj;
-	virtual void act(Param param) const = 0;
-};
 
 // trampoline
 template<class T = objbase>
@@ -69,6 +40,16 @@ public:
 	double pyprop() const { return pyprop_; }
 };
 
+/*-----------------------------------------------------------------------------
+ *  iface
+ *-----------------------------------------------------------------------------*/
+class iface {
+public:
+	int n = 42;
+	virtual int f() const = 0;
+};
+
+// trampoline
 template<class T = iface>
 class py_iface : public T  {
 public:
@@ -79,7 +60,22 @@ public:
 	}
 };
 
-// bind mytype
+/*-----------------------------------------------------------------------------
+ *  mytype
+ *-----------------------------------------------------------------------------*/
+class mytype : public iface, public objbase {
+public:
+	std::string name() const override {
+		return "mytype";
+	}
+	int f() const override {
+		return 42;
+	}
+};
+using sp_my = std::shared_ptr<mytype>;
+using sp_cmy = std::shared_ptr<const mytype>;
+
+// trmapoline
 class py_mytype : public py_iface<py_objbase_<mytype>> {
 public:
 	using py_iface<py_objbase_<mytype>>::py_iface;
@@ -89,6 +85,73 @@ public:
 	}
 };
 
+/*-----------------------------------------------------------------------------
+ *  mytype_simple
+ *-----------------------------------------------------------------------------*/
+class mytype_simple : public objbase {
+public:
+	long value;
+
+	using objbase::objbase;
+	mytype_simple(long value_) : value(value_) {}
+
+	std::string name() const override {
+		return "mytype_simple";
+	}
+};
+
+// custom type cast
+NAMESPACE_BEGIN(pybind11)
+NAMESPACE_BEGIN(detail)
+
+template<> struct type_caster<std::shared_ptr<mytype_simple>> {
+	std::shared_ptr<mytype_simple> value;
+
+	static PYBIND11_DESCR name() {
+		return type_descr(_("mytype_simple"));
+	}
+
+	bool load(handle src, bool) {
+		/* Extract PyObject from handle */
+		PyObject *source = src.ptr();
+		/* Try converting into a Python integer value */
+		PyObject *tmp = PyNumber_Long(source);
+		if (!tmp)
+			return false;
+		/* Now try to convert into a C++ int */
+		value = std::make_shared<mytype_simple>(PyLong_AsLong(tmp));
+		Py_DECREF(tmp);
+		/* Ensure return code was OK (to avoid out-of-range errors etc) */
+		return !PyErr_Occurred();
+	}
+
+	static handle cast(const std::shared_ptr<mytype_simple>& src, return_value_policy, handle) {
+		return PyLong_FromLong(src->value);
+	}
+
+	operator std::shared_ptr<mytype_simple>() { return value; }
+	template< typename > using cast_op_type = std::shared_ptr<mytype_simple>;
+};
+
+NAMESPACE_END(detail)
+NAMESPACE_END(pybind11)
+
+/*-----------------------------------------------------------------------------
+ *  functors
+ *-----------------------------------------------------------------------------*/
+class myslot1 {
+public:
+	using Param = sp_cmy;
+	virtual void act(Param param) const = 0;
+};
+
+class myslot2 {
+public:
+	using Param = sp_cobj;
+	virtual void act(Param param) const = 0;
+};
+
+// trmapoline
 template<class Slot>
 class py_myslot : public Slot {
 public:
@@ -107,7 +170,7 @@ PYBIND11_PLUGIN(example) {
 	py::module m("example");
 
 	// bind objbase
-	py::class_<objbase, py_objbase_<>, std::shared_ptr<objbase>>(m, "objbase")
+	py::class_<objbase, py_objbase<>, std::shared_ptr<objbase>>(m, "objbase")
 		.def(py::init_alias<>())
 		.def("name", &objbase::name)
 		.def_property_readonly("prop", &objbase::prop)
@@ -135,6 +198,20 @@ PYBIND11_PLUGIN(example) {
 			s->act(src.shared_from_this());
 		})
 	;
+
+	//py::class_<mytype_simple, objbase, py_objbase_<mytype_simple>, std::shared_ptr<mytype_simple> >(m, "mytype_simple")
+	//	.def(py::init_alias<>())
+	//	.def("name", &mytype_simple::name)
+	//;
+	m.def("test_objbase_pass", [](std::shared_ptr<objbase> obj) {
+		std::cout << "Am I mytype_simple instance? " << std::boolalpha
+			<< bool(std::dynamic_pointer_cast<mytype_simple>(obj)) << std::endl;
+	});
+	m.def("test_mytype_pass", [](std::shared_ptr<mytype_simple> obj) {
+		std::cout << "Am I objbase instance? " << std::boolalpha
+			<< bool(std::dynamic_pointer_cast<objbase>(obj)) << std::endl;
+	});
+	//py::implicitly_convertible< std::shared_ptr<mytype_simple>, objbase >();
 
 	// bind slot
 	py::class_<myslot1, py_myslot<myslot1>, std::shared_ptr<myslot1>>(m, "myslot1")
