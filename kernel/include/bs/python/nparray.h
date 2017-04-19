@@ -72,18 +72,6 @@ public:
 			std::copy(from, to, data());
 	}
 
-	// copy-costruct from passed container
-	template<
-		typename Container,
-		typename = std::enable_if_t<
-			std::is_class< Container >::value &&
-			!std::is_base_of< pyarray_t, Container >::value
-		>
-	>
-	bs_nparray_traits(const Container& in) : pyarray_t(std::distance(std::begin(in), std::end(in))) {
-		std::copy(std::begin(in), std::end(in), data());
-	}
-
 	// specific implementation of resize
 	// disables refcheck - use with care
 	void resize(size_type new_size) {
