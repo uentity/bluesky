@@ -20,24 +20,20 @@ using sp_obj = std::shared_ptr<objbase>;
 using sp_cobj = std::shared_ptr<const objbase>;
 
 // trampoline
+class py_prop {
+	double pyprop_ = 42.84;
+public:
+	double pyprop() const { return pyprop_; }
+};
+
 template<class T = objbase>
-class py_objbase : public T {
+class py_objbase : public T, public py_prop {
 public:
 	using T::T;
 
 	std::string name() const override {
 		PYBIND11_OVERLOAD(std::string, T, name);
 	}
-};
-
-template<class T = objbase>
-class py_objbase_ : public py_objbase<T> {
-	double pyprop_ = 42.84;
-
-public:
-	using py_objbase<T>::py_objbase;
-
-	double pyprop() const { return pyprop_; }
 };
 
 /*-----------------------------------------------------------------------------
@@ -76,9 +72,9 @@ using sp_my = std::shared_ptr<mytype>;
 using sp_cmy = std::shared_ptr<const mytype>;
 
 // trmapoline
-class py_mytype : public py_iface<py_objbase_<mytype>> {
+class py_mytype : public py_iface<py_objbase<mytype>> {
 public:
-	using py_iface<py_objbase_<mytype>>::py_iface;
+	using py_iface<py_objbase<mytype>>::py_iface;
 
 	int f() const override {
 		PYBIND11_OVERLOAD(int, mytype, f);
@@ -175,8 +171,9 @@ PYBIND11_PLUGIN(example) {
 		.def("name", &objbase::name)
 		.def_property_readonly("prop", &objbase::prop)
 		.def_property_readonly("refs", [](const objbase& src) { return src.shared_from_this().use_count() - 1; })
-		.def_property_readonly("pyprop", [](const py_objbase_<>& src) {
-			return src.pyprop();
+		.def_property_readonly("pyprop", [](const objbase& src) {
+			auto py_src = dynamic_cast<const py_prop*>(&src);
+			return py_src->pyprop();
 		})
 	;
 
