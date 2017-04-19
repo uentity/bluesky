@@ -15,6 +15,8 @@
 	#pragma warning(disable:4275)
 	// disable xxx needs to have dll-interface blah-blah
 	#pragma warning(disable:4251)
+	// deprecation is not an error (for pybind11)
+	#pragma warning(disable:4996)
 
 	// API export/import macro
 	#define _BS_API_EXPORT __declspec(dllexport)
