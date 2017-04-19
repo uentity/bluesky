@@ -8,11 +8,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/detail/lib_descriptor.h>
+#include <bs/plugin_descriptor.h>
 #include <bs/exception.h>
 #include <bs/misc.h>
 
 #ifdef _WIN32
-#include <windows.h>
 #include <Psapi.h>
 #elif defined(UNIX)
 #include <dlfcn.h>
@@ -30,7 +30,7 @@ bool lib_descriptor::load(const char* fname) {
 #ifdef UNIX
 	handle_ = dlopen(fname, RTLD_GLOBAL | RTLD_NOW);
 #else
-	handle_ = LoadLibrary(LPCSTR(fname));
+	handle_ = LoadLibrary(LPCTSTR(fname));
 #endif
 	if (!handle_) {
 		throw bs_kexception(dll_error_message().c_str(), "lib_descriptor");
@@ -80,18 +80,18 @@ void* lib_descriptor::load_sym_glob_name(const char* sym_name) {
 			plugin_descriptor* pd = nullptr;
 			ulong m_ind = 0;
 
-			//get handle of current process
+			// get handle of current process
 			hproc = GetCurrentProcess();
 
-			//enumerate all modules of current process
+			// enumerate all modules of current process
 			HMODULE res = nullptr;
 			if(hproc && EnumProcessModules(hproc, hmods, sizeof(hmods), &cbNeeded))	{
 				ulong cnt = cbNeeded / sizeof(HMODULE);
 				for (ulong i = 0; i < cnt; ++i) {
-					//search for given symbol in i-th module
+					// search for given symbol in i-th module
 					if(pdf = (BS_GET_PLUGIN_DESCRIPTOR)GetProcAddress(hmods[i], "bs_get_plugin_descriptor")) {
-						//get pointer to plugin_descriptor & check if this is a kernel
-						if((pd = pdf()) && pd->name_.compare("BlueSky kernel") == 0) {
+						// get pointer to plugin_descriptor & check if this is a kernel
+						if((pd = pdf()) && pd->name.compare("kernel") == 0) {
 							res = hmods[i];
 							break;
 						}

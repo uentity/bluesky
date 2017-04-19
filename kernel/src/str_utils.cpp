@@ -11,6 +11,9 @@
 #include <boost/locale.hpp>
 #include <boost/lexical_cast.hpp>
 #include <iostream>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace blue_sky {
 

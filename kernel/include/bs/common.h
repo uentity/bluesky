@@ -12,6 +12,9 @@
 // prevent warnings about macro redeifinition - include Python.h
 // at the very beginning
 #if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+#ifdef _MSC_VER
+#define HAVE_ROUND
+#endif
 #include <Python.h>
 #endif
 

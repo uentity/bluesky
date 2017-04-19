@@ -5,6 +5,9 @@
 #pragma once
 
 #include <bs/common.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 // hide implementation
 namespace blue_sky { namespace detail {
@@ -13,8 +16,11 @@ namespace blue_sky { namespace detail {
  *-----------------------------------------------------------------------------*/
 struct BS_API lib_descriptor {
 	std::string fname_; //!< path to dynamic library
-	// seems to be the same in both UNIX and Windows
+#ifdef _WIN32
+	HMODULE handle_;
+#else
 	void* handle_;
+#endif
 
 	lib_descriptor();
 
