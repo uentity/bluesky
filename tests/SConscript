@@ -13,7 +13,7 @@ if build_kind == "init" :
 	Return();
 
 exe_name = "bs_tests";
-test_units = files(["."], excludes=["test_pymod.cpp", "test_nparray.cpp"]).sources;
+test_units = files(["."], excludes=["test_pymod.cpp", "test_nparray.cpp", "test_example.cpp"]).sources;
 
 # setup default build environment
 tests_env = custom_env.Clone();
@@ -27,20 +27,20 @@ bs_tests = tests_env.Program(
 );
 
 # library for testing Python module
-tests_env['SHLIBPREFIX'] = '';
-test_pymod = tests_env.SharedLibrary(
+custom_env['SHLIBPREFIX'] = '';
+test_pymod = custom_env.SharedLibrary(
 	target = osp.join(tar_exe_dir, 'test_pymod'),
 	source = 'test_pymod.cpp'
 );
 
 # library for testing Python numpy arrays
-test_nparray = tests_env.SharedLibrary(
+test_nparray = custom_env.SharedLibrary(
 	target = osp.join(tar_exe_dir, 'test_nparray'),
 	source = 'test_nparray.cpp'
 );
 
 # library for testing different Python-bindings related things
-test_example = tests_env.SharedLibrary(
+test_example = custom_env.SharedLibrary(
 	target = osp.join(tar_exe_dir, 'example'),
 	source = 'test_example.cpp'
 );
