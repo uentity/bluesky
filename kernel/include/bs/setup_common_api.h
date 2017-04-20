@@ -17,6 +17,8 @@
 	#pragma warning(disable:4251)
 	// deprecation is not an error (for pybind11)
 	#pragma warning(disable:4996)
+	// 4003 is triggered by Boost.Preprocessor
+	#pragma warning(disable:4003)
 
 	// API export/import macro
 	#define _BS_API_EXPORT __declspec(dllexport)
