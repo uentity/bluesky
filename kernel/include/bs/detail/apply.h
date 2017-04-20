@@ -10,8 +10,13 @@
 #pragma once
 
 #include <type_traits>
-#include "invoke.h"
 #include "tuple_utils.h"
+#ifdef _MSC_VER
+#define bs_invoke std::invoke
+#else
+#include "invoke.h"
+#define bs_invoke ::blue_sky::invoke
+#endif
 
 namespace blue_sky {
 
@@ -22,7 +27,7 @@ namespace blue_sky {
 template< typename F, typename Tuple, size_t... I >
 constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
 	// missing std::invoke here
-	return invoke(std::forward<F>(f), std::get<I>(std::forward<Tuple>(t))...);
+	return bs_invoke(std::forward<F>(f), std::get<I>(std::forward<Tuple>(t))...);
 }
 
 template< typename F, typename Tuple >
