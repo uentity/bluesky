@@ -133,6 +133,8 @@ bs_signal::bs_signal(int signal_code)
 	: pimpl_(new signal_impl(signal_code))
 {}
 
+bs_signal::~bs_signal() = default;
+
 void bs_signal::init(int signal_code) const {
 	if(signal_code > 0)
 		pimpl_->signal_code_ = signal_code;

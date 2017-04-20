@@ -39,6 +39,7 @@ public:
 	typedef std::shared_ptr< bs_signal > sp_signal;
 
 	bs_signal(int signal_code);
+	~bs_signal();
 	// delayed initialization
 	void init(int signal_code) const;
 	// check signal code
