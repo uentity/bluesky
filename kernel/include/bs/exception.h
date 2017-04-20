@@ -55,7 +55,7 @@ public:
 	}
 
 	// enable printing & loging facility
-	friend std::ostream& operator <<(std::ostream& os, const bs_exception& ex);
+	friend BS_API std::ostream& operator <<(std::ostream& os, const bs_exception& ex);
 
 	// write exeption to kernel error log
 	void print() const;
