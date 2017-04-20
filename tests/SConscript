@@ -27,20 +27,21 @@ bs_tests = tests_env.Program(
 );
 
 # library for testing Python module
-custom_env['SHLIBPREFIX'] = '';
-test_pymod = custom_env.SharedLibrary(
+py_env = custom_env.Clone();
+py_env['SHLIBPREFIX'] = '';
+test_pymod = py_env.SharedLibrary(
 	target = osp.join(tar_exe_dir, 'test_pymod'),
 	source = 'test_pymod.cpp'
 );
 
 # library for testing Python numpy arrays
-test_nparray = custom_env.SharedLibrary(
+test_nparray = py_env.SharedLibrary(
 	target = osp.join(tar_exe_dir, 'test_nparray'),
 	source = 'test_nparray.cpp'
 );
 
 # library for testing different Python-bindings related things
-test_example = custom_env.SharedLibrary(
+test_example = py_env.SharedLibrary(
 	target = osp.join(tar_exe_dir, 'example'),
 	source = 'test_example.cpp'
 );
