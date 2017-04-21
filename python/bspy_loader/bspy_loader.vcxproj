@@ -72,26 +72,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>bs</TargetName>
     <TargetExt>.pyd</TargetExt>
-    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)build\$(ProjectName)\$(Configuration)$(Platform)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\exe\$(Configuration)$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)..\..\build\$(ProjectName)\$(Configuration)$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <TargetName>bs</TargetName>
     <TargetExt>.pyd</TargetExt>
-    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)build\$(ProjectName)\$(Configuration)$(Platform)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\exe\$(Configuration)$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)..\..\build\$(ProjectName)\$(Configuration)$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>bs</TargetName>
     <TargetExt>.pyd</TargetExt>
-    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)build\$(ProjectName)\$(Configuration)$(Platform)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\exe\$(Configuration)$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)..\..\build\$(ProjectName)\$(Configuration)$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>bs</TargetName>
     <TargetExt>.pyd</TargetExt>
-    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)build\$(ProjectName)\$(Configuration)$(Platform)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\exe\$(Configuration)$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)..\..\build\$(ProjectName)\$(Configuration)$(Platform)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
