@@ -13,12 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with BlueSky; if not, see <http://www.gnu.org/licenses/>.
 
-#include <pybind11/pybind11.h>
-
 #include <bs/common.h>
 #include <bs/kernel.h>
 #include <bs/detail/lib_descriptor.h>
 #include <bs/log.h>
+
+#include <pybind11/pybind11.h>
 
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/stringize.hpp>
