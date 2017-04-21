@@ -74,11 +74,11 @@ NAMESPACE_BEGIN(python)
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-///*-----------------------------------------------------------------------------
+// *-----------------------------------------------------------------------------
 // *  trampoline class for bindings for BS objects
 // *-----------------------------------------------------------------------------*/
 template<typename Object = objbase>
-class BS_API py_object : public Object {
+class py_object : public Object {
 public:
 	// objbase can carry any Python instance
 	py::object pyobj = py::none();
