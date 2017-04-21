@@ -34,10 +34,14 @@ public:
 
 		template< typename T, typename... Ts >
 		struct rem_tape_head {
-			//using tuple_t = std::tuple< Ts... >;
 			using type = log_tape< Level, Ts... >;
+#ifdef _MSC_VER
 			using write_overl_t = decltype(&type::template write< Ts... >);
 			static constexpr write_overl_t write_overl = &type::template write< Ts... >;
+#else
+			using write_overl_t = decltype((type::template write< Ts... >));
+			static constexpr write_overl_t write_overl = type::template write< Ts... >;
+#endif
 		};
 
 		// construct from args tuple
