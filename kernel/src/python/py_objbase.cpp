@@ -32,7 +32,7 @@ void py_bind_objbase(py::module& m) {
 		// use init_alias to always construct trampoline class and have valid pyobj property
 		.def(py::init_alias<>())
 		.def(py::init_alias<py::object>())
-		.def("bs_resolve_type", &objbase::bs_resolve_type)
+		.def("bs_resolve_type", &objbase::bs_resolve_type, py::return_value_policy::reference)
 		.def("bs_register_this", &objbase::bs_register_this)
 		.def("bs_free_this", &objbase::bs_free_this)
 		.def("swap", &objbase::swap)

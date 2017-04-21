@@ -60,7 +60,7 @@ BSPY_ENABLE_PYOBJ_((T<T_spec_tup>))
 #define BSPY_EXPORT_DEF_(T_tup)                                \
 .def_property_readonly_static("bs_type", [](pybind11::object){ \
     return BOOST_PP_TUPLE_ENUM(T_tup)::bs_type();              \
-})
+}, pybind11::return_value_policy::reference)
 // for types with <= 1 template params
 #define BSPY_EXPORT_DEF(T) \
 BSPY_EXPORT_DEF_((T))
