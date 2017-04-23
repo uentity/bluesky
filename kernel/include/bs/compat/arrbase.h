@@ -22,7 +22,7 @@ namespace blue_sky {
 /// Expected that underlying container is std::vector-like, i.e.
 /// all elements are stored in continuos memory segment
 template< class T >
-class BS_API bs_arrbase {
+class bs_arrbase {
 public:
 	typedef std::shared_ptr< bs_arrbase > sp_arrbase;
 
@@ -181,7 +181,7 @@ public:
  * bs_arrbase_impl = bs_arrbase + custom container (minimum overloads)
  *----------------------------------------------------------------*/
 template< class T, class array_t >
-class BS_API bs_arrbase_impl : public array_t, public bs_arrbase< T > {
+class bs_arrbase_impl : public array_t, public bs_arrbase< T > {
 public:
     // traits for bs_array
 	using container = array_t;

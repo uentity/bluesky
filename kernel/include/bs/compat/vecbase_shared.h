@@ -17,7 +17,7 @@ namespace blue_sky {
  * Make array around plain buffer optionally held by bs_arrbase-compatible container 
  *----------------------------------------------------------------*/
 template< class T, class vector_t >
-class BS_API bs_vecbase_shared_impl :
+class bs_vecbase_shared_impl :
 	// bind bs_vecbase< T > interface to vector_t container
 	// this allows to utilise vecbase implementation directly in shared_data_
 	public bs_arrbase_shared_impl< T, bs_vecbase_impl< T, vector_t > >,

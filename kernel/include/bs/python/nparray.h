@@ -26,7 +26,7 @@
 NAMESPACE_BEGIN(blue_sky)
 
 template< typename T >
-class BS_API bs_nparray_traits
+class bs_nparray_traits
 	: public bs_arrbase< T >, public pybind11::array_t< T, pybind11::array::forcecast > {
 public:
     // traits for bs_array
@@ -282,7 +282,5 @@ public:
 	template <typename> using cast_op_type = sp_array;
 };
 
-
 NAMESPACE_END(detail)
 NAMESPACE_END(pybind11)
-

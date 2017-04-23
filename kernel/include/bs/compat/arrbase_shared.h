@@ -21,7 +21,7 @@ namespace blue_sky {
  * Thus, array data is shared
  *----------------------------------------------------------------*/
 template< class T, class array_t >
-class BS_API bs_arrbase_shared_impl : public bs_arrbase< T > {
+class bs_arrbase_shared_impl : public bs_arrbase< T > {
 public:
 	// traits for bs_array
 	using arrbase = bs_arrbase< T >;

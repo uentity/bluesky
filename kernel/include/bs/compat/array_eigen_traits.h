@@ -17,7 +17,7 @@ namespace blue_sky {
 
 // represents row
 template< class T >
-class BS_API eigen_traits : public Eigen::Array< T, 1, Eigen::Dynamic >, public bs_arrbase< T > {
+class eigen_traits : public Eigen::Array< T, 1, Eigen::Dynamic >, public bs_arrbase< T > {
 public:
 	// traits for bs_array
 	using container = Eigen::Array< T, 1, Eigen::Dynamic >;
@@ -113,7 +113,6 @@ public:
 	void swap(eigen_traits& rhs) {
 		container::swap(rhs);
 	}
-
 };
 
 } /* namespace blue_sky */

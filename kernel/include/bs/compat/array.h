@@ -24,7 +24,7 @@ namespace blue_sky {
 
 /// @brief traits for arrays with std::vector container
 template< class T >
-struct BS_API vector_traits : public bs_vecbase_impl< T, std::vector< T > > {};
+struct vector_traits : public bs_vecbase_impl< T, std::vector< T > > {};
 
 /*-----------------------------------------------------------------------------
  *  bs_array - BlueSky class to choose arrbase_impl or vecbase_impl for different containers
@@ -36,7 +36,7 @@ struct BS_API vector_traits : public bs_vecbase_impl< T, std::vector< T > > {};
 ///           T -- type of array elements
 /// cont_traits -- specifies underlying container
 template< class T, template< class > class cont_traits = BS_ARRAY_DEFAULT_TRAITS >
-class BS_API bs_array : public cont_traits< T >::bs_array_base, public objbase {
+class bs_array : public cont_traits< T >::bs_array_base, public objbase {
 public:
 	// traits
 	using cont_traits_t = cont_traits< T >;
@@ -140,7 +140,6 @@ protected:
 			std::copy(rhs.begin(), rhs.end(), this->begin());
 		}
 	}
-
 
 	BS_TYPE_DECL_INL_BEGIN(bs_array, objbase, "", \
 			"Array of values of the same type indexed by integral type", true, true)

@@ -18,7 +18,7 @@ namespace blue_sky {
  *-----------------------------------------------------------------------------*/
 // difference from arrbase is insert and erase operations
 template< class T >
-class BS_API bs_vecbase {
+class bs_vecbase {
 public:
 	using arrbase    = bs_arrbase< T >;
 	using key_type   = typename arrbase::key_type;
@@ -49,7 +49,7 @@ public:
  * bs_vecbase_impl implements bs_vecbase and bs_arrbase iface using custom vector-like container
  *----------------------------------------------------------------*/
 template< class T, class vector_t >
-class BS_API bs_vecbase_impl : public bs_arrbase_impl< T, vector_t >, public bs_vecbase< T > {
+class bs_vecbase_impl : public bs_arrbase_impl< T, vector_t >, public bs_vecbase< T > {
 public:
 	using base_t        = bs_arrbase_impl< T, vector_t >;
     // traits for bs_array
