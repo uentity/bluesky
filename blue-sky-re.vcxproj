@@ -112,7 +112,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{D269D8FA-A040-4E02-BB3C-61F3B9B4C1A9}</ProjectGuid>
     <RootNamespace>blueskyre</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
