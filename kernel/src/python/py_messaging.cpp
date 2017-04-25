@@ -81,12 +81,12 @@ public:
 		);
 	}
 
-	bool fire_signal(int signal_code, const sp_obj& param) const override {
+	bool fire_signal(int signal_code, const sp_obj& param, const sp_cobj& sender) const override {
 		PYBIND11_OVERLOAD_PURE(
 			bool,
 			Next,
 			fire_signal,
-			signal_code, param
+			signal_code, param, sender
 		);
 	}
 
@@ -131,12 +131,12 @@ public:
 		);
 	}
 
-	bool fire_signal(int signal_code, const sp_obj& param) const override {
+	bool fire_signal(int signal_code, const sp_obj& param, const sp_cobj& sender) const override {
 		PYBIND11_OVERLOAD(
 			bool,
 			bs_messaging,
 			fire_signal,
-			signal_code, param
+			signal_code, param, sender
 		);
 	}
 
@@ -194,7 +194,7 @@ void py_bind_messaging(py::module& m) {
 		.def("unsubscribe"     , &bs_imessaging::unsubscribe)
 		.def("num_slots"       , &bs_imessaging::num_slots)
 		.def("fire_signal"     , &bs_imessaging::fire_signal,
-			"signal_code"_a, "param"_a = nullptr
+			"signal_code"_a, "param"_a = nullptr, "sender"_a = nullptr
 		)
 		.def("get_signal_list" , &bs_imessaging::get_signal_list)
 	;
@@ -214,7 +214,7 @@ void py_bind_messaging(py::module& m) {
 		.def("unsubscribe"     , &bs_messaging::unsubscribe)
 		.def("num_slots"       , &bs_messaging::num_slots)
 		.def("fire_signal"     , &bs_messaging::fire_signal,
-			"signal_code"_a, "param"_a = nullptr
+			"signal_code"_a, "param"_a = nullptr, "sender"_a = nullptr
 		)
 		.def("add_signal"      , add_signal_ptr)
 		.def("remove_signal"   , &bs_messaging::remove_signal)

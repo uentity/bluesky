@@ -82,7 +82,7 @@ public:
 	bool subscribe(int signal_code, const sp_slot& slot) const;
 	bool unsubscribe(int signal_code, const sp_slot& slot) const;
 	ulong num_slots(int signal_code) const;
-	bool fire_signal(int signal_code, const sp_obj& param = nullptr) const;
+	bool fire_signal(int signal_code, const sp_obj& param = nullptr, const sp_cobj& sender = nullptr) const;
 	std::vector< int > get_signal_list() const;
 
 	// default ctor - doesn't add any signals

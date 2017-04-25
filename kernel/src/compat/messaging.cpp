@@ -187,16 +187,15 @@ void bs_messaging::swap(bs_messaging& rhs) {
 //	return *this;
 //}
 
-bool bs_messaging::fire_signal(int signal_code, const sp_obj& params) const {
+bool bs_messaging::fire_signal(int signal_code, const sp_obj& params, const sp_cobj& sender) const {
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig == signals_.end()) return false;
 
-	sig->second->fire(shared_from_this(), params);
+	sig->second->fire(sender ? sender : shared_from_this(), params);
 	return true;
 }
 
-bool bs_messaging::add_signal(int signal_code)
-{
+bool bs_messaging::add_signal(int signal_code) {
 	if(signals_.find(signal_code) != signals_.end()) return false;
 
 	sp_signal sig =  BS_KERNEL.create_object(bs_signal::bs_type(), signal_code);
@@ -239,7 +238,7 @@ bool bs_messaging::subscribe(int signal_code, const sp_slot& slot) const {
 	if(!slot) return false;
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig != signals_.end()) {
-		sig->second->connect(slot, shared_from_this());
+		sig->second->connect(slot);
 		return true;
 	}
 	return false;
