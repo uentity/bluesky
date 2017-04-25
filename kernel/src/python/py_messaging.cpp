@@ -24,12 +24,26 @@ public:
 	using bs_slot::bs_slot;
 
 	void execute(sp_cobj sender, int signal_code, sp_obj param) const override {
-		PYBIND11_OVERLOAD_PURE(
-			void,
-			bs_slot,
-			execute,
-			std::move(sender), signal_code, std::move(param)
-		);
+		// Use modified version of PYBIND11_OVERLOAD_PURE macro code
+		// original implementation would fail with runtime error that pure virtual method is called
+		// if no overload was found. But slot should be safe in sutuation when Python object is
+		// already destroyed. In such a case just DO NOTHING and return.
+		pybind11::gil_scoped_acquire gil;
+		pybind11::function overload = pybind11::get_overload(static_cast<const bs_slot *>(this), "execute");
+		if (overload) {
+			auto o = overload(std::move(sender), signal_code, std::move(param));
+			if (pybind11::detail::cast_is_temporary_value_reference<void>::value) {
+				static pybind11::detail::overload_caster_t<void> caster;
+				return pybind11::detail::cast_ref<void>(std::move(o), caster);
+			}
+			else return pybind11::detail::cast_safe<void>(std::move(o));
+		}
+		//PYBIND11_OVERLOAD_PURE(
+		//	void,
+		//	bs_slot,
+		//	execute,
+		//	std::move(sender), signal_code, std::move(param)
+		//);
 	}
 };
 
