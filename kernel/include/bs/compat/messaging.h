@@ -24,7 +24,7 @@ class BS_API bs_slot {
 public:
 	typedef std::shared_ptr< bs_slot > sp_slot;
 
-	virtual void execute(sp_mobj sender, int signal_code, sp_obj param) const = 0;
+	virtual void execute(sp_cobj sender, int signal_code, sp_obj param) const = 0;
 };
 using sp_slot = bs_slot::sp_slot;
 
@@ -46,12 +46,12 @@ public:
 	int get_code() const;
 
 	// if sender != nullptr then slot will be activated only for given sender
-	bool connect(const sp_slot& slot, const sp_mobj& sender = nullptr) const;
+	bool connect(const sp_slot& slot, const sp_cobj& sender = nullptr) const;
 	bool disconnect(const sp_slot& slot) const;
 	ulong num_slots() const;
 
 	//call slots, connected to this signal
-	void fire(const sp_mobj& sender = nullptr, const sp_obj& param = nullptr) const;
+	void fire(const sp_cobj& sender = nullptr, const sp_obj& param = nullptr) const;
 
 private:
 	class signal_impl;

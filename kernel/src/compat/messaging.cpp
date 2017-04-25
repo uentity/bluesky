@@ -35,7 +35,7 @@ template< class slot_ptr >
 class sync_layer {
 public:
 	static void fire_slot(
-		const slot_ptr& slot, sp_mobj&& sender, int signal_code, sp_obj&& param
+		const slot_ptr& slot, sp_cobj&& sender, int signal_code, sp_obj&& param
 	) {
 		if(slot)
 			// directly execute slot
@@ -47,11 +47,12 @@ public:
 template< class slot_ptr = sp_slot  >
 class slot_holder : public sync_layer< slot_ptr > {
 public:
-	typedef std::weak_ptr<const bs_imessaging> sender_ptr;
+	using sender_ptr = std::weak_ptr<const objbase>;
+	//typedef std::weak_ptr<const bs_imessaging> sender_ptr;
 	typedef sync_layer< slot_ptr > base_t;
 	using base_t::fire_slot;
 
-	slot_holder(slot_ptr slot, const sp_mobj& sender = nullptr)
+	slot_holder(slot_ptr slot, const sp_cobj& sender = nullptr)
 		: slot_(std::move(slot)), sender_(sender)
 	{}
 
@@ -67,11 +68,11 @@ public:
 		return (slot_ < rhs.slot_);
 	}
 
-	void operator()(const sp_mobj& sender, int signal_code, const sp_obj& param) const {
-		if(!sender_.expired() || (sender.get() == sender_.lock().get())) {
+	void operator()(const sp_cobj& sender, int signal_code, const sp_obj& param) const {
+		if(sender_.expired() || sender.get() == sender_.lock().get()) {
 			// right here NEW temp copies of sender and param will be created by compiler
 			// because fire_slot accepts only rvalue references
-			fire_slot(slot_, sp_mobj(sender), signal_code, sp_obj(param));
+			fire_slot(slot_, sp_cobj(sender), signal_code, sp_obj(param));
 		}
 	}
 
@@ -92,7 +93,7 @@ class bs_signal::signal_impl
 public:
 	//send signal command
 	typedef boost::signals2::signal<
-		void (const sp_mobj& sender, int signal_code, const sp_obj& param)
+		void (const sp_cobj& sender, int signal_code, const sp_obj& param)
 	> signal_engine;
 
 	//default ctor
@@ -103,12 +104,12 @@ public:
 		: signal_code_(sig_code)
 	{}
 
-	void fire(const sp_mobj& sender, const sp_obj& param) {
+	void fire(const sp_cobj& sender, const sp_obj& param) {
 		my_signal_(sender, signal_code_, param);
 	}
 
 	// if sender != nullptr then slot will be activated only for given sender
-	bool connect(const sp_slot& slot, const sp_mobj& sender = nullptr) {
+	bool connect(const sp_slot& slot, const sp_cobj& sender = nullptr) {
 		if(!slot) return false;
 		my_signal_.connect(slot_holder<>(slot, sender));
 		return true;
@@ -142,11 +143,11 @@ void bs_signal::init(int signal_code) const {
 		throw bs_kexception("Wrong signal code given", "bs_signal::init");
 }
 
-void bs_signal::fire(const sp_mobj& sender, const sp_obj& param) const {
+void bs_signal::fire(const sp_cobj& sender, const sp_obj& param) const {
 	pimpl_->fire(sender, param);
 }
 
-bool bs_signal::connect(const sp_slot& slot, const sp_mobj& sender) const {
+bool bs_signal::connect(const sp_slot& slot, const sp_cobj& sender) const {
 	return pimpl_->connect(slot, sender);
 }
 
@@ -190,7 +191,7 @@ bool bs_messaging::fire_signal(int signal_code, const sp_obj& params) const {
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig == signals_.end()) return false;
 
-	sig->second->fire(bs_shared_this<const bs_messaging>(), params);
+	sig->second->fire(shared_from_this(), params);
 	return true;
 }
 
@@ -238,7 +239,7 @@ bool bs_messaging::subscribe(int signal_code, const sp_slot& slot) const {
 	if(!slot) return false;
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig != signals_.end()) {
-		sig->second->connect(slot, bs_shared_this<const bs_messaging>());
+		sig->second->connect(slot, shared_from_this());
 		return true;
 	}
 	return false;

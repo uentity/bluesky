@@ -23,7 +23,7 @@ class py_bs_slot : public bs_slot {
 public:
 	using bs_slot::bs_slot;
 
-	void execute(sp_mobj sender, int signal_code, sp_obj param) const override {
+	void execute(sp_cobj sender, int signal_code, sp_obj param) const override {
 		PYBIND11_OVERLOAD_PURE(
 			void,
 			bs_slot,
@@ -206,6 +206,9 @@ void py_bind_messaging(py::module& m) {
 		.def("remove_signal"   , &bs_messaging::remove_signal)
 		.def("get_signal_list" , &bs_messaging::get_signal_list)
 		.def("clear"           , &bs_messaging::clear)
+		.def("test_slot1", [](const bs_messaging& src, const sp_slot& slot, const sp_obj param = nullptr) {
+			slot->execute(src.shared_from_this(), 42, param);
+		})
 	;
 
 	py_bind_signal(m);
