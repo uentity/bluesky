@@ -152,6 +152,17 @@ struct plugins_discover {
 	}
 
 	void init_conf_path() {
+		/*-----------------------------------------------------------------------------
+		 *  Logic here is the following
+		 *  1. Conf file from the latter path override previous one
+		 *  2. For UNIX order is the following:
+		 *  	/etc/blue-sky/blue-sky.conf
+		 *  	/home/$USER/.blue-sky/blue-sky.conf
+		 *  3. For Windows order is the following:
+		 *  	%ALLUSERSPROFILE%\blue-sky\blue-sky.conf (C:\ProgramData\...)
+		 *  	%APPDATA%\blue-sky\blue-sky.conf (C:\Users\%USER%\AppData\Roaming\...)
+		 *  4. blue-sky.conf from . dir is the last one
+		 *-----------------------------------------------------------------------------*/
 		std::string home_path;
 #ifdef UNIX
 		conf_path_.push_back("/etc/blue-sky/blue-sky.conf");
@@ -159,10 +170,10 @@ struct plugins_discover {
 		if(!home_path.empty())
 			conf_path_.push_back(home_path + "/.blue-sky/blue-sky.conf");
 #else // WINDOWS
-		home_path = ::getenv("APPDATA");
+		home_path = ::getenv("ALLUSERSPROFILE");
 		if(!home_path.empty())
 			conf_path_.push_back(home_path + "\\blue-sky\\blue-sky.conf");
-		home_path = ::getenv("ALLUSERSPROFILE");
+		home_path = ::getenv("APPDATA");
 		if(!home_path.empty())
 			conf_path_.push_back(home_path + "\\blue-sky\\blue-sky.conf");
 #endif // UNIX
@@ -189,23 +200,24 @@ struct plugins_discover {
 				add_paths(var, split_path_list(trim(pprefix)), true);
 		}
 
-		// TODO: discover path to kernel library as fallback
-		//if(cfg_.env_mp["BLUE_SKY_PATH"].empty())
-		//	cfg_.env_mp["BLUE_SKY_PATH"].push_back(".");
-		//if(cfg_.env_mp["BLUE_SKY_PREFIX"].empty())
-		//	cfg_.env_mp["BLUE_SKY_PREFIX"].push_back(".");
 
 		// 3. Add some predefined paths as a fallback - lowest priority
-		vstr_t& plugins_paths = bs_path_["BLUE_SKY_PLUGINS_PATH"];
+		vstr_t& plugins_paths = bs_path_[BS_PLUG_PATH];
+		// TODO: discover path to kernel library as fallback
+		// if no paths were set in config files, add current dir as highest priority search path
+		if(plugins_paths.empty()) add_path(plugins_paths, ".");
 #ifdef UNIX
-		add_path(plugins_paths, getenv_def("HOME") + "/.blue-sky/plugins");
-		add_path(plugins_paths, "/usr/share/blue-sky/plugins");
+		add_path(plugins_paths, getenv_def("HOME") + "/.blue-sky/plugins", true);
+		add_path(plugins_paths, "/usr/share/blue-sky/plugins", true);
 #else // WINDOWS
-		add_path(plugins_paths, getenv_def("ALLUSERSPROFILE") + "\\Application Data\\blue-sky\\plugins");
-		add_path(plugins_paths, getenv_def("APPDATA") + "\\blue-sky\\plugins");
+		add_path(plugins_paths, getenv_def("ALLUSERSPROFILE") + "\\Application Data\\blue-sky\\plugins", true);
+		add_path(plugins_paths, getenv_def("APPDATA") + "\\blue-sky\\plugins", true);
 #endif // UNIX
-		//current dir as fallback -- disabled
-		//add_path(plugins_paths, ".");
+
+		// now we literally need to reverse plugins paths order
+		// because LoadPlugins will start loading from FIRST path in list
+		// and skip all duplicates from tail paths
+		std::reverse(plugins_paths.begin(), plugins_paths.end());
 
 		// print some info
 		BSOUT << "--------" << bs_end;
