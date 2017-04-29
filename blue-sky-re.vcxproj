@@ -161,27 +161,27 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetExt>.dll</TargetExt>
-    <IntDir>build\$(Configuration)$(Platform)\</IntDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)$(Platform)\</IntDir>
     <TargetName>blue_sky</TargetName>
-    <OutDir>exe\$(Configuration)$(Platform)\</OutDir>
+    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <TargetExt>.dll</TargetExt>
-    <IntDir>build\$(Configuration)$(Platform)\</IntDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)$(Platform)\</IntDir>
     <TargetName>blue_sky</TargetName>
-    <OutDir>exe\$(Configuration)$(Platform)\</OutDir>
+    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetExt>.dll</TargetExt>
-    <IntDir>build\$(Configuration)$(Platform)\</IntDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)$(Platform)\</IntDir>
     <TargetName>blue_sky</TargetName>
-    <OutDir>exe\$(Configuration)$(Platform)\</OutDir>
+    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetExt>.dll</TargetExt>
-    <IntDir>build\$(Configuration)$(Platform)\</IntDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)$(Platform)\</IntDir>
     <TargetName>blue_sky</TargetName>
-    <OutDir>exe\$(Configuration)$(Platform)\</OutDir>
+    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -194,6 +194,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST_PATH)\lib;$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
+      <AdditionalDependencies>python27.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -207,6 +208,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST_PATH)\lib64;$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
+      <AdditionalDependencies>python27.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

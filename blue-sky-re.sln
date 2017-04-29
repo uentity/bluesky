@@ -10,6 +10,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bspy_loader", "python\bspy_
 		{D269D8FA-A040-4E02-BB3C-61F3B9B4C1A9} = {D269D8FA-A040-4E02-BB3C-61F3B9B4C1A9}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxproj", "{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -34,6 +36,14 @@ Global
 		{3918A718-3C07-4426-919E-3E2F1385E87C}.Release|x64.Build.0 = Release|x64
 		{3918A718-3C07-4426-919E-3E2F1385E87C}.Release|x86.ActiveCfg = Release|Win32
 		{3918A718-3C07-4426-919E-3E2F1385E87C}.Release|x86.Build.0 = Release|Win32
+		{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}.Debug|x64.ActiveCfg = Debug|x64
+		{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}.Debug|x64.Build.0 = Debug|x64
+		{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}.Debug|x86.ActiveCfg = Debug|Win32
+		{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}.Debug|x86.Build.0 = Debug|Win32
+		{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}.Release|x64.ActiveCfg = Release|x64
+		{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}.Release|x64.Build.0 = Release|x64
+		{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}.Release|x86.ActiveCfg = Release|Win32
+		{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
