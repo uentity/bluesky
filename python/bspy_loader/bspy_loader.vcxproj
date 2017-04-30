@@ -109,6 +109,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)exe\$(Configuration)$(Platform);$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
       <AdditionalDependencies>blue_sky.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y $(TargetDir)bs.pyd $(PYTHON_PATH)\DLLs</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -122,6 +125,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)exe\$(Configuration)$(Platform);$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
       <AdditionalDependencies>blue_sky.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y $(TargetDir)bs.pyd $(PYTHON_PATH)\DLLs</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -135,6 +141,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)exe\$(Configuration)$(Platform);$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
       <AdditionalDependencies>blue_sky.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y $(TargetDir)bs.pyd $(PYTHON64_PATH)\DLLs</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -152,6 +161,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)exe\$(Configuration)$(Platform);$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
       <AdditionalDependencies>blue_sky.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y $(TargetDir)bs.pyd $(PYTHON64_PATH)\DLLs</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
