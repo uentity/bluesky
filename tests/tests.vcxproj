@@ -22,6 +22,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="test_any_array.cpp" />
     <ClCompile Include="test_common.cpp" />
+    <ClCompile Include="test_load_plugins.cpp" />
     <ClCompile Include="test_log.cpp" />
     <ClCompile Include="test_type_descriptor.cpp" />
   </ItemGroup>
