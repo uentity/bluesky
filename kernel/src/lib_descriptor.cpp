@@ -30,10 +30,10 @@ bool lib_descriptor::load(const char* fname) {
 #ifdef UNIX
 	handle_ = dlopen(fname, RTLD_GLOBAL | RTLD_NOW);
 #else
-	handle_ = LoadLibrary(LPCTSTR(fname));
+	handle_ = LoadLibrary(fname);
 #endif
 	if (!handle_) {
-		throw bs_kexception(dll_error_message().c_str(), "lib_descriptor");
+		throw bs_kexception(dll_error_message().c_str(), (std::string("lib_descriptor:") + fname).c_str());
 	}
 	return (bool)handle_;
 }
