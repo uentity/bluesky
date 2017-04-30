@@ -194,7 +194,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST_PATH)\lib;$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
-      <AdditionalDependencies>python27.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -208,7 +208,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST_PATH)\lib64;$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
-      <AdditionalDependencies>python27.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
