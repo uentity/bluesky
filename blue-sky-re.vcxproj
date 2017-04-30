@@ -191,6 +191,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)\kernel\include;$(ProjectDir)\third_party\pybind11\include;$(ProjectDir)\third_party\actor-framework\libcaf_core;$(ProjectDir)\third_party\cereal\include;$(ProjectDir)\third_party\eigen;$(ProjectDir)\third_party\spdlog\include;$(LOKI_PATH)\include;$(BOOST_PATH);$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST_PATH)\lib;$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
@@ -205,6 +206,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)\kernel\include;$(ProjectDir)\third_party\pybind11\include;$(ProjectDir)\third_party\actor-framework\libcaf_core;$(ProjectDir)\third_party\cereal\include;$(ProjectDir)\third_party\eigen;$(ProjectDir)\third_party\spdlog\include;$(LOKI_PATH)\include;$(BOOST_PATH);$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BOOST_PATH)\lib64;$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
