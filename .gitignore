@@ -1,12 +1,8 @@
 *.so
 *.pyd
 *.dll
-*.sln
 *.sdf
 *.opensdf
-*.vcxproj
-*.filters
-*.vcproj
 *.user
 *.log
 *.vim
