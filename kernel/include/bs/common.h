@@ -15,7 +15,14 @@
 #ifdef _MSC_VER
 #define HAVE_ROUND
 #endif
-#include <Python.h>
+#ifdef _DEBUG
+	// stop Python from forcing linking to debug library
+	#undef _DEBUG
+	#include <Python.h>
+	#define _DEBUG
+#else
+	#include <Python.h>
+#endif
 #endif
 
 // local BS includes
