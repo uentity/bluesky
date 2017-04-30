@@ -19,6 +19,8 @@
 	#pragma warning(disable:4996)
 	// 4003 is triggered by Boost.Preprocessor
 	#pragma warning(disable:4003)
+	// const applied to function type
+	#pragma warning(disable:4180)
 
 	// API export/import macro
 	#define _BS_API_EXPORT __declspec(dllexport)
