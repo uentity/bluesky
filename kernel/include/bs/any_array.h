@@ -101,7 +101,7 @@ public:
 
 		// allow only implicit conversions to const reference
 		template< typename T >
-		operator const T&() const && {
+		operator T() const && {
 			return boost::any_cast< const T& >(val_);
 		}
 
