@@ -344,8 +344,6 @@ int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
 		pymod_.reset(new bspy_module(*static_cast< pybind11::module* >(py_root_module)));
 		pymod_->init_kernel_subsyst();
 	}
-#else
-	(void)init_py_subsyst;
 #endif
 
 	std::size_t plugin_cnt = 0;
