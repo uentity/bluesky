@@ -22,7 +22,7 @@ bool kernel_plugins_subsyst::register_type(
 	if(td.is_nil()) return false;
 
 	// if no plugin descriptor provided - register as runtime type
-	const plugin_descriptor* pdp = pd ? pd : &runtime_pd_;
+	const plugin_descriptor* pdp = pd ? pd : &runtime_pd();
 	if(!is_inner_pd(*pdp)) {
 		// case for external plugin descriptor
 		// try to register it or find a match with existing pd

@@ -22,7 +22,7 @@
  *  BS kernel plugin descriptor
  *-----------------------------------------------------------------------------*/
 BS_C_API const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {
-	return &blue_sky::detail::kernel_plugins_subsyst::kernel_pd_;
+	return &blue_sky::detail::kernel_plugins_subsyst::kernel_pd();
 }
 
 NAMESPACE_BEGIN(blue_sky)
@@ -57,19 +57,26 @@ std::string extract_root_name(const std::string& full_name) {
 NAMESPACE_BEGIN(detail)
 
 // init kernel plugin descriptors
-const plugin_descriptor kernel_plugins_subsyst::kernel_pd_(
-	BS_GET_TI(__kernel_types_pd_tag__), "kernel", KERNEL_VERSION,
-	"BlueSky virtual kernel plugin", "bs"
-);
-const plugin_descriptor kernel_plugins_subsyst::runtime_pd_(
-	BS_GET_TI(__runtime_types_pd_tag__), "runtime", KERNEL_VERSION,
-	"BlueSky virtual plugin for runtime types", "bs"
-);
+const plugin_descriptor& kernel_plugins_subsyst::kernel_pd() {
+	static const plugin_descriptor kernel_pd(
+		BS_GET_TI(__kernel_types_pd_tag__), "kernel", KERNEL_VERSION,
+		"BlueSky virtual kernel plugin", "bs"
+	);
+	return kernel_pd;
+}
+
+const plugin_descriptor& kernel_plugins_subsyst::runtime_pd() {
+	static const plugin_descriptor runtime_pd(
+		BS_GET_TI(__runtime_types_pd_tag__), "runtime", KERNEL_VERSION,
+		"BlueSky virtual plugin for runtime types", "bs"
+	);
+	return runtime_pd;
+}
 
 kernel_plugins_subsyst::kernel_plugins_subsyst() {
 	// register kernel virtual plugins
-	register_plugin(&kernel_pd_, lib_descriptor());
-	register_plugin(&runtime_pd_, lib_descriptor());
+	register_plugin(&kernel_pd(), lib_descriptor());
+	register_plugin(&runtime_pd(), lib_descriptor());
 }
 
 kernel_plugins_subsyst::~kernel_plugins_subsyst() {}
@@ -152,7 +159,7 @@ kernel_plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_d
 
 void kernel_plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
 	// we cannot clear kernel internal types
-	if(pd == kernel_pd_) return;
+	if(pd == kernel_pd()) return;
 
 	types_.get< plug_key >().erase(pd);
 }
@@ -223,7 +230,7 @@ int kernel_plugins_subsyst::load_plugin(
 			return retval;
 		}
 		// check if loaded lib is really a blue-sky kernel
-		if(*p_descr == kernel_pd_)
+		if(*p_descr == kernel_pd())
 			return retval;
 			// TODO: do something with err code
 			//return blue_sky::no_library;
@@ -289,7 +296,7 @@ int kernel_plugins_subsyst::load_plugin(
 				pymod_->init_plugin_subsyst(
 					p_descr->py_namespace.c_str(), p_descr->description.c_str(), init_py_fn
 				);
-				py_scope = kernel_pd_.py_namespace + '.' + p_descr->py_namespace;
+				py_scope = kernel_pd().py_namespace + '.' + p_descr->py_namespace;
 			}
 		}
 #else

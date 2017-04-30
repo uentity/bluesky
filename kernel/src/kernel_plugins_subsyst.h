@@ -37,34 +37,13 @@ struct BS_HIDDEN_API pd_comp_name {
 	}
 };
 
-//// fab_elem sorting order by bs_type_info
-//struct BS_HIDDEN_API tt_comp_ti {
-//	bool operator()(const type_tuple& lhs, const type_tuple& rhs) const {
-//		return lhs.td() < rhs.td();
-//	}
-//};
-//
-//// fab element comparison by string typename
-//struct BS_HIDDEN_API tt_comp_typename {
-//	bool operator()(const type_tuple& lhs, const type_tuple& rhs) const {
-//		return lhs.td().name < rhs.td().name;
-//	}
-//};
-//
-//// fab elements comparison by plugin name
-//struct BS_HIDDEN_API tt_comp_pd {
-//	bool operator()(const type_tuple& lhs, const type_tuple& rhs) const {
-//		return (lhs.pd().name < rhs.pd().name);
-//	}
-//};
-
 /*-----------------------------------------------------------------
  * Kernel plugins loading subsystem definition
  *----------------------------------------------------------------*/
 struct BS_HIDDEN_API kernel_plugins_subsyst {
 
-	static const plugin_descriptor kernel_pd_;       //! plugin descriptor for kernel types
-	static const plugin_descriptor runtime_pd_;      //! plugin descriptor for runtime types
+	static const plugin_descriptor& kernel_pd();
+	static const plugin_descriptor& runtime_pd();
 
 	// plugin_descriptor -> lib_descriptor 1-to-1 relation
 	// IMPORTANT: descriptors are stored by string name - thus allowing us
@@ -138,15 +117,15 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	 * types management
 	 *----------------------------------------------------------------*/
 	bool is_inner_pd(const plugin_descriptor& pd) {
-		return (pd == kernel_pd_ || pd == runtime_pd_);
+		return (pd == kernel_pd() || pd == runtime_pd());
 	}
 
 	bool register_kernel_type(const type_descriptor& td, type_tuple* tt_ref = nullptr) {
-		return register_type(td, &kernel_pd_, tt_ref);
+		return register_type(td, &kernel_pd(), tt_ref);
 	}
 
 	bool register_rt_type(const type_descriptor& td, type_tuple* tt_ref = nullptr) {
-		return register_type(td, &runtime_pd_, tt_ref);
+		return register_type(td, &runtime_pd(), tt_ref);
 	}
 
 	// register given type
