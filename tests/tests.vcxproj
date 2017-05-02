@@ -27,8 +27,8 @@
     <ClCompile Include="test_type_descriptor.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\blue-sky-re-nopy.vcxproj">
-      <Project>{b23f6f6b-a1c8-4525-9403-447f9d57ed1a}</Project>
+    <ProjectReference Include="..\blue-sky-re.vcxproj">
+      <Project>{d269d8fa-a040-4e02-bb3c-61f3b9b4c1a9}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
