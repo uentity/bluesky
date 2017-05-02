@@ -61,12 +61,7 @@ kernel::types_enum kernel::registered_types() const {
 }
 
 kernel::types_enum kernel::plugin_types(const plugin_descriptor& pd) const {
-	using plug_key = detail::kernel_plugins_subsyst::plug_key;
-
-	types_enum res;
-	auto plt = pimpl_->types_.get< plug_key >().equal_range(pd);
-	std::copy(plt.first, plt.second, std::back_inserter(res));
-	return res;
+	return plugin_types(pd.name);
 }
 
 kernel::types_enum kernel::plugin_types(const std::string& plugin_name) const {
