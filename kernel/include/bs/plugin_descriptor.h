@@ -12,6 +12,7 @@
 #include "setup_common_api.h"
 #include "type_info.h"
 #include "fwd.h"
+#include "detail/typestring.h"
 
 #include <string>
 
@@ -71,22 +72,25 @@ struct BS_API plugin_initializer {
 	BLUE_SKY_PLUGIN_DESCRIPTOR_EXT allows you to set Python namespace (scope) name for all classes
 	exported to Python.
 
+    Limitations: type name should not contain fancy chars and have size <= 64 (see detail/typestring.h
+    for explanation how to increase it).
+
   \param tag = tag for class
 	\param name = plugin's unique name
 	\param version = plugin's version
 	\param description = description of the plugin
 	\param py_namespace = plugin's namespace in Python
 */
-#define BS_PLUGIN_DESCRIPTOR_EXT(name, version, description, py_namespace)       \
-namespace {                                                                      \
-    class BS_HIDDEN_API_PLUGIN _bs_this_plugin_tag_ {};                          \
-}                                                                                \
-BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {  \
-    static ::blue_sky::plugin_descriptor plugin_info_(                           \
-        BS_GET_TI (_bs_this_plugin_tag_),                                        \
-        name, version, description, py_namespace                                 \
-    );                                                                           \
-    return &plugin_info_;                                                        \
+#define BS_PLUGIN_DESCRIPTOR_EXT(name, version, description, py_namespace)      \
+namespace {                                                                     \
+template <typename T> struct bs_this_plugin_tag {};                             \
+}                                                                               \
+BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() { \
+    static ::blue_sky::plugin_descriptor plugin_info_(                          \
+        BS_GET_TI(bs_this_plugin_tag<typestring_is(name)>),                     \
+        name, version, description, py_namespace                                \
+    );                                                                          \
+    return &plugin_info_;                                                       \
 }
 
 #define BS_PLUGIN_DESCRIPTOR(name, version, description) \
