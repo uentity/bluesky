@@ -201,6 +201,9 @@
     <ClInclude Include="kernel\src\kernel_plugins_subsyst.h">
       <Filter>Файлы исходного кода</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\typestring.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">

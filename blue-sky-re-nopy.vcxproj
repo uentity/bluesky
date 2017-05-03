@@ -48,6 +48,7 @@
     <ClInclude Include="kernel\include\bs\detail\part.h" />
     <ClInclude Include="kernel\include\bs\detail\str_utils.h" />
     <ClInclude Include="kernel\include\bs\detail\tuple_utils.h" />
+    <ClInclude Include="kernel\include\bs\detail\typestring.h" />
     <ClInclude Include="kernel\include\bs\exception.h" />
     <ClInclude Include="kernel\include\bs\force_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\fwd.h" />
