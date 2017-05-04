@@ -162,34 +162,34 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetExt>.dll</TargetExt>
-    <IntDir>$(SolutionDir)build\$(Configuration)$(Platform)\</IntDir>
+    <IntDir>$(ProjectDir)build\$(Configuration)$(Platform)\</IntDir>
     <TargetName>blue_sky</TargetName>
-    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
+    <OutDir>$(ProjectDir)exe\$(Configuration)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <TargetExt>.dll</TargetExt>
-    <IntDir>$(SolutionDir)build\$(Configuration)$(Platform)\</IntDir>
+    <IntDir>$(ProjectDir)build\$(Configuration)$(Platform)\</IntDir>
     <TargetName>blue_sky</TargetName>
-    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
+    <OutDir>$(ProjectDir)exe\$(Configuration)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetExt>.dll</TargetExt>
-    <IntDir>$(SolutionDir)build\$(Configuration)$(Platform)\</IntDir>
+    <IntDir>$(ProjectDir)build\$(Configuration)$(Platform)\</IntDir>
     <TargetName>blue_sky</TargetName>
-    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
+    <OutDir>$(ProjectDir)exe\$(Configuration)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetExt>.dll</TargetExt>
-    <IntDir>$(SolutionDir)build\$(Configuration)$(Platform)\</IntDir>
+    <IntDir>$(ProjectDir)build\$(Configuration)$(Platform)\</IntDir>
     <TargetName>blue_sky</TargetName>
-    <OutDir>$(SolutionDir)exe\$(Configuration)$(Platform)\</OutDir>
+    <OutDir>$(ProjectDir)exe\$(Configuration)$(Platform)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\kernel\include;$(ProjectDir)\third_party\pybind11\include;$(ProjectDir)\third_party\actor-framework\libcaf_core;$(ProjectDir)\third_party\cereal\include;$(ProjectDir)\third_party\eigen;$(ProjectDir)\third_party\spdlog\include;$(LOKI_PATH)\include;$(BOOST_PATH);$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BOOST_PATH);$(LOKI_PATH)\include;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -204,7 +204,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\kernel\include;$(ProjectDir)\third_party\pybind11\include;$(ProjectDir)\third_party\actor-framework\libcaf_core;$(ProjectDir)\third_party\cereal\include;$(ProjectDir)\third_party\eigen;$(ProjectDir)\third_party\spdlog\include;$(LOKI_PATH)\include;$(BOOST_PATH);$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BOOST_PATH);$(LOKI_PATH)\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -221,7 +221,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\kernel\include;$(ProjectDir)\third_party\pybind11\include;$(ProjectDir)\third_party\actor-framework\libcaf_core;$(ProjectDir)\third_party\cereal\include;$(ProjectDir)\third_party\eigen;$(ProjectDir)\third_party\spdlog\include;$(LOKI_PATH)\include;$(BOOST_PATH);$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BOOST_PATH);$(LOKI_PATH)\include;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -238,7 +238,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\kernel\include;$(ProjectDir)\third_party\pybind11\include;$(ProjectDir)\third_party\actor-framework\libcaf_core;$(ProjectDir)\third_party\cereal\include;$(ProjectDir)\third_party\eigen;$(ProjectDir)\third_party\spdlog\include;$(LOKI_PATH)\include;$(BOOST_PATH);$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BOOST_PATH);$(LOKI_PATH)\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>

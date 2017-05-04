@@ -100,14 +100,14 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\spdlog\include;$(BOOST_PATH);$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BOOST_PATH);$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)exe\$(Configuration)$(Platform);$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
-      <AdditionalDependencies>blue_sky.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y $(TargetDir)bs.pyd $(PYTHON_PATH)\DLLs</Command>
@@ -118,12 +118,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\spdlog\include;$(BOOST_PATH);$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BOOST_PATH);$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(SolutionDir)exe\$(Configuration)$(Platform);$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
-      <AdditionalDependencies>blue_sky.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y $(TargetDir)bs.pyd $(PYTHON_PATH)\DLLs</Command>
@@ -134,12 +134,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\spdlog\include;$(BOOST_PATH);$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BOOST_PATH);$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(SolutionDir)exe\$(Configuration)$(Platform);$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
-      <AdditionalDependencies>blue_sky.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y $(TargetDir)bs.pyd $(PYTHON64_PATH)\DLLs</Command>
@@ -152,14 +152,14 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\spdlog\include;$(BOOST_PATH);$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BOOST_PATH);$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)exe\$(Configuration)$(Platform);$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
-      <AdditionalDependencies>blue_sky.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y $(TargetDir)bs.pyd $(PYTHON64_PATH)\DLLs</Command>
@@ -167,6 +167,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\blue-sky-re.vcxproj">
+      <Project>{d269d8fa-a040-4e02-bb3c-61f3b9b4c1a9}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
