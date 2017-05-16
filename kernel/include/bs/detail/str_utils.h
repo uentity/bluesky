@@ -59,13 +59,13 @@ static inline std::string trim(const std::string& s) {
 // functions to convert string <-> wstring using given locale name in POSIX format
 // if passed enc_name is empty, then native system locale is auto-deduced
 // if enc_name = "UTF-8" or "utf-8", then country-based UTF-8 locale is used
-BS_API std::string wstr2str(const std::wstring& text, const std::string& loc_name = "utf-8");
-BS_API std::wstring str2wstr(const std::string& text, const std::string& loc_name = "utf-8");
+BS_API std::string wstr2str(const std::wstring& text, const std::string& loc_name = "");
+BS_API std::wstring str2wstr(const std::string& text, const std::string& loc_name = "");
 
 // convert UTF-8 encoded string <-> string
 // if passed enc_name is empty, then native system locale is auto-deduced for string
-BS_API std::string ustr2str(const std::string& text, const std::string& loc_name = "utf-8");
-BS_API std::string str2ustr(const std::string& text, const std::string& loc_name = "utf-8");
+BS_API std::string ustr2str(const std::string& text, const std::string& loc_name = "");
+BS_API std::string str2ustr(const std::string& text, const std::string& loc_name = "");
 
 // generic string -> string conversion from one locale to another
 // if in_enc_name is empty, assume that text given in native system locale
