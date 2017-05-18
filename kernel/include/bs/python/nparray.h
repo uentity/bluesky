@@ -132,7 +132,10 @@ NAMESPACE_BEGIN(detail)
 // otherwise it'll make a copy.  writeable lets you turn off the writeable flag for the array.
 template< typename Array >
 handle bs_array_cast(Array const& src, handle base = handle(), bool writeable = true) {
-	array a(src.size(), src.data(), base);
+	array a(
+		src.dtype(), array::ShapeContainer(src.shape(), src.shape() + src.ndim()),
+		array::StridesContainer(src.strides(), src.strides() + src.ndim()), src.data(), base
+	);
 	if (!writeable)
 		array_proxy(a.ptr())->flags &= ~detail::npy_api::NPY_ARRAY_WRITEABLE_;
 
@@ -262,7 +265,7 @@ public:
 		}
 
 		// check if src is None, then assign nullptr to value and we're done
-		if(src == none()) {
+		if(src.is(none())) {
 			value = nullptr;
 			return true;
 		}
