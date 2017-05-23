@@ -29,7 +29,7 @@ auto register_logger(const char* log_name, Sinks... sinks) {
 // purpose of this function is to find log filename that is not locked by another process
 spdlog::sink_ptr create_file_sink(const char* desired_fname) {
 	fmt::MemoryWriter fname;
-	for(ulong i = 0; i < 100; i++) {
+	for(int i = 0; i < 100; i++) {
 		if(i)
 			fname.write("{}_{}", desired_fname, i);
 		else
