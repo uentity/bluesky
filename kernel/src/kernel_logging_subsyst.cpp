@@ -30,8 +30,9 @@ auto register_logger(const char* log_name, Sinks... sinks) {
 spdlog::sink_ptr create_file_sink(const char* desired_fname) {
 	fmt::MemoryWriter fname;
 	for(int i = 0; i < 100; i++) {
+		fname.clear();
 		if(i)
-			fname.write("{}_{}", desired_fname, i);
+			fname.write("{}_{}", i, desired_fname);
 		else
 			fname.write("{}", desired_fname);
 		try {
