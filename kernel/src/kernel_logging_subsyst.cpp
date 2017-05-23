@@ -9,6 +9,7 @@
 
 #include "kernel_logging_subsyst.h"
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/null_sink.h>
 #include <unordered_map>
 
 using namespace blue_sky::detail;
@@ -25,6 +26,24 @@ auto register_logger(const char* log_name, Sinks... sinks) {
 	return L;
 }
 
+// purpose of this function is to find log filename that is not locked by another process
+spdlog::sink_ptr create_file_sink(const char* desired_fname) {
+	fmt::MemoryWriter fname;
+	for(ulong i = 0; i < 100; i++) {
+		if(i)
+			fname.write("{}_{}", desired_fname, i);
+		else
+			fname.write("{}", desired_fname);
+		try {
+			auto res = std::make_shared< spdlog::sinks::rotating_file_sink_mt >(fname.str(), 1024*1024*5, 1);
+			if(res) return res;
+		}
+		catch(spdlog::spdlog_ex) {}
+	}
+	// in fail casr just return null sink
+	return std::make_shared< spdlog::sinks::null_sink_st >();
+}
+
 }
 
 spdlog::logger& kernel_logging_subsyst::get_log(const char* log_name) {
@@ -34,11 +53,11 @@ spdlog::logger& kernel_logging_subsyst::get_log(const char* log_name) {
 			logs({
 				{"out", register_logger("out",
 					std::make_shared< spdlog::sinks::stdout_sink_mt >(),
-					std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky.log", 1024*1024*5, 1)
+					create_file_sink("blue_sky.log")
 				)},
 				{"err", register_logger("err",
 					std::make_shared< spdlog::sinks::stderr_sink_mt >(),
-					std::make_shared< spdlog::sinks::rotating_file_sink_mt >("blue_sky_err.log", 1024*1024*5, 1)
+					create_file_sink("blue_sky_err.log")
 			)}})
 		{
 			for(auto& log : logs) {
