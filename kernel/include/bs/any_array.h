@@ -232,12 +232,16 @@ public:
 
 	// assign from map of key-value pairs
 	// does check if key already exists in array
+	// if not -- inserts new element
 	template< class Map >
 	any_array& operator =(const Map& rhs) {
 		for(const auto& v : rhs) {
 			auto pv = trait::find(*this, v.first);
 			if(pv != end()) {
 				trait::iter2val(pv) = v.second;
+			}
+			else {
+				this->operator[](v.first) = v.second;
 			}
 		}
 		return *this;
