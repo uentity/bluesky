@@ -35,6 +35,7 @@
     <ClInclude Include="kernel\include\bs\compat\serialize\fix.h" />
     <ClInclude Include="kernel\include\bs\compat\serialize\fixcont.h" />
     <ClInclude Include="kernel\include\bs\compat\serialize\fixdata.h" />
+    <ClInclude Include="kernel\include\bs\compat\serialize\fixint.h" />
     <ClInclude Include="kernel\include\bs\compat\serialize\fixreal.h" />
     <ClInclude Include="kernel\include\bs\compat\serialize\fixstr.h" />
     <ClInclude Include="kernel\include\bs\compat\serialize\macro.h" />
