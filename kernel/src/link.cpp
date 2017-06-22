@@ -15,7 +15,7 @@ NAMESPACE_BEGIN(blue_sky)
 namespace {
 
 // global random UUID generator for BS links
-auto gen = boost::uuids::random_generator();
+static auto gen = boost::uuids::random_generator();
 
 } // eof hidden namespace
 

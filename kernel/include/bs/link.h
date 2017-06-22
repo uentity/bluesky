@@ -64,8 +64,6 @@ public:
 
 protected:
 	std::string name_;
-
-private :
 	id_type id_;
 };
 

@@ -21,37 +21,22 @@ NAMESPACE_BEGIN(blue_sky)
 */
 class BS_API objbase : public std::enable_shared_from_this< objbase > {
 	friend class kernel;
-	//friend class combase;
-	friend class bs_inode;
-	//friend class bs_link;
-
-	//BS_COMMON_DECL(objbase)
 
 public:
 	/// default ctor
 	objbase(); //= default;
-
 	/// default copy ctor
 	objbase(const objbase&); //= default;
-
 	/// default move ctor
 	objbase(objbase&&) = default;
-
 	// virtual destructor
 	virtual ~objbase();
 
 	//! swap function needed to provide assignment ability
 	void swap(objbase& rhs);
 
-	// signals list
-	//BLUE_SKY_SIGNALS_DECL_BEGIN(bs_messaging)
-	//	//on_unlock,
-	//	on_delete,
-	//BLUE_SKY_SIGNALS_DECL_END
-
 	//! type_descriptor of objbase class
 	static const type_descriptor& bs_type();
-
 	/*!
 	\brief Type descriptor resolver for derived class.
 	This method should be overridden by childs.
@@ -66,14 +51,6 @@ public:
 	// remove this instance from kernel instances list
 	int bs_free_this() const;
 
-	// default object deletion method - executes 'delete this'
-	//virtual void dispose() const;
-
-	/*!
-	\brief Access to corresponding inode object
-	*/
-	const blue_sky::bs_inode* inode() const;
-
 	template< class Derived >
 	decltype(auto) bs_shared_this() const {
 		return std::static_pointer_cast< const Derived, const objbase >(this->shared_from_this());
@@ -84,9 +61,13 @@ public:
 		return std::static_pointer_cast< Derived, objbase >(this->shared_from_this());
 	}
 
+	/// obtain type ID: for C++ types typeid is type_descriptor.name
+	virtual const char* type_id() const;
+	/// obtain object's ID
+	virtual const char* id() const;
+
 protected:
-	// associated inode
-	const blue_sky::bs_inode* inode_;
+	std::string id_;
 };
 
 // alias

@@ -97,6 +97,22 @@ public:
 			bs_resolve_type
 		);
 	}
+
+	const char* type_id() const override {
+		PYBIND11_OVERLOAD(
+			const char*,
+			Object,
+			type_id
+		);
+	}
+
+	const char* id() const override {
+		PYBIND11_OVERLOAD(
+			const char*,
+			Object,
+			id
+		);
+	}
 };
 
 NAMESPACE_END(python)

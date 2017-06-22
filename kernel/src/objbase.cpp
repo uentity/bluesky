@@ -8,71 +8,39 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/objbase.h>
-//#include "bs_command.h"
-//#include "bs_tree.h"
-//#include "bs_kernel.h"
-//#include "bs_prop_base.h"
-
+#include <bs/kernel.h>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 // -----------------------------------------------------
 // Implementation of class: object_base
 // -----------------------------------------------------
 
-//BS_COMMON_IMPL(objbase)
+NAMESPACE_BEGIN(blue_sky)
 
-namespace blue_sky {
+namespace {
 
-/*!
- * \brief Default constructor
- */
+// global random UUID generator for BS objects
+static auto gen = boost::uuids::random_generator();
+
+} // eof hidden namespace
 
 objbase::objbase()
-	:  inode_(NULL)
+	: id_(boost::uuids::to_string(gen()))
 {}
 
-//objbase::objbase(const bs_messaging::sig_range_t& sr)
-//	: bs_refcounter(), bs_messaging(sr), inode_(NULL)
-//{
-//	add_ref();
-//	add_signal(BS_SIGNAL_RANGE(objbase));
-//}
-
 objbase::objbase(const objbase& obj)
-	: enable_shared_from_this(obj), inode_(NULL)
+	: enable_shared_from_this(obj), id_(boost::uuids::to_string(gen()))
 {}
 
 void objbase::swap(objbase& rhs) {
-	//bs_messaging::swap(rhs);
-	std::swap(inode_, rhs.inode_);
+	std::swap(id_, rhs.id_);
 }
 
-objbase::~objbase()
-{}
+objbase::~objbase() {}
 
-//void objbase::dispose() const {
-//	delete this;
-//}
-
-const bs_inode* objbase::inode() const {
-	return inode_;
-}
 
 const type_descriptor& objbase::bs_type() {
-	// 1st implementation
-	//static struct td_init {
-	//	td_init() : type(
-	//		BS_GET_TI(objbase), "objbase", NULL, NULL,
-	//		"Base class of all BlueSky types"
-	//	) {
-	//		type.add_constructor< objbase >();
-	//		type.add_copy_constructor< objbase >();
-	//	}
-
-	//	type_descriptor type;
-	//} td;
-	//return td.type;
-	
-	// 2nd impl
 	static type_descriptor td(
 		identity< objbase >(), identity< nil >(),
 		"objbase", "Base class of all BlueSky types", std::true_type(), std::true_type()
@@ -81,17 +49,20 @@ const type_descriptor& objbase::bs_type() {
 }
 
 int objbase::bs_register_this() const {
-	//return BS_KERNEL.register_instance(this);
-	return 0;
+	return BS_KERNEL.register_instance(shared_from_this());
 }
 
 int objbase::bs_free_this() const {
-	//return BS_KERNEL.free_instance(this);
-	return 0;
+	return BS_KERNEL.free_instance(shared_from_this());
 }
 
-} /* namespace blue_sky */
+const char* objbase::type_id() const {
+	return bs_type().name.c_str();
+}
 
-// -----------------------------------------------------
-// End of implementation class: object_base
-// -----------------------------------------------------
+const char* objbase::id() const {
+	return id_.c_str();
+}
+
+NAMESPACE_END(blue_sky)
+

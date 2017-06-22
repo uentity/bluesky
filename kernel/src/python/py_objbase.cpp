@@ -46,6 +46,8 @@ void py_bind_objbase(py::module& m) {
 				static_cast<py_object<>&>(src).pyobj = std::move(value);
 			}
 		})
+		.def("type_id", &objbase::type_id)
+		.def("id", &objbase::id)
 		// DEBUG
 		.def_property_readonly("refs", [](objbase& src) { return src.shared_from_this().use_count() - 1; })
 	;
