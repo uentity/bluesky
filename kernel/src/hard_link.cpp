@@ -10,6 +10,7 @@
 #include <bs/link.h>
 
 NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(tree)
 
 bs_hard_link::bs_hard_link(std::string name, const sp_obj& data) :
 	bs_link(std::move(name)), data_(data)
@@ -23,9 +24,10 @@ bs_link::link_type bs_hard_link::type_id() const {
 	return hard_link;
 }
 
-sp_link bs_hard_link::clone() const {
+bs_link::sp_link bs_hard_link::clone() const {
 	return std::make_shared< bs_hard_link >(*this);
 }
 
+NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 

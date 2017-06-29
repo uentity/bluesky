@@ -10,6 +10,7 @@
 #include <bs/node.h>
 
 NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(tree)
 
 using links_container = bs_node::links_container;
 using iterator = bs_node::iterator;
@@ -119,5 +120,6 @@ sp_link bs_node::deep_search(const id_type& id) const {
 	return pimpl_->deep_search(id);
 }
 
+NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 

@@ -57,14 +57,16 @@ template< class, template< class > class > class bs_array;
 template< class > struct vector_traits;
 template< class > struct str_val_traits;
 
+namespace tree {
+
 // data storage
 class bs_inode;
 class bs_link;
 class bs_node;
-//common used smart pointers to them
-typedef std::shared_ptr< bs_inode > sp_inode;
 typedef std::shared_ptr< bs_link > sp_link;
 typedef std::shared_ptr< bs_node > sp_node;
+
+}
 
 //common typedefs
 typedef std::size_t  ulong; //!< unsigned long

@@ -17,6 +17,7 @@
 #include <boost/multi_index/member.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(tree)
 // global alias to shorten typing
 namespace mi = boost::multi_index;
 
@@ -104,5 +105,6 @@ private:
 	std::unique_ptr< node_impl > pimpl_;
 };
 
+NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 

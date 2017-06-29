@@ -13,6 +13,7 @@
 #include <boost/uuid/uuid.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(tree)
 
 /// base class of all links
 class BS_API bs_link {
@@ -88,5 +89,6 @@ private:
 	sp_obj data_;
 };
 
+NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 

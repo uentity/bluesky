@@ -11,6 +11,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(tree)
 
 namespace {
 
@@ -32,5 +33,6 @@ bs_link::bs_link(const bs_link& lhs)
 
 bs_link::~bs_link() {}
 
+NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 
