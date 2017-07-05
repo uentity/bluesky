@@ -12,20 +12,20 @@
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
 
-bs_hard_link::bs_hard_link(std::string name, const sp_obj& data) :
-	bs_link(std::move(name)), data_(data)
+hard_link::hard_link(std::string name, const sp_obj& data) :
+	link(std::move(name)), data_(data)
 {}
 
-sp_obj bs_hard_link::data() const {
+sp_obj hard_link::data() const {
 	return data_;
 }
 
-bs_link::link_type bs_hard_link::type_id() const {
-	return hard_link;
+link::link_type hard_link::type_id() const {
+	return link_type::hard_link;
 }
 
-bs_link::sp_link bs_hard_link::clone() const {
-	return std::make_shared< bs_hard_link >(*this);
+link::sp_link hard_link::clone() const {
+	return std::make_shared< hard_link >(*this);
 }
 
 NAMESPACE_END(tree)

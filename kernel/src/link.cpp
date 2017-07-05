@@ -1,7 +1,7 @@
 /// @file
 /// @author uentity
 /// @date 14.09.2016
-/// @brief Implementation os bs_link
+/// @brief Implementation os link
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -20,18 +20,18 @@ static auto gen = boost::uuids::random_generator();
 
 } // eof hidden namespace
 
-bs_link::bs_link(std::string name)
+link::link(std::string name)
 	: name_(std::move(name)),
 	id_(gen())
 {}
 
 // copy ctor does not copy uuid from lhs
 // instead it creates a new one
-bs_link::bs_link(const bs_link& lhs)
+link::link(const link& lhs)
 	: name_(lhs.name_), id_(gen())
 {}
 
-bs_link::~bs_link() {}
+link::~link() {}
 
 NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)

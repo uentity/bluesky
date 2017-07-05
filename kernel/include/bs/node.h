@@ -21,17 +21,17 @@ NAMESPACE_BEGIN(tree)
 // global alias to shorten typing
 namespace mi = boost::multi_index;
 
-class BS_API bs_node : public objbase {
+class BS_API node : public objbase {
 public:
-	using id_type = bs_link::id_type;
+	using id_type = link::id_type;
 
 	// links are sorted by unique ID
 	using id_key = mi::member<
-		bs_link, const id_type, &bs_link::id_
+		link, const id_type, &link::id_
 	>;
 	// and non-unique name
 	using name_key = mi::member<
-		bs_link, const std::string, &bs_link::name_
+		link, const std::string, &link::name_
 	>;
 	// container that will store all node elements (links)
 	using links_container = mi::multi_index_container<
@@ -97,7 +97,7 @@ public:
 	/// rename given link
 
 	/// ctor
-	bs_node();
+	node();
 
 private:
 	// PIMPL

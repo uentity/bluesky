@@ -12,12 +12,12 @@
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
 
-using links_container = bs_node::links_container;
-using iterator = bs_node::iterator;
-using name_iterator = bs_node::name_iterator;
-using name_range = bs_node::name_range;
+using links_container = node::links_container;
+using iterator = node::iterator;
+using name_iterator = node::name_iterator;
+using name_range = node::name_range;
 
-class bs_node::node_impl {
+class node::node_impl {
 public:
 
 	sp_link deep_search(const id_type& id) const {
@@ -31,45 +31,45 @@ public:
 	links_container links_;
 };
 
-bs_node::bs_node()
+node::node()
 	: pimpl_(new node_impl())
 {}
 
-std::size_t bs_node::size() const {
+std::size_t node::size() const {
 	return pimpl_->links_.size();
 }
 
-bool bs_node::empty() const {
+bool node::empty() const {
 	return pimpl_->links_.empty();
 }
 
-iterator bs_node::begin() const {
+iterator node::begin() const {
 	return pimpl_->links_.begin();
 }
 
-iterator bs_node::end() const {
+iterator node::end() const {
 	return pimpl_->links_.end();
 }
 
-name_iterator bs_node::begin_name() const {
+name_iterator node::begin_name() const {
 	return pimpl_->links_.get< name_key >().begin();
 }
 
-name_iterator bs_node::end_name() const {
+name_iterator node::end_name() const {
 	return pimpl_->links_.get< name_key >().end();
 }
 
-iterator bs_node::find(const id_type& id) const {
+iterator node::find(const id_type& id) const {
 	return pimpl_->links_.find(id);
 }
 
-iterator bs_node::find(const std::string& name) const {
+iterator node::find(const std::string& name) const {
 	return pimpl_->links_.project< 0 >(
 		pimpl_->links_.get< name_key >().find(name)
 	);
 }
 
-iterator bs_node::find(const sp_obj& obj) const {
+iterator node::find(const sp_obj& obj) const {
 	iterator elem = begin();
 	for(iterator links_end = end(); elem != links_end; ++elem) {
 		if(*elem && (*elem)->data() == obj)
@@ -78,45 +78,45 @@ iterator bs_node::find(const sp_obj& obj) const {
 	return elem;
 }
 
-name_range bs_node::equal_range(const std::string& name) const {
+name_range node::equal_range(const std::string& name) const {
 	return pimpl_->links_.get< name_key >().equal_range(name);
 }
 
-name_range bs_node::equal_range(const sp_link& l) const {
+name_range node::equal_range(const sp_link& l) const {
 	return pimpl_->links_.get< name_key >().equal_range(l->name());
 }
 
-bs_node::insert_ret_t bs_node::insert(const sp_link& l) {
+node::insert_ret_t node::insert(const sp_link& l) {
 	return pimpl_->links_.insert(l);
 }
 
-bs_node::insert_ret_t bs_node::insert(const std::string& name, const sp_obj& obj) {
+node::insert_ret_t node::insert(const std::string& name, const sp_obj& obj) {
 	return pimpl_->links_.insert(
-		std::make_shared< bs_hard_link >(name, obj)
+		std::make_shared< hard_link >(name, obj)
 	);
 }
 
-void bs_node::erase(const std::string& name) {
+void node::erase(const std::string& name) {
 	pimpl_->links_.get< name_key >().erase(name);
 }
 
-void bs_node::erase(const sp_link& l) {
+void node::erase(const sp_link& l) {
 	pimpl_->links_.get< id_key >().erase(l->id());
 }
 
-void bs_node::erase(const sp_obj& obj) {
+void node::erase(const sp_obj& obj) {
 	pimpl_->links_.get< id_key >().erase(find(obj));
 }
 
-void bs_node::erase(iterator pos) {
+void node::erase(iterator pos) {
 	pimpl_->links_.get< id_key >().erase(pos);
 }
 
-void bs_node::erase(iterator from, iterator to) {
+void node::erase(iterator from, iterator to) {
 	pimpl_->links_.get< id_key >().erase(from, to);
 }
 
-sp_link bs_node::deep_search(const id_type& id) const {
+sp_link node::deep_search(const id_type& id) const {
 	return pimpl_->deep_search(id);
 }
 

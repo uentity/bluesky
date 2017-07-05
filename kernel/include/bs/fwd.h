@@ -60,15 +60,14 @@ template< class > struct str_val_traits;
 namespace tree {
 
 // data storage
-class bs_inode;
-class bs_link;
-class bs_node;
-typedef std::shared_ptr< bs_link > sp_link;
-typedef std::shared_ptr< bs_node > sp_node;
+class link;
+class node;
+typedef std::shared_ptr< link > sp_link;
+typedef std::shared_ptr< node > sp_node;
 
 }
 
-//common typedefs
+// common typedefs
 typedef std::size_t  ulong; //!< unsigned long
 typedef unsigned int uint; //!< unsigned int
 

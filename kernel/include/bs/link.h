@@ -16,13 +16,13 @@ NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
 
 /// base class of all links
-class BS_API bs_link {
+class BS_API link {
 public:
 	// give node access to all link's memebers
-	friend class bs_node;
+	friend class node;
 
 	using id_type = boost::uuids::uuid;
-	using sp_link = std::shared_ptr< bs_link >;
+	using sp_link = std::shared_ptr< link >;
 
 	enum link_type {
 		hard_link = 0,
@@ -31,13 +31,13 @@ public:
 	};
 
 	/// ctor accept name of created link
-	bs_link(std::string name);
+	link(std::string name);
 
 	/// direct copying of links are prohibited
-	bs_link(const bs_link&);
+	link(const link&);
 
 	/// virtual dtor
-	virtual ~bs_link();
+	virtual ~link();
 
 	/// because we cannot make explicit copies of link
 	/// we need a dedicated faunction to make links clones
@@ -70,11 +70,11 @@ protected:
 
 /// hard link stores direct pointer to object
 /// there can exist many hard links to single object
-class BS_API bs_hard_link : public bs_link {
+class BS_API hard_link : public link {
 public:
 
 	/// ctor -- additionaly accepts a pointer to object
-	bs_hard_link(std::string name, const sp_obj& data);
+	hard_link(std::string name, const sp_obj& data);
 
 	/// implement link's API
 	sp_obj data() const override;
@@ -83,7 +83,7 @@ public:
 
 	sp_link clone() const override;
 
-	//std::shared_ptr< bs_link > parent() const override;
+	//std::shared_ptr< link > parent() const override;
 
 private:
 	sp_obj data_;
