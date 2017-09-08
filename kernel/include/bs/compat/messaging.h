@@ -25,6 +25,7 @@ public:
 	typedef std::shared_ptr< bs_slot > sp_slot;
 
 	virtual void execute(sp_cobj sender, int signal_code, sp_obj param) const = 0;
+	virtual ~bs_slot();
 };
 using sp_slot = bs_slot::sp_slot;
 

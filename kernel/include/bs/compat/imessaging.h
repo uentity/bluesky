@@ -25,6 +25,8 @@ public:
 	virtual ulong num_slots(int signal_code) const = 0;
 	virtual bool fire_signal(int signal_code, const sp_obj& param = nullptr, const sp_cobj& sender = nullptr) const = 0;
 	virtual std::vector< int > get_signal_list() const = 0;
+	// virtual dtor
+	virtual ~bs_imessaging();
 };
 
 typedef std::shared_ptr< const bs_imessaging > sp_mobj;
