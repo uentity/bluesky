@@ -15,6 +15,30 @@
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
 
+/// inode that stores access rights, timestampts, etc
+struct BS_API inode {
+	// link's owner
+	std::string owner;
+	std::string group;
+
+	// flags
+	bool : 1;
+	bool suid : 1;
+	bool sgid : 1;
+	bool sticky : 1;
+
+	// access rights
+	// user (owner)
+	bool : 1;
+	unsigned int u : 3;
+	// group
+	bool : 1;
+	unsigned int g : 3;
+	// others
+	bool : 1;
+	unsigned int o : 3;
+};
+
 /// base class of all links
 class BS_API link {
 public:
@@ -43,6 +67,13 @@ public:
 	/// we need a dedicated faunction to make links clones
 	virtual sp_link clone() const = 0;
 
+	/// get pointer to object link is pointing to
+	/// NOTE: returned pointer can be null
+	virtual sp_obj data() const = 0;
+
+	/// query what kind of link is this
+	virtual link_type type_id() const = 0;
+
 	/// access link's unique ID
 	const id_type& id() const {
 		return id_;
@@ -53,12 +84,12 @@ public:
 		return name_;
 	}
 
-	/// get pointer to object link is pointing to
-	/// NOTE: returned pointer can be null
-	virtual sp_obj data() const = 0;
-
-	/// query what kind of link is this
-	virtual link_type type_id() const = 0;
+	const inode& get_inode() const {
+		return inode_;
+	}
+	inode& get_inode() {
+		return inode_;
+	}
 
 	/// get link's parent container
 	//virtual sp_link parent() const = 0;
@@ -66,6 +97,7 @@ public:
 protected:
 	std::string name_;
 	id_type id_;
+	inode inode_;
 };
 
 /// hard link stores direct pointer to object
