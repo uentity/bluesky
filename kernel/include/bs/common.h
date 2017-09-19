@@ -9,42 +9,6 @@
 
 #pragma once
 
-// prevent warnings about macro redeifinition - include Python.h
-// at the very beginning
-#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
-#ifdef _MSC_VER
-#define HAVE_ROUND
-#endif
-#ifdef _DEBUG
-	// stop Python from forcing linking to debug library
-	#undef _DEBUG
-	#include <Python.h>
-	#define _DEBUG
-#else
-	#include <Python.h>
-#endif
-#endif
-
-// local BS includes
-// API macro definitions
-#include "setup_common_api.h"
-#include BS_SETUP_PLUGIN_API()
-
-#include "fwd.h"
-#include "type_info.h"
-#include "assert.h"
-#include "detail/args.h"
-
-// common includes - used almost everywhere
-#include <cstddef>
-#include <memory>
-#include <vector>
-#include <string>
-#include <iosfwd>
-#include <algorithm>
-
-//#define TO_STR(s) #s //!< To string convertion macro
-
 #if !defined(NAMESPACE_BEGIN)
 #  define NAMESPACE_BEGIN(name) namespace name {
 #endif
@@ -52,21 +16,60 @@
 #  define NAMESPACE_END(name) }
 #endif
 
-namespace blue_sky {
+// prevent warnings about macro redeifinition - include Python.h
+// at the very beginning
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+	#ifdef _MSC_VER
+		#define HAVE_ROUND
+	#endif
+	#ifdef _DEBUG
+		// disable linking to pythonX_d.lib on Windows in debug mode
+		#undef _DEBUG
+		#include <Python.h>
+		#define _DEBUG
+	#else
+		#include <Python.h>
+	#endif
+#endif
 
-//DECLARE_ERROR_CODES(
-//	((no_error,                 "no_error"))
-//	((user_defined,             "user_defined"))
-//	((unknown_error,            "unknown_error"))
-//	((system_error,             "system_error"))
-//	((wrong_path,               "wrong_path"))
-//	((no_plugins,               "no_plugins"))
-//	((no_library,               "no_library"))
-//	((no_type,                  "no_type"))
-//	((out_of_range,             "out_of_range"))
-//	((not_permited_operation,   "not_permited_operation"))
-//	((boost_error,              "boost_error"))
-//);
+// detect C++17 support
+#if !defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+#  if __cplusplus >= 201402L
+#    define BS_CPP14
+#    if __cplusplus > 201402L /* Temporary: should be updated to >= the final C++17 value once known */
+#      define BS_CPP17
+#    endif
+#  endif
+#elif defined(_MSC_VER)
+// MSVC sets _MSVC_LANG rather than __cplusplus (supposedly until the standard is fully implemented)
+#  if _MSVC_LANG >= 201402L
+#    define BS_CPP14
+#    if _MSVC_LANG > 201402L && _MSC_VER >= 1910
+#      define BS_CPP17
+#    endif
+#  endif
+#endif
+
+// local BS includes
+// API macro definitions
+#include "setup_common_api.h"
+#include BS_SETUP_PLUGIN_API()
+
+// common includes - used almost everywhere
+#include <type_traits>
+#include <cstddef>
+#include <memory>
+#include <vector>
+#include <string>
+#include <iosfwd>
+#include <algorithm>
+
+#include "fwd.h"
+#include "type_info.h"
+#include "assert.h"
+#include "detail/args.h"
+
+NAMESPACE_BEGIN(blue_sky)
 
 /// BlueSky singleton template
 template< class T >
@@ -78,5 +81,5 @@ public:
 // identity utility template to pass params to templated constructors
 template< class T > struct identity { using type = T; };
 
-} // eof blue_sky namespace
+NAMESPACE_END(blue_sky)
 

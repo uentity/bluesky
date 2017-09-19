@@ -16,16 +16,6 @@
 namespace blue_sky {
 
 /*-----------------------------------------------------------------
- * Constructs tuple with references to given arguments
- * lvalue references in arguments are passed as is
- * rvalue objects in arguments are passed as rvalue references
- *----------------------------------------------------------------*/
-template <typename T>
-constexpr decltype(auto) forward_tuple(T&& t) {
-    return apply(std::forward_as_tuple, std::forward<T>(t));
-}
-
-/*-----------------------------------------------------------------
  * Helper to generaate integer sequence in given bounds
  *----------------------------------------------------------------*/
 template< std::size_t From, std::size_t To >

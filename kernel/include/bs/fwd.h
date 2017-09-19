@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include <cstddef>
 #include <memory>
 
 namespace blue_sky {
