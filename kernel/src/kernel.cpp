@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/kernel.h>
+#include <bs/misc.h>
 #include "kernel_impl.h"
 
 namespace blue_sky {
@@ -104,6 +105,10 @@ str_any_array& kernel::pert_str_any_array(const type_descriptor& master) {
 
 idx_any_array& kernel::pert_idx_any_array(const type_descriptor& master) {
 	return pimpl_->pert_idx_any_array(master);
+}
+
+std::string kernel::last_error() const {
+	return last_system_message();
 }
 
 } /* namespace blue_sky */
