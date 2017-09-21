@@ -78,7 +78,8 @@ void py_bind_common(py::module& m) {
 
 	// plugin_descriptor binding
 	py::class_< plugin_descriptor >(m, "plugin_descriptor")
-		.def(py::init< const char* >())
+		.def(py::init< const char* >(), "plugin_name"_a)
+		.def(py::init< const std::string& >(), "plugin_name"_a)
 		.def("__init__", [](
 			plugin_descriptor& pd, const bs_type_info& tag, const char* name, const char* version,
 			const char* description, const char* py_namespace
@@ -98,6 +99,8 @@ void py_bind_common(py::module& m) {
 		.def(py::self != py::self)
 		.def("__repr__", [](const plugin_descriptor& pd) { return pd.name; })
 	;
+	// enable implicit conversion from string -> plugin_descriptor
+	py::implicitly_convertible<std::string, plugin_descriptor>();
 
 	// type_desccriptor bind
 	py::class_< type_descriptor >(m, "type_descriptor")
@@ -130,6 +133,8 @@ void py_bind_common(py::module& m) {
 		.def(py::self != std::string())
 		.def("__repr__", [](const type_descriptor& td) { return td.name; })
 	;
+	// enable implicit conversion from string -> type_descriptor
+	py::implicitly_convertible<std::string, type_descriptor>();
 }
 
 NAMESPACE_END(python)
