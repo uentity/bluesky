@@ -17,12 +17,14 @@ void py_bind_common(py::module& m);
 void py_bind_messaging(py::module& m);
 void py_bind_objbase(py::module& m);
 void py_bind_misc(py::module& m);
+void py_bind_kernel(py::module& m);
 
 BS_INIT_PY(bs) {
 	py_bind_common(m);
 	py_bind_objbase(m);
 	py_bind_messaging(m);
 	py_bind_misc(m);
+	py_bind_kernel(m);
 }
 
 }}
