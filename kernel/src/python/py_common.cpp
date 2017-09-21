@@ -62,7 +62,7 @@ void py_bind_common(py::module& m) {
 	// bs_type_info binding
 	// empty constructor creates nil type
 	py::class_< bs_type_info >(m, "type_info")
-		.def("__init__", [](bs_type_info& ti) { new(&ti) bs_type_info(nil_type_info()); })
+		.def(py::init( []() { return std::make_unique<bs_type_info>(nil_type_info()); } ))
 		.def_property_readonly("name", &bs_type_info::name, "name"_a)
 		.def_property_readonly_static(
 			"nil", [](py::object){ return nil_type_info(); }
@@ -80,12 +80,12 @@ void py_bind_common(py::module& m) {
 	py::class_< plugin_descriptor >(m, "plugin_descriptor")
 		.def(py::init< const char* >(), "plugin_name"_a)
 		.def(py::init< const std::string& >(), "plugin_name"_a)
-		.def("__init__", [](
-			plugin_descriptor& pd, const bs_type_info& tag, const char* name, const char* version,
+		.def(py::init([](
+			const bs_type_info& tag, const char* name, const char* version,
 			const char* description, const char* py_namespace
 		){
-			new(&pd) plugin_descriptor(tag, name, version, description, py_namespace);
-		}, "tag_type_info"_a, "plug_name"_a, "version"_a, "description"_a = "", "py_namespace"_a = "")
+			return std::make_unique<plugin_descriptor>(tag, name, version, description, py_namespace);
+		}), "tag_type_info"_a, "plug_name"_a, "version"_a, "description"_a = "", "py_namespace"_a = "")
 		.def_readonly("name", &plugin_descriptor::name)
 		.def_readonly("version", &plugin_descriptor::version)
 		.def_readonly("description", &plugin_descriptor::description)
