@@ -63,6 +63,13 @@
 #include <string>
 #include <iosfwd>
 #include <algorithm>
+#ifdef BS_CPP17
+	#include <optional>
+	#define bs_optional std::optional
+#else
+	#include <boost/optional.hpp>
+	#define bs_optional boost::optional
+#endif
 
 #include "fwd.h"
 #include "type_info.h"
