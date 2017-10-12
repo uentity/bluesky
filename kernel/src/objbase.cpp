@@ -33,6 +33,10 @@ objbase::objbase(const objbase& obj)
 	: enable_shared_from_this(obj), id_(boost::uuids::to_string(gen()))
 {}
 
+objbase::objbase(std::string custom_id)
+	: id_(std::move(custom_id))
+{}
+
 void objbase::swap(objbase& rhs) {
 	std::swap(id_, rhs.id_);
 }
@@ -56,12 +60,12 @@ int objbase::bs_free_this() const {
 	return BS_KERNEL.free_instance(shared_from_this());
 }
 
-const char* objbase::type_id() const {
-	return bs_type().name.c_str();
+std::string objbase::type_id() const {
+	return bs_type().name;
 }
 
-const char* objbase::id() const {
-	return id_.c_str();
+std::string objbase::id() const {
+	return id_;
 }
 
 NAMESPACE_END(blue_sky)

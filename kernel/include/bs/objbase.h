@@ -62,12 +62,15 @@ public:
 	}
 
 	/// obtain type ID: for C++ types typeid is type_descriptor.name
-	virtual const char* type_id() const;
+	virtual std::string type_id() const;
 	/// obtain object's ID
-	virtual const char* id() const;
+	virtual std::string id() const;
 
 protected:
 	std::string id_;
+
+	/// ctor for derived classes that can provide external ID
+	objbase(std::string custom_id);
 };
 
 // alias
