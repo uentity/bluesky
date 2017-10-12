@@ -9,16 +9,17 @@
 
 #pragma once
 
-#include <bs/objbase.h>
-#include <bs/exception.h>
-#include <bs/type_macro.h>
-
 #include <pybind11/pybind11.h>
 // for auto-support of std containers
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 // operator overloading support
 #include <pybind11/operators.h>
+
+#include <bs/objbase.h>
+#include <bs/exception.h>
+#include <bs/type_macro.h>
+#include <bs/python/kernel.h>
 
 typedef void (*bs_init_py_fn)(void*);
 
@@ -66,6 +67,16 @@ BSPY_EXPORT_DEF_((T))
 #define BSPY_EXPORT_DEF_T(T, T_spec_tupe) \
 BSPY_EXPORT_DEF_((T<T_spec_tup>))
 
+// export boost::optional in C++14 mode
+#ifndef BS_CPP17
+NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)
+
+template <typename T>
+struct type_caster<boost::optional<T>> : optional_caster<boost::optional<T>> {};
+
+NAMESPACE_END(pybind11) NAMESPACE_END(detail)
+#endif
+
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(python)
 
@@ -96,17 +107,17 @@ public:
 		);
 	}
 
-	const char* type_id() const override {
+	std::string type_id() const override {
 		PYBIND11_OVERLOAD(
-			const char*,
+			std::string,
 			Object,
 			type_id
 		);
 	}
 
-	const char* id() const override {
+	std::string id() const override {
 		PYBIND11_OVERLOAD(
-			const char*,
+			std::string,
 			Object,
 			id
 		);

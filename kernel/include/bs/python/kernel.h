@@ -7,19 +7,14 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#pragma once
+
 #include <bs/kernel.h>
 #include <pybind11/pybind11.h>
-#ifdef BS_CPP17
-	#include <optional>
-	#define bs_optional std::optional
-#else
-	#include <boost/optional.hpp>
-	#define bs_optional boost::optional
-#endif
 
 NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)
 /*-----------------------------------------------------------------------------
- *  custom caster for blue_sky::type_tuple
+ *  cast blue_sky::type_tuple <-> Python tuple
  *-----------------------------------------------------------------------------*/
 template<> struct type_caster<blue_sky::type_tuple> {
 	// carry resuling value
