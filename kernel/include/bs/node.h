@@ -33,6 +33,28 @@ public:
 	using name_key = mi::member<
 		link, const std::string, &link::name_
 	>;
+	// key alias
+	enum class Key { ID, Name };
+	template<Key K> using Key_const = std::integral_constant<Key, K>;
+
+private:
+	// convert from key alias -> key type
+	template<Key K, class unused = void>
+	struct Key_dispatch {
+		using tag = id_key;
+		using type = id_type;
+	};
+	template<class unused>
+	struct Key_dispatch<Key::Name, unused> {
+		using tag = name_key;
+		using type = std::string;
+	};
+
+public:
+	template<Key K> using Key_tag = typename Key_dispatch<K>::tag;
+	template<Key K> using Key_type = typename Key_dispatch<K>::type;
+
+
 	// container that will store all node elements (links)
 	using links_container = mi::multi_index_container<
 		sp_link,
@@ -42,11 +64,22 @@ public:
 		>
 	>;
 
-	using iterator = links_container::iterator;
-	using name_iterator = links_container::index< name_key >::type::iterator;
-	using name_range = std::pair< name_iterator, name_iterator >;
+	// some useful type aliases
+	template<Key K = Key::ID> using iterator = typename links_container::index<Key_tag<K>>::type::iterator;
+	template<Key K = Key::ID> using const_iterator = typename links_container::index<Key_tag<K>>::type::const_iterator;
+	template<Key K = Key::ID> using insert_ret_t = std::pair<iterator<K>, bool>;
+	using name_range = std::pair< iterator<Key::Name>, iterator<Key::Name> >;
 
-	using insert_ret_t = std::pair< iterator, bool >;
+private:
+	/// Implementation details
+	iterator<Key::ID> begin(Key_const<Key::ID>) const;
+	iterator<Key::Name> begin(Key_const<Key::Name>) const;
+
+	iterator<Key::ID> end(Key_const<Key::ID>) const;
+	iterator<Key::Name> end(Key_const<Key::Name>) const;
+
+public:
+	/// Main API
 
 	/// number of elements in this node
 	std::size_t size() const;
@@ -58,17 +91,22 @@ public:
 	void clear();
 
 	// iterate in IDs order
-	iterator begin() const;
-	iterator end() const;
+	template<Key K = Key::ID>
+	iterator<K> begin() const {
+		return begin(Key_const<K>());
+	}
 
-	// iterate in alphabetical order
-	name_iterator begin_name() const;
-	name_iterator end_name() const;
+	template<Key K = Key::ID>
+	iterator<K> end() const {
+		return end(Key_const<K>());
+	}
 
-	iterator find(const id_type& id) const;
-	iterator find(const std::string& name) const;
+	// search link by given key
+	iterator<Key::ID> find(const id_type& id) const;
+	iterator<Key::ID> find(const std::string& name) const;
 	/// caution: slow!
-	iterator find(const sp_obj& obj) const;
+	iterator<Key::ID> find(const sp_obj& obj) const;
+
 
 	/// returns link pointer instead of iterator
 	template< typename Key >
@@ -83,16 +121,16 @@ public:
 	name_range equal_range(const sp_link& l) const;
 
 	/// insertion
-	insert_ret_t insert(const sp_link& l);
+	insert_ret_t<Key::ID> insert(const sp_link& l);
 	// auto-create and insert hard link that points to object
-	insert_ret_t insert(const std::string& name, const sp_obj& obj);
+	insert_ret_t<Key::ID> insert(const std::string& name, const sp_obj& obj);
 
 	void erase(const std::string& name);
 	void erase(const sp_link& l);
 	void erase(const sp_obj& obj);
 
-	void erase(iterator pos);
-	void erase(iterator from, iterator to);
+	void erase(iterator<Key::ID> pos);
+	void erase(iterator<Key::ID> from, iterator<Key::ID> to);
 
 	/// rename given link
 
