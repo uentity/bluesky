@@ -61,7 +61,7 @@ int objbase::bs_free_this() const {
 }
 
 std::string objbase::type_id() const {
-	return bs_type().name;
+	return bs_resolve_type().name;
 }
 
 std::string objbase::id() const {
