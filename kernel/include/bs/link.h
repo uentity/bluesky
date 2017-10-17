@@ -74,6 +74,12 @@ public:
 	/// query what kind of link is this
 	virtual link_type type_id() const = 0;
 
+	/// get link's object ID
+	virtual std::string oid() const;
+
+	/// get link's object type ID
+	virtual std::string obj_type_id() const;
+
 	/// access link's unique ID
 	const id_type& id() const {
 		return id_;

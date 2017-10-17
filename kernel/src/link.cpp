@@ -9,6 +9,7 @@
 
 #include <bs/link.h>
 #include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
@@ -32,6 +33,19 @@ link::link(const link& lhs)
 {}
 
 link::~link() {}
+
+// get link's object ID
+std::string link::oid() const {
+	auto obj = data();
+	if(obj) return obj->id();
+	return boost::uuids::to_string(boost::uuids::nil_uuid());
+}
+
+std::string link::obj_type_id() const {
+	auto obj = data();
+	if(obj) return obj->type_id();
+	return type_descriptor::nil().name;
+}
 
 NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
