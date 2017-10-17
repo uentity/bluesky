@@ -176,10 +176,9 @@ insert_status<Key::ID> node::insert(sp_link l) {
 	// switch owner to *this if succeeded
 	if(res.second) {
 		auto& res_lnk = *(res.first->get());
-		if(auto prev_owner = res_lnk.owner()) {
+		if(auto prev_owner = res_lnk.owner())
 			prev_owner->erase(res_lnk.id());
-			res_lnk.reset_owner(bs_shared_this<node>());
-		}
+		res_lnk.reset_owner(bs_shared_this<node>());
 	}
 	return res;
 }

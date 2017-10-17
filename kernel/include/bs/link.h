@@ -57,7 +57,7 @@ public:
 	/// ctor accept name of created link
 	link(std::string name);
 
-	/// direct copying of links are prohibited
+	/// direct copying of links change ID
 	link(const link&);
 
 	/// virtual dtor
@@ -126,8 +126,6 @@ public:
 	LinkType type_id() const override;
 
 	sp_link clone() const override;
-
-	//std::shared_ptr< link > parent() const override;
 
 private:
 	sp_obj data_;
