@@ -47,6 +47,10 @@ std::string link::obj_type_id() const {
 	return type_descriptor::nil().name;
 }
 
+void link::reset_owner(const sp_node& new_owner) {
+	owner_ = new_owner;
+}
+
 NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 

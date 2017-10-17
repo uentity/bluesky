@@ -97,13 +97,19 @@ public:
 		return inode_;
 	}
 
-	/// get link's parent container
-	//virtual sp_link parent() const = 0;
+	/// get link's container
+	sp_node owner() const {
+		return owner_.lock();
+	}
 
 protected:
 	std::string name_;
 	id_type id_;
 	inode inode_;
+	std::weak_ptr<node> owner_;
+
+	friend class node;
+	void reset_owner(const sp_node& new_owner);
 };
 
 /// hard link stores direct pointer to object

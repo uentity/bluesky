@@ -71,7 +71,7 @@ void py_bind_tree(py::module& m) {
 		.def("type_id", &link::type_id)
 		.def("oid", &link::oid)
 		.def("obj_type_id", &link::obj_type_id)
-		.def_property_readonly("id", [](const link& L) {
+			.def_property_readonly("id", [](const link& L) {
 			return boost::uuids::to_string(L.id());
 		})
 		.def_property_readonly("name", &link::name)
@@ -79,6 +79,7 @@ void py_bind_tree(py::module& m) {
 			py::overload_cast<>(&link::get_inode, py::const_),
 			py::overload_cast<>(&link::get_inode)
 		)
+		.def_property_readonly("owner", &link::owner)
 	;
 
 	py::class_<hard_link, link, py_link<hard_link>, std::shared_ptr<hard_link>>(m, "hard_link")

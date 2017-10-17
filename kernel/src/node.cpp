@@ -171,11 +171,21 @@ range<Key::OID> node::equal_range_oid(const std::string& oid) const {
 }
 
 insert_status<Key::ID> node::insert(sp_link l) {
-	return pimpl_->links_.insert(std::move(l));
+	// try to insert given link
+	auto res = pimpl_->links_.insert(std::move(l));
+	// switch owner to *this if succeeded
+	if(res.second) {
+		auto& res_lnk = *(res.first->get());
+		if(auto prev_owner = res_lnk.owner()) {
+			prev_owner->erase(res_lnk.id());
+			res_lnk.reset_owner(bs_shared_this<node>());
+		}
+	}
+	return res;
 }
 
 insert_status<Key::ID> node::insert(std::string name, sp_obj obj) {
-	return pimpl_->links_.insert(
+	return insert(
 		std::make_shared< hard_link >(std::move(name), std::move(obj))
 	);
 }
