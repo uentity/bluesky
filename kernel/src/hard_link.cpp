@@ -20,8 +20,8 @@ sp_obj hard_link::data() const {
 	return data_;
 }
 
-link::link_type hard_link::type_id() const {
-	return link_type::hard_link;
+link::LinkType hard_link::type_id() const {
+	return LinkType::Hard;
 }
 
 link::sp_link hard_link::clone() const {

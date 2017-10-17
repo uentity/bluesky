@@ -24,7 +24,7 @@ template<typename Link = link>
 class py_link : public Link {
 public:
 	using Link::Link;
-	using typename Link::link_type;
+	using typename Link::LinkType;
 
 	sp_link clone() const override {
 		PYBIND11_OVERLOAD_PURE(sp_link, Link, clone, );
@@ -34,8 +34,8 @@ public:
 		PYBIND11_OVERLOAD_PURE(sp_obj, Link, data, );
 	}
 
-	link_type type_id() const override {
-		PYBIND11_OVERLOAD_PURE(link_type, Link, type_id, );
+	LinkType type_id() const override {
+		PYBIND11_OVERLOAD_PURE(LinkType, Link, type_id, );
 	}
 
 	std::string oid() const override {
@@ -64,7 +64,8 @@ void py_bind_tree(py::module& m) {
 		.def_property_readonly("o", [](const inode& i) { return i.o; })
 	;
 
-	py::class_<link, py_link<>, std::shared_ptr<link>>(m, "link")
+	py::class_<link, py_link<>, std::shared_ptr<link>> link_pyface(m, "link");
+	link_pyface
 		.def(py::init<std::string>())
 		.def("clone", &link::clone)
 		.def("data", &link::data)
@@ -81,12 +82,20 @@ void py_bind_tree(py::module& m) {
 		)
 		.def_property_readonly("owner", &link::owner)
 	;
+	// export link_type enum
+	py::enum_<link::LinkType>(link_pyface, "LinkType")
+		.value("Hard", link::LinkType::Hard)
+		.value("Symbolic", link::LinkType::Symbolic)
+		.value("Net", link::LinkType::Net)
+		.export_values()
+	;
 
 	py::class_<hard_link, link, py_link<hard_link>, std::shared_ptr<hard_link>>(m, "hard_link")
 		.def(py::init<std::string, const sp_obj&>())
 	;
 
-	py::class_<node, objbase, std::shared_ptr<node>>(m, "node")
+	py::class_<node, objbase, std::shared_ptr<node>> node_pyface(m, "node");
+	node_pyface
 		BSPY_EXPORT_DEF(node)
 		.def(py::init<>())
 		.def("__len__", &node::size)
@@ -191,6 +200,12 @@ void py_bind_tree(py::module& m) {
 				res.emplace_back(i->name());
 			return res;
 		})
+	;
+	// export node's Key enum
+	py::enum_<node::Key>(node_pyface, "Key")
+		.value("ID", node::Key::ID)
+		.value("OID", node::Key::OID)
+		.value("Name", node::Key::Name)
 	;
 
 }
