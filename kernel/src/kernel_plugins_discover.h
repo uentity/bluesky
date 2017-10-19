@@ -173,7 +173,7 @@ struct plugins_discover {
 		home_path = ::getenv("ALLUSERSPROFILE");
 		if(!home_path.empty())
 			conf_path_.push_back(home_path + "\\blue-sky\\blue-sky.conf");
-		home_path = ::getenv("APPDATA");
+		home_path = ::getenv("USERPROFILE");
 		if(!home_path.empty())
 			conf_path_.push_back(home_path + "\\blue-sky\\blue-sky.conf");
 #endif // UNIX
