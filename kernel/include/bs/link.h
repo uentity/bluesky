@@ -48,12 +48,6 @@ public:
 	using id_type = boost::uuids::uuid;
 	using sp_link = std::shared_ptr< link >;
 
-	enum LinkType {
-		Hard = 0,
-		Symbolic,
-		Net
-	};
-
 	/// ctor accept name of created link
 	link(std::string name);
 
@@ -72,7 +66,7 @@ public:
 	virtual sp_obj data() const = 0;
 
 	/// query what kind of link is this
-	virtual LinkType type_id() const = 0;
+	virtual std::string type_id() const = 0;
 
 	/// get link's object ID
 	virtual std::string oid() const;
@@ -123,7 +117,7 @@ public:
 	/// implement link's API
 	sp_obj data() const override;
 
-	LinkType type_id() const override;
+	std::string type_id() const override;
 
 	sp_link clone() const override;
 

@@ -24,7 +24,6 @@ template<typename Link = link>
 class py_link : public Link {
 public:
 	using Link::Link;
-	using typename Link::LinkType;
 
 	sp_link clone() const override {
 		PYBIND11_OVERLOAD_PURE(sp_link, Link, clone, );
@@ -34,8 +33,8 @@ public:
 		PYBIND11_OVERLOAD_PURE(sp_obj, Link, data, );
 	}
 
-	LinkType type_id() const override {
-		PYBIND11_OVERLOAD_PURE(LinkType, Link, type_id, );
+	std::string type_id() const override {
+		PYBIND11_OVERLOAD_PURE(std::string, Link, type_id, );
 	}
 
 	std::string oid() const override {
@@ -81,13 +80,6 @@ void py_bind_tree(py::module& m) {
 			py::overload_cast<>(&link::get_inode)
 		)
 		.def_property_readonly("owner", &link::owner)
-	;
-	// export link_type enum
-	py::enum_<link::LinkType>(link_pyface, "LinkType")
-		.value("Hard", link::LinkType::Hard)
-		.value("Symbolic", link::LinkType::Symbolic)
-		.value("Net", link::LinkType::Net)
-		.export_values()
 	;
 
 	py::class_<hard_link, link, py_link<hard_link>, std::shared_ptr<hard_link>>(m, "hard_link")
