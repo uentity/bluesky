@@ -12,6 +12,7 @@
 #include "objbase.h"
 #include "link.h"
 #include "exception.h"
+#include "detail/is_container.h"
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -116,7 +117,7 @@ public:
 	iterator<Key::ID> find(const id_type& id) const;
 	iterator<Key::ID> find(const std::string& link_name) const;
 	/// caution: slow!
-	// find link by given object ID (first found link is returned)
+	/// find link by given object ID (first found link is returned)
 	iterator<Key::ID> find_oid(const std::string& oid) const;
 
 	/// returns link pointer instead of iterator
@@ -135,10 +136,33 @@ public:
 	range<Key::Name> equal_range(const std::string& link_name) const;
 	range<Key::OID> equal_range_oid(const std::string& oid) const;
 
+	/// links insertions policy
+	enum InsertPolicy {
+		AllowDupNames = 0,
+		DenyDupNames = 1,
+		RenameDup = 2,
+		DenyDupOID = 4,
+		Merge = 8
+	};
 	/// leafs insertion
-	insert_status<Key::ID> insert(sp_link l);
-	// auto-create and insert hard link that points to object
-	insert_status<Key::ID> insert(std::string name, sp_obj obj);
+	insert_status<Key::ID> insert(sp_link l, uint pol = AllowDupNames);
+	/// auto-create and insert hard link that points to object
+	insert_status<Key::ID> insert(std::string name, sp_obj obj, uint pol = AllowDupNames);
+	/// insert links from given container
+	/// NOTE: container elements will be moved from passed container!
+	template<
+		typename C,
+		typename = std::enable_if_t<is_container<C>::value>
+	>
+	void insert(const C& links, uint pol = AllowDupNames) {
+		for(auto L : links) {
+			static_assert(
+				std::is_base_of<link, std::decay_t<decltype(*L)>>::value,
+				"Links container should contain pointers to `tree::link` objects!"
+			);
+			insert(std::move(L));
+		}
+	}
 
 	/// leafs removal
 	void erase(const id_type& link_id);
@@ -157,7 +181,7 @@ public:
 	/// rename given link
 
 	/// ctor
-	node();
+	node(std::string custom_id = "");
 	// copy ctor makes deep copy of contained links
 	node(const node& src);
 

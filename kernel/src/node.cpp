@@ -46,6 +46,8 @@ public:
 		return nullptr;
 	}
 
+	//static deep_merge(const node_impl& n, )
+
 	template<Key K = Key::ID>
 	auto begin() const {
 		return links_.get<Key_tag<K>>().begin();
@@ -93,6 +95,41 @@ public:
 		return this->deep_search_impl<K>(*this, key);
 	}
 
+	insert_status<Key::ID> insert(sp_link l, uint pol) {
+		// check if we have duplication name
+		iterator<Key::ID> dup;
+		if((pol & 3) > 0) {
+			dup = find<Key::Name>(l->name());
+			if(dup != end<>()) {
+				// first check if dup names are prohibited
+				if(pol & InsertPolicy::DenyDupNames) return {dup, false};
+				else {
+					// try to auto-rename link
+					std::string new_name;
+					bool unique_found = false;
+					for(int i = 0; i < 1000; ++i) {
+						new_name = l->name() + '_' + std::to_string(i);
+						if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
+							// we've found a unique name
+							l->name_ = std::move(new_name);
+							unique_found = true;
+							break;
+						}
+					}
+					// if no unique name was found - return fail
+					if(!unique_found) return {dup, false};
+				}
+			}
+		}
+		// check for duplicating OID
+		if(pol & InsertPolicy::DenyDupNames) {
+			dup = find<Key::OID>(l->oid());
+			if(dup != end<>()) return {dup, false};
+		}
+		// try to insert given link
+		return links_.insert(std::move(l));
+	}
+
 	// implement deep copy ctor
 	node_impl(const node_impl& src) {
 		for(const auto& plink : src.links_) {
@@ -108,12 +145,12 @@ public:
 /*-----------------------------------------------------------------------------
  *  node
  *-----------------------------------------------------------------------------*/
-node::node()
-	: pimpl_(std::make_unique<node_impl>())
+node::node(std::string custom_id)
+	: objbase(true, custom_id), pimpl_(std::make_unique<node_impl>())
 {}
 
 node::node(const node& src)
-	: pimpl_(std::make_unique<node_impl>(*src.pimpl_))
+	: objbase(src), pimpl_(std::make_unique<node_impl>(*src.pimpl_))
 {}
 
 node::~node() = default;
@@ -170,9 +207,8 @@ range<Key::OID> node::equal_range_oid(const std::string& oid) const {
 	return pimpl_->equal_range<Key::OID>(oid);
 }
 
-insert_status<Key::ID> node::insert(sp_link l) {
-	// try to insert given link
-	auto res = pimpl_->links_.insert(std::move(l));
+insert_status<Key::ID> node::insert(sp_link l, uint pol) {
+	auto res = pimpl_->insert(std::move(l), pol);
 	// switch owner to *this if succeeded
 	if(res.second) {
 		auto& res_lnk = *(res.first->get());
@@ -180,12 +216,22 @@ insert_status<Key::ID> node::insert(sp_link l) {
 			prev_owner->erase(res_lnk.id());
 		res_lnk.reset_owner(bs_shared_this<node>());
 	}
+	else if(pol | InsertPolicy::Merge && res.first != end()) {
+		// check if we need to deep merge given links
+		// go one step down the hierarchy
+		auto src_node = l->data_node();
+		auto dst_node = (*res.first)->data_node();
+		if(src_node && dst_node) {
+			// insert all links from source node into destination
+			dst_node->insert(*src_node, pol);
+		}
+	}
 	return res;
 }
 
-insert_status<Key::ID> node::insert(std::string name, sp_obj obj) {
+insert_status<Key::ID> node::insert(std::string name, sp_obj obj, uint pol) {
 	return insert(
-		std::make_shared< hard_link >(std::move(name), std::move(obj))
+		std::make_shared< hard_link >(std::move(name), std::move(obj)), pol
 	);
 }
 
@@ -230,6 +276,7 @@ sp_link node::deep_search_oid(const std::string& oid) const {
 }
 
 BS_TYPE_IMPL(node, objbase, "node", "BS tree node", true, true);
+BS_TYPE_ADD_CONSTRUCTOR(node, (std::string))
 BS_REGISTER_TYPE("kernel", node)
 
 NAMESPACE_END(tree)
