@@ -48,6 +48,7 @@ void py_bind_objbase(py::module& m) {
 		})
 		.def("type_id", &objbase::type_id)
 		.def("id", &objbase::id)
+		.def_property_readonly("is_node", &objbase::is_node)
 		// DEBUG
 		.def_property_readonly("refs", [](objbase& src) { return src.shared_from_this().use_count() - 1; })
 	;

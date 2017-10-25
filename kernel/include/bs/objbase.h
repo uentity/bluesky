@@ -21,18 +21,20 @@ NAMESPACE_BEGIN(blue_sky)
 */
 class BS_API objbase : public std::enable_shared_from_this< objbase > {
 	friend class kernel;
+	friend class tree::node;
 
 public:
-	/// default ctor
-	objbase(); //= default;
+	/// default ctor that accepts custom ID string
+	/// if ID is empty it will be auto-generated
+	objbase(std::string custom_oid = "");
 	/// default copy ctor
-	objbase(const objbase&); //= default;
+	objbase(const objbase&);
 	/// default move ctor
 	objbase(objbase&&) = default;
 	// virtual destructor
 	virtual ~objbase();
 
-	//! swap function needed to provide assignment ability
+	/// swap function needed to provide assignment ability
 	void swap(objbase& rhs);
 
 	//! type_descriptor of objbase class
@@ -66,11 +68,19 @@ public:
 	/// obtain object's ID
 	virtual std::string id() const;
 
+	/// check if object is actually a tree::node
+	/// NOTE: no RTTI, no virtual functions, just checks flag
+	bool is_node() const;
+
 protected:
+	/// string ID storage
 	std::string id_;
 
-	/// ctor for derived classes that can provide external ID
-	objbase(std::string custom_id);
+private:
+	/// flag indicating that this object is actually a tree::node
+	bool is_node_;
+	/// dedicated ctor that sets `is_node` flag
+	objbase(bool is_node, std::string custom_oid = "");
 };
 
 // alias

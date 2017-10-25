@@ -25,19 +25,20 @@ static auto gen = boost::uuids::random_generator();
 
 } // eof hidden namespace
 
-objbase::objbase()
-	: id_(boost::uuids::to_string(gen()))
+objbase::objbase(std::string custom_oid)
+	: objbase(false, custom_oid)
+{}
+
+objbase::objbase(bool is_node, std::string custom_oid)
+	: id_(custom_oid.size() ? std::move(custom_oid) : boost::uuids::to_string(gen())), is_node_(is_node)
 {}
 
 objbase::objbase(const objbase& obj)
-	: enable_shared_from_this(obj), id_(boost::uuids::to_string(gen()))
-{}
-
-objbase::objbase(std::string custom_id)
-	: id_(std::move(custom_id))
+	: enable_shared_from_this(obj), id_(boost::uuids::to_string(gen())), is_node_(obj.is_node_)
 {}
 
 void objbase::swap(objbase& rhs) {
+	std::swap(is_node_, rhs.is_node_);
 	std::swap(id_, rhs.id_);
 }
 
