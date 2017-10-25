@@ -44,6 +44,10 @@ public:
 	std::string obj_type_id() const override {
 		PYBIND11_OVERLOAD_PURE(std::string, Link, obj_type_id, );
 	}
+
+	sp_node data_node() const override {
+		PYBIND11_OVERLOAD_PURE(sp_node, Link, data_node, );
+	}
 };
 
 static boost::uuids::string_generator uuid_from_str;
@@ -71,7 +75,8 @@ void py_bind_tree(py::module& m) {
 		.def("type_id", &link::type_id)
 		.def("oid", &link::oid)
 		.def("obj_type_id", &link::obj_type_id)
-			.def_property_readonly("id", [](const link& L) {
+		.def("data_node", &link::data_node)
+		.def_property_readonly("id", [](const link& L) {
 			return boost::uuids::to_string(L.id());
 		})
 		.def_property_readonly("name", &link::name)
@@ -83,6 +88,9 @@ void py_bind_tree(py::module& m) {
 	;
 
 	py::class_<hard_link, link, py_link<hard_link>, std::shared_ptr<hard_link>>(m, "hard_link")
+		.def(py::init<std::string, sp_obj>())
+	;
+	py::class_<weak_link, link, py_link<weak_link>, std::shared_ptr<weak_link>>(m, "weak_link")
 		.def(py::init<std::string, const sp_obj&>())
 	;
 

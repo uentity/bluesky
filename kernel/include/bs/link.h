@@ -74,6 +74,10 @@ public:
 	/// get link's object type ID
 	virtual std::string obj_type_id() const;
 
+	/// return tree::node if contained object is a node
+	/// derived class can probably return chached node info
+	virtual sp_node data_node() const;
+
 	/// access link's unique ID
 	const id_type& id() const {
 		return id_;
@@ -123,18 +127,50 @@ class BS_API hard_link : public link {
 public:
 
 	/// ctor -- additionaly accepts a pointer to object
-	hard_link(std::string name, const sp_obj& data);
+	hard_link(std::string name, sp_obj data);
 
 	/// implement link's API
+	sp_link clone() const override;
+
 	sp_obj data() const override;
 
 	std::string type_id() const override;
 
-	sp_link clone() const override;
+	std::string oid() const override;
+
+	std::string obj_type_id() const override;
+
+	sp_node data_node() const override;
 
 private:
 	sp_obj data_;
 };
+
+/// weak link is same as hard link, but stores weak link to data
+/// intended to be used to add class memebers self tree structure
+class BS_API weak_link : public link {
+public:
+
+	/// ctor -- additionaly accepts a pointer to object
+	weak_link(std::string name, const sp_obj& data);
+
+	/// implement link's API
+	sp_link clone() const override;
+
+	sp_obj data() const override;
+
+	std::string type_id() const override;
+
+	std::string oid() const override;
+
+	std::string obj_type_id() const override;
+
+	sp_node data_node() const override;
+
+private:
+	std::weak_ptr<objbase> data_;
+};
+
 
 NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
