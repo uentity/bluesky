@@ -40,25 +40,34 @@ public:
 	using oid_key = mi::const_mem_fun<
 		link, std::string, &link::oid
 	>;
+	// and non-unique object type
+	using type_key = mi::const_mem_fun<
+		link, std::string, &link::obj_type_id
+	>;
 	// key alias
-	enum class Key { ID, OID, Name };
+	enum class Key { ID, OID, Name, Type };
 	template<Key K> using Key_const = std::integral_constant<Key, K>;
 
 private:
 	// convert from key alias -> key type
-	template<Key K, class unused = void>
+	template<Key K, class _ = void>
 	struct Key_dispatch {
 		using tag = id_key;
 		using type = id_type;
 	};
-	template<class unused>
-	struct Key_dispatch<Key::Name, unused> {
+	template<class _>
+	struct Key_dispatch<Key::Name, _> {
 		using tag = name_key;
 		using type = std::string;
 	};
-	template<class unused>
-	struct Key_dispatch<Key::OID, unused> {
+	template<class _>
+	struct Key_dispatch<Key::OID, _> {
 		using tag = oid_key;
+		using type = std::string;
+	};
+	template<class _>
+	struct Key_dispatch<Key::Type, _> {
+		using tag = type_key;
 		using type = std::string;
 	};
 
@@ -72,7 +81,8 @@ public:
 		mi::indexed_by<
 			mi::ordered_unique< mi::tag< id_key >, id_key >,
 			mi::ordered_non_unique< mi::tag< name_key >, name_key >,
-			mi::ordered_non_unique< mi::tag< oid_key >, oid_key >
+			mi::ordered_non_unique< mi::tag< oid_key >, oid_key >,
+			mi::ordered_non_unique< mi::tag< type_key >, type_key >
 		>
 	>;
 
@@ -135,6 +145,7 @@ public:
 
 	range<Key::Name> equal_range(const std::string& link_name) const;
 	range<Key::OID> equal_range_oid(const std::string& oid) const;
+	range<Key::Type> equal_type(const std::string& type_id) const;
 
 	/// links insertions policy
 	enum InsertPolicy {
@@ -168,6 +179,7 @@ public:
 	void erase(const id_type& link_id);
 	void erase(const std::string& link_name);
 	void erase_oid(const std::string& oid);
+	void erase_type(const std::string& type_id);
 
 	void erase(const range<Key::ID>& r);
 	void erase(const range<Key::Name>& r);
@@ -196,10 +208,12 @@ private:
 	iterator<Key::ID> begin(Key_const<Key::ID>) const;
 	iterator<Key::Name> begin(Key_const<Key::Name>) const;
 	iterator<Key::OID> begin(Key_const<Key::OID>) const;
+	iterator<Key::Type> begin(Key_const<Key::Type>) const;
 
 	iterator<Key::ID> end(Key_const<Key::ID>) const;
 	iterator<Key::Name> end(Key_const<Key::Name>) const;
 	iterator<Key::OID> end(Key_const<Key::OID>) const;
+	iterator<Key::Type> end(Key_const<Key::Type>) const;
 
 	BS_TYPE_DECL
 };

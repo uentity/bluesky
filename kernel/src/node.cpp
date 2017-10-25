@@ -187,6 +187,14 @@ iterator<Key::OID> node::end(Key_const<Key::OID>) const {
 	return pimpl_->end<Key::OID>();
 }
 
+iterator<Key::Type> node::begin(Key_const<Key::Type>) const {
+	return pimpl_->begin<Key::Type>();
+}
+
+iterator<Key::Type> node::end(Key_const<Key::Type>) const {
+	return pimpl_->end<Key::Type>();
+}
+
 iterator<Key::ID> node::find(const id_type& id) const {
 	return pimpl_->find<Key::ID>(id);
 }
@@ -205,6 +213,10 @@ range<Key::Name> node::equal_range(const std::string& link_name) const {
 
 range<Key::OID> node::equal_range_oid(const std::string& oid) const {
 	return pimpl_->equal_range<Key::OID>(oid);
+}
+
+range<Key::Type> node::equal_type(const std::string& type_id) const {
+	return pimpl_->equal_range<Key::Type>(type_id);
 }
 
 insert_status<Key::ID> node::insert(sp_link l, uint pol) {
@@ -245,6 +257,10 @@ void node::erase(const std::string& name) {
 
 void node::erase_oid(const std::string& oid) {
 	pimpl_->erase<Key::OID>(oid);
+}
+
+void node::erase_type(const std::string& type_id) {
+	pimpl_->erase<Key::Type>(type_id);
 }
 
 void node::erase(const range<Key::ID>& r) {

@@ -118,6 +118,10 @@ void py_bind_tree(py::module& m) {
 		.def("contains_oid", [](const node& N, const std::string& oid) {
 			return N.find_oid(oid) != N.end<>();
 		}, "OID", "Check if node contains object with given ID")
+		// check by object type
+		.def("contains_type", [](const node& N, const std::string& type_id) {
+			return N.equal_type(type_id).first != N.end<node::Key::Type>();
+		}, "obj_type_id", "Check if node contains objects with given type")
 
 		// search by link name
 		.def("__getitem__", [](const node& N, const std::string& link_name) {
@@ -166,15 +170,23 @@ void py_bind_tree(py::module& m) {
 			auto r = N.equal_range_oid(oid);
 			return py::make_iterator(r.first, r.second);
 		}, py::keep_alive<0, 1>(), "OID"_a)
+		.def("equal_type", [](const node& N, const std::string& type_id) {
+			auto r = N.equal_type(type_id);
+			return py::make_iterator(r.first, r.second);
+		}, py::keep_alive<0, 1>(), "obj_type_id"_a)
 
 		// insert hard link to given object
 		.def("__setitem__", [](node& N, std::string link_name, sp_obj obj) {
 			N.insert(std::move(link_name), std::move(obj));
 		}, "link_name"_a, "obj"_a)
 		// insert given link
-		.def("insert", [](node& N, sp_link l) {
+		.def("insert", [](node& N, sp_link l, uint pol = node::AllowDupNames) {
 			return N.insert(std::move(l)).second;
-		}, "link"_a, "Insert given link")
+		}, "link"_a, "pol"_a = node::AllowDupNames, "Insert given link")
+		// insert hard link to given object
+		.def("insert", [](node& N, std::string name, sp_obj obj, uint pol = node::AllowDupNames) {
+			return N.insert(std::move(name), std::move(obj), pol).second;
+		}, "name"_a, "obj"_a, "pol"_a = node::AllowDupNames, "Insert hard link to given object")
 
 		// erase by given link name or object instance (object's ID)
 		.def("__delitem__", [](node& N, py::object key) {
@@ -188,6 +200,9 @@ void py_bind_tree(py::module& m) {
 		.def("erase_lid", [](node& N, const std::string& key) {
 			N.erase(uuid_from_str(key));
 		}, "lid"_a, "Erase link with given ID")
+		.def("erase_type", [](node& N, const std::string& type_id) {
+			N.erase_type(type_id);
+		}, "obj_type_id"_a, "Erase all links pointing to objects with given type")
 
 		// misc functions
 		.def_property_readonly("size", &node::size)
@@ -206,6 +221,16 @@ void py_bind_tree(py::module& m) {
 		.value("ID", node::Key::ID)
 		.value("OID", node::Key::OID)
 		.value("Name", node::Key::Name)
+		.value("Type", node::Key::Type)
+	;
+	// export node's insert policy
+	py::enum_<node::InsertPolicy>(node_pyface, "InsertPolicy")
+		.value("AllowDupNames", node::InsertPolicy::AllowDupNames)
+		.value("DenyDupNames", node::InsertPolicy::DenyDupNames)
+		.value("RenameDup", node::InsertPolicy::RenameDup)
+		.value("DenyDupOID", node::InsertPolicy::DenyDupOID)
+		.value("Merge", node::InsertPolicy::Merge)
+		.export_values();
 	;
 
 }
