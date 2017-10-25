@@ -40,7 +40,7 @@ struct BS_API inode {
 };
 
 /// base class of all links
-class BS_API link {
+class BS_API link  : public std::enable_shared_from_this<link> {
 public:
 	// give node access to all link's memebers
 	friend class node;
@@ -94,6 +94,17 @@ public:
 	/// get link's container
 	sp_node owner() const {
 		return owner_.lock();
+	}
+
+	/// provide shared pointers casted to derived type
+	template< class Derived >
+	decltype(auto) bs_shared_this() const {
+		return std::static_pointer_cast< const Derived, const link >(this->shared_from_this());
+	}
+
+	template< class Derived >
+	decltype(auto) bs_shared_this() {
+		return std::static_pointer_cast< Derived, link >(this->shared_from_this());
 	}
 
 protected:
