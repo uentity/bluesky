@@ -90,8 +90,21 @@ public:
 	template<Key K = Key::ID> using iterator = typename links_container::index<Key_tag<K>>::type::iterator;
 	template<Key K = Key::ID> using const_iterator = typename links_container::index<Key_tag<K>>::type::const_iterator;
 	template<Key K = Key::ID> using insert_status = std::pair<iterator<K>, bool>;
-	template<Key K = Key::ID> using range = std::pair<iterator<K>, iterator<K>>;
-	template<Key K = Key::ID> using const_range = std::pair<const_iterator<K>, const_iterator<K>>;
+
+	/// range is a pair that supports iteration
+	template<typename Iterator>
+	struct range_t : public std::pair<Iterator, Iterator> {
+		using base_t = std::pair<Iterator, Iterator>;
+		using base_t::base_t;
+		range_t(const range_t&) = default;
+		range_t(range_t&&) = default;
+		range_t(const base_t& rhs) : base_t(rhs) {}
+
+		Iterator begin() const { return this->first; }
+		Iterator end() const { return this->second; }
+	};
+	template<Key K = Key::ID> using range = range_t<iterator<K>>;
+	template<Key K = Key::ID> using const_range = range_t<const_iterator<K>>;
 
 public:
 	/// Main API
