@@ -69,5 +69,9 @@ std::string objbase::id() const {
 	return id_;
 }
 
+bool objbase::is_node() const {
+	return is_node_;
+}
+
 NAMESPACE_END(blue_sky)
 

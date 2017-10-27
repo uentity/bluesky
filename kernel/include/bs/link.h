@@ -76,7 +76,7 @@ public:
 
 	/// return tree::node if contained object is a node
 	/// derived class can probably return chached node info
-	virtual sp_node data_node() const;
+	virtual sp_node data_node() const = 0;
 
 	/// access link's unique ID
 	const id_type& id() const {

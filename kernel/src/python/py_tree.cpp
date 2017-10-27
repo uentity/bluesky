@@ -94,7 +94,27 @@ void py_bind_tree(py::module& m) {
 		.def(py::init<std::string, const sp_obj&>())
 	;
 
+	// forward define node
 	py::class_<node, objbase, std::shared_ptr<node>> node_pyface(m, "node");
+
+	// export node's Key enum
+	py::enum_<node::Key>(node_pyface, "Key")
+		.value("ID", node::Key::ID)
+		.value("OID", node::Key::OID)
+		.value("Name", node::Key::Name)
+		.value("Type", node::Key::Type)
+	;
+	// export node's insert policy
+	py::enum_<node::InsertPolicy>(node_pyface, "InsertPolicy")
+		.value("AllowDupNames", node::InsertPolicy::AllowDupNames)
+		.value("DenyDupNames", node::InsertPolicy::DenyDupNames)
+		.value("RenameDup", node::InsertPolicy::RenameDup)
+		.value("DenyDupOID", node::InsertPolicy::DenyDupOID)
+		.value("Merge", node::InsertPolicy::Merge)
+		.export_values();
+	;
+
+	// fill node with methods
 	node_pyface
 		BSPY_EXPORT_DEF(node)
 		.def(py::init<>())
@@ -216,23 +236,6 @@ void py_bind_tree(py::module& m) {
 			return res;
 		})
 	;
-	// export node's Key enum
-	py::enum_<node::Key>(node_pyface, "Key")
-		.value("ID", node::Key::ID)
-		.value("OID", node::Key::OID)
-		.value("Name", node::Key::Name)
-		.value("Type", node::Key::Type)
-	;
-	// export node's insert policy
-	py::enum_<node::InsertPolicy>(node_pyface, "InsertPolicy")
-		.value("AllowDupNames", node::InsertPolicy::AllowDupNames)
-		.value("DenyDupNames", node::InsertPolicy::DenyDupNames)
-		.value("RenameDup", node::InsertPolicy::RenameDup)
-		.value("DenyDupOID", node::InsertPolicy::DenyDupOID)
-		.value("Merge", node::InsertPolicy::Merge)
-		.export_values();
-	;
-
 }
 
 NAMESPACE_END(python)
