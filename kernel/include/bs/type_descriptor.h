@@ -45,7 +45,40 @@ private:
 	mutable BS_TYPE_COPY_FUN copy_fun_;
 
 	// map type of params tuple -> typeless creation function
-	mutable std::unordered_map< std::type_index, std::pair< void(*)(), void*> > creators_;
+	using ctor_handle = std::pair< void(*)(), void*>;
+	mutable std::unordered_map< std::type_index, ctor_handle > creators_;
+
+	// `decay_helper` extends `std::decay` such that pointed type (for pointers) is also decayed
+	template<typename T, typename = void>
+	struct decay_helper {
+		using type = std::decay_t<T>; //-> can give a pointer, that's why 2nd pass is needed
+	};
+	template<typename T>
+	struct decay_helper<T, std::enable_if_t<std::is_pointer<T>::value>> {
+		using type = std::decay_t<decltype(*std::declval<T>())>*;
+	};
+	// need to double-pass through `decay_helper` to strip `const` from inline strings
+	// and other const arrays
+	template<typename T> using decay_arg = typename decay_helper< typename decay_helper<T>::type >::type;
+	// decayed ctor parameters tuple is the key to find corresponding creator function
+	template< typename... Args > using args_pack = std::tuple<decay_arg<Args>...>;
+
+	// generate BS type creator signature with consistent results
+	// if param is pointer (const or not) to type `T` -> result is `const T*`
+	// else result is const reference to decayed param type `T`
+	template<typename T, typename = void>
+	struct pass_helper {
+		using type = std::add_lvalue_reference_t< std::add_const_t<decay_arg<T>> >;
+	};
+	template<typename T>
+	struct pass_helper<T, std::enable_if_t<std::is_pointer<decay_arg<T>>::value>> {
+		using dT = std::remove_reference_t<decltype(*std::declval<decay_arg<T>>())>;
+		using type = std::add_const_t<dT>*;
+	};
+	template<typename T> using pass_arg = typename pass_helper<T>::type;
+	// final signature of object creator function callback
+	template< typename... Args >
+	using creator_callback = bs_type_ctor_result (*)(void*, pass_arg<Args>...);
 
 	template< class T, class unused = void >
 	struct extract_tdfun {
@@ -92,16 +125,6 @@ private:
 
 		bs_type_ctor_result ptr_;
 	};
-
-	// helper to find out parameters pack tuple type
-	template< typename... Args >
-	using args_pack = std::tuple< std::decay_t< Args >... >;
-
-	// type of object construction callback
-	template< typename... Args >
-	using creator_callback = bs_type_ctor_result (*)(
-		void*, std::add_lvalue_reference_t< const std::decay_t< Args > >...
-	);
 
 	// should we add default ctor?
 	template< typename T, bool Enable >
@@ -181,9 +204,9 @@ public:
 	// for templated functions
 	template< typename... Args >
 	void add_constructor(bs_type_ctor_result (*f)(Args...)) const {
-		creators_[typeid(args_pack< Args... >)] = std::make_pair(
+		creators_[typeid(args_pack< Args... >)] = ctor_handle(
 			reinterpret_cast< void(*)() >((creator_callback< Args... >)
-				[](void* ff, std::add_lvalue_reference_t< const std::decay_t< Args > >... args) {
+				[](void* ff, pass_arg< Args >... args) {
 					return (*reinterpret_cast< decltype(f) >(ff))(args...);
 				}
 			),
@@ -202,10 +225,10 @@ public:
 	// explicit constructor arguments types
 	template< typename T, typename... Args >
 	void add_constructor() const {
-		creators_[typeid(args_pack< Args... >)] = std::make_pair(
+		creators_[typeid(args_pack< Args... >)] = ctor_handle(
 			reinterpret_cast< void(*)() >((creator_callback< Args... >)
-				[](void*, std::add_lvalue_reference_t< const std::decay_t< Args > >... args) {
-					return std::static_pointer_cast< objbase, T >(std::make_shared< T >(args...));
+				[](void* ff, pass_arg< Args >... args) {
+					return std::static_pointer_cast<objbase, T>(std::make_shared<T>(args...));
 				}
 			),
 			nullptr
@@ -224,8 +247,8 @@ public:
 	shared_ptr_cast construct(Args&&... args) const {
 		auto creator = creators_.find(typeid(args_pack< Args... >));
 		if(creator != creators_.end()) {
-			auto callback = reinterpret_cast< creator_callback< Args...> >(creator->second.first);
-			return callback(creator->second.second, std::forward< Args >(args)...);
+			auto callback = reinterpret_cast< creator_callback<Args...> >(creator->second.first);
+			return callback(creator->second.second, std::forward<Args>(args)...);
 		}
 		return {};
 	}
@@ -319,10 +342,8 @@ inline bool operator !=(const type_descriptor& td, const BS_TYPE_INFO& ti) {
 // upcastable_eq(td1, td2) will return true if td1 != td2
 // but td1 can be casted up to td2 (i.e. td1 is inherited from td1)
 struct BS_API upcastable_eq : public std::binary_function<
-							  type_descriptor,
-							  type_descriptor,
-							  bool >
-{
+	type_descriptor, type_descriptor, bool
+> {
 	bool operator()(const type_descriptor& td1, const type_descriptor& td2) const;
 };
 
