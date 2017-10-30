@@ -9,6 +9,7 @@
 
 #include <bs/node.h>
 #include <bs/kernel.h>
+#include <set>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
@@ -128,6 +129,15 @@ public:
 		}
 		// try to insert given link
 		return links_.insert(std::move(l));
+	}
+
+	template<Key K>
+	std::vector<Key_type<K>> keys() const {
+		std::set<Key_type<K>> r;
+		auto kex = Key_tag<K>();
+		for(const auto& i : links_)
+			r.insert(kex(*i));
+		return {r.begin(), r.end()};
 	}
 
 	// implement deep copy ctor
@@ -289,6 +299,22 @@ sp_link node::deep_search(const std::string& link_name) const {
 
 sp_link node::deep_search_oid(const std::string& oid) const {
 	return pimpl_->deep_search<Key::OID>(oid);
+}
+
+std::vector<Key_type<Key::ID>> node::keys(Key_const<Key::ID>) const {
+	return pimpl_->keys<Key::ID>();
+}
+
+std::vector<Key_type<Key::Name>> node::keys(Key_const<Key::Name>) const {
+	return pimpl_->keys<Key::Name>();
+}
+
+std::vector<Key_type<Key::OID>> node::keys(Key_const<Key::OID>) const {
+	return pimpl_->keys<Key::OID>();
+}
+
+std::vector<Key_type<Key::Type>> node::keys(Key_const<Key::Type>) const {
+	return pimpl_->keys<Key::Type>();
 }
 
 BS_TYPE_IMPL(node, objbase, "node", "BS tree node", true, true);

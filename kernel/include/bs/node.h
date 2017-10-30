@@ -203,6 +203,12 @@ public:
 		erase(range<K>{pos, std::advance(pos)});
 	}
 
+	/// obtain vector of keys for given index type
+	template<Key K = Key::ID>
+	std::vector<Key_type<K>> keys() const {
+		return keys(Key_const<K>());
+	}
+
 	/// rename given link
 
 	/// ctor
@@ -227,6 +233,11 @@ private:
 	iterator<Key::Name> end(Key_const<Key::Name>) const;
 	iterator<Key::OID> end(Key_const<Key::OID>) const;
 	iterator<Key::Type> end(Key_const<Key::Type>) const;
+
+	std::vector<Key_type<Key::ID>> keys(Key_const<Key::ID>) const;
+	std::vector<Key_type<Key::Name>> keys(Key_const<Key::Name>) const;
+	std::vector<Key_type<Key::OID>> keys(Key_const<Key::OID>) const;
+	std::vector<Key_type<Key::Type>> keys(Key_const<Key::Type>) const;
 
 	BS_TYPE_DECL
 };

@@ -236,13 +236,28 @@ void py_bind_tree(py::module& m) {
 		.def_property_readonly("size", &node::size)
 		.def_property_readonly("empty", &node::empty)
 		.def("clear", &node::clear, "Clears all node contents")
-		.def("keys", [](const node& N) {
-			std::vector<std::string> res;
-			res.reserve(N.size());
-			for(const auto& i : N)
-				res.emplace_back(i->name());
-			return res;
-		})
+		.def("keys", [](const node& N, node::Key ktype = node::Key::Name) {
+			if(ktype == node::Key::ID) {
+				// convert UUIDs to string representation
+				auto keys = N.keys<>();
+				std::vector<std::string> res;
+				res.reserve(keys.size());
+				for(const auto& k : keys)
+					res.emplace_back(boost::uuids::to_string(k));
+				return res;
+			}
+			else {
+				switch(ktype) {
+				default:
+				case node::Key::Name :
+					return N.keys<node::Key::Name>();
+				case node::Key::OID :
+					return N.keys<node::Key::OID>();
+				case node::Key::Type :
+					return N.keys<node::Key::Type>();
+				};
+			}
+		}, "key_type"_a = node::Key::Name)
 	;
 }
 
