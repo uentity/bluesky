@@ -161,6 +161,16 @@ void py_bind_tree(py::module& m) {
 			return N.equal_type(type_id).first != N.end<node::Key::Type>();
 		}, "obj_type_id", "Check if node contains objects with given type")
 
+		// get item by int index
+		.def("__getitem__", [](const node& N, const long idx) {
+			// support for Pythonish indexing from both ends
+			if(std::size_t(std::abs(idx)) > N.size())
+				throw py::key_error("Index out of bounds");
+			auto pos = idx < 0 ? N.end() : N.begin();
+			std::advance(pos, idx);
+			if(pos == N.end()) throw py::key_error("Index out of bounds");
+			return *pos;
+		}, py::return_value_policy::reference_internal, "link_idx"_a)
 		// search by link name
 		.def("__getitem__", [](const node& N, const std::string& link_name) {
 			auto r = N.find(link_name);
@@ -173,14 +183,6 @@ void py_bind_tree(py::module& m) {
 			if(r != N.end<>()) return *r;
 			throw py::key_error("Node doesn't contain object with ID = " + obj->id());
 		}, py::return_value_policy::reference_internal, "object"_a)
-		// get item by int index
-		.def("__getitem__", [](const node& N, long idx) {
-			if(idx < 0 || ulong(idx) >= N.size())
-				throw py::key_error("Index out of bounds");
-			auto r = N.begin();
-			std::advance(r, idx);
-			return *r;
-		}, py::return_value_policy::reference_internal, "link_name"_a)
 		// search by object ID
 		.def("find_oid", [](const node& N, const std::string& oid) {
 			auto r = N.find_oid(oid);
@@ -221,10 +223,6 @@ void py_bind_tree(py::module& m) {
 			return py::make_iterator(r.first, r.second);
 		}, py::keep_alive<0, 1>(), "obj_type_id"_a)
 
-		// insert hard link to given object
-		.def("__setitem__", [](node& N, std::string link_name, sp_obj obj) {
-			N.insert(std::move(link_name), std::move(obj));
-		}, "link_name"_a, "obj"_a)
 		// insert given link
 		.def("insert", [](node& N, sp_link l, uint pol = node::AllowDupNames) {
 			return N.insert(std::move(l)).second;
@@ -234,6 +232,13 @@ void py_bind_tree(py::module& m) {
 			return N.insert(std::move(name), std::move(obj), pol).second;
 		}, "name"_a, "obj"_a, "pol"_a = node::AllowDupNames, "Insert hard link to given object")
 
+		// erase by given index
+		.def("__delitem__", [](node& N, const long idx) {
+			// support for Pythonish indexing from both ends
+			if(std::size_t(std::abs(idx)) > N.size())
+				throw py::key_error("Index out of bounds");
+			N.erase(idx < 0 ? N.size() + idx : idx);
+		})
 		// erase by given link name or object instance (object's ID)
 		.def("__delitem__", [](node& N, py::object key) {
 			if(PyString_Check(key.ptr()))

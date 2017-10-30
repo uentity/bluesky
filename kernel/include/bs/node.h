@@ -15,6 +15,7 @@
 #include "detail/is_container.h"
 
 #include <boost/multi_index_container.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
@@ -45,8 +46,10 @@ public:
 	using type_key = mi::const_mem_fun<
 		link, std::string, &link::obj_type_id
 	>;
+	// and have random-access index that preserve custom items ordering
+	struct any_order {};
 	// key alias
-	enum class Key { ID, OID, Name, Type };
+	enum class Key { ID, OID, Name, Type, AnyOrder };
 	template<Key K> using Key_const = std::integral_constant<Key, K>;
 
 private:
@@ -71,6 +74,11 @@ private:
 		using tag = type_key;
 		using type = std::string;
 	};
+	template<class _>
+	struct Key_dispatch<Key::AnyOrder, _> {
+		using tag = any_order;
+		using type = std::size_t;
+	};
 
 public:
 	template<Key K> using Key_tag = typename Key_dispatch<K>::tag;
@@ -80,6 +88,7 @@ public:
 	using links_container = mi::multi_index_container<
 		sp_link,
 		mi::indexed_by<
+			mi::sequenced< mi::tag< any_order > >,
 			mi::hashed_unique< mi::tag< id_key >, id_key >,
 			mi::ordered_non_unique< mi::tag< name_key >, name_key >,
 			mi::ordered_non_unique< mi::tag< oid_key >, oid_key >,
@@ -88,8 +97,8 @@ public:
 	>;
 
 	// some useful type aliases
-	template<Key K = Key::ID> using iterator = typename links_container::index<Key_tag<K>>::type::iterator;
-	template<Key K = Key::ID> using const_iterator = typename links_container::index<Key_tag<K>>::type::const_iterator;
+	template<Key K = Key::AnyOrder> using iterator = typename links_container::index<Key_tag<K>>::type::iterator;
+	template<Key K = Key::AnyOrder> using const_iterator = typename links_container::index<Key_tag<K>>::type::const_iterator;
 	template<Key K = Key::ID> using insert_status = std::pair<iterator<K>, bool>;
 
 	/// range is a pair that supports iteration
@@ -120,12 +129,12 @@ public:
 	void clear();
 
 	// iterate in IDs order
-	template<Key K = Key::ID>
+	template<Key K = Key::AnyOrder>
 	iterator<K> begin() const {
 		return begin(Key_const<K>());
 	}
 
-	template<Key K = Key::ID>
+	template<Key K = Key::AnyOrder>
 	iterator<K> end() const {
 		return end(Key_const<K>());
 	}
@@ -138,11 +147,11 @@ public:
 	}
 
 	// search link by given key
-	iterator<Key::ID> find(const id_type& id) const;
-	iterator<Key::ID> find(const std::string& link_name) const;
-	/// caution: slow!
+	iterator<Key::AnyOrder> find(const std::size_t idx) const;
+	iterator<Key::AnyOrder> find(const id_type& id) const;
+	iterator<Key::AnyOrder> find(const std::string& link_name) const;
 	/// find link by given object ID (first found link is returned)
-	iterator<Key::ID> find_oid(const std::string& oid) const;
+	iterator<Key::AnyOrder> find_oid(const std::string& oid) const;
 
 	/// returns link pointer instead of iterator
 	template<Key K>
@@ -158,7 +167,7 @@ public:
 	sp_link deep_search_oid(const std::string& oid) const;
 
 	range<Key::Name> equal_range(const std::string& link_name) const;
-	range<Key::OID> equal_range_oid(const std::string& oid) const;
+	range<Key::OID>  equal_range_oid(const std::string& oid) const;
 	range<Key::Type> equal_type(const std::string& type_id) const;
 
 	/// links insertions policy
@@ -190,23 +199,26 @@ public:
 	}
 
 	/// leafs removal
+	void erase(const std::size_t idx);
 	void erase(const id_type& link_id);
 	void erase(const std::string& link_name);
 	void erase_oid(const std::string& oid);
 	void erase_type(const std::string& type_id);
 
+	void erase(const range<Key::AnyOrder>& r);
 	void erase(const range<Key::ID>& r);
 	void erase(const range<Key::Name>& r);
 	void erase(const range<Key::OID>& r);
 
 	template<Key K>
-	void erase(const iterator<K>& pos) {
+	void erase(iterator<K> pos) {
 		erase(range<K>{pos, std::advance(pos)});
 	}
 
 	/// obtain vector of keys for given index type
 	template<Key K = Key::ID>
 	std::vector<Key_type<K>> keys() const {
+		static_assert(K != Key::AnyOrder, "There are no keys for custom order index");
 		return keys(Key_const<K>());
 	}
 
@@ -229,11 +241,13 @@ private:
 	iterator<Key::Name> begin(Key_const<Key::Name>) const;
 	iterator<Key::OID> begin(Key_const<Key::OID>) const;
 	iterator<Key::Type> begin(Key_const<Key::Type>) const;
+	iterator<Key::AnyOrder> begin(Key_const<Key::AnyOrder>) const;
 
 	iterator<Key::ID> end(Key_const<Key::ID>) const;
 	iterator<Key::Name> end(Key_const<Key::Name>) const;
 	iterator<Key::OID> end(Key_const<Key::OID>) const;
 	iterator<Key::Type> end(Key_const<Key::Type>) const;
+	iterator<Key::AnyOrder> end(Key_const<Key::AnyOrder>) const;
 
 	std::vector<Key_type<Key::ID>> keys(Key_const<Key::ID>) const;
 	std::vector<Key_type<Key::Name>> keys(Key_const<Key::Name>) const;

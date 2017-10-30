@@ -49,27 +49,27 @@ public:
 
 	//static deep_merge(const node_impl& n, )
 
-	template<Key K = Key::ID>
+	template<Key K = Key::AnyOrder>
 	auto begin() const {
 		return links_.get<Key_tag<K>>().begin();
 	}
-	template<Key K = Key::ID>
+	template<Key K = Key::AnyOrder>
 	auto end() const {
 		return links_.get<Key_tag<K>>().end();
 	}
 
-	template<Key K, Key R = Key::ID>
+	template<Key K, Key R = Key::AnyOrder>
 	auto find(
 		const Key_type<K>& key,
-		std::enable_if_t<std::is_same<Key_const<K>, Key_const<Key::ID>>::value>* = nullptr
+		std::enable_if_t<std::is_same<Key_const<K>, Key_const<R>>::value>* = nullptr
 	) const {
 		return links_.get<Key_tag<K>>().find(key);
 	}
 
-	template<Key K, Key R = Key::ID>
+	template<Key K, Key R = Key::AnyOrder>
 	auto find(
 		const Key_type<K>& key,
-		std::enable_if_t<!std::is_same<Key_const<K>, Key_const<Key::ID>>::value>* = nullptr
+		std::enable_if_t<!std::is_same<Key_const<K>, Key_const<R>>::value>* = nullptr
 	) const {
 		return links_.project<Key_tag<R>>(
 			links_.get<Key_tag<K>>().find(key)
@@ -100,8 +100,8 @@ public:
 		// check if we have duplication name
 		iterator<Key::ID> dup;
 		if((pol & 3) > 0) {
-			dup = find<Key::Name>(l->name());
-			if(dup != end<>()) {
+			dup = find<Key::Name, Key::ID>(l->name());
+			if(dup != end<Key::ID>()) {
 				// first check if dup names are prohibited
 				if(pol & InsertPolicy::DenyDupNames) return {dup, false};
 				else {
@@ -124,11 +124,11 @@ public:
 		}
 		// check for duplicating OID
 		if(pol & InsertPolicy::DenyDupOID) {
-			dup = find<Key::OID>(l->oid());
-			if(dup != end<>()) return {dup, false};
+			dup = find<Key::OID, Key::ID>(l->oid());
+			if(dup != end<Key::ID>()) return {dup, false};
 		}
 		// try to insert given link
-		return links_.insert(std::move(l));
+		return links_.get<Key_tag<Key::ID>>().insert(std::move(l));
 	}
 
 	template<Key K>
@@ -143,7 +143,7 @@ public:
 	// implement deep copy ctor
 	node_impl(const node_impl& src) {
 		for(const auto& plink : src.links_) {
-			links_.insert(plink->clone());
+			links_.get<Key_tag<Key::ID>>().insert(plink->clone());
 		}
 	}
 
@@ -173,12 +173,20 @@ bool node::empty() const {
 	return pimpl_->links_.empty();
 }
 
-iterator<Key::ID> node::begin(Key_const<Key::ID>) const {
+iterator<Key::AnyOrder> node::begin(Key_const<Key::AnyOrder>) const {
 	return pimpl_->begin<>();
 }
 
-iterator<Key::ID> node::end(Key_const<Key::ID>) const {
+iterator<Key::AnyOrder> node::end(Key_const<Key::AnyOrder>) const {
 	return pimpl_->end<>();
+}
+
+iterator<Key::ID> node::begin(Key_const<Key::ID>) const {
+	return pimpl_->begin<Key::ID>();
+}
+
+iterator<Key::ID> node::end(Key_const<Key::ID>) const {
+	return pimpl_->end<Key::ID>();
 }
 
 iterator<Key::Name> node::begin(Key_const<Key::Name>) const {
@@ -205,15 +213,21 @@ iterator<Key::Type> node::end(Key_const<Key::Type>) const {
 	return pimpl_->end<Key::Type>();
 }
 
-iterator<Key::ID> node::find(const id_type& id) const {
+iterator<Key::AnyOrder> node::find(const std::size_t idx) const {
+	auto i = begin();
+	std::advance(i, idx);
+	return i;
+}
+
+iterator<Key::AnyOrder> node::find(const id_type& id) const {
 	return pimpl_->find<Key::ID>(id);
 }
 
-iterator<Key::ID> node::find(const std::string& name) const {
+iterator<Key::AnyOrder> node::find(const std::string& name) const {
 	return pimpl_->find<Key::Name>(name);
 }
 
-iterator<Key::ID> node::find_oid(const std::string& oid) const {
+iterator<Key::AnyOrder> node::find_oid(const std::string& oid) const {
 	return pimpl_->find<Key::OID>(oid);
 }
 
@@ -238,7 +252,7 @@ insert_status<Key::ID> node::insert(const sp_link& l, uint pol) {
 			prev_owner->erase(res_lnk.id());
 		res_lnk.reset_owner(bs_shared_this<node>());
 	}
-	else if(pol & InsertPolicy::Merge && res.first != end()) {
+	else if(pol & InsertPolicy::Merge && res.first != end<Key::ID>()) {
 		// check if we need to deep merge given links
 		// go one step down the hierarchy
 		auto src_node = l->data_node();
@@ -255,6 +269,10 @@ insert_status<Key::ID> node::insert(std::string name, sp_obj obj, uint pol) {
 	return insert(
 		std::make_shared<hard_link>(std::move(name), std::move(obj)), pol
 	);
+}
+
+void node::erase(const std::size_t idx) {
+	pimpl_->links_.get<Key_tag<Key::AnyOrder>>().erase(find(idx));
 }
 
 void node::erase(const id_type& lid) {
