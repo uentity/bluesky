@@ -16,6 +16,7 @@
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 
@@ -79,7 +80,7 @@ public:
 	using links_container = mi::multi_index_container<
 		sp_link,
 		mi::indexed_by<
-			mi::ordered_unique< mi::tag< id_key >, id_key >,
+			mi::hashed_unique< mi::tag< id_key >, id_key >,
 			mi::ordered_non_unique< mi::tag< name_key >, name_key >,
 			mi::ordered_non_unique< mi::tag< oid_key >, oid_key >,
 			mi::ordered_non_unique< mi::tag< type_key >, type_key >
