@@ -169,7 +169,7 @@ public:
 		Merge = 8
 	};
 	/// leafs insertion
-	insert_status<Key::ID> insert(sp_link l, uint pol = AllowDupNames);
+	insert_status<Key::ID> insert(const sp_link& l, uint pol = AllowDupNames);
 	/// auto-create and insert hard link that points to object
 	insert_status<Key::ID> insert(std::string name, sp_obj obj, uint pol = AllowDupNames);
 	/// insert links from given container
@@ -184,7 +184,7 @@ public:
 				std::is_base_of<link, std::decay_t<decltype(*L)>>::value,
 				"Links container should contain pointers to `tree::link` objects!"
 			);
-			insert(std::move(L));
+			insert(std::move(L), pol);
 		}
 	}
 

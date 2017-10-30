@@ -122,7 +122,7 @@ public:
 			}
 		}
 		// check for duplicating OID
-		if(pol & InsertPolicy::DenyDupNames) {
+		if(pol & InsertPolicy::DenyDupOID) {
 			dup = find<Key::OID>(l->oid());
 			if(dup != end<>()) return {dup, false};
 		}
@@ -219,8 +219,8 @@ range<Key::Type> node::equal_type(const std::string& type_id) const {
 	return pimpl_->equal_range<Key::Type>(type_id);
 }
 
-insert_status<Key::ID> node::insert(sp_link l, uint pol) {
-	auto res = pimpl_->insert(std::move(l), pol);
+insert_status<Key::ID> node::insert(const sp_link& l, uint pol) {
+	auto res = pimpl_->insert(l, pol);
 	// switch owner to *this if succeeded
 	if(res.second) {
 		auto& res_lnk = *(res.first->get());
@@ -228,7 +228,7 @@ insert_status<Key::ID> node::insert(sp_link l, uint pol) {
 			prev_owner->erase(res_lnk.id());
 		res_lnk.reset_owner(bs_shared_this<node>());
 	}
-	else if(pol | InsertPolicy::Merge && res.first != end()) {
+	else if(pol & InsertPolicy::Merge && res.first != end()) {
 		// check if we need to deep merge given links
 		// go one step down the hierarchy
 		auto src_node = l->data_node();
@@ -243,7 +243,7 @@ insert_status<Key::ID> node::insert(sp_link l, uint pol) {
 
 insert_status<Key::ID> node::insert(std::string name, sp_obj obj, uint pol) {
 	return insert(
-		std::make_shared< hard_link >(std::move(name), std::move(obj)), pol
+		std::make_shared<hard_link>(std::move(name), std::move(obj)), pol
 	);
 }
 
