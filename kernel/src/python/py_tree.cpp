@@ -155,6 +155,14 @@ void py_bind_tree(py::module& m) {
 			if(r != N.end<>()) return *r;
 			throw py::key_error("Node doesn't contain object with ID = " + obj->id());
 		}, py::return_value_policy::reference_internal, "object"_a)
+		// get item by int index
+		.def("__getitem__", [](const node& N, long idx) {
+			if(idx < 0 || ulong(idx) >= N.size())
+				throw py::key_error("Index out of bounds");
+			auto r = N.begin();
+			std::advance(r, idx);
+			return *r;
+		}, py::return_value_policy::reference_internal, "link_name"_a)
 		// search by object ID
 		.def("find_oid", [](const node& N, const std::string& oid) {
 			auto r = N.find_oid(oid);
