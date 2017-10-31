@@ -36,11 +36,9 @@ public:
 		if(r != n.end<K>()) return *r;
 
 		// if not succeeded search in children nodes
-		for(const auto& plink : n.links_) {
-			if(plink->obj_type_id() == node::bs_type().name) {
-				auto l = deep_search_impl<K>(
-					*std::static_pointer_cast<node>(plink->data())->pimpl_, key
-				);
+		for(const auto& l : n.links_) {
+			if(auto n = l->data_node()) {
+				auto l = deep_search_impl<K>(*n->pimpl_, key);
 				if(l) return l;
 			}
 		}
