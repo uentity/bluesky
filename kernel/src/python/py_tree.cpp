@@ -121,6 +121,7 @@ void py_bind_tree(py::module& m) {
 		.value("OID", node::Key::OID)
 		.value("Name", node::Key::Name)
 		.value("Type", node::Key::Type)
+		.value("AnyOrder", node::Key::AnyOrder)
 	;
 	// export node's insert policy
 	py::enum_<node::InsertPolicy>(node_pyface, "InsertPolicy")
@@ -142,24 +143,24 @@ void py_bind_tree(py::module& m) {
 			py::keep_alive<0, 1>()
 		)
 
-		// check by link name or object instance (object's ID)
+		// check by link ID or object object's ID
 		.def("__contains__", [](const node& N, py::object key) {
 			if(PyString_Check(key.ptr()))
-				return N.find(py::cast<std::string>(key)) != N.end<>();
+				return N.find(uuid_from_str(py::cast<std::string>(key))) != N.end<>();
 			return N.find_oid(py::cast<sp_obj>(key)->id()) != N.end<>();
 		})
-		// check by link ID
-		.def("contains_lid", [](const node& N, const std::string& lid) {
-			return N.find(uuid_from_str(lid)) != N.end<>();
-		}, "LID", "Check if node contains link with given ID")
+		// check by link name
+		.def("contains_name", [](const node& N, const std::string& lname) {
+			return N.find(lname) != N.end<>();
+		}, "link_name", "Check if node contains link with given name")
 		// check by object ID
 		.def("contains_oid", [](const node& N, const std::string& oid) {
 			return N.find_oid(oid) != N.end<>();
-		}, "OID", "Check if node contains object with given ID")
+		}, "oid", "Check if node contains link to object with given ID")
 		// check by object type
 		.def("contains_type", [](const node& N, const std::string& type_id) {
 			return N.equal_type(type_id).first != N.end<node::Key::Type>();
-		}, "obj_type_id", "Check if node contains objects with given type")
+		}, "obj_type_id", "Check if node contain links to objects with given type")
 
 		// get item by int index
 		.def("__getitem__", [](const node& N, const long idx) {
@@ -170,45 +171,53 @@ void py_bind_tree(py::module& m) {
 			std::advance(pos, idx);
 			if(pos == N.end()) throw py::key_error("Index out of bounds");
 			return *pos;
-		}, py::return_value_policy::reference_internal, "link_idx"_a)
+		}, "link_idx"_a)
 		// search by link name
-		.def("__getitem__", [](const node& N, const std::string& link_name) {
-			auto r = N.find(link_name);
+		.def("__getitem__", [](const node& N, const std::string& lid) {
+			auto r = N.find(uuid_from_str(lid));
 			if(r != N.end<>()) return *r;
-			throw py::key_error("Node doesn't contain link with name '" + link_name + "'");
-		}, py::return_value_policy::reference_internal, "link_name"_a)
+			throw py::key_error("Node doesn't contain link with ID " + lid);
+		}, "link_name"_a)
 		// search by object instance
 		.def("__getitem__", [](const node& N, const sp_obj& obj) {
 			auto r = N.find(obj->id());
 			if(r != N.end<>()) return *r;
-			throw py::key_error("Node doesn't contain object with ID = " + obj->id());
-		}, py::return_value_policy::reference_internal, "object"_a)
+			throw py::key_error("Node doesn't contain links to object with ID = " + obj->id());
+		}, "object"_a)
 		// search by object ID
 		.def("find_oid", [](const node& N, const std::string& oid) {
 			auto r = N.find_oid(oid);
 			if(r != N.end<>()) return *r;
-			throw py::key_error("Node doesn't contain object with ID - " + oid);
-		}, py::return_value_policy::reference_internal, "OID"_a, "Find item by object ID")
-		// search by link ID
-		.def("find_lid", [](const node& N, const std::string& lid) {
-			auto r = N.find(uuid_from_str(lid));
+			throw py::key_error("Node doesn't contain links to object with ID - " + oid);
+		}, "oid"_a, "Find link by object ID")
+		// search by link name
+		.def("find_name", [](const node& N, const std::string& lname) {
+			auto r = N.find(lname);
 			if(r != N.end<>()) return *r;
-			throw py::key_error("Node doesn't contain link with ID - " + lid);
-		}, py::return_value_policy::reference_internal, "LID"_a, "Find item by object link ID")
+			throw py::key_error("Node doesn't contain link with name '" + lname + "'");
+		}, "link_name"_a, "Find link by name")
 
-		// deep search by link name or object instance (OID)
+		// obtain index in custom order from link
+		.def("index", [](const node& N, const std::string& lid) {
+			return N.index(uuid_from_str(lid));
+		}, "lid"_a, "Find index of link with given ID")
+		.def("index", [](const node& N, const sp_link& l) {
+			return N.index(l->id());
+		}, "link"_a, "Find index of given link")
+
+		// deep search by link ID or object ID
 		.def("deep_search", [](const node& N, py::object key) {
 			if(PyString_Check(key.ptr()))
-				return N.deep_search(py::cast<std::string>(key));
+				return N.deep_search(uuid_from_str(py::cast<std::string>(key)));
 			return N.deep_search_oid(py::cast<sp_obj>(key)->id());
-		}, "key"_a, "Deep search for link with given name or by object instance (OID)")
-		.def("deep_search_lid", [](const node& N, const std::string& lid) {
-			return N.deep_search(uuid_from_str(lid));
-		}, "LID"_a, "Deep search for link with given ID")
+		}, "key"_a, "Deep search for link with given ID or by object instance (OID)")
+		.def("deep_search_name", [](const node& N, const std::string& lname) {
+			return N.deep_search(lname);
+		}, "link_name"_a, "Deep search for link with given name")
 		// deep search by object ID
 		.def("deep_search_oid", [](const node& N, const std::string& oid) {
 			return N.deep_search_oid(oid);
-		}, "OID"_a, "Deep search for object with given ID")
+		}, "oid"_a, "Deep search for link to object with given ID")
 
 		.def("equal_range", [](const node& N, const std::string& link_name) {
 			auto r = N.equal_range(link_name);
@@ -239,18 +248,19 @@ void py_bind_tree(py::module& m) {
 				throw py::key_error("Index out of bounds");
 			N.erase(idx < 0 ? N.size() + idx : idx);
 		})
-		// erase by given link name or object instance (object's ID)
+		// erase by given link ID or object instance (object's ID)
 		.def("__delitem__", [](node& N, py::object key) {
 			if(PyString_Check(key.ptr()))
-				N.erase(py::cast<std::string>(key));
-			N.erase_oid(py::cast<sp_obj>(key)->id());
+				N.erase(uuid_from_str(py::cast<std::string>(key)));
+			else
+				N.erase_oid(py::cast<sp_obj>(key)->id());
 		})
-		.def("erase", (void (node::*)(const std::string&))&node::erase,
-			"link_name"_a, "Erase links with given name")
-		.def("erase_oid", &node::erase_oid, "obj"_a, "Erase links to given object")
-		.def("erase_lid", [](node& N, const std::string& key) {
+		.def("erase", [](node& N, const std::string& key) {
 			N.erase(uuid_from_str(key));
 		}, "lid"_a, "Erase link with given ID")
+		.def("erase_name", (void (node::*)(const std::string&))&node::erase,
+			"link_name"_a, "Erase links with given name")
+		.def("erase_oid", &node::erase_oid, "obj"_a, "Erase links to given object")
 		.def("erase_type", [](node& N, const std::string& type_id) {
 			N.erase_type(type_id);
 		}, "obj_type_id"_a, "Erase all links pointing to objects with given type")
