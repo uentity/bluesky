@@ -140,6 +140,13 @@ public:
 		return {r.begin(), r.end()};
 	}
 
+	template<Key K>
+	bool rename(iterator<K> pos, std::string new_name) {
+		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
+			l->name_ = std::move(name);
+		});
+	}
+
 	// implement deep copy ctor
 	node_impl(const node_impl& src) {
 		for(const auto& plink : src.links_) {
@@ -333,6 +340,10 @@ std::vector<Key_type<Key::OID>> node::keys(Key_const<Key::OID>) const {
 
 std::vector<Key_type<Key::Type>> node::keys(Key_const<Key::Type>) const {
 	return pimpl_->keys<Key::Type>();
+}
+
+bool node::rename(iterator<Key::AnyOrder> pos, std::string new_name) {
+	return pimpl_->rename<Key::AnyOrder>(std::move(pos), std::move(new_name));
 }
 
 BS_TYPE_IMPL(node, objbase, "node", "BS tree node", true, true);

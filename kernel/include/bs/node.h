@@ -48,6 +48,19 @@ public:
 	>;
 	// and have random-access index that preserve custom items ordering
 	struct any_order {};
+
+	// container that will store all node elements (links)
+	using links_container = mi::multi_index_container<
+		sp_link,
+		mi::indexed_by<
+			mi::sequenced< mi::tag< any_order > >,
+			mi::hashed_unique< mi::tag< id_key >, id_key >,
+			mi::ordered_non_unique< mi::tag< name_key >, name_key >,
+			mi::ordered_non_unique< mi::tag< oid_key >, oid_key >,
+			mi::ordered_non_unique< mi::tag< type_key >, type_key >
+		>
+	>;
+
 	// key alias
 	enum class Key { ID, OID, Name, Type, AnyOrder };
 	template<Key K> using Key_const = std::integral_constant<Key, K>;
@@ -84,21 +97,10 @@ public:
 	template<Key K> using Key_tag = typename Key_dispatch<K>::tag;
 	template<Key K> using Key_type = typename Key_dispatch<K>::type;
 
-	// container that will store all node elements (links)
-	using links_container = mi::multi_index_container<
-		sp_link,
-		mi::indexed_by<
-			mi::sequenced< mi::tag< any_order > >,
-			mi::hashed_unique< mi::tag< id_key >, id_key >,
-			mi::ordered_non_unique< mi::tag< name_key >, name_key >,
-			mi::ordered_non_unique< mi::tag< oid_key >, oid_key >,
-			mi::ordered_non_unique< mi::tag< type_key >, type_key >
-		>
-	>;
-
 	// some useful type aliases
-	template<Key K = Key::AnyOrder> using iterator = typename links_container::index<Key_tag<K>>::type::iterator;
-	template<Key K = Key::AnyOrder> using const_iterator = typename links_container::index<Key_tag<K>>::type::const_iterator;
+	template<Key K = Key::AnyOrder> using Index = typename links_container::index<Key_tag<K>>::type;
+	template<Key K = Key::AnyOrder> using iterator = typename Index<K>::iterator;
+	template<Key K = Key::AnyOrder> using const_iterator = typename Index<K>::const_iterator;
 	template<Key K = Key::ID> using insert_status = std::pair<iterator<K>, bool>;
 
 	/// range is a pair that supports iteration
@@ -223,6 +225,7 @@ public:
 	}
 
 	/// rename given link
+	bool rename(iterator<Key::AnyOrder> pos, std::string new_name);
 
 	/// ctor
 	node(std::string custom_id = "");
