@@ -180,6 +180,7 @@ bool node::empty() const {
 	return pimpl_->links_.empty();
 }
 
+// ---- begin/end
 iterator<Key::AnyOrder> node::begin(Key_const<Key::AnyOrder>) const {
 	return pimpl_->begin<>();
 }
@@ -220,6 +221,7 @@ iterator<Key::Type> node::end(Key_const<Key::Type>) const {
 	return pimpl_->end<Key::Type>();
 }
 
+// ---- find
 iterator<Key::AnyOrder> node::find(const std::size_t idx) const {
 	auto i = begin();
 	std::advance(i, idx);
@@ -238,6 +240,17 @@ iterator<Key::AnyOrder> node::find_oid(const std::string& oid) const {
 	return pimpl_->find<Key::OID>(oid);
 }
 
+// ---- index
+std::size_t node::index(const id_type& lid) const {
+	auto i = pimpl_->find<Key::ID, Key::AnyOrder>(lid);
+	return std::distance(begin<Key::AnyOrder>(), i);
+}
+
+std::size_t node::index(const iterator<Key::AnyOrder>& pos) const {
+	return std::distance(begin<Key::AnyOrder>(), pos);
+}
+
+// ---- equal_range
 range<Key::Name> node::equal_range(const std::string& link_name) const {
 	return pimpl_->equal_range<Key::Name>(link_name);
 }
@@ -250,6 +263,7 @@ range<Key::Type> node::equal_type(const std::string& type_id) const {
 	return pimpl_->equal_range<Key::Type>(type_id);
 }
 
+// ---- insert
 insert_status<Key::ID> node::insert(const sp_link& l, uint pol) {
 	auto res = pimpl_->insert(l, pol);
 	// switch owner to *this if succeeded
@@ -278,6 +292,7 @@ insert_status<Key::ID> node::insert(std::string name, sp_obj obj, uint pol) {
 	);
 }
 
+// ---- erase
 void node::erase(const std::size_t idx) {
 	pimpl_->links_.get<Key_tag<Key::AnyOrder>>().erase(find(idx));
 }
@@ -314,6 +329,7 @@ void node::clear() {
 	pimpl_->links_.clear();
 }
 
+// ---- deep_search
 sp_link node::deep_search(const id_type& id) const {
 	return pimpl_->deep_search<>(id);
 }
@@ -326,6 +342,7 @@ sp_link node::deep_search_oid(const std::string& oid) const {
 	return pimpl_->deep_search<Key::OID>(oid);
 }
 
+// ---- keys
 std::vector<Key_type<Key::ID>> node::keys(Key_const<Key::ID>) const {
 	return pimpl_->keys<Key::ID>();
 }

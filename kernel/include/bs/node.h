@@ -163,6 +163,10 @@ public:
 		return *i;
 	}
 
+	/// get integer index of a link relative to beginning
+	std::size_t index(const id_type& lid) const;
+	std::size_t index(const iterator<Key::AnyOrder>& lid) const;
+
 	/// search among all subtree elements
 	sp_link deep_search(const id_type& id) const;
 	sp_link deep_search(const std::string& link_name) const;
