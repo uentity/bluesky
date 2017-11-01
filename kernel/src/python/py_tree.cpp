@@ -50,6 +50,13 @@ public:
 	sp_node data_node() const override {
 		PYBIND11_OVERLOAD_PURE(sp_node, Link, data_node, );
 	}
+
+	inode info() const override {
+		PYBIND11_OVERLOAD_PURE(inode, Link, info, );
+	}
+	void set_info(inodeptr i) override {
+		PYBIND11_OVERLOAD_PURE(void, Link, set_info, std::move(i));
+	}
 };
 
 static boost::uuids::string_generator uuid_from_str;
@@ -73,18 +80,6 @@ void print_link(const sp_link& l, int level = 0) {
 }
 
 void py_bind_tree(py::module& m) {
-	py::class_<inode>(m, "inode")
-		.def(py::init<std::string, std::string>())
-		.def_readonly("owner", &inode::owner)
-		.def_readonly("group", &inode::group)
-		.def_property_readonly("suid", [](const inode& i) { return i.suid; })
-		.def_property_readonly("sgid", [](const inode& i) { return i.sgid; })
-		.def_property_readonly("sticky", [](const inode& i) { return i.sticky; })
-		.def_property_readonly("u", [](const inode& i) { return i.u; })
-		.def_property_readonly("g", [](const inode& i) { return i.g; })
-		.def_property_readonly("o", [](const inode& i) { return i.o; })
-	;
-
 	py::class_<link, py_link<>, std::shared_ptr<link>> link_pyface(m, "link");
 	link_pyface
 		.def(py::init<std::string>())
@@ -98,11 +93,12 @@ void py_bind_tree(py::module& m) {
 			return boost::uuids::to_string(L.id());
 		})
 		.def_property_readonly("name", &link::name)
-		.def_property("inode",
-			py::overload_cast<>(&link::get_inode, py::const_),
-			py::overload_cast<>(&link::get_inode)
-		)
 		.def_property_readonly("owner", &link::owner)
+		.def("info", &link::info)
+		// here we have to make a copy, no way to pass unique_ptr as param
+		.def("set_info", [](py_link<>& l, const inode& i) {
+			l.set_info(std::make_unique<inode>(i));
+		}, "info"_a)
 	;
 
 	py::class_<hard_link, link, py_link<hard_link>, std::shared_ptr<hard_link>>(m, "hard_link")

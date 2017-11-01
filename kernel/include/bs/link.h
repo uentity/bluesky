@@ -15,30 +15,6 @@
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
 
-/// inode that stores access rights, timestampts, etc
-struct BS_API inode {
-	// link's owner
-	std::string owner;
-	std::string group;
-
-	// flags
-	bool : 1;
-	bool suid : 1;
-	bool sgid : 1;
-	bool sticky : 1;
-
-	// access rights
-	// user (owner)
-	bool : 1;
-	unsigned int u : 3;
-	// group
-	bool : 1;
-	unsigned int g : 3;
-	// others
-	bool : 1;
-	unsigned int o : 3;
-};
-
 /// base class of all links
 class BS_API link  : public std::enable_shared_from_this<link> {
 public:
@@ -75,8 +51,12 @@ public:
 	virtual std::string obj_type_id() const;
 
 	/// return tree::node if contained object is a node
-	/// derived class can probably return chached node info
+	/// derived class can return cached node info
 	virtual sp_node data_node() const = 0;
+
+	/// get/set object's inode
+	virtual inode info() const = 0;
+	virtual void set_info(inodeptr i) = 0;
 
 	/// access link's unique ID
 	const id_type& id() const {
@@ -86,13 +66,6 @@ public:
 	/// obtain link's symbolic name
 	std::string name() const {
 		return name_;
-	}
-
-	const inode& get_inode() const {
-		return inode_;
-	}
-	inode& get_inode() {
-		return inode_;
 	}
 
 	/// get link's container
@@ -114,7 +87,6 @@ public:
 protected:
 	std::string name_;
 	id_type id_;
-	inode inode_;
 	std::weak_ptr<node> owner_;
 
 	friend class node;
@@ -142,6 +114,9 @@ public:
 
 	sp_node data_node() const override;
 
+	inode info() const override;
+	void set_info(inodeptr i) override;
+
 private:
 	sp_obj data_;
 };
@@ -166,6 +141,9 @@ public:
 	std::string obj_type_id() const override;
 
 	sp_node data_node() const override;
+
+	inode info() const override;
+	void set_info(inodeptr i) override;
 
 private:
 	std::weak_ptr<objbase> data_;

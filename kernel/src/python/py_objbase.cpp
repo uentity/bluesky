@@ -26,12 +26,32 @@ sp_obj test_anyobj(const sp_obj& obj) {
 } // eof hidden namespace
 
 void py_bind_objbase(py::module& m) {
+	// inode binding
+	py::class_<inode, std::unique_ptr<inode>>(m, "inode")
+		.def(py::init<std::string, std::string>())
+		.def_readonly("owner", &inode::owner)
+		.def_readonly("group", &inode::group)
+		.def_property_readonly("suid", [](const inode& i) { return i.suid; })
+		.def_property_readonly("sgid", [](const inode& i) { return i.sgid; })
+		.def_property_readonly("sticky", [](const inode& i) { return i.sticky; })
+		.def_property_readonly("u", [](const inode& i) { return i.u; })
+		.def_property_readonly("g", [](const inode& i) { return i.g; })
+		.def_property_readonly("o", [](const inode& i) { return i.o; })
+	;
+
 	// objebase binding
 	py::class_< objbase, py_object<>, sp_obj >(m, "objbase", py::multiple_inheritance())
 		BSPY_EXPORT_DEF(objbase)
 		// use init_alias to always construct trampoline class and have valid pyobj property
-		.def(py::init_alias<>())
+		.def(py::init([](std::string custom_oid = "") {
+			return std::make_shared<py_object<>>(std::move(custom_oid));
+		}), "custom_oid"_a = "")
+		.def(py::init([](std::string custom_oid, const inode& i) {
+			return std::make_shared<py_object<>>(std::move(custom_oid), std::make_unique<inode>(i));
+		}), "custom_oid"_a, "i"_a)
+		// construct from any Python type
 		.def(py::init_alias<py::object>())
+
 		.def("bs_resolve_type", &objbase::bs_resolve_type, py::return_value_policy::reference)
 		.def("bs_register_this", &objbase::bs_register_this)
 		.def("bs_free_this", &objbase::bs_free_this)
@@ -49,6 +69,11 @@ void py_bind_objbase(py::module& m) {
 		.def("type_id", &objbase::type_id)
 		.def("id", &objbase::id)
 		.def_property_readonly("is_node", &objbase::is_node)
+		.def_property_readonly("info", &objbase::info)
+		// here we have to make a copy, no way to pass unique_ptr as param
+		.def("set_info", [](objbase& obj, const inode& i) {
+			obj.set_info(std::make_unique<inode>(i));
+		}, "info"_a)
 		// DEBUG
 		.def_property_readonly("refs", [](objbase& src) { return src.shared_from_this().use_count() - 1; })
 	;

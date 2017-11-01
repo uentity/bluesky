@@ -29,7 +29,7 @@ link::link(std::string name)
 // copy ctor does not copy uuid from lhs
 // instead it creates a new one
 link::link(const link& lhs)
-	: std::enable_shared_from_this<link>(lhs), name_(lhs.name_), id_(gen()), inode_(lhs.inode_), owner_()
+	: std::enable_shared_from_this<link>(lhs), name_(lhs.name_), id_(gen()), owner_()
 {}
 
 link::~link() {}
