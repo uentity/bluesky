@@ -25,7 +25,7 @@ template<> struct type_caster<blue_sky::type_tuple> {
 	bs_optional<blue_sky::type_descriptor> td_;
 
 	// caster-related interface
-	static PYBIND11_DESCR name() { return type_descr(_("BS type tuple")); }
+	static constexpr auto name = _("BS type tuple");
 	operator Type*() { return &value.get(); }
 	operator Type&() { return value.get(); }
 	operator Type() { return value.get(); }
