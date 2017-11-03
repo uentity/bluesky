@@ -302,5 +302,11 @@
     <ClCompile Include="kernel\src\python\py_objbase.cpp">
       <Filter>Файлы исходного кода\python</Filter>
     </ClCompile>
+    <ClCompile Include="kernel\src\python\py_kernel.cpp">
+      <Filter>Файлы исходного кода\python</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\python\py_tree.cpp">
+      <Filter>Файлы исходного кода\python</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

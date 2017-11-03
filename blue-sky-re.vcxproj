@@ -103,10 +103,12 @@
     <ClCompile Include="kernel\src\plugin_descriptor.cpp" />
     <ClCompile Include="kernel\src\python\py_array.cpp" />
     <ClCompile Include="kernel\src\python\py_common.cpp" />
+    <ClCompile Include="kernel\src\python\py_kernel.cpp" />
     <ClCompile Include="kernel\src\python\py_main.cpp" />
     <ClCompile Include="kernel\src\python\py_messaging.cpp" />
     <ClCompile Include="kernel\src\python\py_misc.cpp" />
     <ClCompile Include="kernel\src\python\py_objbase.cpp" />
+    <ClCompile Include="kernel\src\python\py_tree.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
     <ClCompile Include="kernel\src\type_info.cpp" />
   </ItemGroup>
