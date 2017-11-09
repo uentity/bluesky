@@ -58,6 +58,14 @@ public:
 	virtual inode info() const = 0;
 	virtual void set_info(inodeptr i) = 0;
 
+	/// flags reflect link properties and state
+	enum Flags {
+		Persistent = 1,
+		Disabled = 2
+	};
+	virtual uint flags() const;
+	virtual void set_flags(uint new_flags);
+
 	/// access link's unique ID
 	const id_type& id() const {
 		return id_;
@@ -87,6 +95,7 @@ public:
 protected:
 	std::string name_;
 	id_type id_;
+	uint flags_;
 	std::weak_ptr<node> owner_;
 
 	friend class node;

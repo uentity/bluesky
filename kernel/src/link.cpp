@@ -23,13 +23,13 @@ static auto gen = boost::uuids::random_generator();
 
 link::link(std::string name)
 	: name_(std::move(name)),
-	id_(gen())
+	id_(gen()), flags_(0)
 {}
 
 // copy ctor does not copy uuid from lhs
 // instead it creates a new one
 link::link(const link& lhs)
-	: std::enable_shared_from_this<link>(lhs), name_(lhs.name_), id_(gen()), owner_()
+	: std::enable_shared_from_this<link>(lhs), name_(lhs.name_), id_(gen()), flags_(0), owner_()
 {}
 
 link::~link() {}
@@ -49,6 +49,14 @@ std::string link::obj_type_id() const {
 
 void link::reset_owner(const sp_node& new_owner) {
 	owner_ = new_owner;
+}
+
+uint link::flags() const {
+	return flags_;
+}
+
+void link::set_flags(uint new_flags) {
+	flags_ = new_flags;
 }
 
 NAMESPACE_END(tree)
