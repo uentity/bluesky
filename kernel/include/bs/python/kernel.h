@@ -10,6 +10,8 @@
 #pragma once
 
 #include <bs/kernel.h>
+#include <bs/link.h>
+#include <bs/node.h>
 #include <pybind11/pybind11.h>
 
 NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)
@@ -93,4 +95,54 @@ template<> struct type_caster<blue_sky::type_tuple> {
 };
 
 NAMESPACE_END(detail) NAMESPACE_END(pybind11)
+
+NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(python)
+/*-----------------------------------------------------------------------------
+ *  cast blue_sky::type_tuple <-> Python tuple
+ *-----------------------------------------------------------------------------*/
+template<typename Link = tree::link>
+class py_link : public Link {
+public:
+	using Link::Link;
+
+	tree::sp_link clone() const override {
+		PYBIND11_OVERLOAD_PURE(tree::sp_link, Link, clone, );
+	}
+
+	sp_obj data() const override {
+		PYBIND11_OVERLOAD_PURE(sp_obj, Link, data, );
+	}
+
+	std::string type_id() const override {
+		PYBIND11_OVERLOAD_PURE(std::string, Link, type_id, );
+	}
+
+	std::string oid() const override {
+		PYBIND11_OVERLOAD_PURE(std::string, Link, oid, );
+	}
+
+	std::string obj_type_id() const override {
+		PYBIND11_OVERLOAD_PURE(std::string, Link, obj_type_id, );
+	}
+
+	tree::sp_node data_node() const override {
+		PYBIND11_OVERLOAD_PURE(tree::sp_node, Link, data_node, );
+	}
+
+	inode info() const override {
+		PYBIND11_OVERLOAD_PURE(inode, Link, info, );
+	}
+	void set_info(inodeptr i) override {
+		PYBIND11_OVERLOAD_PURE(void, Link, set_info, std::move(i));
+	}
+
+	uint flags() const override {
+		PYBIND11_OVERLOAD_PURE(uint, Link, flags, );
+	}
+	void set_flags(uint new_flags) override {
+		PYBIND11_OVERLOAD_PURE(void, Link, set_flags, std::move(new_flags));
+	}
+};
+
+NAMESPACE_END(python) NAMESPACE_END(blue_sky)
 

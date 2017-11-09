@@ -22,43 +22,6 @@ using namespace tree;
 
 namespace {
 
-template<typename Link = link>
-class py_link : public Link {
-public:
-	using Link::Link;
-
-	sp_link clone() const override {
-		PYBIND11_OVERLOAD_PURE(sp_link, Link, clone, );
-	}
-
-	sp_obj data() const override {
-		PYBIND11_OVERLOAD_PURE(sp_obj, Link, data, );
-	}
-
-	std::string type_id() const override {
-		PYBIND11_OVERLOAD_PURE(std::string, Link, type_id, );
-	}
-
-	std::string oid() const override {
-		PYBIND11_OVERLOAD_PURE(std::string, Link, oid, );
-	}
-
-	std::string obj_type_id() const override {
-		PYBIND11_OVERLOAD_PURE(std::string, Link, obj_type_id, );
-	}
-
-	sp_node data_node() const override {
-		PYBIND11_OVERLOAD_PURE(sp_node, Link, data_node, );
-	}
-
-	inode info() const override {
-		PYBIND11_OVERLOAD_PURE(inode, Link, info, );
-	}
-	void set_info(inodeptr i) override {
-		PYBIND11_OVERLOAD_PURE(void, Link, set_info, std::move(i));
-	}
-};
-
 static boost::uuids::string_generator uuid_from_str;
 
 void print_link(const sp_link& l, int level = 0) {
@@ -81,6 +44,15 @@ void print_link(const sp_link& l, int level = 0) {
 
 void py_bind_tree(py::module& m) {
 	py::class_<link, py_link<>, std::shared_ptr<link>> link_pyface(m, "link");
+
+	// export Flags enum
+	py::enum_<link::Flags>(link_pyface, "Flags")
+		.value("Persistent", link::Flags::Persistent)
+		.value("Disabled", link::Flags::Disabled)
+		.export_values()
+	;
+
+	// link base class
 	link_pyface
 		.def(py::init<std::string>())
 		.def("clone", &link::clone)
@@ -99,6 +71,7 @@ void py_bind_tree(py::module& m) {
 		.def("set_info", [](py_link<>& l, const inode& i) {
 			l.set_info(std::make_unique<inode>(i));
 		}, "info"_a)
+		.def_property("flags", &link::flags, &link::set_flags)
 	;
 
 	py::class_<hard_link, link, py_link<hard_link>, std::shared_ptr<hard_link>>(m, "hard_link")
@@ -138,6 +111,15 @@ void py_bind_tree(py::module& m) {
 		if(r != N.end<>()) return *r;
 		throw py::key_error("Node doesn't contain link with ID " + lid);
 	};
+	auto find_by_idx = [](const node& N, const long idx) {
+		// support for Pythonish indexing from both ends
+		if(std::size_t(std::abs(idx)) > N.size())
+			throw py::key_error("Index out of bounds");
+		auto pos = idx < 0 ? N.end() : N.begin();
+		std::advance(pos, idx);
+		if(pos == N.end()) throw py::key_error("Index out of bounds");
+		return pos;
+	};
 	auto erase_by_lid = [](node& N, const std::string& key) {
 		N.erase(uuid_from_str(key));
 	};
@@ -174,14 +156,8 @@ void py_bind_tree(py::module& m) {
 		}, "obj_type_id"_a, "Check if node contain links to objects of given type")
 
 		// get item by int index
-		.def("__getitem__", [](const node& N, const long idx) {
-			// support for Pythonish indexing from both ends
-			if(std::size_t(std::abs(idx)) > N.size())
-				throw py::key_error("Index out of bounds");
-			auto pos = idx < 0 ? N.end() : N.begin();
-			std::advance(pos, idx);
-			if(pos == N.end()) throw py::key_error("Index out of bounds");
-			return *pos;
+		.def("__getitem__", [&find_by_idx](const node& N, const long idx) {
+			return *find_by_idx(N, idx);
 		}, "link_idx"_a)
 		// search by link ID
 		.def("__getitem__", find_by_lid, "lid"_a)
@@ -268,7 +244,7 @@ void py_bind_tree(py::module& m) {
 			N.erase_type(type_id);
 		}, "obj_type_id"_a, "Erase all links pointing to objects of given type")
 
-		// misc functions
+		// misc container-related functions
 		.def_property_readonly("size", &node::size)
 		.def_property_readonly("empty", &node::empty)
 		.def("clear", &node::clear, "Clears all node contents")
@@ -294,6 +270,24 @@ void py_bind_tree(py::module& m) {
 				};
 			}
 		}, "key_type"_a = node::Key::ID)
+
+		// link rename
+		// by ID
+		.def("rename", [](node& N, const std::string& lid, std::string new_name) {
+			return N.rename(N.find(uuid_from_str(lid)), std::move(new_name));
+		}, "LID"_a, "new_name"_a, "Rename link with given ID")
+		// by link instance (extracts ID)
+		.def("rename", [](node& N, const sp_link& l, std::string new_name) {
+			return N.rename(N.find(l->id()), std::move(new_name));
+		}, "link"_a, "new_name"_a, "Rename given link")
+		.def("rename", [&find_by_idx](node& N, const long& idx, std::string new_name) {
+			return N.rename(find_by_idx(N, idx), std::move(new_name));
+		}, "idx"_a, "new_name"_a, "Rename link with given index")
+		.def("rename_all", [](node& N, const std::string old_name, std::string new_name) {
+			const auto R = N.equal_range(old_name);
+			for(auto p = R.begin(); p != R.end(); ++p)
+				N.rename(N.project(p), new_name);
+		}, "old_name"_a, "new_name"_a, "Rename all links with given names")
 	;
 
 	m.def("print_link", [](const sp_link& l) { print_link(l, 0); });
