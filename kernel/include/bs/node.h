@@ -231,6 +231,12 @@ public:
 	/// rename given link
 	bool rename(iterator<Key::AnyOrder> pos, std::string new_name);
 
+	/// project any given iterator into custom order
+	iterator<Key::AnyOrder> project(iterator<Key::ID>) const;
+	iterator<Key::AnyOrder> project(iterator<Key::Name>) const;
+	iterator<Key::AnyOrder> project(iterator<Key::OID>) const;
+	iterator<Key::AnyOrder> project(iterator<Key::Type>) const;
+
 	/// ctor
 	node(std::string custom_id = "");
 	// copy ctor makes deep copy of contained links

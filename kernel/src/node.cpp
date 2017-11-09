@@ -140,9 +140,15 @@ public:
 
 	template<Key K>
 	bool rename(iterator<K> pos, std::string new_name) {
+		if(pos == end<K>()) return false;
 		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
 			l->name_ = std::move(name);
 		});
+	}
+
+	template<Key K>
+	auto project(iterator<K> pos) const {
+		return links_.project<Key_tag<Key::AnyOrder>>(std::move(pos));
 	}
 
 	// implement deep copy ctor
@@ -359,6 +365,22 @@ std::vector<Key_type<Key::Type>> node::keys(Key_const<Key::Type>) const {
 
 bool node::rename(iterator<Key::AnyOrder> pos, std::string new_name) {
 	return pimpl_->rename<Key::AnyOrder>(std::move(pos), std::move(new_name));
+}
+
+iterator<Key::AnyOrder> node::project(iterator<Key::ID> src) const {
+	return pimpl_->project<Key::ID>(src);
+}
+
+iterator<Key::AnyOrder> node::project(iterator<Key::Name> src) const {
+	return pimpl_->project<Key::Name>(src);
+}
+
+iterator<Key::AnyOrder> node::project(iterator<Key::OID> src) const {
+	return pimpl_->project<Key::OID>(src);
+}
+
+iterator<Key::AnyOrder> node::project(iterator<Key::Type> src) const {
+	return pimpl_->project<Key::Type>(src);
 }
 
 BS_TYPE_IMPL(node, objbase, "node", "BS tree node", true, true);
