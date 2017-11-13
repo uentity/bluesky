@@ -268,7 +268,7 @@ range<Key::Type> node::equal_type(const std::string& type_id) const {
 }
 
 // ---- insert
-insert_status<Key::ID> node::insert(const sp_link& l, uint pol) {
+insert_status<Key::ID> node::insert(const sp_link& l, InsertPolicy pol) {
 	auto res = pimpl_->insert(l, pol);
 	// switch owner to *this if succeeded
 	if(res.second) {
@@ -290,7 +290,26 @@ insert_status<Key::ID> node::insert(const sp_link& l, uint pol) {
 	return res;
 }
 
-insert_status<Key::ID> node::insert(std::string name, sp_obj obj, uint pol) {
+insert_status<Key::AnyOrder> node::insert(const sp_link& l, iterator<> pos, InsertPolicy pol) {
+	// 1. insert an element using ID index
+	auto res = insert(l, pol);
+	if(res.first != end<Key::ID>()) {
+		// 2. reposition an element in AnyOrder index
+		auto src = pimpl_->project<Key::ID>(res.first);
+		if(pos != src) {
+			auto& ord_idx = pimpl_->links_.get<Key_tag<Key::AnyOrder>>();
+			ord_idx.relocate(pos, src);
+			return {src, res.second};
+		}
+	}
+	return {pimpl_->project<Key::ID>(res.first), res.second};
+}
+
+insert_status<Key::AnyOrder> node::insert(const sp_link& l, std::size_t idx, InsertPolicy pol) {
+	return insert(l, std::next(begin<Key::AnyOrder>(), std::min(idx, size())), pol);
+}
+
+insert_status<Key::ID> node::insert(std::string name, sp_obj obj, InsertPolicy pol) {
 	return insert(
 		std::make_shared<hard_link>(std::move(name), std::move(obj)), pol
 	);

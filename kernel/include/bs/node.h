@@ -13,6 +13,7 @@
 #include "link.h"
 #include "exception.h"
 #include "detail/is_container.h"
+#include "detail/enumops.h"
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
@@ -185,9 +186,13 @@ public:
 		Merge = 8
 	};
 	/// leafs insertion
-	insert_status<Key::ID> insert(const sp_link& l, uint pol = AllowDupNames);
+	insert_status<Key::ID> insert(const sp_link& l, InsertPolicy pol = AllowDupNames);
+	/// insert link just before given position
+	insert_status<Key::AnyOrder> insert(const sp_link& l, iterator<> pos, InsertPolicy pol = AllowDupNames);
+	/// insert link at given index
+	insert_status<Key::AnyOrder> insert(const sp_link& l, std::size_t idx, InsertPolicy pol = AllowDupNames);
 	/// auto-create and insert hard link that points to object
-	insert_status<Key::ID> insert(std::string name, sp_obj obj, uint pol = AllowDupNames);
+	insert_status<Key::ID> insert(std::string name, sp_obj obj, InsertPolicy pol = AllowDupNames);
 	/// insert links from given container
 	/// NOTE: container elements will be moved from passed container!
 	template<

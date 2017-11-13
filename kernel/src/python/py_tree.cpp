@@ -40,7 +40,32 @@ void print_link(const sp_link& l, int level = 0) {
 	}
 }
 
+// impl of some method to omit code duplication
+bool check_lid(const node& N, const std::string& lid) {
+	return N.find(uuid_from_str(lid)) != N.end<>();
 }
+
+auto find_by_lid(const node& N, const std::string& lid) {
+	auto r = N.find(uuid_from_str(lid));
+	if(r != N.end<>()) return *r;
+	throw py::key_error("Node doesn't contain link with ID " + lid);
+}
+
+auto find_by_idx(const node& N, const long idx, bool allow_end = false) {
+	// support for Pythonish indexing from both ends
+	if(std::size_t(std::abs(idx)) > N.size())
+		throw py::key_error("Index out of bounds");
+	auto pos = idx < 0 ? N.end() : N.begin();
+	std::advance(pos, idx);
+	if(!allow_end && pos == N.end()) throw py::key_error("Index out of bounds");
+	return pos;
+}
+
+void erase_by_lid(node& N, const std::string& key) {
+	N.erase(uuid_from_str(key));
+}
+
+} // hidden ns
 
 void py_bind_tree(py::module& m) {
 	py::class_<link, py_link<>, std::shared_ptr<link>> link_pyface(m, "link");
@@ -93,7 +118,7 @@ void py_bind_tree(py::module& m) {
 		.value("AnyOrder", node::Key::AnyOrder)
 	;
 	// export node's insert policy
-	py::enum_<node::InsertPolicy>(node_pyface, "InsertPolicy")
+	py::enum_<node::InsertPolicy>(node_pyface, "InsertPolicy", py::arithmetic())
 		.value("AllowDupNames", node::InsertPolicy::AllowDupNames)
 		.value("DenyDupNames", node::InsertPolicy::DenyDupNames)
 		.value("RenameDup", node::InsertPolicy::RenameDup)
@@ -101,28 +126,8 @@ void py_bind_tree(py::module& m) {
 		.value("Merge", node::InsertPolicy::Merge)
 		.export_values();
 	;
-
-	// save impl of some method to omit code duplication
-	auto check_lid = [](const node& N, const std::string& lid) {
-		return N.find(uuid_from_str(lid)) != N.end<>();
-	};
-	auto find_by_lid = [](const node& N, const std::string& lid) {
-		auto r = N.find(uuid_from_str(lid));
-		if(r != N.end<>()) return *r;
-		throw py::key_error("Node doesn't contain link with ID " + lid);
-	};
-	auto find_by_idx = [](const node& N, const long idx) {
-		// support for Pythonish indexing from both ends
-		if(std::size_t(std::abs(idx)) > N.size())
-			throw py::key_error("Index out of bounds");
-		auto pos = idx < 0 ? N.end() : N.begin();
-		std::advance(pos, idx);
-		if(pos == N.end()) throw py::key_error("Index out of bounds");
-		return pos;
-	};
-	auto erase_by_lid = [](node& N, const std::string& key) {
-		N.erase(uuid_from_str(key));
-	};
+	py::implicitly_convertible<int, node::InsertPolicy>();
+	py::implicitly_convertible<long, node::InsertPolicy>();
 
 	// fill node with methods
 	node_pyface
@@ -156,7 +161,7 @@ void py_bind_tree(py::module& m) {
 		}, "obj_type_id"_a, "Check if node contain links to objects of given type")
 
 		// get item by int index
-		.def("__getitem__", [&find_by_idx](const node& N, const long idx) {
+		.def("__getitem__", [](const node& N, const long idx) {
 			return *find_by_idx(N, idx);
 		}, "link_idx"_a)
 		// search by link ID
@@ -216,11 +221,15 @@ void py_bind_tree(py::module& m) {
 		}, py::keep_alive<0, 1>(), "obj_type_id"_a)
 
 		// insert given link
-		.def("insert", [](node& N, sp_link l, uint pol = node::AllowDupNames) {
-			return N.insert(std::move(l)).second;
+		.def("insert", [](node& N, const sp_link& l, node::InsertPolicy pol = node::AllowDupNames) {
+			return N.insert(l, uint(pol)).second;
 		}, "link"_a, "pol"_a = node::AllowDupNames, "Insert given link")
+		// insert link at given index
+		.def("insert", [](node& N, const sp_link& l, const long idx, node::InsertPolicy pol = node::AllowDupNames) {
+			return N.insert(l, find_by_idx(N, idx, true), pol).second;
+		}, "link"_a, "idx"_a, "pol"_a = node::AllowDupNames, "Insert link at given index")
 		// insert hard link to given object
-		.def("insert", [](node& N, std::string name, sp_obj obj, uint pol = node::AllowDupNames) {
+		.def("insert", [](node& N, std::string name, sp_obj obj, node::InsertPolicy pol = node::AllowDupNames) {
 			return N.insert(std::move(name), std::move(obj), pol).second;
 		}, "name"_a, "obj"_a, "pol"_a = node::AllowDupNames, "Insert hard link to given object")
 
@@ -280,7 +289,7 @@ void py_bind_tree(py::module& m) {
 		.def("rename", [](node& N, const sp_link& l, std::string new_name) {
 			return N.rename(N.find(l->id()), std::move(new_name));
 		}, "link"_a, "new_name"_a, "Rename given link")
-		.def("rename", [&find_by_idx](node& N, const long& idx, std::string new_name) {
+		.def("rename", [](node& N, const long& idx, std::string new_name) {
 			return N.rename(find_by_idx(N, idx), std::move(new_name));
 		}, "idx"_a, "new_name"_a, "Rename link with given index")
 		.def("rename_all", [](node& N, const std::string old_name, std::string new_name) {
