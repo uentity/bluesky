@@ -10,6 +10,7 @@
 #pragma once
 #include "common.h"
 #include "objbase.h"
+#include "detail/enumops.h"
 #include <boost/uuid/uuid.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -64,7 +65,7 @@ public:
 		Disabled = 2
 	};
 	virtual uint flags() const;
-	virtual void set_flags(uint new_flags);
+	virtual void set_flags(Flags new_flags);
 
 	/// access link's unique ID
 	const id_type& id() const {

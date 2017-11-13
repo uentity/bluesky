@@ -139,7 +139,7 @@ public:
 	uint flags() const override {
 		PYBIND11_OVERLOAD_PURE(uint, Link, flags, );
 	}
-	void set_flags(uint new_flags) override {
+	void set_flags(typename Link::Flags new_flags) override {
 		PYBIND11_OVERLOAD_PURE(void, Link, set_flags, std::move(new_flags));
 	}
 };

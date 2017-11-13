@@ -55,7 +55,7 @@ uint link::flags() const {
 	return flags_;
 }
 
-void link::set_flags(uint new_flags) {
+void link::set_flags(Flags new_flags) {
 	flags_ = new_flags;
 }
 
