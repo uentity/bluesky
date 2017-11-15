@@ -242,6 +242,13 @@ public:
 	iterator<Key::AnyOrder> project(iterator<Key::OID>) const;
 	iterator<Key::AnyOrder> project(iterator<Key::Type>) const;
 
+	/// API for managing link filters
+	/// test is given link can be inserted into the node
+	bool accepts(const sp_link& what) const;
+	/// only simple object type filtera are supported now
+	void accept_object_types(std::vector<std::string> allowed_types);
+	std::vector<std::string> allowed_object_types() const;
+
 	/// ctor
 	node(std::string custom_id = "");
 	// copy ctor makes deep copy of contained links

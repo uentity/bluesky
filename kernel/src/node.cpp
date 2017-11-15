@@ -23,6 +23,8 @@ template<Key K> using Key_const = typename node::Key_const<K>;
 template<Key K> using insert_status = typename node::insert_status<K>;
 template<Key K> using range = typename node::range<K>;
 
+using Flags = link::Flags;
+
 /*-----------------------------------------------------------------------------
  *  node_impl
  *-----------------------------------------------------------------------------*/
@@ -94,19 +96,22 @@ public:
 		return this->deep_search_impl<K>(*this, key);
 	}
 
-	insert_status<Key::ID> insert(sp_link l, uint pol) {
+	insert_status<Key::ID> insert(sp_link l, InsertPolicy pol) {
+		// can't move persistent node from it's owner
+		if(!l || !accepts(l) || (l->flags() & Flags::Persistent && l->owner()))
+			return {end<Key::ID>(), false};
 		// check if we have duplication name
 		iterator<Key::ID> dup;
 		if((pol & 3) > 0) {
 			dup = find<Key::Name, Key::ID>(l->name());
 			if(dup != end<Key::ID>()) {
+				bool unique_found = false;
 				// first check if dup names are prohibited
 				if(pol & InsertPolicy::DenyDupNames) return {dup, false};
-				else {
+				else if(pol & InsertPolicy::RenameDup && !(l->flags() & Flags::Persistent)) {
 					// try to auto-rename link
 					std::string new_name;
-					bool unique_found = false;
-					for(int i = 0; i < 1000; ++i) {
+					for(int i = 0; i < 10000; ++i) {
 						new_name = l->name() + '_' + std::to_string(i);
 						if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
 							// we've found a unique name
@@ -115,9 +120,9 @@ public:
 							break;
 						}
 					}
-					// if no unique name was found - return fail
-					if(!unique_found) return {dup, false};
 				}
+			// if no unique name was found - return fail
+			if(!unique_found) return {dup, false};
 			}
 		}
 		// check for duplicating OID
@@ -151,6 +156,15 @@ public:
 		return links_.project<Key_tag<Key::AnyOrder>>(std::move(pos));
 	}
 
+	bool accepts(const sp_link& what) const {
+		if(!allowed_otypes_.size()) return true;
+		const auto& what_type = what->obj_type_id();
+		for(const auto& otype : allowed_otypes_) {
+			if(what_type == otype) return true;
+		}
+		return false;
+	}
+
 	// implement deep copy ctor
 	node_impl(const node_impl& src) {
 		for(const auto& plink : src.links_) {
@@ -161,6 +175,7 @@ public:
 	node_impl() = default;
 
 	links_container links_;
+	std::vector<std::string> allowed_otypes_;
 };
 
 /*-----------------------------------------------------------------------------
@@ -400,6 +415,18 @@ iterator<Key::AnyOrder> node::project(iterator<Key::OID> src) const {
 
 iterator<Key::AnyOrder> node::project(iterator<Key::Type> src) const {
 	return pimpl_->project<Key::Type>(src);
+}
+
+bool node::accepts(const sp_link& what) const {
+	return pimpl_->accepts(what);
+}
+
+void node::accept_object_types(std::vector<std::string> allowed_types) {
+	pimpl_->allowed_otypes_ = std::move(allowed_types);
+}
+
+std::vector<std::string> node::allowed_object_types() const {
+	return pimpl_->allowed_otypes_;
 }
 
 BS_TYPE_IMPL(node, objbase, "node", "BS tree node", true, true);

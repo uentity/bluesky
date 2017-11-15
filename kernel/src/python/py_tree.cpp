@@ -297,6 +297,14 @@ void py_bind_tree(py::module& m) {
 			for(auto p = R.begin(); p != R.end(); ++p)
 				N.rename(N.project(p), new_name);
 		}, "old_name"_a, "new_name"_a, "Rename all links with given names")
+
+		.def("accepts", &node::accepts, "Check if node accepts given link")
+		.def("accept_object_types", &node::accept_object_types,
+			"Set white list of object types that node will accept"
+		)
+		.def("allowed_object_types", &node::allowed_object_types,
+			"Returns white list of object types that node will accept"
+		)
 	;
 
 	m.def("print_link", [](const sp_link& l) { print_link(l, 0); });
