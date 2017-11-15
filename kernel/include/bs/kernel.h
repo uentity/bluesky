@@ -120,7 +120,7 @@ public:
 	}
 
 	// clone object
-	auto create_object_copy(bs_type_copy_param source) const {
+	auto clone_object(bs_type_copy_param source) const {
 		return source->bs_resolve_type().clone(source);
 	}
 

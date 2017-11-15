@@ -53,6 +53,10 @@ void py_bind_kernel(py::module& m) {
 		.def("instances", (kernel::instances_enum (kernel::*)(const BS_TYPE_INFO&) const) &kernel::instances)
 		.def("pert_str_any_array", &kernel::pert_str_any_array)
 		.def("pert_idx_any_array", &kernel::pert_idx_any_array)
+
+		.def("clone_object", [](const kernel& k, bs_type_copy_param src) -> sp_obj {
+			return k.clone_object(src);
+		}, "src"_a, "Make object copy")
 	;
 
 	auto kt_mod = m.def_submodule("tools", "Kernel tools");
