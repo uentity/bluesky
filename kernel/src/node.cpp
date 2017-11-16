@@ -168,7 +168,8 @@ public:
 	// implement deep copy ctor
 	node_impl(const node_impl& src) {
 		for(const auto& plink : src.links_) {
-			links_.get<Key_tag<Key::ID>>().insert(plink->clone());
+			insert(plink->clone(), InsertPolicy::AllowDupNames);
+			//links_.get<Key_tag<Key::ID>>().insert(plink->clone());
 		}
 	}
 
@@ -427,6 +428,14 @@ void node::accept_object_types(std::vector<std::string> allowed_types) {
 
 std::vector<std::string> node::allowed_object_types() const {
 	return pimpl_->allowed_otypes_;
+}
+
+sp_node node::deep_clone(InsertPolicy pol) const {
+	sp_node res = std::make_shared<node>();
+	for(const auto& plink : pimpl_->links_) {
+		res->insert(plink->clone(true), pol);
+	}
+	return res;
 }
 
 BS_TYPE_IMPL(node, objbase, "node", "BS tree node", true, true);

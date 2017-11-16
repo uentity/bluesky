@@ -308,6 +308,8 @@ void py_bind_tree(py::module& m) {
 		.def("allowed_object_types", &node::allowed_object_types,
 			"Returns white list of object types that node will accept"
 		)
+
+		.def("deep_clone", &node::deep_clone, "Make deep node copy")
 	;
 
 	m.def("print_link", [](const sp_link& l) { print_link(l, 0); });

@@ -254,6 +254,9 @@ public:
 	// copy ctor makes deep copy of contained links
 	node(const node& src);
 
+	/// make deep copy of node with copies of all linked objects
+	virtual sp_node deep_clone(InsertPolicy pol = InsertPolicy::AllowDupNames) const;
+
 	virtual ~node();
 
 private:
