@@ -8,8 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/bs.h>
-#include <bs/link.h>
-#include <bs/node.h>
+#include <bs/python/tree.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <string>
@@ -110,7 +109,7 @@ void py_bind_tree(py::module& m) {
 	;
 
 	// forward define node
-	py::class_<node, objbase, std::shared_ptr<node>> node_pyface(m, "node");
+	py::class_<node, objbase, py_node<>, std::shared_ptr<node>> node_pyface(m, "node");
 
 	// export node's Key enum
 	py::enum_<node::Key>(node_pyface, "Key")
