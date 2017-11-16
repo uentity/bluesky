@@ -16,11 +16,11 @@
 
 namespace blue_sky {
 
-typedef std::shared_ptr< objbase > bs_type_ctor_result;
-typedef const std::shared_ptr< objbase >& bs_type_copy_param;
+using bs_type_ctor_result = std::shared_ptr<objbase>;
+using bs_type_copy_param = const std::shared_ptr<const objbase>&;
 
-typedef bs_type_ctor_result (*BS_TYPE_COPY_FUN)(bs_type_copy_param);
-typedef const blue_sky::type_descriptor& (*BS_GET_TD_FUN)();
+using BS_TYPE_COPY_FUN = bs_type_ctor_result (*)(bs_type_copy_param);
+using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
 
 namespace detail {
 /// Convert lambda::operator() to bs type construct function pointer

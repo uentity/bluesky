@@ -200,7 +200,7 @@ BOOST_AUTO_TEST_CASE(test_type_descriptor) {
 	if(p)
 		std::cout << *p << std::endl;
 	// make copy
-	sp_person p1 = BS_KERNEL.create_object_copy(p);
+	sp_person p1 = BS_KERNEL.clone_object(p);
 	BOOST_TEST(p1);
 	if(p1)
 		std::cout << "Copy is: " << *p1 << std::endl;
