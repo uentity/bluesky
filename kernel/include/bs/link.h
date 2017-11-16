@@ -25,18 +25,13 @@ public:
 	using id_type = boost::uuids::uuid;
 	using sp_link = std::shared_ptr< link >;
 
-	/// ctor accept name of created link
-	link(std::string name);
-
-	/// direct copying of links change ID
-	link(const link&);
-
 	/// virtual dtor
 	virtual ~link();
 
 	/// because we cannot make explicit copies of link
-	/// we need a dedicated faunction to make links clones
-	virtual sp_link clone() const = 0;
+	/// we need a dedicated function to make links clones
+	/// if `deep` flag is set, then clone pointed object as well
+	virtual sp_link clone(bool deep = false) const = 0;
 
 	/// get pointer to object link is pointing to
 	/// NOTE: returned pointer can be null
@@ -61,10 +56,11 @@ public:
 
 	/// flags reflect link properties and state
 	enum Flags {
+		Plain = 0,
 		Persistent = 1,
 		Disabled = 2
 	};
-	virtual uint flags() const;
+	virtual Flags flags() const;
 	virtual void set_flags(Flags new_flags);
 
 	/// access link's unique ID
@@ -96,10 +92,18 @@ public:
 protected:
 	std::string name_;
 	id_type id_;
-	uint flags_;
+	Flags flags_;
 	std::weak_ptr<node> owner_;
 
 	friend class node;
+
+	/// ctor accept name of created link
+	link(std::string name, Flags f = Plain);
+
+	/// direct copying of links change ID
+	link(const link&);
+
+	/// switch link's owner
 	void reset_owner(const sp_node& new_owner);
 };
 
@@ -109,10 +113,10 @@ class BS_API hard_link : public link {
 public:
 
 	/// ctor -- additionaly accepts a pointer to object
-	hard_link(std::string name, sp_obj data);
+	hard_link(std::string name, sp_obj data, Flags f = Plain);
 
 	/// implement link's API
-	sp_link clone() const override;
+	sp_link clone(bool deep = false) const override;
 
 	sp_obj data() const override;
 
@@ -137,10 +141,10 @@ class BS_API weak_link : public link {
 public:
 
 	/// ctor -- additionaly accepts a pointer to object
-	weak_link(std::string name, const sp_obj& data);
+	weak_link(std::string name, const sp_obj& data, Flags f = Plain);
 
 	/// implement link's API
-	sp_link clone() const override;
+	sp_link clone(bool deep = false) const override;
 
 	sp_obj data() const override;
 

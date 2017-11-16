@@ -9,6 +9,7 @@
 
 #include <bs/link.h>
 #include <bs/node.h>
+#include <bs/kernel.h>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
@@ -16,12 +17,21 @@ NAMESPACE_BEGIN(tree)
 /*-----------------------------------------------------------------------------
  *  hard_link
  *-----------------------------------------------------------------------------*/
-hard_link::hard_link(std::string name, sp_obj data) :
-	link(std::move(name)), data_(std::move(data))
+hard_link::hard_link(std::string name, sp_obj data, Flags f) :
+	link(std::move(name), f), data_(std::move(data))
 {}
 
-link::sp_link hard_link::clone() const {
-	return std::make_shared< hard_link >(*this);
+link::sp_link hard_link::clone(bool deep) const {
+	auto make_clone = [](bs_type_copy_param src) -> sp_obj {
+		if(src->is_node())
+			return std::static_pointer_cast<const node>(src)->deep_clone();
+		return BS_KERNEL.clone_object(src);
+	};
+	return std::make_shared<hard_link>(
+		name_,
+		deep ? make_clone(data_) : data_,
+		flags_
+	);
 }
 
 sp_obj hard_link::data() const {
@@ -55,12 +65,13 @@ void hard_link::set_info(inodeptr i) {
 /*-----------------------------------------------------------------------------
  *  weak_link
  *-----------------------------------------------------------------------------*/
-weak_link::weak_link(std::string name, const sp_obj& data) :
-	link(std::move(name)), data_(data)
+weak_link::weak_link(std::string name, const sp_obj& data, Flags f) :
+	link(std::move(name), f), data_(data)
 {}
 
-link::sp_link weak_link::clone() const {
-	return std::make_shared< weak_link >(*this);
+link::sp_link weak_link::clone(bool deep) const {
+	// cannot make deep copy of object pointee
+	return deep ? nullptr : std::make_shared<weak_link>(name_, data_.lock(), flags_);
 }
 
 sp_obj weak_link::data() const {

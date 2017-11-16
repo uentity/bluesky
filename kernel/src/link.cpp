@@ -21,15 +21,15 @@ static auto gen = boost::uuids::random_generator();
 
 } // eof hidden namespace
 
-link::link(std::string name)
+link::link(std::string name, Flags f)
 	: name_(std::move(name)),
-	id_(gen()), flags_(0)
+	id_(gen()), flags_(f)
 {}
 
 // copy ctor does not copy uuid from lhs
 // instead it creates a new one
 link::link(const link& lhs)
-	: std::enable_shared_from_this<link>(lhs), name_(lhs.name_), id_(gen()), flags_(0), owner_()
+	: std::enable_shared_from_this<link>(lhs), name_(lhs.name_), id_(gen()), flags_(lhs.flags_), owner_()
 {}
 
 link::~link() {}
@@ -51,7 +51,7 @@ void link::reset_owner(const sp_node& new_owner) {
 	owner_ = new_owner;
 }
 
-uint link::flags() const {
+link::Flags link::flags() const {
 	return flags_;
 }
 

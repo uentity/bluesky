@@ -71,15 +71,16 @@ void py_bind_tree(py::module& m) {
 	py::class_<link, py_link<>, std::shared_ptr<link>> link_pyface(m, "link");
 
 	// export Flags enum
-	py::enum_<link::Flags>(link_pyface, "Flags")
+	py::enum_<link::Flags>(link_pyface, "Flags", py::arithmetic())
 		.value("Persistent", link::Flags::Persistent)
 		.value("Disabled", link::Flags::Disabled)
 		.export_values()
 	;
+	py::implicitly_convertible<int, link::Flags>();
+	py::implicitly_convertible<long, link::Flags>();
 
 	// link base class
 	link_pyface
-		.def(py::init<std::string>())
 		.def("clone", &link::clone)
 		.def("data", &link::data)
 		.def("type_id", &link::type_id)
@@ -100,10 +101,12 @@ void py_bind_tree(py::module& m) {
 	;
 
 	py::class_<hard_link, link, py_link<hard_link>, std::shared_ptr<hard_link>>(m, "hard_link")
-		.def(py::init<std::string, sp_obj>())
+		.def(py::init<std::string, sp_obj, link::Flags>(),
+			"name"_a, "data"_a, "flags"_a = link::Flags::Plain)
 	;
 	py::class_<weak_link, link, py_link<weak_link>, std::shared_ptr<weak_link>>(m, "weak_link")
-		.def(py::init<std::string, const sp_obj&>())
+		.def(py::init<std::string, const sp_obj&, link::Flags>(),
+			"name"_a, "data"_a, "flags"_a = link::Flags::Plain)
 	;
 
 	// forward define node
