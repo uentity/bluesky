@@ -63,16 +63,17 @@ public:
 /*-----------------------------------------------------------------------------
  *  node's trampoline class for derived types
  *-----------------------------------------------------------------------------*/
-template<typename Node = tree::node>
-class py_node : public Node {
-public:
-	using Node::Node;
-	using typename Node::InsertPolicy;
-
-	tree::sp_node deep_clone(InsertPolicy pol = InsertPolicy::AllowDupNames) const override {
-		PYBIND11_OVERLOAD(tree::sp_node, Node, deep_clone, pol);
-	}
-};
+// [NOTE] disabled, because there's no virtual methods in node
+//template<typename Node = tree::node>
+//class py_node : public Node {
+//public:
+//	using Node::Node;
+//	using typename Node::InsertPolicy;
+//
+//	tree::sp_node deep_clone(InsertPolicy pol = InsertPolicy::AllowDupNames) const override {
+//		PYBIND11_OVERLOAD(tree::sp_node, Node, deep_clone, pol);
+//	}
+//};
 
 NAMESPACE_END(python) NAMESPACE_END(blue_sky)
 

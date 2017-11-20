@@ -22,14 +22,9 @@ hard_link::hard_link(std::string name, sp_obj data, Flags f) :
 {}
 
 link::sp_link hard_link::clone(bool deep) const {
-	auto make_clone = [](bs_type_copy_param src) -> sp_obj {
-		if(src->is_node())
-			return std::static_pointer_cast<const node>(src)->deep_clone();
-		return BS_KERNEL.clone_object(src);
-	};
 	return std::make_shared<hard_link>(
 		name_,
-		deep ? make_clone(data_) : data_,
+		deep ? BS_KERNEL.clone_object(data_) : data_,
 		flags_
 	);
 }

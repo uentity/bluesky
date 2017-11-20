@@ -249,13 +249,15 @@ public:
 	void accept_object_types(std::vector<std::string> allowed_types);
 	std::vector<std::string> allowed_object_types() const;
 
-	/// ctor
+	/// obtain link to this node
+	/// this method is intended to always resolve to owner (parent) node
+	/// multiple hard links to same node are prohibited
+	sp_link self_link() const;
+
+	/// ctor - creates hard self link with given name
 	node(std::string custom_id = "");
 	// copy ctor makes deep copy of contained links
 	node(const node& src);
-
-	/// make deep copy of node with copies of all linked objects
-	virtual sp_node deep_clone(InsertPolicy pol = InsertPolicy::AllowDupNames) const;
 
 	virtual ~node();
 
@@ -281,6 +283,9 @@ private:
 	std::vector<Key_type<Key::Name>> keys(Key_const<Key::Name>) const;
 	std::vector<Key_type<Key::OID>> keys(Key_const<Key::OID>) const;
 	std::vector<Key_type<Key::Type>> keys(Key_const<Key::Type>) const;
+
+	/// reset hard link to self when adding this node into another node
+	void self_relink(const sp_link& new_self);
 
 	BS_TYPE_DECL
 };

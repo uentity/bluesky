@@ -165,16 +165,19 @@ public:
 		return false;
 	}
 
-	// implement deep copy ctor
-	node_impl(const node_impl& src) {
+	// implement shallow links copy ctor
+	node_impl(const node_impl& src)
+		: allowed_otypes_(src.allowed_otypes_)
+	{
 		for(const auto& plink : src.links_) {
-			insert(plink->clone(), InsertPolicy::AllowDupNames);
-			//links_.get<Key_tag<Key::ID>>().insert(plink->clone());
+			// non-deep clone can result in unconditional moving nodes from source
+			insert(plink->clone(true), InsertPolicy::AllowDupNames);
 		}
 	}
 
 	node_impl() = default;
 
+	std::weak_ptr<link> self_link_;
 	links_container links_;
 	std::vector<std::string> allowed_otypes_;
 };
@@ -191,6 +194,15 @@ node::node(const node& src)
 {}
 
 node::~node() = default;
+
+sp_link node::self_link() const {
+	return pimpl_->self_link_.lock();
+}
+
+void node::self_relink(const sp_link& new_self) {
+	if(new_self->type_id() == "hard_link")
+		pimpl_->self_link_ = new_self;
+}
 
 std::size_t node::size() const {
 	return pimpl_->links_.size();
@@ -292,6 +304,9 @@ insert_status<Key::ID> node::insert(const sp_link& l, InsertPolicy pol) {
 		if(auto prev_owner = res_lnk.owner())
 			prev_owner->erase(res_lnk.id());
 		res_lnk.reset_owner(bs_shared_this<node>());
+		// if we inserting a node, relink it to ensure a single hard link exists
+		if(auto N = l->data_node())
+			N->self_relink(l);
 	}
 	else if(pol & InsertPolicy::Merge && res.first != end<Key::ID>()) {
 		// check if we need to deep merge given links
@@ -428,14 +443,6 @@ void node::accept_object_types(std::vector<std::string> allowed_types) {
 
 std::vector<std::string> node::allowed_object_types() const {
 	return pimpl_->allowed_otypes_;
-}
-
-sp_node node::deep_clone(InsertPolicy pol) const {
-	sp_node res = std::make_shared<node>();
-	for(const auto& plink : pimpl_->links_) {
-		res->insert(plink->clone(true), pol);
-	}
-	return res;
 }
 
 BS_TYPE_IMPL(node, objbase, "node", "BS tree node", true, true);

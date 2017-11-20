@@ -80,7 +80,7 @@ void py_bind_tree(py::module& m) {
 
 	// link base class
 	link_pyface
-		.def("clone", &link::clone)
+		.def("clone", &link::clone, "deep"_a = true, "Make shallow or deep copy of link")
 		.def("data", &link::data)
 		.def("type_id", &link::type_id)
 		.def("oid", &link::oid)
@@ -109,7 +109,7 @@ void py_bind_tree(py::module& m) {
 	;
 
 	// forward define node
-	py::class_<node, objbase, py_node<>, std::shared_ptr<node>> node_pyface(m, "node");
+	py::class_<node, objbase, std::shared_ptr<node>> node_pyface(m, "node");
 
 	// export node's Key enum
 	py::enum_<node::Key>(node_pyface, "Key")
@@ -308,7 +308,7 @@ void py_bind_tree(py::module& m) {
 			"Returns white list of object types that node will accept"
 		)
 
-		.def("deep_clone", &node::deep_clone, "Make deep node copy")
+		.def("self_link", &node::self_link)
 	;
 
 	m.def("print_link", [](const sp_link& l) { print_link(l, 0); });
