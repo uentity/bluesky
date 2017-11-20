@@ -89,6 +89,8 @@ public:
 		return std::static_pointer_cast< Derived, link >(this->shared_from_this());
 	}
 
+	bool rename(std::string new_name);
+
 protected:
 	std::string name_;
 	id_type id_;

@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/link.h>
+#include <bs/node.h>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
@@ -57,6 +58,14 @@ link::Flags link::flags() const {
 
 void link::set_flags(Flags new_flags) {
 	flags_ = new_flags;
+}
+
+bool link::rename(std::string new_name) {
+	if(auto O = owner()) {
+		return O->rename(O->find(id()), std::move(new_name));
+	}
+	name_ = std::move(new_name);
+	return true;
 }
 
 NAMESPACE_END(tree)
