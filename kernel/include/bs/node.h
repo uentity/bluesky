@@ -254,6 +254,10 @@ public:
 	/// multiple hard links to same node are prohibited
 	sp_link self_link() const;
 
+	/// ensure that owner of all contained leafs is correctly set to this node
+	/// if deep is true, correct owners in all subtree
+	void propagate_owner(bool deep = false);
+
 	/// ctor - creates hard self link with given name
 	node(std::string custom_id = "");
 	// copy ctor makes deep copy of contained links

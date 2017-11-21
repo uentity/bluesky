@@ -169,10 +169,12 @@ public:
 	node_impl(const node_impl& src)
 		: allowed_otypes_(src.allowed_otypes_)
 	{
-		for(const auto& plink : src.links_) {
+		for(const auto& plink : src.links_.get<Key_tag<Key::AnyOrder>>()) {
 			// non-deep clone can result in unconditional moving nodes from source
 			insert(plink->clone(true), InsertPolicy::AllowDupNames);
 		}
+		// [NOTE] links are in invalid state (no owner set) now
+		// correct this by manually calling `node::propagate_owner()` after copy is constructed
 	}
 
 	node_impl() = default;
@@ -194,6 +196,17 @@ node::node(const node& src)
 {}
 
 node::~node() = default;
+
+void node::propagate_owner(bool deep) {
+	// properly setup owner in node's leafs
+	const auto self = bs_shared_this<node>();
+	for(auto& plink : pimpl_->links_) {
+		plink->reset_owner(self);
+		if(deep) if(const auto child_node = plink->data_node()) {
+			child_node->propagate_owner(true);
+		}
+	}
+}
 
 sp_link node::self_link() const {
 	return pimpl_->self_link_.lock();
@@ -450,5 +463,16 @@ BS_TYPE_ADD_CONSTRUCTOR(node, (std::string))
 BS_REGISTER_TYPE("kernel", node)
 
 NAMESPACE_END(tree)
+
+namespace detail {
+
+BS_API void adjust_cloned_node(const sp_obj& pnode) {
+	// fix owner in node's clone
+	if(pnode->is_node())
+		std::static_pointer_cast<tree::node>(pnode)->propagate_owner();
+}
+	
+} /* namespace detail */
+
 NAMESPACE_END(blue_sky)
 

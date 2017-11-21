@@ -23,13 +23,17 @@ using BS_TYPE_COPY_FUN = bs_type_ctor_result (*)(bs_type_copy_param);
 using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
 
 namespace detail {
+
 /// Convert lambda::operator() to bs type construct function pointer
 template <typename L> struct lam2bsctor {};
 template <typename C, typename R, typename... A>
 struct lam2bsctor<R (C::*)(A...)> { typedef bs_type_ctor_result type(A...); };
 template <typename C, typename R, typename... A>
 struct lam2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...); };
-}
+/// correct leafs owner in cloned node object
+BS_API void adjust_cloned_node(const sp_obj&);
+
+} // ns detail
 
 /*!
 \struct type_descriptor
@@ -271,10 +275,14 @@ public:
 		copy_fun_ = f;
 	}
 
-	// make instance copy
+	// make a copy of object instance
 	shared_ptr_cast clone(bs_type_copy_param src) const {
-		if(copy_fun_)
-			return (*copy_fun_)(src);
+		if(copy_fun_) {
+			auto res = (*copy_fun_)(src);
+			// nodes need special adjustment
+			detail::adjust_cloned_node(res);
+			return res;
+		}
 		return {};
 	}
 
