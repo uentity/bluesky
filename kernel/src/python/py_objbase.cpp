@@ -39,16 +39,19 @@ void py_bind_objbase(py::module& m) {
 		.def_property_readonly("o", [](const inode& i) { return i.o; })
 	;
 
+	// explicit ctor defiition for multiple reuse
+	const auto objbase_ctor1 = [](std::string custom_oid = "") -> sp_obj {
+		return std::make_shared<py_object<>>(std::move(custom_oid));
+	};
+	const auto objbase_ctor2 = [](std::string custom_oid, const inode& i) -> sp_obj {
+		return std::make_shared<py_object<>>(std::move(custom_oid), std::make_unique<inode>(i));
+	};
 	// objebase binding
 	py::class_< objbase, py_object<>, sp_obj >(m, "objbase", py::multiple_inheritance())
 		BSPY_EXPORT_DEF(objbase)
 		// use init_alias to always construct trampoline class and have valid pyobj property
-		.def(py::init([](std::string custom_oid = "") {
-			return std::make_shared<py_object<>>(std::move(custom_oid));
-		}), "custom_oid"_a = "")
-		.def(py::init([](std::string custom_oid, const inode& i) {
-			return std::make_shared<py_object<>>(std::move(custom_oid), std::make_unique<inode>(i));
-		}), "custom_oid"_a, "i"_a)
+		.def(py::init(objbase_ctor1), "custom_oid"_a = "")
+		.def(py::init(objbase_ctor2), "custom_oid"_a, "i"_a)
 		// construct from any Python type
 		.def(py::init_alias<py::object>())
 
@@ -77,6 +80,16 @@ void py_bind_objbase(py::module& m) {
 		// DEBUG
 		.def_property_readonly("refs", [](objbase& src) { return src.shared_from_this().use_count() - 1; })
 	;
+	// add custom constructors for objbase that always constructs trampoline class
+	auto& td = objbase::bs_type();
+	td.add_constructor([]() -> sp_obj { return std::make_shared<py_object<>>(); });
+	td.add_constructor(objbase_ctor1);
+	td.add_constructor(objbase_ctor2);
+	td.add_copy_constructor([](bs_type_copy_param src) -> sp_obj {
+		return std::make_shared<py_object<>>(
+			*static_cast<const py_object<>*>(src.get())
+		);
+	});
 
 	// any Python instance can be converted to objbase
 	py::implicitly_convertible< py::object, objbase >();
