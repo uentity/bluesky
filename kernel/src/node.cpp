@@ -104,7 +104,7 @@ public:
 		iterator<Key::ID> dup;
 		if((pol & 3) > 0) {
 			dup = find<Key::Name, Key::ID>(l->name());
-			if(dup != end<Key::ID>()) {
+			if(dup != end<Key::ID>() && (*dup)->id() != l->id()) {
 				bool unique_found = false;
 				// first check if dup names are prohibited
 				if(pol & InsertPolicy::DenyDupNames) return {dup, false};
@@ -121,8 +121,8 @@ public:
 						}
 					}
 				}
-			// if no unique name was found - return fail
-			if(!unique_found) return {dup, false};
+				// if no unique name was found - return fail
+				if(!unique_found) return {dup, false};
 			}
 		}
 		// check for duplicating OID
@@ -177,6 +177,22 @@ public:
 		// correct this by manually calling `node::propagate_owner()` after copy is constructed
 	}
 
+	// postprocessing of just inserted link
+	// if link points to node, return it
+	static sp_node adjust_inserted_link(const sp_link& lnk, const sp_node& n) {
+		// remove link from prev owner
+		if(auto prev_owner = lnk->owner())
+			prev_owner->erase(lnk->id());
+		// set new owner
+		lnk->reset_owner(n);
+		// if we inserting a node, relink it to ensure a single hard link exists
+		if(auto N = lnk->data_node()) {
+			N->self_relink(lnk);
+			return N;
+		}
+		return nullptr;
+	}
+
 	node_impl() = default;
 
 	std::weak_ptr<link> self_link_;
@@ -200,11 +216,11 @@ node::~node() = default;
 void node::propagate_owner(bool deep) {
 	// properly setup owner in node's leafs
 	const auto self = bs_shared_this<node>();
+	sp_node child_node;
 	for(auto& plink : pimpl_->links_) {
-		plink->reset_owner(self);
-		if(deep) if(const auto child_node = plink->data_node()) {
+		child_node = node_impl::adjust_inserted_link(plink, self);
+		if(deep && child_node)
 			child_node->propagate_owner(true);
-		}
 	}
 }
 
@@ -311,15 +327,9 @@ range<Key::Type> node::equal_type(const std::string& type_id) const {
 // ---- insert
 insert_status<Key::ID> node::insert(const sp_link& l, InsertPolicy pol) {
 	auto res = pimpl_->insert(l, pol);
-	// switch owner to *this if succeeded
 	if(res.second) {
-		auto& res_lnk = *(res.first->get());
-		if(auto prev_owner = res_lnk.owner())
-			prev_owner->erase(res_lnk.id());
-		res_lnk.reset_owner(bs_shared_this<node>());
-		// if we inserting a node, relink it to ensure a single hard link exists
-		if(auto N = l->data_node())
-			N->self_relink(l);
+		// inserted link postprocessing
+		node_impl::adjust_inserted_link(*res.first, bs_shared_this<node>());
 	}
 	else if(pol & InsertPolicy::Merge && res.first != end<Key::ID>()) {
 		// check if we need to deep merge given links
