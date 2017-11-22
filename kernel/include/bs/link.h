@@ -165,6 +165,43 @@ private:
 	std::weak_ptr<objbase> data_;
 };
 
+/// symbolic link is actually a link to another link, which is specified as absolute or relative
+/// string path
+class BS_API sym_link : public link {
+public:
+
+	/// ctor -- pointee is specified by string path
+	sym_link(std::string name, std::string path, Flags f = Plain);
+	/// ctor -- pointee is specified directly - absolute path will be stored
+	sym_link(std::string name, const sp_link& src, Flags f = Plain);
+
+	/// implement link's API
+	sp_link clone(bool deep = false) const override;
+
+	sp_obj data() const override;
+
+	std::string type_id() const override;
+
+	std::string oid() const override;
+
+	std::string obj_type_id() const override;
+
+	sp_node data_node() const override;
+
+	inode info() const override;
+	void set_info(inodeptr i) override;
+
+	/// additional sym link API
+	/// check is pointed link is alive
+	bool is_alive() const;
+
+	/// return stored pointee path
+	std::string src_path(bool human_readable = false) const;
+
+private:
+	std::string path_;
+};
+
 
 NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)

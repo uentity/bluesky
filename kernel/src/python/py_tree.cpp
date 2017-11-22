@@ -25,7 +25,7 @@ static boost::uuids::string_generator uuid_from_str;
 
 void print_link(const sp_link& l, int level = 0) {
 	static const auto dumplnk = [](const sp_link& l_) {
-		std::cout << l_->name() << " -> (" << l_->obj_type_id() << ", " << l_->oid() << ")" << std::endl;
+		std::cout << l_->name() << " [" << l_->id() << "] -> (" << l_->obj_type_id() << ", " << l_->oid() << ")" << std::endl;
 	};
 
 	const std::string loffs(level*2, ' ');
@@ -106,6 +106,15 @@ void py_bind_tree(py::module& m) {
 	py::class_<weak_link, link, py_link<weak_link>, std::shared_ptr<weak_link>>(m, "weak_link")
 		.def(py::init<std::string, const sp_obj&, link::Flags>(),
 			"name"_a, "data"_a, "flags"_a = link::Flags::Plain)
+	;
+	py::class_<sym_link, link, py_link<sym_link>, std::shared_ptr<sym_link>>(m, "sym_link")
+		.def(py::init<std::string, std::string, link::Flags>(),
+			"name"_a, "path"_a, "flags"_a = link::Flags::Plain)
+		.def(py::init<std::string, const sp_link&, link::Flags>(),
+			"name"_a, "source"_a, "flags"_a = link::Flags::Plain)
+
+		.def_property_readonly("is_alive", &sym_link::is_alive)
+		.def("src_path", &sym_link::src_path, "human_readable"_a = false)
 	;
 
 	// forward define node
@@ -309,6 +318,9 @@ void py_bind_tree(py::module& m) {
 		)
 
 		.def("self_link", &node::self_link)
+		.def("propagate_owner", &node::propagate_owner, "deep"_a = false,
+			"Set owner of all contained links to this node (if deep, fix owner in entire subtree)"
+		)
 	;
 
 	m.def("print_link", [](const sp_link& l) { print_link(l, 0); });
