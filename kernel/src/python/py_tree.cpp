@@ -319,9 +319,6 @@ void py_bind_tree(py::module& m) {
 		)
 
 		.def_property_readonly("self_link", &node::self_link)
-		.def("create_self_link", &node::create_self_link, "name"_a, "force"_a = false,
-			"Return a hard link that owns this node"
-		)
 		.def("propagate_owner", &node::propagate_owner, "deep"_a = false,
 			"Set owner of all contained links to this node (if deep, fix owner in entire subtree)"
 		)

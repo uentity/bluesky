@@ -244,15 +244,15 @@ sp_link node::self_link() const {
 	return pimpl_->self_link_.lock();
 }
 
-sp_link node::create_self_link(std::string name, bool force) {
-	if(!force && !pimpl_->self_link_.expired()) {
-		return pimpl_->self_link_.lock();
-	}
-	// create new self link
-	auto root_lnk = std::make_shared<hard_link>(std::move(name), bs_shared_this<node>());
-	pimpl_->self_relink(root_lnk);
-	return root_lnk;
-}
+//sp_link node::create_self_link(std::string name, bool force) {
+//	if(!force && !pimpl_->self_link_.expired()) {
+//		return pimpl_->self_link_.lock();
+//	}
+//	// create new self link
+//	auto root_lnk = std::make_shared<hard_link>(std::move(name), bs_shared_this<node>());
+//	pimpl_->self_relink(root_lnk);
+//	return root_lnk;
+//}
 
 
 std::size_t node::size() const {
