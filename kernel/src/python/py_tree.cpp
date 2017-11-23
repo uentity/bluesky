@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/bs.h>
+#include <bs/tree.h>
 #include <bs/python/tree.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/string_generator.hpp>
@@ -313,15 +314,28 @@ void py_bind_tree(py::module& m) {
 		.def("accept_object_types", &node::accept_object_types,
 			"Set white list of object types that node will accept"
 		)
-		.def("allowed_object_types", &node::allowed_object_types,
+		.def_property_readonly("allowed_object_types", &node::allowed_object_types,
 			"Returns white list of object types that node will accept"
 		)
 
-		.def("self_link", &node::self_link)
+		.def_property_readonly("self_link", &node::self_link)
+		.def("create_self_link", &node::create_self_link, "name"_a, "force"_a = false,
+			"Return a hard link that owns this node"
+		)
 		.def("propagate_owner", &node::propagate_owner, "deep"_a = false,
 			"Set owner of all contained links to this node (if deep, fix owner in entire subtree)"
 		)
 	;
+
+	// misc tree-related functions
+	m.def("abspath", &abspath, "lnk"_a, "human_readable"_a = false, "Get link's absolute path");
+	m.def("convert_path", &convert_path,
+		"src_path"_a, "start"_a, "from_human_readable"_a = false,
+		"Convert path from ID-based to human readable (name-bases) or vice versa"
+	);
+	m.def("search_by_path", &search_by_path, "path"_a, "start"_a,
+		"Quick link search by given abs path (ID-based!)"
+	);
 
 	m.def("print_link", [](const sp_link& l) { print_link(l, 0); });
 	m.def("print_link", [](const sp_node& n, std::string name = "/") {

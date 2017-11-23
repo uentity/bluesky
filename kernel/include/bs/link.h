@@ -108,6 +108,8 @@ protected:
 	/// switch link's owner
 	void reset_owner(const sp_node& new_owner);
 };
+using sp_link = std::shared_ptr<link>;
+using sp_clink = std::shared_ptr<const link>;
 
 /// hard link stores direct pointer to object
 /// there can exist many hard links to single object
@@ -173,7 +175,7 @@ public:
 	/// ctor -- pointee is specified by string path
 	sym_link(std::string name, std::string path, Flags f = Plain);
 	/// ctor -- pointee is specified directly - absolute path will be stored
-	sym_link(std::string name, const sp_link& src, Flags f = Plain);
+	sym_link(std::string name, const sp_clink& src, Flags f = Plain);
 
 	/// implement link's API
 	sp_link clone(bool deep = false) const override;

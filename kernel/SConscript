@@ -44,6 +44,7 @@ kernel_cpp_list = [
 	"src/hard_link.cpp",
 	"src/sym_link.cpp",
 	"src/node.cpp",
+	"src/tree.cpp",
 	"src/compat/messaging.cpp",
 	"src/compat/array.cpp",
 	"src/compat/array_serialize.cpp"

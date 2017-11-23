@@ -249,10 +249,13 @@ public:
 	void accept_object_types(std::vector<std::string> allowed_types);
 	std::vector<std::string> allowed_object_types() const;
 
-	/// obtain link to this node
-	/// this method is intended to always resolve to owner (parent) node
-	/// multiple hard links to same node are prohibited
+	/// obtain link to this node conained in owner (parent) node
+	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)
 	sp_link self_link() const;
+	/// if self link is ot set, create a self hard link and return it
+	/// otherwise return current self link
+	/// if `force` is true, always relink to new hard link
+	sp_link create_self_link(std::string name, bool force = false);
 
 	/// ensure that owner of all contained leafs is correctly set to this node
 	/// if deep is true, correct owners in all subtree
@@ -287,9 +290,6 @@ private:
 	std::vector<Key_type<Key::Name>> keys(Key_const<Key::Name>) const;
 	std::vector<Key_type<Key::OID>> keys(Key_const<Key::OID>) const;
 	std::vector<Key_type<Key::Type>> keys(Key_const<Key::Type>) const;
-
-	/// reset hard link to self when adding this node into another node
-	void self_relink(const sp_link& new_self);
 
 	BS_TYPE_DECL
 };

@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/node.h>
+#include <bs/tree.h>
 #include <bs/kernel.h>
 #include <set>
 
@@ -30,6 +31,7 @@ using Flags = link::Flags;
  *-----------------------------------------------------------------------------*/
 class node::node_impl {
 public:
+	friend struct access_node_impl;
 
 	template<Key K = Key::ID>
 	static sp_link deep_search_impl(const node_impl& n, const Key_type<K>& key) {
@@ -177,6 +179,20 @@ public:
 		// correct this by manually calling `node::propagate_owner()` after copy is constructed
 	}
 
+	void self_relink(const sp_link& new_self) {
+		// sym links cannot own a node
+		if(new_self && new_self->type_id() == "sym_link")
+			return;
+
+		// remove node from existing owner
+		if(const auto pself = self_link_.lock()) {
+			if(const auto owner = pself->owner())
+				owner->erase(pself->id());
+		}
+		// set new owner link
+		self_link_ = new_self;
+	}
+
 	// postprocessing of just inserted link
 	// if link points to node, return it
 	static sp_node adjust_inserted_link(const sp_link& lnk, const sp_node& n) {
@@ -187,7 +203,7 @@ public:
 		lnk->reset_owner(n);
 		// if we inserting a node, relink it to ensure a single hard link exists
 		if(auto N = lnk->data_node()) {
-			N->self_relink(lnk);
+			N->pimpl_->self_relink(lnk);
 			return N;
 		}
 		return nullptr;
@@ -228,10 +244,16 @@ sp_link node::self_link() const {
 	return pimpl_->self_link_.lock();
 }
 
-void node::self_relink(const sp_link& new_self) {
-	if(new_self->type_id() == "hard_link")
-		pimpl_->self_link_ = new_self;
+sp_link node::create_self_link(std::string name, bool force) {
+	if(!force && !pimpl_->self_link_.expired()) {
+		return pimpl_->self_link_.lock();
+	}
+	// create new self link
+	auto root_lnk = std::make_shared<hard_link>(std::move(name), bs_shared_this<node>());
+	pimpl_->self_relink(root_lnk);
+	return root_lnk;
 }
+
 
 std::size_t node::size() const {
 	return pimpl_->links_.size();
