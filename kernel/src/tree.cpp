@@ -50,8 +50,27 @@ std::string abspath(sp_clink l, bool human_readable) {
 		if(const auto parent = l->owner()) {
 			l = parent->self_link();
 		}
+		else return boost::join(res, "/");
 	}
+	// leadind slash is appended only if we have 'real' root node without self link
 	return std::string("/") + boost::join(res, "/");
+
+	// another possible implementation without multiple returns
+	// just leave it here -)
+	//sp_node parent;
+	//do {
+	//	if(l)
+	//		res.push_front(human_readable ? l->name() : boost::uuids::to_string(l->id()));
+	//	else {
+	//		// for root node
+	//		res.emplace_front("");
+	//		break;
+	//	}
+	//	if((parent = l->owner())) {
+	//		l = parent->self_link();
+	//	}
+	//} while(parent);
+	//return boost::join(res, "/");
 }
 
 std::string convert_path(std::string src_path, const sp_clink& start, bool from_human_readable) {
