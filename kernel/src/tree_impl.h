@@ -25,28 +25,24 @@ sp_link deref_path(
 	boost::split(path_parts, path, boost::is_any_of("/"));
 	// setup search root
 	sp_node root = l.owner();
-	if(root && !path_parts[0].size()) {
-		// we have absolute path
-		// walk up the tree
-		// [NOTE] consider a case when path points to different tree?
-		auto O = root->self_link();
-		while(O) {
-			root = O->data_node();
-			if(!root) {
-				// we should never come here if tree is in correct state
-				//BSERROR << log::E("sym_link: Tree is incorrect, can't traverse to root!") << log::end;
-				root = l.owner();
-				break;
-			}
-			O = root->self_link();
+	if(!root) {
+		// given link points to tree root?
+		root = l.data_node();
+	}
+	else if(!path_parts[0].size()) {
+		// link is inside the tree and we have absolute path
+		// walk up the tree to find root node
+		sp_link h_root;
+		while(root && (h_root = root->self_link())) {
+			root = h_root->owner();
 		}
 	}
 
 	// follow the root and find target link
 	sp_link res;
 	for(const auto& part : path_parts) {
-		if(!part.size() || part == ".") continue;
 		if(!root) return nullptr;
+		if(!part.size() || part == ".") continue;
 
 		// invoke level processing function that should return link to next level
 		res = proc_f(part, (const sp_node&)root);
