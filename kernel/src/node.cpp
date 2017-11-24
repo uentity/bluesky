@@ -98,7 +98,7 @@ public:
 		return this->deep_search_impl<K>(*this, key);
 	}
 
-	insert_status<Key::ID> insert(sp_link l, InsertPolicy pol) {
+	insert_status<Key::ID> insert(sp_link l, const InsertPolicy pol) {
 		// can't move persistent node from it's owner
 		if(!l || !accepts(l) || (l->flags() & Flags::Persistent && l->owner()))
 			return {end<Key::ID>(), false};
@@ -199,14 +199,14 @@ public:
 		// remove link from prev owner
 		if(auto prev_owner = lnk->owner())
 			prev_owner->erase(lnk->id());
+		// if we inserting a node, relink it to ensure a single hard link exists
+		sp_node lnk_node;
+		if((lnk_node = lnk->data_node())) {
+			lnk_node->pimpl_->self_relink(lnk);
+		}
 		// set new owner
 		lnk->reset_owner(n);
-		// if we inserting a node, relink it to ensure a single hard link exists
-		if(auto N = lnk->data_node()) {
-			N->pimpl_->self_relink(lnk);
-			return N;
-		}
-		return nullptr;
+		return lnk_node;
 	}
 
 	node_impl() = default;
@@ -375,7 +375,7 @@ insert_status<Key::AnyOrder> node::insert(const sp_link& l, iterator<> pos, Inse
 		if(pos != src) {
 			auto& ord_idx = pimpl_->links_.get<Key_tag<Key::AnyOrder>>();
 			ord_idx.relocate(pos, src);
-			return {src, res.second};
+			return {src, true};
 		}
 	}
 	return {pimpl_->project<Key::ID>(res.first), res.second};

@@ -199,7 +199,7 @@ public:
 		typename C,
 		typename = std::enable_if_t<is_container<C>::value>
 	>
-	void insert(const C& links, uint pol = AllowDupNames) {
+	void insert(const C& links, InsertPolicy pol = AllowDupNames) {
 		for(auto L : links) {
 			static_assert(
 				std::is_base_of<link, std::decay_t<decltype(*L)>>::value,
