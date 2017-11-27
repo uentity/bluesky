@@ -34,17 +34,32 @@ public:
 	friend struct access_node_impl;
 
 	template<Key K = Key::ID>
-	static sp_link deep_search_impl(const node_impl& n, const Key_type<K>& key) {
+	static sp_link deep_search_impl(
+		const node_impl& n, const Key_type<K>& key,
+		std::set<Key_type<Key::ID>> active_symlinks = {}
+		//std::unordered_set<Key_type<Key::ID>, boost::hash<Key_type<Key::ID>>> active_symlinks = {}
+	) {
 		// first do direct search in leafs
 		auto r = n.find<K, K>(key);
 		if(r != n.end<K>()) return *r;
 
 		// if not succeeded search in children nodes
 		for(const auto& l : n.links_) {
-			if(auto n = l->data_node()) {
-				auto l = deep_search_impl<K>(*n->pimpl_, key);
-				if(l) return l;
+			// remember symlink
+			const auto is_symlink = l->type_id() == "sym_link";
+			if(is_symlink){
+				if(active_symlinks.find(l->id()) == active_symlinks.end())
+					active_symlinks.insert(l->id());
+				else continue;
 			}
+			// search on next level
+			if(const auto next_n = l->data_node()) {
+				const auto next_l = deep_search_impl<K>(*next_n->pimpl_, key, active_symlinks);
+				if(next_l) return next_l;
+			}
+			// remove symlink
+			if(is_symlink)
+				active_symlinks.erase(l->id());
 		}
 		return nullptr;
 	}
