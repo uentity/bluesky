@@ -44,6 +44,7 @@
     <ClInclude Include="kernel\include\bs\compat\vecbase_shared.h" />
     <ClInclude Include="kernel\include\bs\detail\apply.h" />
     <ClInclude Include="kernel\include\bs\detail\args.h" />
+    <ClInclude Include="kernel\include\bs\detail\enumops.h" />
     <ClInclude Include="kernel\include\bs\detail\invoke.h" />
     <ClInclude Include="kernel\include\bs\detail\lib_descriptor.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
@@ -65,10 +66,12 @@
     <ClInclude Include="kernel\include\bs\python\common.h" />
     <ClInclude Include="kernel\include\bs\python\nparray.h" />
     <ClInclude Include="kernel\include\bs\python\nparray_serialize.h" />
+    <ClInclude Include="kernel\include\bs\python\tree.h" />
     <ClInclude Include="kernel\include\bs\setup_common_api.h" />
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
+    <ClInclude Include="kernel\include\bs\tree.h" />
     <ClInclude Include="kernel\include\bs\type_descriptor.h" />
     <ClInclude Include="kernel\include\bs\type_info.h" />
     <ClInclude Include="kernel\include\bs\type_macro.h" />
@@ -77,6 +80,7 @@
     <ClInclude Include="kernel\src\kernel_logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_plugins_discover.h" />
     <ClInclude Include="kernel\src\kernel_plugins_subsyst.h" />
+    <ClInclude Include="kernel\src\tree_impl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp" />
@@ -110,6 +114,8 @@
     <ClCompile Include="kernel\src\python\py_objbase.cpp" />
     <ClCompile Include="kernel\src\python\py_tree.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
+    <ClCompile Include="kernel\src\sym_link.cpp" />
+    <ClCompile Include="kernel\src\tree.cpp" />
     <ClCompile Include="kernel\src\type_info.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
