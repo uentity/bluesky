@@ -14,19 +14,29 @@
 #include <boost/uuid/string_generator.hpp>
 #include <string>
 
+#include <pybind11/functional.h>
 #include <iostream>
+
+// make it possible to exchange vector of links without copying
+// (and modify it in-place in Python for `walk()`)
+PYBIND11_MAKE_OPAQUE(std::vector<blue_sky::tree::sp_link>);
+//PYBIND11_MAKE_OPAQUE(std::vector<double>);
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(python)
 using namespace tree;
 
+/*-----------------------------------------------------------------------------
+ *  hidden details
+ *-----------------------------------------------------------------------------*/
 namespace {
 
 static boost::uuids::string_generator uuid_from_str;
 
 void print_link(const sp_link& l, int level = 0) {
 	static const auto dumplnk = [](const sp_link& l_) {
-		std::cout << l_->name() << " [" << l_->id() << "] -> (" << l_->obj_type_id() << ", " << l_->oid() << ")" << std::endl;
+		std::cout << l_->name() << " [" << l_->type_id() << ' ' << l_->id() << "] -> ("
+		          << l_->obj_type_id() << ", " << l_->oid() << ")" << std::endl;
 	};
 
 	const std::string loffs(level*2, ' ');
@@ -67,6 +77,9 @@ void erase_by_lid(node& N, const std::string& key) {
 
 } // hidden ns
 
+/*-----------------------------------------------------------------------------
+ *  tree Python bindings
+ *-----------------------------------------------------------------------------*/
 void py_bind_tree(py::module& m) {
 	py::class_<link, py_link<>, std::shared_ptr<link>> link_pyface(m, "link");
 
@@ -318,7 +331,9 @@ void py_bind_tree(py::module& m) {
 			"Returns white list of object types that node will accept"
 		)
 
-		.def_property_readonly("self_link", &node::self_link)
+		.def_property_readonly("handle", &node::handle,
+			"Returns a single link that owns this node in overall tree"
+		)
 		.def("propagate_owner", &node::propagate_owner, "deep"_a = false,
 			"Set owner of all contained links to this node (if deep, fix owner in entire subtree)"
 		)
@@ -330,9 +345,33 @@ void py_bind_tree(py::module& m) {
 		"src_path"_a, "start"_a, "from_human_readable"_a = false,
 		"Convert path from ID-based to human readable (name-bases) or vice versa"
 	);
-	m.def("search_by_path", &search_by_path, "path"_a, "start"_a,
+	m.def("deref_path", &deref_path, "path"_a, "start"_a,
 		"Quick link search by given abs path (ID-based!)"
 	);
+
+	// bind list of links as opaque type to allow in-place modification
+	py::bind_vector<std::vector<sp_link>>(m, "links_list");
+	m.def("walk",
+		py::overload_cast<const sp_link&, const step_process_f&, bool, bool>(&walk),
+		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true,
+		"Walk the tree similar to Python `os.walk()`"
+	);
+
+	// TEST CODE
+	//py::bind_vector<std::vector<double>>(m, "d_list", py::module_local(false));
+	//m.def("test_callback", [](std::function<void(std::vector<double>&)> f) {
+	//	//std::vector<sp_link> v{nullptr, nullptr, nullptr};
+	//	std::vector<double> v{0, 0};
+	//	f(v);
+	//	for(const auto& l : v) {
+	//		std::cout << l << ' ';
+	//	}
+	//	std::cout << std::endl;
+	//});
+	//m.def("test_static_d", []() -> std::vector<double>& {
+	//	static std::vector<double> v{0, 0};
+	//	return v;
+	//}, py::return_value_policy::reference);
 
 	m.def("print_link", [](const sp_link& l) { print_link(l, 0); });
 	m.def("print_link", [](const sp_node& n, std::string name = "/") {

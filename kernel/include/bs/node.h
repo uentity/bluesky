@@ -251,7 +251,7 @@ public:
 
 	/// obtain link to this node conained in owner (parent) node
 	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)
-	sp_link self_link() const;
+	sp_link handle() const;
 
 	/// ensure that owner of all contained leafs is correctly set to this node
 	/// if deep is true, correct owners in all subtree

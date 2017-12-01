@@ -194,18 +194,18 @@ public:
 		// correct this by manually calling `node::propagate_owner()` after copy is constructed
 	}
 
-	void self_relink(const sp_link& new_self) {
+	void set_handle(const sp_link& new_self) {
 		// sym links cannot own a node
 		if(new_self && new_self->type_id() == "sym_link")
 			return;
 
 		// remove node from existing owner
-		if(const auto pself = self_link_.lock()) {
+		if(const auto pself = handle_.lock()) {
 			if(const auto owner = pself->owner())
 				owner->erase(pself->id());
 		}
 		// set new owner link
-		self_link_ = new_self;
+		handle_ = new_self;
 	}
 
 	// postprocessing of just inserted link
@@ -217,7 +217,7 @@ public:
 		// if we inserting a node, relink it to ensure a single hard link exists
 		sp_node lnk_node;
 		if((lnk_node = lnk->data_node())) {
-			lnk_node->pimpl_->self_relink(lnk);
+			lnk_node->pimpl_->set_handle(lnk);
 		}
 		// set new owner
 		lnk->reset_owner(n);
@@ -226,7 +226,7 @@ public:
 
 	node_impl() = default;
 
-	std::weak_ptr<link> self_link_;
+	std::weak_ptr<link> handle_;
 	links_container links_;
 	std::vector<std::string> allowed_otypes_;
 };
@@ -255,17 +255,17 @@ void node::propagate_owner(bool deep) {
 	}
 }
 
-sp_link node::self_link() const {
-	return pimpl_->self_link_.lock();
+sp_link node::handle() const {
+	return pimpl_->handle_.lock();
 }
 
 //sp_link node::create_self_link(std::string name, bool force) {
-//	if(!force && !pimpl_->self_link_.expired()) {
-//		return pimpl_->self_link_.lock();
+//	if(!force && !pimpl_->handle_.expired()) {
+//		return pimpl_->handle_.lock();
 //	}
 //	// create new self link
 //	auto root_lnk = std::make_shared<hard_link>(std::move(name), bs_shared_this<node>());
-//	pimpl_->self_relink(root_lnk);
+//	pimpl_->set_handle(root_lnk);
 //	return root_lnk;
 //}
 

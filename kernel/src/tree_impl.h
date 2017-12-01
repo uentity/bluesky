@@ -33,7 +33,7 @@ sp_link deref_path(
 		// link is inside the tree and we have absolute path
 		// walk up the tree to find root node
 		sp_link h_root;
-		while(root && (h_root = root->self_link())) {
+		while(root && (h_root = root->handle())) {
 			root = h_root->owner();
 		}
 	}
@@ -48,7 +48,7 @@ sp_link deref_path(
 		res = proc_f(part, (const sp_node&)root);
 
 		// calc new root from next level link
-		if(part == ".." && (res = root->self_link())) {
+		if(part == ".." && (res = root->handle())) {
 			// go up one level
 			root = res->owner();
 		}
