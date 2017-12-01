@@ -10,6 +10,7 @@
 #include <bs/tree.h>
 #include "tree_impl.h"
 
+#include <set>
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
