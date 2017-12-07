@@ -9,10 +9,6 @@
 
 #pragma once
 
-#include <bs/objbase.h>
-#include <bs/exception.h>
-#include <bs/type_macro.h>
-
 #include <pybind11/pybind11.h>
 // for auto-support of std containers
 #include <pybind11/stl.h>
@@ -20,25 +16,28 @@
 // operator overloading support
 #include <pybind11/operators.h>
 
+#include <bs/objbase.h>
+#include <bs/exception.h>
+#include <bs/type_macro.h>
+#include <bs/python/kernel.h>
+
 typedef void (*bs_init_py_fn)(void*);
 
 /*-----------------------------------------------------------------------------
  *  macro definitions
  *-----------------------------------------------------------------------------*/
 // init Python subsystem in BS plugin
-#define BS_INIT_PY(mod_name)                                                        \
-BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor();      \
-static void init_py_subsystem_impl(pybind11::module&);                              \
-BS_C_API_PLUGIN void bs_init_py_subsystem(void* py_plugin_module) {                 \
-	if(!py_plugin_module) return;                                                   \
-	init_py_subsystem_impl(*static_cast< pybind11::module* >(py_plugin_module));    \
-}                                                                                   \
-PYBIND11_PLUGIN(mod_name) {                                                         \
-	pybind11::module m(#mod_name, bs_get_plugin_descriptor()->description.c_str()); \
-	bs_init_py_subsystem(&m);                                                       \
-	return m.ptr();                                                                 \
-}                                                                                   \
-void init_py_subsystem_impl(pybind11::module& m)
+#define BS_INIT_PY(mod_name)                                                              \
+BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor();            \
+static void bs_init_py_subsystem_##mod_name(pybind11::module&);                           \
+BS_C_API_PLUGIN void bs_init_py_subsystem(void* py_plugin_module) {                       \
+    if(!py_plugin_module) return;                                                         \
+    bs_init_py_subsystem_##mod_name(*static_cast< pybind11::module* >(py_plugin_module)); \
+}                                                                                         \
+PYBIND11_MODULE(mod_name, m) {                                                            \
+    bs_init_py_subsystem_##mod_name(m);                                                   \
+}                                                                                         \
+void bs_init_py_subsystem_##mod_name(pybind11::module& m)
 
 // this macro turns on `pyobj` property in any BS type T (`pyobj` is enabled for objbase)
 // to use it you *have* to declare constructors with `py::init_alias`
@@ -68,6 +67,16 @@ BSPY_EXPORT_DEF_((T))
 #define BSPY_EXPORT_DEF_T(T, T_spec_tupe) \
 BSPY_EXPORT_DEF_((T<T_spec_tup>))
 
+// export boost::optional in C++14 mode
+#ifndef BS_CPP17
+NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)
+
+template <typename T>
+struct type_caster<boost::optional<T>> : optional_caster<boost::optional<T>> {};
+
+NAMESPACE_END(pybind11) NAMESPACE_END(detail)
+#endif
+
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(python)
 
@@ -95,6 +104,22 @@ public:
 			const type_descriptor&,
 			Object,
 			bs_resolve_type
+		);
+	}
+
+	std::string type_id() const override {
+		PYBIND11_OVERLOAD(
+			std::string,
+			Object,
+			type_id
+		);
+	}
+
+	std::string id() const override {
+		PYBIND11_OVERLOAD(
+			std::string,
+			Object,
+			id
 		);
 	}
 };

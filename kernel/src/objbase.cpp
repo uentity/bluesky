@@ -8,71 +8,46 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/objbase.h>
-//#include "bs_command.h"
-//#include "bs_tree.h"
-//#include "bs_kernel.h"
-//#include "bs_prop_base.h"
-
+#include <bs/kernel.h>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 // -----------------------------------------------------
 // Implementation of class: object_base
 // -----------------------------------------------------
 
-//BS_COMMON_IMPL(objbase)
+NAMESPACE_BEGIN(blue_sky)
 
-namespace blue_sky {
+namespace {
 
-/*!
- * \brief Default constructor
- */
+// global random UUID generator for BS objects
+static auto gen = boost::uuids::random_generator();
 
-objbase::objbase()
-	:  inode_(NULL)
+} // eof hidden namespace
+
+objbase::objbase(std::string custom_oid, inodeptr i)
+	: objbase(false, custom_oid, std::move(i))
 {}
 
-//objbase::objbase(const bs_messaging::sig_range_t& sr)
-//	: bs_refcounter(), bs_messaging(sr), inode_(NULL)
-//{
-//	add_ref();
-//	add_signal(BS_SIGNAL_RANGE(objbase));
-//}
+objbase::objbase(bool is_node, std::string custom_oid, inodeptr i)
+	: id_(custom_oid.size() ? std::move(custom_oid) : boost::uuids::to_string(gen())),
+	inode_(std::move(i)),
+	is_node_(is_node)
+{}
 
 objbase::objbase(const objbase& obj)
-	: enable_shared_from_this(obj), inode_(NULL)
+	: enable_shared_from_this(obj), id_(boost::uuids::to_string(gen())), is_node_(obj.is_node_)
 {}
 
 void objbase::swap(objbase& rhs) {
-	//bs_messaging::swap(rhs);
-	std::swap(inode_, rhs.inode_);
+	std::swap(is_node_, rhs.is_node_);
+	std::swap(id_, rhs.id_);
 }
 
-objbase::~objbase()
-{}
+objbase::~objbase() {}
 
-//void objbase::dispose() const {
-//	delete this;
-//}
-
-const bs_inode* objbase::inode() const {
-	return inode_;
-}
 
 const type_descriptor& objbase::bs_type() {
-	// 1st implementation
-	//static struct td_init {
-	//	td_init() : type(
-	//		BS_GET_TI(objbase), "objbase", NULL, NULL,
-	//		"Base class of all BlueSky types"
-	//	) {
-	//		type.add_constructor< objbase >();
-	//		type.add_copy_constructor< objbase >();
-	//	}
-
-	//	type_descriptor type;
-	//} td;
-	//return td.type;
-	
-	// 2nd impl
 	static type_descriptor td(
 		identity< objbase >(), identity< nil >(),
 		"objbase", "Base class of all BlueSky types", std::true_type(), std::true_type()
@@ -81,17 +56,33 @@ const type_descriptor& objbase::bs_type() {
 }
 
 int objbase::bs_register_this() const {
-	//return BS_KERNEL.register_instance(this);
-	return 0;
+	return BS_KERNEL.register_instance(shared_from_this());
 }
 
 int objbase::bs_free_this() const {
-	//return BS_KERNEL.free_instance(this);
-	return 0;
+	return BS_KERNEL.free_instance(shared_from_this());
 }
 
-} /* namespace blue_sky */
+std::string objbase::type_id() const {
+	return bs_resolve_type().name;
+}
 
-// -----------------------------------------------------
-// End of implementation class: object_base
-// -----------------------------------------------------
+std::string objbase::id() const {
+	return id_;
+}
+
+bool objbase::is_node() const {
+	return is_node_;
+}
+
+inode objbase::info() const {
+	return inode_ ? *inode_ : inode();
+}
+
+void objbase::set_info(inodeptr i) {
+	// TODO: add permissions processing
+	inode_ = std::move(i);
+}
+
+NAMESPACE_END(blue_sky)
+

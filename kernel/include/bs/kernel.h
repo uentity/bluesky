@@ -120,7 +120,7 @@ public:
 	}
 
 	// clone object
-	auto create_object_copy(bs_type_copy_param source) const {
+	auto clone_object(bs_type_copy_param source) const {
 		return source->bs_resolve_type().clone(source);
 	}
 
@@ -141,7 +141,8 @@ public:
 			std::is_base_of< objbase, T >::value,
 			"Only blue_sky::objbase derived instances can be registered!"
 		);
-		return register_instance(std::static_pointer_cast< objbase >(obj));
+		return register_instance(obj);
+		//return register_instance(std::static_pointer_cast< objbase >(obj));
 	}
 	template< class T > int register_instance(T* obj) {
 		// check that T is inherited from objbase
@@ -159,7 +160,8 @@ public:
 			std::is_base_of< objbase, T >::value,
 			"Only blue_sky::objbase derived instances can be registered!"
 		);
-		return free_instance(std::static_pointer_cast< objbase >(obj));
+		return free_instance(obj);
+		//return free_instance(std::static_pointer_cast< objbase >(obj));
 	}
 	template< class T > int free_instance(T* obj) {
 		// check that T is inherited from objbase

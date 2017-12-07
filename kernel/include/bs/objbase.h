@@ -14,6 +14,32 @@
 #include "objbase_macro.h"
 
 NAMESPACE_BEGIN(blue_sky)
+
+/// inode that stores access rights, timestampts, etc
+struct BS_API inode {
+	// link's owner
+	std::string owner;
+	std::string group;
+
+	// flags
+	bool : 1;
+	bool suid : 1;
+	bool sgid : 1;
+	bool sticky : 1;
+
+	// access rights
+	// user (owner)
+	bool : 1;
+	unsigned int u : 3;
+	// group
+	bool : 1;
+	unsigned int g : 3;
+	// others
+	bool : 1;
+	unsigned int o : 3;
+};
+using inodeptr = std::unique_ptr<inode>;
+
 /*!
 	\class objbase
 	\ingroup object_base
@@ -21,37 +47,24 @@ NAMESPACE_BEGIN(blue_sky)
 */
 class BS_API objbase : public std::enable_shared_from_this< objbase > {
 	friend class kernel;
-	//friend class combase;
-	friend class bs_inode;
-	//friend class bs_link;
-
-	//BS_COMMON_DECL(objbase)
+	friend class tree::node;
 
 public:
-	/// default ctor
-	objbase(); //= default;
-
+	/// default ctor that accepts custom ID string
+	/// if ID is empty it will be auto-generated
+	objbase(std::string custom_oid = "", inodeptr i = nullptr);
 	/// default copy ctor
-	objbase(const objbase&); //= default;
-
+	objbase(const objbase&);
 	/// default move ctor
 	objbase(objbase&&) = default;
-
 	// virtual destructor
 	virtual ~objbase();
 
-	//! swap function needed to provide assignment ability
+	/// swap function needed to provide assignment ability
 	void swap(objbase& rhs);
-
-	// signals list
-	//BLUE_SKY_SIGNALS_DECL_BEGIN(bs_messaging)
-	//	//on_unlock,
-	//	on_delete,
-	//BLUE_SKY_SIGNALS_DECL_END
 
 	//! type_descriptor of objbase class
 	static const type_descriptor& bs_type();
-
 	/*!
 	\brief Type descriptor resolver for derived class.
 	This method should be overridden by childs.
@@ -66,14 +79,6 @@ public:
 	// remove this instance from kernel instances list
 	int bs_free_this() const;
 
-	// default object deletion method - executes 'delete this'
-	//virtual void dispose() const;
-
-	/*!
-	\brief Access to corresponding inode object
-	*/
-	const blue_sky::bs_inode* inode() const;
-
 	template< class Derived >
 	decltype(auto) bs_shared_this() const {
 		return std::static_pointer_cast< const Derived, const objbase >(this->shared_from_this());
@@ -84,9 +89,30 @@ public:
 		return std::static_pointer_cast< Derived, objbase >(this->shared_from_this());
 	}
 
+	/// obtain type ID: for C++ types typeid is type_descriptor.name
+	virtual std::string type_id() const;
+	/// obtain object's ID
+	virtual std::string id() const;
+
+	/// check if object is actually a tree::node
+	/// NOTE: no RTTI, no virtual functions, just checks flag
+	bool is_node() const;
+
+	/// get/set inode
+	inode info() const;
+	void set_info(inodeptr i);
+
 protected:
-	// associated inode
-	const blue_sky::bs_inode* inode_;
+	/// string ID storage
+	std::string id_;
+	/// contains object tree-related metadata
+	std::unique_ptr<inode> inode_;
+
+private:
+	/// flag indicating that this object is actually a tree::node
+	bool is_node_;
+	/// dedicated ctor that sets `is_node` flag
+	objbase(bool is_node, std::string custom_oid = "", inodeptr i = nullptr);
 };
 
 // alias

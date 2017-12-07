@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "common.h"
+#include "setup_common_api.h"
 #include <boost/lexical_cast.hpp>
 #include <stdio.h>
 

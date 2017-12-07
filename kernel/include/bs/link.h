@@ -10,37 +10,58 @@
 #pragma once
 #include "common.h"
 #include "objbase.h"
+#include "detail/enumops.h"
 #include <boost/uuid/uuid.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(tree)
 
 /// base class of all links
-class BS_API bs_link {
+class BS_API link  : public std::enable_shared_from_this<link> {
 public:
 	// give node access to all link's memebers
-	friend class bs_node;
+	friend class node;
 
 	using id_type = boost::uuids::uuid;
-	using sp_link = std::shared_ptr< bs_link >;
-
-	enum link_type {
-		hard_link = 0,
-		sym_link,
-		net_link
-	};
-
-	/// ctor accept name of created link
-	bs_link(std::string name);
-
-	/// direct copying of links are prohibited
-	bs_link(const bs_link&);
+	using sp_link = std::shared_ptr< link >;
 
 	/// virtual dtor
-	virtual ~bs_link();
+	virtual ~link();
 
 	/// because we cannot make explicit copies of link
-	/// we need a dedicated faunction to make links clones
-	virtual sp_link clone() const = 0;
+	/// we need a dedicated function to make links clones
+	/// if `deep` flag is set, then clone pointed object as well
+	virtual sp_link clone(bool deep = false) const = 0;
+
+	/// get pointer to object link is pointing to
+	/// NOTE: returned pointer can be null
+	virtual sp_obj data() const = 0;
+
+	/// query what kind of link is this
+	virtual std::string type_id() const = 0;
+
+	/// get link's object ID
+	virtual std::string oid() const;
+
+	/// get link's object type ID
+	virtual std::string obj_type_id() const;
+
+	/// return tree::node if contained object is a node
+	/// derived class can return cached node info
+	virtual sp_node data_node() const = 0;
+
+	/// get/set object's inode
+	virtual inode info() const = 0;
+	virtual void set_info(inodeptr i) = 0;
+
+	/// flags reflect link properties and state
+	enum Flags {
+		Plain = 0,
+		Persistent = 1,
+		Disabled = 2
+	};
+	virtual Flags flags() const;
+	virtual void set_flags(Flags new_flags);
 
 	/// access link's unique ID
 	const id_type& id() const {
@@ -52,43 +73,138 @@ public:
 		return name_;
 	}
 
-	/// get pointer to object link is pointing to
-	/// NOTE: returned pointer can be null
-	virtual sp_obj data() const = 0;
+	/// get link's container
+	sp_node owner() const {
+		return owner_.lock();
+	}
 
-	/// query what kind of link is this
-	virtual link_type type_id() const = 0;
+	/// provide shared pointers casted to derived type
+	template< class Derived >
+	decltype(auto) bs_shared_this() const {
+		return std::static_pointer_cast< const Derived, const link >(this->shared_from_this());
+	}
 
-	/// get link's parent container
-	//virtual sp_link parent() const = 0;
+	template< class Derived >
+	decltype(auto) bs_shared_this() {
+		return std::static_pointer_cast< Derived, link >(this->shared_from_this());
+	}
+
+	bool rename(std::string new_name);
 
 protected:
 	std::string name_;
-
-private :
 	id_type id_;
+	Flags flags_;
+	std::weak_ptr<node> owner_;
+
+	friend class node;
+
+	/// ctor accept name of created link
+	link(std::string name, Flags f = Plain);
+
+	/// direct copying of links change ID
+	link(const link&);
+
+	/// switch link's owner
+	void reset_owner(const sp_node& new_owner);
 };
+using sp_link = std::shared_ptr<link>;
+using sp_clink = std::shared_ptr<const link>;
 
 /// hard link stores direct pointer to object
 /// there can exist many hard links to single object
-class BS_API bs_hard_link : public bs_link {
+class BS_API hard_link : public link {
 public:
 
 	/// ctor -- additionaly accepts a pointer to object
-	bs_hard_link(std::string name, const sp_obj& data);
+	hard_link(std::string name, sp_obj data, Flags f = Plain);
 
 	/// implement link's API
+	sp_link clone(bool deep = false) const override;
+
 	sp_obj data() const override;
 
-	link_type type_id() const override;
+	std::string type_id() const override;
 
-	sp_link clone() const override;
+	std::string oid() const override;
 
-	//std::shared_ptr< bs_link > parent() const override;
+	std::string obj_type_id() const override;
+
+	sp_node data_node() const override;
+
+	inode info() const override;
+	void set_info(inodeptr i) override;
 
 private:
 	sp_obj data_;
 };
 
+/// weak link is same as hard link, but stores weak link to data
+/// intended to be used to add class memebers self tree structure
+class BS_API weak_link : public link {
+public:
+
+	/// ctor -- additionaly accepts a pointer to object
+	weak_link(std::string name, const sp_obj& data, Flags f = Plain);
+
+	/// implement link's API
+	sp_link clone(bool deep = false) const override;
+
+	sp_obj data() const override;
+
+	std::string type_id() const override;
+
+	std::string oid() const override;
+
+	std::string obj_type_id() const override;
+
+	sp_node data_node() const override;
+
+	inode info() const override;
+	void set_info(inodeptr i) override;
+
+private:
+	std::weak_ptr<objbase> data_;
+};
+
+/// symbolic link is actually a link to another link, which is specified as absolute or relative
+/// string path
+class BS_API sym_link : public link {
+public:
+
+	/// ctor -- pointee is specified by string path
+	sym_link(std::string name, std::string path, Flags f = Plain);
+	/// ctor -- pointee is specified directly - absolute path will be stored
+	sym_link(std::string name, const sp_clink& src, Flags f = Plain);
+
+	/// implement link's API
+	sp_link clone(bool deep = false) const override;
+
+	sp_obj data() const override;
+
+	std::string type_id() const override;
+
+	std::string oid() const override;
+
+	std::string obj_type_id() const override;
+
+	sp_node data_node() const override;
+
+	inode info() const override;
+	void set_info(inodeptr i) override;
+
+	/// additional sym link API
+	/// check is pointed link is alive
+	bool is_alive() const;
+
+	/// return stored pointee path
+	std::string src_path(bool human_readable = false) const;
+
+private:
+	std::string path_;
+};
+
+
+NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 

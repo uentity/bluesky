@@ -207,10 +207,9 @@ public:
 		}
 	}
 
-	static PYBIND11_DESCR name() {
-		return type_descr(_("numpy.ndarray[") + npy_format_descriptor< typename Array::arrbase::value_type >::name() +
-			_("]"));
-	}
+	static constexpr auto name = _("numpy.ndarray[") +
+		npy_format_descriptor< typename Array::arrbase::value_type >::name +
+		_("]");
 
 	// Explicitly delete these: support python -> C++ conversion on these (i.e. these can be return
 	// types but not bound arguments).  We still provide them (with an explicitly delete) so that

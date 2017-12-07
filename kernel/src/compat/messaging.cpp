@@ -27,6 +27,9 @@ BS_TYPE_ADD_CONSTRUCTOR(bs_messaging, (const bs_messaging::sig_range_t&))
 BS_REGISTER_TYPE("kernel", blue_sky::bs_signal)
 BS_REGISTER_TYPE("kernel", blue_sky::bs_messaging)
 
+// slot virtual dtor
+bs_slot::~bs_slot() {}
+
 /*-----------------------------------------------------------------
  * BS signal helpers
  *----------------------------------------------------------------*/
@@ -165,6 +168,9 @@ int bs_signal::get_code() const {
 }
 
 //============================== bs_messaging implementation ===========================================================
+// virtual imessaging dtor
+bs_imessaging::~bs_imessaging() {}
+
 //empty ctor
 bs_messaging::bs_messaging() {}
 

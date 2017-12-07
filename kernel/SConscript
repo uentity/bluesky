@@ -42,7 +42,9 @@ kernel_cpp_list = [
 	"src/main.cpp",
 	"src/link.cpp",
 	"src/hard_link.cpp",
+	"src/sym_link.cpp",
 	"src/node.cpp",
+	"src/tree.cpp",
 	"src/compat/messaging.cpp",
 	"src/compat/array.cpp",
 	"src/compat/array_serialize.cpp"
@@ -56,6 +58,8 @@ py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in Split("""
 	py_messaging.cpp
 	py_objbase.cpp
 	py_misc.cpp
+	py_kernel.cpp
+	py_tree.cpp
 """)];
 
 # setup default build environment

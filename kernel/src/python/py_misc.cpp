@@ -24,6 +24,8 @@ void py_bind_misc(py::module& m) {
 	m.def("str2ustr", &str2ustr, "text"_a, "loc_name"_a  = "utf-8");
 
 	m.def("str2str", &str2str, "text"_a, "out_loc_name"_a, "in_loc_name"_a = "");
+
+	m.def("is_path_local", &is_path_local);
 }
 
 NAMESPACE_END(python)
