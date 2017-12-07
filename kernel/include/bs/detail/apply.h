@@ -35,7 +35,7 @@ NAMESPACE_END(detail)
  *----------------------------------------------------------------*/
 template< typename F, typename Tuple >
 constexpr decltype(auto) apply(F&& f, Tuple&& t) {
-	return detail::apply_impl(
+	return blue_sky::detail::apply_impl(
 		std::forward<F>(f), std::forward<Tuple>(t),
 		std::make_index_sequence<std::tuple_size<std::decay_t<Tuple>>::value>{}
 	);
@@ -55,7 +55,7 @@ constexpr decltype(auto) apply_range(
 		std::size_t, std::tuple_size< std::decay_t< Tuple > >::value
 	>()
 ) {
-	return detail::apply_impl(
+	return blue_sky::detail::apply_impl(
 		std::forward<F>(f), std::forward<Tuple>(t),
 		make_bounded_sequence< From, To >::value
 	);
