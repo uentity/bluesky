@@ -20,5 +20,8 @@ BS_API std::string gettime();
 BS_API std::string system_message(int err_code);
 BS_API std::string last_system_message();
 
+/// test if given path resides on local drive
+BS_API bool is_path_local(const std::string& path);
+
 }	//end of blue_sky namespace
 

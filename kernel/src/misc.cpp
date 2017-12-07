@@ -18,6 +18,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include "Shlwapi.h"
 #include <time.h>
 #endif
 
@@ -70,6 +71,24 @@ std::string last_system_message() {
 	err_code = errno;
 #endif
 	return system_message(err_code);
+}
+
+BS_API bool is_path_local(const std::string& path) {
+#ifdef _WIN32
+	// first check if given path is valid and exists
+	const auto ppath = path.c_str();
+	if (!PathFileExists(ppath))
+		return false;
+	// obtain volume name (drive letter)
+	std::vector<char> vol_name(MAX_PATH + 1, 0);
+	if(!GetVolumePathName(ppath, &vol_name[0], (DWORD)vol_name.size()))
+		return false;
+	// return true for local drives
+	return (GetDriveType(&vol_name[0]) == DRIVE_FIXED);
+#else
+	// for Linux always return true
+	return true;
+#endif
 }
 
 }	//end of namespace blue_sky
