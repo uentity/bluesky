@@ -100,7 +100,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BOOST_PATH);$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -118,7 +118,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BOOST_PATH);$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -134,7 +134,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BOOST_PATH);$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -152,7 +152,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BOOST_PATH);$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
