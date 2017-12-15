@@ -200,16 +200,18 @@ void py_bind_tree(py::module& m) {
 		// search by link ID
 		.def("find", find_by_lid, "lid"_a, "Find link with given ID")
 		// search by object ID
-		.def("find_oid", [](const node& N, const std::string& oid) {
+		.def("find_oid", [](const node& N, const std::string& oid) -> sp_link {
 			auto r = N.find_oid(oid);
 			if(r != N.end<>()) return *r;
-			throw py::key_error("Node doesn't contain links to object with ID - " + oid);
+			return nullptr;
+			//throw py::key_error("Node doesn't contain links to object with ID - " + oid);
 		}, "oid"_a, "Find link to object with given ID")
 		// search by link name
-		.def("find_name", [](const node& N, const std::string& lname) {
+		.def("find_name", [](const node& N, const std::string& lname) -> sp_link {
 			auto r = N.find(lname);
 			if(r != N.end<>()) return *r;
-			throw py::key_error("Node doesn't contain link with name '" + lname + "'");
+			return nullptr;
+			//throw py::key_error("Node doesn't contain link with name '" + lname + "'");
 		}, "link_name"_a, "Find link with given name")
 
 		// obtain index in custom order from link
@@ -314,10 +316,10 @@ void py_bind_tree(py::module& m) {
 		.def("rename", [](node& N, const sp_link& l, std::string new_name) {
 			return N.rename(N.find(l->id()), std::move(new_name));
 		}, "link"_a, "new_name"_a, "Rename given link")
-		.def("rename", [](node& N, const long& idx, std::string new_name) {
+		.def("rename", [](node& N, const long idx, std::string new_name) {
 			return N.rename(find_by_idx(N, idx), std::move(new_name));
 		}, "idx"_a, "new_name"_a, "Rename link with given index")
-		.def("rename_all", [](node& N, const std::string old_name, std::string new_name) {
+		.def("rename_all", [](node& N, const std::string& old_name, const std::string& new_name) {
 			const auto R = N.equal_range(old_name);
 			for(auto p = R.begin(); p != R.end(); ++p)
 				N.rename(N.project(p), new_name);
