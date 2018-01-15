@@ -76,6 +76,7 @@
     <ClInclude Include="kernel\src\kernel_logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_plugins_discover.h" />
     <ClInclude Include="kernel\src\kernel_plugins_subsyst.h" />
+    <ClInclude Include="kernel\src\tree_impl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp" />
@@ -101,6 +102,8 @@
     <ClCompile Include="kernel\src\objbase.cpp" />
     <ClCompile Include="kernel\src\plugin_descriptor.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
+    <ClCompile Include="kernel\src\sym_link.cpp" />
+    <ClCompile Include="kernel\src\tree.cpp" />
     <ClCompile Include="kernel\src\type_info.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -185,12 +188,12 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -200,12 +203,12 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -217,12 +220,13 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Shlwapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -234,12 +238,13 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Shlwapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
