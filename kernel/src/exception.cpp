@@ -48,11 +48,15 @@ bs_exception::bs_exception(const char* message, const char* who, int err_code)
 	: who_(who),
 	what_((who_.empty() ? "" : who_ + ": ") + message + collect_backtrace()),
 	err_code_(err_code)
-{}
+{
+	print();
+}
 
 bs_exception::bs_exception(const boost::format &message, const char* who, int err_code)
 	: bs_exception(message.str().c_str(), who, err_code)
-{}
+{
+	print();
+}
 
 //! \return exception message string
 const char* bs_exception::what() const noexcept {
