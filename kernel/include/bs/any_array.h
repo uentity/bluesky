@@ -32,6 +32,7 @@ private:
 	template< typename T >
 	struct has_mapped_t< T, typename void_< typename T::mapped_type >::type > : std::true_type {};
 
+public:
 	// trait for vector-like containers
 	template< typename Cont = container_t, typename = void >
 	struct trait_impl {
@@ -59,12 +60,21 @@ private:
 		static bool has_key(const Cont& C, const key_type& k) {
 			return k < C.size();
 		}
+
+		static bool insert(Cont& C, const key_type& k, boost::any value) {
+			if(k <= C.size()) {
+				C.insert(std::next(C.begin(), k), std::move(value));
+				return true;
+			}
+			return false;
+		}
 	};
 
 	// trait for map-like containers
 	template< typename Cont >
 	struct trait_impl< Cont, typename std::enable_if_t< has_mapped_t< Cont >::value > > {
 		using key_type = typename Cont::key_type;
+		using value_type = typename Cont::value_type;
 
 		template< typename Iterator >
 		static auto& iter2val(const Iterator& i) {
@@ -84,11 +94,13 @@ private:
 		static bool has_key(const Cont& C, const key_type& k) {
 			return C.find(k) != C.end();
 		}
+
+		static bool insert(Cont& C, const key_type& k, boost::any value) {
+			return C.insert(value_type(k, std::move(value))).second;
+		}
 	};
 
 	using trait = trait_impl< container_t >;
-
-public:
 
 	// helper class to auto-convert return type to destination const reference type
 	struct value_cast {
@@ -247,6 +259,11 @@ public:
 		return *this;
 	}
 
+	// insert an element into array
+	template< typename T >
+	bool insert_element(const key_type& k, T value) {
+		return trait::insert(*this, k, std::move(value));
+	}
 };
 
 // map-like any_array with std::string key
