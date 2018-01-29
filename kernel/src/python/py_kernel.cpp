@@ -29,7 +29,7 @@ void set_any_array_value(
 	if(A.has_key(k))
 		A.template ss<T>(k) = std::move(value);
 	else
-		A.template insert_element(k, std::move(value));
+		A.insert_element(k, std::move(value));
 }
 
 template< template<class> class array_traits >
