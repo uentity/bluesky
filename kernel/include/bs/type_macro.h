@@ -246,11 +246,11 @@ BS_TYPE_ADD_COPY_CONSTRUCTOR_F_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), f)
  * auto-register type in BS kernel
  *----------------------------------------------------------------*/
 // type passed as tuple
-#define BS_REGISTER_TYPE_(plugin, T_tup)                         \
-namespace { static bool BOOST_PP_CAT(_bs_reg_type_, __LINE__) =  \
-[]() { return ::blue_sky::give_kernel::Instance().register_type( \
-    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), plugin);               \
-}(); }
+#define BS_REGISTER_TYPE_(plugin, T_tup)                        \
+namespace { static bool BOOST_PP_CAT(_bs_reg_type_, __LINE__) = \
+    ::blue_sky::give_kernel::Instance().register_type(          \
+    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), plugin);              \
+}
 
 // non-templated types and types with 1 template parameter
 #define BS_REGISTER_TYPE(plugin, T) \

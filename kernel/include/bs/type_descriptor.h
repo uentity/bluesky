@@ -14,7 +14,7 @@
 
 #include <unordered_map>
 
-namespace blue_sky {
+NAMESPACE_BEGIN(blue_sky)
 
 using bs_type_ctor_result = std::shared_ptr<objbase>;
 using bs_type_copy_param = const std::shared_ptr<const objbase>&;
@@ -22,7 +22,7 @@ using bs_type_copy_param = const std::shared_ptr<const objbase>&;
 using BS_TYPE_COPY_FUN = bs_type_ctor_result (*)(bs_type_copy_param);
 using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
 
-namespace detail {
+NAMESPACE_BEGIN(detail)
 
 /// Convert lambda::operator() to bs type construct function pointer
 template <typename L> struct lam2bsctor {};
@@ -33,7 +33,7 @@ struct lam2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...)
 /// correct leafs owner in cloned node object
 BS_API void adjust_cloned_node(const sp_obj&);
 
-} // ns detail
+NAMESPACE_END(detail)
 
 /*!
 \struct type_descriptor
@@ -355,5 +355,5 @@ struct BS_API upcastable_eq : public std::binary_function<
 	bool operator()(const type_descriptor& td1, const type_descriptor& td2) const;
 };
 
-}	// eof blue_sky namespace
+NAMESPACE_END(blue_sky)
 
