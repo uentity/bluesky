@@ -120,9 +120,7 @@ public:
 	}
 
 	// clone object
-	auto clone_object(bs_type_copy_param source) const {
-		return source->bs_resolve_type().clone(source);
-	}
+	type_descriptor::shared_ptr_cast clone_object(bs_type_copy_param source) const;
 
 	// access to plugins & types from them
 	//! \brief loaded plugins

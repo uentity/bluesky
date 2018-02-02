@@ -111,5 +111,9 @@ std::string kernel::last_error() const {
 	return last_system_message();
 }
 
+type_descriptor::shared_ptr_cast kernel::clone_object(bs_type_copy_param source) const {
+	return source->bs_resolve_type().clone(source);
+}
+
 } /* namespace blue_sky */
 
