@@ -74,6 +74,8 @@ NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)
 template <typename T>
 struct type_caster<boost::optional<T>> : optional_caster<boost::optional<T>> {};
 
+template<> struct type_caster<boost::none_t> : public void_caster<boost::none_t> {};
+
 NAMESPACE_END(pybind11) NAMESPACE_END(detail)
 #endif
 
