@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #define BOOST_TEST_DYN_LINK
-#include <bs/exception.h>
+#include <bs/error.h>
 #include <bs/kernel.h>
 #include <bs/kernel_tools.h>
 

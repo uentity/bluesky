@@ -8,9 +8,10 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #define BOOST_TEST_DYN_LINK
-#include <bs/exception.h>
+#include <bs/error.h>
 #include <bs/log.h>
 
+#include <spdlog/fmt/ostr.h>
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 
@@ -45,6 +46,6 @@ BOOST_AUTO_TEST_CASE(test_bs_log) {
 	bsout() << "Hello simple {}" << "World" << end;
 	bsout() << I("My name is {}") << "Alexander" << "and I'm {} years old" << 35 << end;
 
-	bs_exception("Kernel panic!", "Kernel::test").print();
+	bsout() << error("Kernel::test: Kernel panic!").to_string() << bs_end;
 }
 

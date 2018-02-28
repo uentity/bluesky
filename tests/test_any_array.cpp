@@ -9,7 +9,7 @@
 
 #define BOOST_TEST_DYN_LINK
 #include <bs/kernel.h>
-#include <bs/exception.h>
+#include <bs/error.h>
 #include <bs/objbase.h>
 
 #include <boost/test/unit_test.hpp>
@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(test_any_array) {
 	// map of string key -> any value
 	auto a = str_any_array();
 	a["1"] = 42;
-	a["2"] = bs_exception("OMG!");
+	a["2"] = error("OMG!");
 	a["3"] = 84.7;
 	a["4"] = "test";
 	a["5"] = std::string("hello");
@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(test_any_array) {
 	BOOST_TEST(a.size< const std::string& >() == 1u);
 
 	BOOST_TEST(a.size< double >() == 1u);
-	BOOST_TEST(a.size< bs_exception >() == 1u);
+	BOOST_TEST(a.size< error >() == 1u);
 	BOOST_TEST(a.size< const char* >() == 1u);
 	BOOST_TEST(a.size< char* >() == 0u);
 
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(test_any_array) {
 	a.at("1", t2);
 	BOOST_TEST(t2 == 0);
 	std::cout << "a[""4""] should be test, and really: " << a.ss< const char* >("4") << std::endl;
-	std::cout << "a[""2""] is exception: " << a.ss< bs_exception >("2") << std::endl;
+	std::cout << "a[""2""] is error: " << a.ss< error >("2") << std::endl;
 
 	// map of index -> any value
 	auto b = idx_any_array(3);
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(test_any_array) {
 	BOOST_TEST(b.size< const std::string& >() == 1u);
 
 	BOOST_TEST(b.size< double >() == 1u);
-	BOOST_TEST(b.size< bs_exception >() == 1u);
+	BOOST_TEST(b.size< error >() == 1u);
 	BOOST_TEST(b.size< const char* >() == 1u);
 	BOOST_TEST(b.size< char* >() == 0u);
 
