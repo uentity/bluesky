@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/kernel.h>
-#include <bs/exception.h>
+#include <bs/error.h>
 #include "kernel_logging_subsyst.h"
 #include "kernel_plugins_subsyst.h"
 #include "kernel_instance_subsyst.h"
@@ -43,8 +43,8 @@ public:
 		}
 		// sanity
 		if(is_nil(info))
-			throw bs_kexception(
-				boost::format("cannot find type info for type %1%, seems like not registered") % master.name
+			throw error(
+				fmt::format("Cannot find type info for type {}, seems like not registered", master.name)
 			);
 		return info;
 	}

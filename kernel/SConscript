@@ -29,7 +29,7 @@ kernel_cpp_list = [
 	"src/objbase.cpp",
 	"src/misc.cpp",
 	"src/str_utils.cpp",
-	"src/exception.cpp",
+	"src/error.cpp",
 	"src/kernel_ston.cpp",
 	"src/kernel_logging_subsyst.cpp",
 	"src/kernel_plugins_subsyst.cpp",
@@ -37,6 +37,7 @@ kernel_cpp_list = [
 	"src/kernel_types_factory.cpp",
 	"src/kernel.cpp",
 	"src/kernel_tools.cpp",
+	"src/kernel_errors.cpp",
 	"src/lib_descriptor.cpp",
 	"src/log.cpp",
 	"src/main.cpp",
@@ -60,6 +61,7 @@ py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in Split("""
 	py_misc.cpp
 	py_kernel.cpp
 	py_tree.cpp
+	py_error.cpp
 """)];
 
 # setup default build environment

@@ -12,9 +12,11 @@
 // kernel already contains a lot
 #include "kernel.h"
 #include "kernel_tools.h"
-// exceptions handling
-#include "exception.h"
+// errors handling
+#include "error.h"
 #include "throw_exception.h"
+#include "detail/kernel_errors.h"
+#include "detail/tree_errors.h"
 // other things
 #include "misc.h"
 

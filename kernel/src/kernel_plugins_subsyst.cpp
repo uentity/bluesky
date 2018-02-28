@@ -13,7 +13,7 @@
 
 #include "kernel_plugins_subsyst.h"
 #include "kernel_plugins_discover.h"
-#include <bs/exception.h>
+#include <bs/error.h>
 #include <bs/log.h>
 
 #define KERNEL_VERSION "0.1" //!< version of blue-sky kernel
@@ -314,10 +314,10 @@ int kernel_plugins_subsyst::load_plugin(
 		else
 			log_msg << log::end;
 	}
-	catch(const bs_exception& ex) {
+	catch(const error& ex) {
 		// print error information
-		ex.print();
-		retval = ex.err_code();
+		ex.dump();
+		retval = ex.code.value();
 	}
 	catch(const std::exception& ex) {
 		BSERROR << log::E("[Std Exception] {}: {}") << who << ex.what() << bs_end;

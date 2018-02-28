@@ -44,8 +44,7 @@ namespace log {
 }
 
 // exception
-class bs_exception;
-class bs_kexception;
+class error;
 
 template< template< class > class > class any_array;
 

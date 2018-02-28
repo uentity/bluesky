@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/assert.h>
-#include <bs/exception.h>
+#include <bs/error.h>
 
 #include <stdlib.h>
 #include <cassert>

@@ -11,7 +11,7 @@
 
 #include "objbase.h"
 #include "link.h"
-#include "exception.h"
+#include "detail/tree_errors.h"
 #include "detail/is_container.h"
 #include "detail/enumops.h"
 
@@ -160,7 +160,7 @@ public:
 	template<Key K>
 	sp_link search(const Key_type<K>& k) const {
 		auto i = find(k);
-		if(i == end<K>()) throw bs_kexception("Unable to find link by given key", "node::search");
+		if(i == end<K>()) throw error("node::search", TreeError::KeyMismatch);
 		return *i;
 	}
 

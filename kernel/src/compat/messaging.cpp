@@ -140,10 +140,7 @@ bs_signal::bs_signal(int signal_code)
 bs_signal::~bs_signal() = default;
 
 void bs_signal::init(int signal_code) const {
-	if(signal_code > 0)
-		pimpl_->signal_code_ = signal_code;
-	else
-		throw bs_kexception("Wrong signal code given", "bs_signal::init");
+	pimpl_->signal_code_ = signal_code;
 }
 
 void bs_signal::fire(const sp_cobj& sender, const sp_obj& param) const {

@@ -11,7 +11,7 @@
 
 // setup API macro depending on compiler
 #if defined(_MSC_VER)		//M$ compiler
-	// disable warning about inheriting from non-DLL types - can be ignored for STL (apply to bs_exception)
+	// disable warning about inheriting from non-DLL types - can be ignored for STL
 	#pragma warning(disable:4275)
 	// disable xxx needs to have dll-interface blah-blah
 	#pragma warning(disable:4251)

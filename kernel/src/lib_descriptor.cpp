@@ -9,8 +9,9 @@
 
 #include <bs/detail/lib_descriptor.h>
 #include <bs/plugin_descriptor.h>
-#include <bs/exception.h>
+#include <bs/error.h>
 #include <bs/misc.h>
+#include <bs/detail/kernel_errors.h>
 
 #ifdef _WIN32
 #include <Psapi.h>
@@ -33,7 +34,7 @@ bool lib_descriptor::load(const char* fname) {
 	handle_ = LoadLibrary(fname);
 #endif
 	if (!handle_) {
-		throw bs_kexception(dll_error_message().c_str(), (std::string("lib_descriptor:") + fname).c_str());
+		throw error(std::string("lib_descriptor: ") + fname, KernelError::CantLoadDLL);
 	}
 	return (bool)handle_;
 }
@@ -45,10 +46,7 @@ void lib_descriptor::unload() {
 		dlclose(handle_);
 #elif defined(_WIN32)
 		if (!FreeLibrary(handle_)) {
-			throw bs_kexception(
-				dll_error_message().c_str(),
-				(std::string("lib_descriptor: can't unload library ") + fname_).c_str()
-			);
+			throw error(std::string("lib_descriptor: ") + fname_, KernelError::CantUnloadDLL);
 		}
 #endif
 	}

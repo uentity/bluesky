@@ -7,7 +7,7 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/exception.h>
+#include <bs/detail/kernel_errors.h>
 #include <bs/log.h>
 #include "kernel_plugins_subsyst.h"
 
@@ -88,9 +88,9 @@ type_tuple kernel_plugins_subsyst::demand_type(const type_tuple& obj_t) {
 			register_type(obj_t.td(), &obj_t.pd(), &tt_ref);
 		// still nil td means that serious error happened - type cannot be registered
 		if(tt_ref.is_nil()) {
-			throw bs_kexception(boost::format(
-				"Type (%s) is nil or cannot be registered!") % obj_t.td().name,
-				"kernel:factory"
+			throw error(
+				fmt::format("Type ({}) is nil or cannot be registered!", obj_t.td().name),
+				KernelError::CantRegisterType
 			);
 		}
 	}

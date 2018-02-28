@@ -17,7 +17,7 @@
 #include <pybind11/operators.h>
 
 #include <bs/objbase.h>
-#include <bs/exception.h>
+#include <bs/error.h>
 #include <bs/type_macro.h>
 #include <bs/python/kernel.h>
 

@@ -167,12 +167,12 @@ struct BS_API assert_wrapper {
 	if (false) ; else {                      \
 		BS_ASSERT ((cond));                  \
 		if (!(cond))                         \
-		throw bs_exception (caption, #cond); \
+		throw error(std::string(caption) + ": " +  #cond); \
 	}
 #else
 #define BS_ERROR(cond, caption)              \
 	if (!(cond)) {                           \
-		throw bs_exception (caption, #cond); \
+		throw error(std::string(caption) + ": " + #cond); \
 	}
 #endif
 

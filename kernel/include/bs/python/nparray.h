@@ -11,7 +11,7 @@
 
 #include "../fwd.h"
 #include "../common.h"
-#include "../exception.h"
+#include "../error.h"
 #include "../compat/arrbase_shared.h"
 #include "../compat/array.h"
 

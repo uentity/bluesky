@@ -9,19 +9,19 @@
 
 #pragma once
 
+#include "error.h"
 #include <boost/current_function.hpp>
-#include <boost/lexical_cast.hpp>
-#include "exception.h"
+#include <spdlog/fmt/fmt.h>
 #include <string>
 
 namespace blue_sky {
 
 #ifdef _DEBUG
 #define bs_throw_exception(msg) \
-	throw bs_exception(msg, std::string(__FILE__) + ':' + boost::lexical_cast<std::string>(__LINE__) + ": [" + BOOST_CURRENT_FUNCTION + ']');
+	throw error(fmt::format("{} : {} : {} : [{}]", msg, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION));
 #else
 #define bs_throw_exception(msg) \
-	throw bs_exception(msg, std::string(__FILE__) + ":" + boost::lexical_cast<std::string>(__LINE__), msg);
+	throw error(fmt::format("{} : {} : {}", msg, __FILE__, __LINE__));
 #endif
 
 }

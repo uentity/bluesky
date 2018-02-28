@@ -36,7 +36,7 @@ std::string gettime() {
 	return cur_time_str;
 }
 
-// using code from from boos/filesystem/src/exception.cpp
+// using code from from boost/filesystem/src/exception.cpp
 // system error-messages
 std::string system_message(int err_code) {
 	std::string str;
