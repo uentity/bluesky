@@ -16,9 +16,6 @@
     <Filter Include="Заголовочные файлы\bs">
       <UniqueIdentifier>{fe4c34e2-aba7-4762-9861-d6b9b8d654ec}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Заголовочные файлы\bs\python">
-      <UniqueIdentifier>{30268e32-3b68-45a2-8dc6-19b322a7c679}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Заголовочные файлы\bs\compat">
       <UniqueIdentifier>{11c4f115-a182-4b2a-a093-cbe65425d736}</UniqueIdentifier>
     </Filter>
@@ -43,9 +40,6 @@
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
     <ClInclude Include="kernel\include\bs\common.h">
-      <Filter>Заголовочные файлы\bs</Filter>
-    </ClInclude>
-    <ClInclude Include="kernel\include\bs\exception.h">
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
     <ClInclude Include="kernel\include\bs\force_plugin_import.h">
@@ -101,15 +95,6 @@
     </ClInclude>
     <ClInclude Include="kernel\include\bs\type_macro.h">
       <Filter>Заголовочные файлы\bs</Filter>
-    </ClInclude>
-    <ClInclude Include="kernel\include\bs\python\common.h">
-      <Filter>Заголовочные файлы\bs\python</Filter>
-    </ClInclude>
-    <ClInclude Include="kernel\include\bs\python\nparray.h">
-      <Filter>Заголовочные файлы\bs\python</Filter>
-    </ClInclude>
-    <ClInclude Include="kernel\include\bs\python\nparray_serialize.h">
-      <Filter>Заголовочные файлы\bs\python</Filter>
     </ClInclude>
     <ClInclude Include="kernel\include\bs\compat\array.h">
       <Filter>Заголовочные файлы\bs\compat</Filter>
@@ -207,15 +192,21 @@
     <ClInclude Include="kernel\src\tree_impl.h">
       <Filter>Файлы исходного кода</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\error.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\kernel_errors.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\tree_errors.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\common.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\exception.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\hard_link.cpp">
@@ -285,6 +276,12 @@
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\error.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\kernel_errors.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
   </ItemGroup>

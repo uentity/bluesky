@@ -48,9 +48,6 @@
     <ClInclude Include="kernel\include\bs\common.h">
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\include\bs\exception.h">
-      <Filter>Заголовочные файлы\bs</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\include\bs\force_plugin_import.h">
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
@@ -222,15 +219,21 @@
     <ClInclude Include="kernel\src\tree_impl.h">
       <Filter>Файлы исходного кода</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\error.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\kernel_errors.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\tree_errors.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\common.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\exception.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\hard_link.cpp">
@@ -325,6 +328,15 @@
     </ClCompile>
     <ClCompile Include="kernel\src\sym_link.cpp">
       <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\error.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\kernel_errors.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\python\py_error.cpp">
+      <Filter>Файлы исходного кода\python</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

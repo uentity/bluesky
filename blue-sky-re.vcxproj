@@ -46,12 +46,14 @@
     <ClInclude Include="kernel\include\bs\detail\args.h" />
     <ClInclude Include="kernel\include\bs\detail\enumops.h" />
     <ClInclude Include="kernel\include\bs\detail\invoke.h" />
+    <ClInclude Include="kernel\include\bs\detail\kernel_errors.h" />
     <ClInclude Include="kernel\include\bs\detail\lib_descriptor.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
     <ClInclude Include="kernel\include\bs\detail\str_utils.h" />
+    <ClInclude Include="kernel\include\bs\detail\tree_errors.h" />
     <ClInclude Include="kernel\include\bs\detail\tuple_utils.h" />
     <ClInclude Include="kernel\include\bs\detail\typestring.h" />
-    <ClInclude Include="kernel\include\bs\exception.h" />
+    <ClInclude Include="kernel\include\bs\error.h" />
     <ClInclude Include="kernel\include\bs\force_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\fwd.h" />
     <ClInclude Include="kernel\include\bs\kernel.h" />
@@ -88,9 +90,10 @@
     <ClCompile Include="kernel\src\compat\array.cpp" />
     <ClCompile Include="kernel\src\compat\array_serialize.cpp" />
     <ClCompile Include="kernel\src\compat\messaging.cpp" />
-    <ClCompile Include="kernel\src\exception.cpp" />
+    <ClCompile Include="kernel\src\error.cpp" />
     <ClCompile Include="kernel\src\hard_link.cpp" />
     <ClCompile Include="kernel\src\kernel.cpp" />
+    <ClCompile Include="kernel\src\kernel_errors.cpp" />
     <ClCompile Include="kernel\src\kernel_instance_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel_logging_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel_plugins_subsyst.cpp" />
@@ -107,6 +110,7 @@
     <ClCompile Include="kernel\src\plugin_descriptor.cpp" />
     <ClCompile Include="kernel\src\python\py_array.cpp" />
     <ClCompile Include="kernel\src\python\py_common.cpp" />
+    <ClCompile Include="kernel\src\python\py_error.cpp" />
     <ClCompile Include="kernel\src\python\py_kernel.cpp" />
     <ClCompile Include="kernel\src\python\py_main.cpp" />
     <ClCompile Include="kernel\src\python\py_messaging.cpp" />

@@ -44,12 +44,14 @@
     <ClInclude Include="kernel\include\bs\detail\apply.h" />
     <ClInclude Include="kernel\include\bs\detail\args.h" />
     <ClInclude Include="kernel\include\bs\detail\invoke.h" />
+    <ClInclude Include="kernel\include\bs\detail\kernel_errors.h" />
     <ClInclude Include="kernel\include\bs\detail\lib_descriptor.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
     <ClInclude Include="kernel\include\bs\detail\str_utils.h" />
+    <ClInclude Include="kernel\include\bs\detail\tree_errors.h" />
     <ClInclude Include="kernel\include\bs\detail\tuple_utils.h" />
     <ClInclude Include="kernel\include\bs\detail\typestring.h" />
-    <ClInclude Include="kernel\include\bs\exception.h" />
+    <ClInclude Include="kernel\include\bs\error.h" />
     <ClInclude Include="kernel\include\bs\force_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\fwd.h" />
     <ClInclude Include="kernel\include\bs\kernel.h" />
@@ -61,9 +63,6 @@
     <ClInclude Include="kernel\include\bs\objbase.h" />
     <ClInclude Include="kernel\include\bs\objbase_macro.h" />
     <ClInclude Include="kernel\include\bs\plugin_descriptor.h" />
-    <ClInclude Include="kernel\include\bs\python\common.h" />
-    <ClInclude Include="kernel\include\bs\python\nparray.h" />
-    <ClInclude Include="kernel\include\bs\python\nparray_serialize.h" />
     <ClInclude Include="kernel\include\bs\setup_common_api.h" />
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
@@ -84,9 +83,10 @@
     <ClCompile Include="kernel\src\compat\array.cpp" />
     <ClCompile Include="kernel\src\compat\array_serialize.cpp" />
     <ClCompile Include="kernel\src\compat\messaging.cpp" />
-    <ClCompile Include="kernel\src\exception.cpp" />
+    <ClCompile Include="kernel\src\error.cpp" />
     <ClCompile Include="kernel\src\hard_link.cpp" />
     <ClCompile Include="kernel\src\kernel.cpp" />
+    <ClCompile Include="kernel\src\kernel_errors.cpp" />
     <ClCompile Include="kernel\src\kernel_instance_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel_logging_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel_plugins_subsyst.cpp" />
