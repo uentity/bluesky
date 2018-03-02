@@ -179,6 +179,9 @@ public:
 	str_any_array& pert_str_any_array(const type_descriptor& master);
 	idx_any_array& pert_idx_any_array(const type_descriptor& master);
 
+	/// provide access to kernel's plugin_descriptor
+	const plugin_descriptor& self_descriptor() const;
+
 private:
 	//! \brief Constructor of kernel
 	kernel();

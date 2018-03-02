@@ -115,5 +115,9 @@ type_descriptor::shared_ptr_cast kernel::clone_object(bs_type_copy_param source)
 	return source->bs_resolve_type().clone(source);
 }
 
+const plugin_descriptor& kernel::self_descriptor() const {
+	return pimpl_->kernel_pd();
+}
+
 } /* namespace blue_sky */
 
