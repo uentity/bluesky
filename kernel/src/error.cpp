@@ -44,8 +44,10 @@ std::string collect_backtrace() {
 #endif
 
 // not throwing error message formatter
-auto format_errmsg = [](const std::string ec_message, auto custom_message = "") {
-	return ec_message.size() ? ec_message + ": " + custom_message : custom_message;
+inline std::string format_errmsg(const std::string ec_message, const std::string custom_message) {
+	return ec_message.size() ?
+		(custom_message.size() ? ec_message + ": " + custom_message : ec_message)
+		: custom_message;
 };
 
 } // hidden namespace
@@ -72,36 +74,31 @@ std::error_code make_error_code(Error e) {
 /*-----------------------------------------------------------------------------
  *  error implementation
  *-----------------------------------------------------------------------------*/
-error::error(const char* message, const std::error_code ec, bool quiet)
-	: runtime_error(format_errmsg(ec.message(), message)), code(ec)
+error::error(IsQuiet quiet, const std::string message, const std::error_code ec)
+	: runtime_error(format_errmsg(ec.message(), std::move(message))),
+	  code(ec == Error::Undefined ? (quiet == IsQuiet::Yes ? Error::OK : Error::Happened) : std::move(ec))
 {
-	if(!quiet) dump();
+	if(quiet == IsQuiet::No) dump();
 }
 
-error::error(const std::string& message, const std::error_code ec, bool quiet)
-	: runtime_error(format_errmsg(ec.message(), message)), code(ec)
+error::error(IsQuiet quiet, const std::error_code ec)
+	: runtime_error(ec.message()),
+	  code(ec == Error::Undefined ? (quiet == IsQuiet::Yes ? Error::OK : Error::Happened) : std::move(ec))
 {
-	if(!quiet) dump();
+	if(quiet == IsQuiet::No) dump();
 }
 
-error::error(const char* message, const std::error_code ec)
-	: error(message, std::move(ec), false)
-{}
+error::error(IsQuiet quiet, int ec)
+	: runtime_error(""), code(static_cast<Error>(ec))
+{
+	//BSOUT << "error: from int!" << log::end;
+	if(quiet == IsQuiet::No) dump();
+}
 
-error::error(const std::string& message, const std::error_code ec)
-	: error(message, std::move(ec), false)
-{}
+// copy & move ctors are default
+error::error(const error& rhs) noexcept = default;
+error::error(error&& rhs) noexcept = default;
 
-error::error(const std::error_code ec)
-	: error("", std::move(ec), false)
-{}
-
-// copy ctor
-error::error(const error& rhs) noexcept
-	: runtime_error(rhs), code(rhs.code)
-{}
-
-//! error category
 const char* error::domain() const noexcept {
 	return code.category().name();
 }
@@ -118,11 +115,14 @@ void error::dump() const {
 		bsout() << log::I(to_string()) << log::end;
 }
 
-// exception printing
+bool error::ok() const {
+	return !(bool)code;
+}
+
+// error printing
 BS_API std::ostream& operator <<(std::ostream& os, const error& ec) {
 	return os << ec.to_string();
 }
-
 
 NAMESPACE_END(blue_sky)
 

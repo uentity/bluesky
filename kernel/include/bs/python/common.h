@@ -67,6 +67,15 @@ BSPY_EXPORT_DEF_((T))
 #define BSPY_EXPORT_DEF_T(T, T_spec_tupe) \
 BSPY_EXPORT_DEF_((T<T_spec_tup>))
 
+// register new error construcctor that takes user-defined error values enum
+#define BSPY_REGISTER_ERROR_ENUM(E) [](){                                          \
+    auto err_ctor = pybind11::init<E>();                                           \
+    auto err_class = (pybind11::class_<std::error_code>) pybind11::module::import( \
+        BS_KERNEL.self_descriptor().py_namespace.c_str()).attr("error_code");      \
+    err_ctor.execute(err_class);                                                   \
+}();                                                                               \
+py::implicitly_convertible<E, std::error_code>();
+
 // export boost::optional in C++14 mode
 #ifndef BS_CPP17
 NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)

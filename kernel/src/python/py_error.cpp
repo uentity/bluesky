@@ -39,10 +39,13 @@ void py_bind_error(py::module& m) {
 	 *-----------------------------------------------------------------------------*/
 	// bind std::error_code
 	py::class_<std::error_code>(m, "error_code")
+		// empty ctor results in Error::Happened
 		.def(py::init([]() { return std::error_code(Error::Happened); }))
+		// construct from known error enums -- plugins can add ctors like this
 		.def(py::init<Error>())
 		.def(py::init<KernelError>())
 		.def(py::init<TreeError>())
+
 		.def_property_readonly("value", &std::error_code::value, "Get numeric error code")
 		.def_property_readonly(
 			"category",
@@ -57,6 +60,9 @@ void py_bind_error(py::module& m) {
 		.def(py::self < py::self)
 		.def("__bool__", [](const std::error_code& c){ return (bool)c; })
 		.def("__hash__", [](const std::error_code& c){ return std::hash<std::error_code>{}(c); })
+		.def("__repr__", [](const std::error_code& c){
+			return fmt::format("[{}] [{}] {}", c.category().name(), c.value(), c.message());
+		})
 	;
 	// implcitly construct error_code from corresponding enum value
 	py::implicitly_convertible<Error, std::error_code>();
@@ -66,15 +72,29 @@ void py_bind_error(py::module& m) {
 	// bind blue_sky::error
 	py::class_<error>(m, "error")
 		// ctors
-		.def(py::init<const std::string&, std::error_code>(),
+		// from optional error_code
+		.def(py::init<const std::error_code>(), "code"_a = Error::Happened)
+		// message + optional error_code
+		.def(py::init<const std::string, const std::error_code>(),
 			"message"_a, "code"_a = Error::Happened
 		)
-		.def(py::init<std::error_code>(), "code"_a)
+		// int code -- disable this ctor, because it will be used if some error enum value passed
+		//.def(py::init<int>())
+
 		// quiet
-		.def_static("quiet", &error::quiet<const std::string&, const std::error_code>,
+		.def_static("quiet",
+			&error::quiet<const std::string, const std::error_code&>,
 			"message"_a, "code"_a = Error::OK
 		)
-		.def_static("quiet", (error (*)(std::error_code)) &error::quiet, "code"_a)
+		.def_static("quiet",
+			&error::quiet<const std::error_code&>,
+			"code"_a = Error::OK
+		)
+		// [TODO]: implement better solution
+		// allow quiet construct from int, but this results in that all error enum values get
+		// auto-converted to int and passed as int here
+		.def_static("quiet", &error::quiet<int>, "code"_a)
+
 		// other methods
 		.def_property_readonly("domain", &error::domain, "Get error domain (error_code::category)")
 		.def("dump", &error::dump, "Log current error")
@@ -83,7 +103,11 @@ void py_bind_error(py::module& m) {
 		.def_readonly("code", &error::code, "Access code of this error")
 		// error message
 		.def_property_readonly("what", &error::what, "Get error message")
+		.def_property_readonly("ok", &error::ok, "Test if no error happened (successfull op)")
 	;
+	py::implicitly_convertible<Error, error>();
+
+	m.def("test_code", [](int c) { bsout() << c << log::end; });
 }
 
 NAMESPACE_END(python)

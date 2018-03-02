@@ -279,7 +279,6 @@ int kernel_plugins_subsyst::load_plugin(
 			bs_init_py_fn init_py_fn;
 			lib.load_sym("bs_init_py_subsystem", init_py_fn);
 			if(!init_py_fn)
-				// TODO: enable logging
 				bserr() << log::E("{}: Python subsystem wasn't found in plugin {}")
 					<< who << lib.fname_ << log::end;
 			else {
@@ -315,8 +314,6 @@ int kernel_plugins_subsyst::load_plugin(
 			log_msg << log::end;
 	}
 	catch(const error& ex) {
-		// print error information
-		ex.dump();
 		retval = ex.code.value();
 	}
 	catch(const std::exception& ex) {
@@ -359,19 +356,16 @@ int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
 		++plugin_cnt;
 	}
 
-//#ifdef BSPY_EXPORTING
-//	// register converter for any Python object
-//	// should be at the end of boost::python registry
-//	if(init_py_subsyst) {
-//		boost::python::scope bs_root = pymod_.root_scope();
-//		blue_sky::python::py_bind_anyobject();
-//	}
-//#endif
+#ifdef BSPY_EXPORTING
+	// register constructor of std::error_code from arbitrary int value
+	if(py_root_module) {
+		auto err_class = (pybind11::class_<std::error_code>)pymod_->root_module_.attr("error_code");
+		pybind11::init([](int ec) {
+			return std::error_code(static_cast<Error>(ec));
+		}).execute(err_class);
+	}
+#endif
 
-	//if (lib_cnt == 0) {
-	//	BSERROR << log::E("BlueSky: no plugins were loaded") << bs_end;
-	//	return -1;
-	//}
 	return 0;
 }
 
