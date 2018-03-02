@@ -34,21 +34,30 @@ bool lib_descriptor::load(const char* fname) {
 	handle_ = LoadLibrary(fname);
 #endif
 	if (!handle_) {
-		throw error(std::string("lib_descriptor: ") + fname, KernelError::CantLoadDLL);
+		throw error(
+			std::string("lib_descriptor: ") + fname + ": " + dll_error_message(),
+			KernelError::CantLoadDLL
+		);
 	}
 	return (bool)handle_;
 }
 
 void lib_descriptor::unload() {
-	//unload library
+	// unload library
+	
 	if(handle_) {
+		bool res = false;
 #ifdef UNIX
-		dlclose(handle_);
+		res = dlclose(handle_) == 0;
 #elif defined(_WIN32)
-		if (!FreeLibrary(handle_)) {
-			throw error(std::string("lib_descriptor: ") + fname_, KernelError::CantUnloadDLL);
-		}
+		res = FreeLibrary(handle_);
 #endif
+		if(!res) {
+			throw error(
+				std::string("lib_descriptor: ") + fname_ + ": " + dll_error_message(),
+				KernelError::CantUnloadDLL
+			);
+		}
 	}
 	handle_ = nullptr;
 }

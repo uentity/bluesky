@@ -23,10 +23,10 @@ BS_API std::error_code make_error_code(KernelError e) {
 		std::string message(int ec) const override {
 			switch(static_cast<KernelError>(ec)) {
 			case KernelError::CantLoadDLL:
-				return "Can't load DLL: " + detail::lib_descriptor::dll_error_message();
+				return std::string("Can't load DLL");
 
 			case KernelError::CantUnloadDLL:
-				return "Can't unload DLL: " + detail::lib_descriptor::dll_error_message();
+				return std::string("Can't unload DLL");
 
 			case KernelError::CantRegisterType:
 				return "Type cannot be registered";
@@ -58,9 +58,9 @@ BS_API std::error_code make_error_code(TreeError e) {
 				return "";
 			}
 		}
-	} kernel_category;
+	} tree_category;
 
-	return { static_cast<int>(e), kernel_category };
+	return { static_cast<int>(e), tree_category };
 }
 
 NAMESPACE_END(tree)
