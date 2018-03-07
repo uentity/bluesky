@@ -19,8 +19,8 @@
 // prevent warnings about macro redeifinition - include Python.h
 // at the very beginning
 #if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
-	#ifdef _MSC_VER
-		#define HAVE_ROUND
+	#if defined(_MSC_VER) && _MSC_VER >= 1800
+		#define HAVE_ROUND 1
 	#endif
 	#ifdef _DEBUG
 		// disable linking to pythonX_d.lib on Windows in debug mode
