@@ -35,7 +35,7 @@ template<> struct type_caster<blue_sky::type_tuple> {
 	// last parameter is holder for temp object initialized when string is passed
 	template<typename T>
 	static bs_optional<const T&> load_str_or_T(handle src, bool convert, bs_optional<T>& tmp) {
-		if(PyString_Check(src.ptr())) {
+		if(pybind11::isinstance<pybind11::str>(src)) {
 			auto caster = make_caster<std::string>();
 			if(caster.load(src, convert)) {
 				tmp.emplace(cast_op<std::string>(caster).c_str());
