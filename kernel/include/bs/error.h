@@ -44,10 +44,11 @@ class BS_API error : public std::runtime_error {
 	// should we log error in constructor?
 	enum class IsQuiet { Yes, No };
 
-	// helper to detect if first ctor argument is quiet tag
+	// helper to narrow gready nature of perfect forwarding ctor
 	template<typename A1 = int, typename... As>
 	struct allow_forward {
-		static constexpr bool value = !std::is_same<std::decay_t<A1>, IsQuiet>::value;
+		static constexpr bool value = !std::is_same<A1, IsQuiet>::value
+			&& !std::is_base_of<error, std::decay_t<A1>>::value;
 	};
 
 public:
@@ -70,7 +71,6 @@ public:
 	/// construct quiet error that don't get logged in constructor
 	/// quiet error can be treated like operation result
 	/// will construct error_code with Error::OK status by default
-	/// from string message
 	template<typename... Ts>
 	static error quiet(Ts&&... args) {
 		return error(IsQuiet::Yes, std::forward<Ts>(args)...);
