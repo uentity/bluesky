@@ -59,12 +59,12 @@ template<> struct type_caster<bs_any> {
 		handle simple = cast_alternative(src, type_list<
 			py::int_, char, short, int, long, long long, unsigned int, unsigned long, unsigned long long
 		>());
-		if(simple != none())
+		if(!simple.is(none()))
 			return simple;
 		else if(src_t == typeid(bool))
 			return bool_(boost::any_cast<bool>(src));
-		else if((simple = cast_alternative(src, type_list<py::float_, float, double>())) != none() ||
-			(simple = cast_alternative(src, type_list<py::str, std::string, const char*, char*>())) != none()
+		else if(!(simple = cast_alternative(src, type_list<py::float_, float, double>())).is(none()) ||
+			!(simple = cast_alternative(src, type_list<py::str, std::string, const char*, char*>())).is(none())
 		)
 			return simple;
 		else if(src_t == typeid(sp_obj)) {

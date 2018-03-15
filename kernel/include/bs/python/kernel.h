@@ -26,37 +26,44 @@ template<> struct type_caster<blue_sky::type_tuple> {
 
 	// caster-related interface
 	static constexpr auto name = _("BS type tuple");
-	operator Type*() { return &value.get(); }
-	operator Type&() { return value.get(); }
-	operator Type() { return value.get(); }
+	operator Type*() { return &value.value(); }
+	operator Type&() { return value.value(); }
+	operator Type() { return value.value(); }
 	template <typename> using cast_op_type = Type;
 
 	// helper to extract ref to given type from string or type instance
 	// last parameter is holder for temp object initialized when string is passed
 	template<typename T>
-	static bs_optional<const T&> load_str_or_T(handle src, bool convert, bs_optional<T>& tmp) {
+	static const T* load_str_or_T(handle src, bool convert, bs_optional<T>& tmp) {
 		if(pybind11::isinstance<pybind11::str>(src)) {
 			auto caster = make_caster<std::string>();
 			if(caster.load(src, convert)) {
 				tmp.emplace(cast_op<std::string>(caster).c_str());
-				return {tmp.get()};
+				return &tmp.value();
 			}
 		}
 		else {
 			auto caster = make_caster<const T&>();
 			if(caster.load(src, convert)) {
-				return {cast_op<const T&>(caster)};
+				return &cast_op<const T&>(caster);
 			}
 		}
-		return {};
+		return nullptr;
 	}
 
 	bool load_from_value(handle src, bool convert) {
-		value.emplace(load_str_or_T<blue_sky::type_descriptor>(src, convert, td_).get());
-		if(value) return true;
+		// 1. try load type_descriptor
+		if(auto p_td = load_str_or_T<blue_sky::type_descriptor>(src, convert, td_)) {
+			value.emplace(*p_td);
+			return true;
+		}
 
-		value.emplace(load_str_or_T<blue_sky::plugin_descriptor>(src, convert, pd_).get());
-		return bool(value);
+		// 2. try load plugin_descriptor
+		if(auto p_pd = load_str_or_T<blue_sky::plugin_descriptor>(src, convert, pd_)) {
+			value.emplace(*p_pd);
+			return true;
+		}
+		return false;
 	}
 
 	// convert from Python -> C++
@@ -71,7 +78,7 @@ template<> struct type_caster<blue_sky::type_tuple> {
 				auto pd = load_str_or_T<blue_sky::plugin_descriptor>(PyTuple_GetItem(pysrc, 0), convert, pd_);
 				auto td = load_str_or_T<blue_sky::type_descriptor>(PyTuple_GetItem(pysrc, 1), convert, td_);
 				if(pd && td) {
-					value.emplace(pd.get(), td.get());
+					value.emplace(*pd, *td);
 					return true;
 				}
 			}
