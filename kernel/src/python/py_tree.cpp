@@ -63,12 +63,10 @@ auto find_by_lid(const node& N, const std::string& lid) {
 
 auto find_by_idx(const node& N, const long idx, bool allow_end = false) {
 	// support for Pythonish indexing from both ends
-	if(std::size_t(std::abs(idx)) > N.size())
+	const std::size_t positive_idx = idx < 0 ? N.size() + std::size_t(allow_end) + idx : std::size_t(idx);
+	if(positive_idx > N.size() - std::size_t(!allow_end))
 		throw py::key_error("Index out of bounds");
-	auto pos = idx < 0 ? N.end() : N.begin();
-	std::advance(pos, idx);
-	if(!allow_end && pos == N.end()) throw py::key_error("Index out of bounds");
-	return pos;
+	return std::next(N.begin(), positive_idx);
 }
 
 void erase_by_lid(node& N, const std::string& key) {
