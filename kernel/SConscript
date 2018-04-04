@@ -87,9 +87,6 @@ if base_env['py'] == '1' :
 # link with Boost libraries
 base_env.AppendUnique(LIBS = boost_get_libnames(kboost_libs, build_kind));
 
-if "debug" in build_kind :
-	base_env.AppendUnique(CPPDEFINES = ["BS_EXCEPTION_COLLECT_BACKTRACE"]);
-
 # actaully build target
 bs_kernel = base_env.SharedLibrary(
 	target = os.path.join(tar_exe_dir, lib_name),
