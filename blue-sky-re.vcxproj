@@ -77,6 +77,8 @@
     <ClInclude Include="kernel\include\bs\type_descriptor.h" />
     <ClInclude Include="kernel\include\bs\type_info.h" />
     <ClInclude Include="kernel\include\bs\type_macro.h" />
+    <ClInclude Include="kernel\src\backtrace_tools_unix.h" />
+    <ClInclude Include="kernel\src\backtrace_tools_win.h" />
     <ClInclude Include="kernel\src\kernel_impl.h" />
     <ClInclude Include="kernel\src\kernel_instance_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_logging_subsyst.h" />

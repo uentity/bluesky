@@ -11,6 +11,14 @@
 #include <bs/kernel.h>
 #include <sstream>
 
+#ifdef _DEBUG
+#ifdef _WIN32
+#include "backtrace_tools_win.h"
+#else
+#include "backtrace_tools_unix.h"
+#endif
+#endif
+
 namespace blue_sky { namespace kernel_tools {
 using namespace std;
 
@@ -36,12 +44,7 @@ std::string print_loaded_types() {
 	return outs.str();
 }
 
-#if defined(BS_EXCEPTION_COLLECT_BACKTRACE)
-#ifdef _WIN32
-#include "backtrace_tools_win.h"
-#else
-#include "backtrace_tools_unix.h"
-#endif
+#ifdef _DEBUG
 
 std::string get_backtrace(int backtrace_depth, int skip) {
 	static const size_t max_backtrace_len = 1024;
@@ -63,11 +66,10 @@ std::string get_backtrace(int backtrace_depth, int skip) {
 
 #else
 
-std::string get_backtrace(int backtrace_depth) {
+std::string get_backtrace(int backtrace_depth, int skip) {
 	return "";
 }
 
 #endif
 
 }} /* namespace blue_sky::kernel_tools */
-

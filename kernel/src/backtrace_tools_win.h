@@ -1,6 +1,6 @@
 /// @file
-/// @author Sergey Miryanov
-/// @date 16.06.2009
+/// @author Alexander Gagarin (uentity)
+/// @date 04.04.2018
 /// @brief 
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
@@ -12,78 +12,16 @@
 #include <bs/error.h>
 #include <windows.h>
 #include <dbghelp.h>
-#include <Psapi.h>
 #include <vector>
 #include <string>
 #include <spdlog/fmt/fmt.h>
 
 #pragma comment (lib, "dbghelp.lib")
-#pragma comment (lib, "psapi.lib")
 
 namespace {
 
 int sys_get_backtrace(void **backtrace_, int size_) {
-	STACKFRAME64 stack_frame = {0};
-	CONTEXT context = {0};
-	HANDLE thread = GetCurrentThread ();
-	HANDLE process = GetCurrentProcess ();
-	if (!thread) {
-		throw error("get_backtrace: Can't get thread handler");
-	}
-	if (!process) {
-		throw error("get_backtrace: Can't get process handler");
-	}
-
-	static bool sym_init = true;
-	if (sym_init) {
-		if (!SymInitialize (process, "d:\\blue-sky\\exe\\release\\plugins", TRUE)) {
-			throw bs_exception ("get_backtrace: Can't initialize symbol handler");
-		}
-		sym_init = false;
-	}
-
-	context.ContextFlags = CONTEXT_CONTROL;
-	__asm {
-label_:
-		mov [context.Ebp], ebp;
-		mov [context.Esp], esp;
-		mov eax, [label_];
-		mov [context.Eip], eax;
-	};
-
-	stack_frame.AddrPC.Offset     = context.Eip;
-	stack_frame.AddrPC.Mode       = AddrModeFlat;
-	stack_frame.AddrFrame.Offset  = context.Ebp;
-	stack_frame.AddrFrame.Mode    = AddrModeFlat;
-	stack_frame.AddrStack.Offset  = context.Esp;
-	stack_frame.AddrStack.Mode    = AddrModeFlat;
-
-	BOOL res = FALSE;
-	int i = 0;
-	for(; i < size_; ++i) {
-		res = StackWalk64(
-			IMAGE_FILE_MACHINE_I386,
-			process,
-			thread,
-			&stack_frame,
-			NULL,
-			NULL,
-			SymFunctionTableAccess64,
-			SymGetModuleBase64,
-			NULL
-		);
-
-		if(!res || stack_frame.AddrPC.Offset == 0)
-			break;
-
-		backtrace_[i] = (void *)stack_frame.AddrPC.Offset;
-	}
-
-	if (!res && !i) {
-		throw error("get_backtrace: Can't obtain call-stack info");
-	}
-
-	return i;
+	return CaptureStackBackTrace(0, size_, backtrace_, NULL);
 }
 
 char** sys_get_backtrace_names(void *const *backtrace_, int size_) {

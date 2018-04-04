@@ -228,6 +228,12 @@
     <ClInclude Include="kernel\include\bs\detail\tree_errors.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\src\backtrace_tools_unix.h">
+      <Filter>Файлы исходного кода</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\backtrace_tools_win.h">
+      <Filter>Файлы исходного кода</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
