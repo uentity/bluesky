@@ -36,6 +36,38 @@ std::string print_loaded_types() {
 	return outs.str();
 }
 
-	
+#if defined(BS_EXCEPTION_COLLECT_BACKTRACE)
+#ifdef _WIN32
+#include "backtrace_tools_win.h"
+#else
+#include "backtrace_tools_unix.h"
+#endif
+
+std::string get_backtrace(int backtrace_depth, int skip) {
+	static const size_t max_backtrace_len = 1024;
+	void *backtrace[max_backtrace_len];
+
+	int len = sys_get_backtrace(backtrace, backtrace_depth);
+	if(!len) return "\nNo call stack";
+
+	std::string callstack = "\nCall stack: ";
+	auto demangled_names = sys_demangled_backtrace_names(
+		backtrace, sys_get_backtrace_names(backtrace, len), len, skip
+	);
+	for(auto& name : demangled_names) {
+		callstack += "\n\t";
+		callstack += std::move(name);
+	}
+	return callstack;
+}
+
+#else
+
+std::string get_backtrace(int backtrace_depth) {
+	return "";
+}
+
+#endif
+
 }} /* namespace blue_sky::kernel_tools */
 

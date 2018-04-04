@@ -10,20 +10,10 @@
 #include <bs/error.h>
 #include <bs/misc.h>
 #include <bs/log.h>
+#include <bs/kernel_tools.h>
 
 #include <cstring>
 #include <iostream>
-
-#ifdef _WIN32
-#include "windows.h"
-#elif defined(UNIX)
-#include <errno.h>
-#include <string.h>
-#endif
-
-#ifdef BS_EXCEPTION_COLLECT_BACKTRACE
-#include <bs/kernel_tools.h>
-#endif
 
 using namespace std;
 
@@ -32,16 +22,6 @@ NAMESPACE_BEGIN(blue_sky)
  *  hidden details
  *-----------------------------------------------------------------------------*/
 namespace {
-
-#ifdef BS_EXCEPTION_COLLECT_BACKTRACE
-std::string collect_backtrace() {
-	return kernel_tools::get_backtrace(128);
-}
-#else
-std::string collect_backtrace() {
-	return "";
-}
-#endif
 
 // not throwing error message formatter
 inline std::string format_errmsg(const std::string ec_message, const std::string custom_message) {
@@ -104,7 +84,11 @@ const char* error::domain() const noexcept {
 }
 
 std::string error::to_string() const {
-	return fmt::format("[{}] [{}] {}", domain(), code.value(), what());
+	std::string s = fmt::format("[{}] [{}] {}", domain(), code.value(), what());
+#ifdef _DEBUG
+	if(!ok()) s += kernel_tools::get_backtrace(20, 4);
+#endif
+	return s;
 }
 
 void error::dump() const {
