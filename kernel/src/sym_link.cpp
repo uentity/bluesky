@@ -33,7 +33,7 @@ sp_link sym_link::clone(bool deep) const {
 sp_obj sym_link::data() const {
 	// cannot dereference dangling sym link
 	if(owner_.expired()) return nullptr;
-	const auto src_link = detail::deref_path<>(path_, *this);
+	const auto src_link = detail::deref_path(path_, *this);
 	return src_link ? src_link->data() : nullptr;
 }
 
@@ -68,7 +68,7 @@ void sym_link::set_info(inodeptr i) {
 }
 
 bool sym_link::is_alive() const {
-	return bool(detail::deref_path<>(path_, *this));
+	return bool(detail::deref_path(path_, *this));
 }
 
 /// return stored pointee path

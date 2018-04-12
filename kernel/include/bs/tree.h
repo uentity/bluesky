@@ -27,7 +27,7 @@ BS_API std::string convert_path(
 /// quick link search by given absolute or relative path (ID-based!)
 /// may be faster that full `node::deep_search()`
 /// also can lookup starting from any tree node given absolute path
-BS_API sp_link deref_path(const std::string& path, const sp_clink& start);
+BS_API sp_link deref_path(const std::string& path, const sp_clink& start, node::Key path_unit = node::Key::ID);
 
 /// walk the tree just like the Python's `os.walk` is implemented
 using step_process_fp = void (*)(const sp_link&, std::vector<sp_link>&, std::vector<sp_link>&);

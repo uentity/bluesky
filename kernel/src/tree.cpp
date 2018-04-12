@@ -87,9 +87,9 @@ inline std::string link2path_unit(const sp_clink& l, Key path_unit) {
 // public
 NAMESPACE_BEGIN(detail)
 
-sp_link walk_down_tree(const std::string& cur_lid, const sp_node& level) {
+sp_link walk_down_tree(const std::string& cur_lid, const sp_node& level, node::Key path_unit) {
 	if(cur_lid != "..") {
-		const auto next = level->find(cur_lid, Key::ID);
+		const auto next = level->find(cur_lid, path_unit);
 		if(next != level->end()) {
 			return *next;
 		}
@@ -162,9 +162,9 @@ std::string convert_path(
 	return res_path;
 }
 
-sp_link deref_path(const std::string& path, const sp_clink& start) {
+sp_link deref_path(const std::string& path, const sp_clink& start, node::Key path_unit) {
 	if(!start) return nullptr;
-	return detail::deref_path<>(path, *start);
+	return detail::deref_path(path, *start, detail::gen_walk_down_tree(path_unit));
 }
 
 void walk(const sp_link& root, step_process_fp step_f, bool topdown, bool follow_symlinks) {

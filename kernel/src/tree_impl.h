@@ -14,11 +14,23 @@
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree) NAMESPACE_BEGIN(detail)
 
-sp_link walk_down_tree(const std::string& cur_lid, const sp_node& level);
+sp_link walk_down_tree(
+	const std::string& cur_lid, const sp_node& level, node::Key path_unit = node::Key::ID
+);
 
-template<typename level_process_f = decltype(walk_down_tree)>
+NAMESPACE_BEGIN()
+// put into hidden namespace to prevent equal multiple instantiations
+auto gen_walk_down_tree(node::Key path_unit = node::Key::ID) {
+	return [path_unit](const std::string& cur_lid, const sp_node& level) {
+		return walk_down_tree(cur_lid, level, path_unit);
+	};
+}
+
+NAMESPACE_END()
+
+template< typename level_process_f = decltype(gen_walk_down_tree()) >
 sp_link deref_path(
-	const std::string& path, const link& l, const level_process_f& proc_f = walk_down_tree
+	const std::string& path, const link& l, level_process_f&& proc_f = gen_walk_down_tree()
 ) {
 	// split 
 	std::vector<std::string> path_parts;
