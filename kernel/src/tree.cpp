@@ -11,7 +11,6 @@
 #include "tree_impl.h"
 
 #include <set>
-#include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -25,8 +24,6 @@ template<Key K> using Key_type = typename node::Key_type<K>;
  *-----------------------------------------------------------------------------*/
 // hidden
 namespace {
-
-static boost::uuids::string_generator uuid_from_str;
 
 template<class Callback>
 void walk_impl(
@@ -75,6 +72,16 @@ void walk_impl(
 	}
 }
 
+inline std::string link2path_unit(const sp_clink& l, Key path_unit) {
+	switch(path_unit) {
+	default:
+	case Key::ID : return boost::uuids::to_string(l->id());
+	case Key::OID : return l->oid();
+	case Key::Name : return l->name();
+	case Key::Type : return l->type_id();
+	}
+}
+
 } // hidden ns
 
 // public
@@ -82,7 +89,7 @@ NAMESPACE_BEGIN(detail)
 
 sp_link walk_down_tree(const std::string& cur_lid, const sp_node& level) {
 	if(cur_lid != "..") {
-		const auto next = level->find(uuid_from_str(cur_lid));
+		const auto next = level->find(cur_lid, Key::ID);
 		if(next != level->end()) {
 			return *next;
 		}
@@ -95,10 +102,10 @@ NAMESPACE_END(detail)
 /*-----------------------------------------------------------------------------
  *  public API
  *-----------------------------------------------------------------------------*/
-std::string abspath(sp_clink l, bool human_readable) {
+std::string abspath(sp_clink l, Key path_unit) {
 	std::deque<std::string> res;
 	while(l) {
-		res.push_front(human_readable ? l->name() : boost::uuids::to_string(l->id()));
+		res.push_front(link2path_unit(l, path_unit));
 		if(const auto parent = l->owner()) {
 			l = parent->handle();
 		}
@@ -125,31 +132,19 @@ std::string abspath(sp_clink l, bool human_readable) {
 	//return boost::join(res, "/");
 }
 
-std::string convert_path(std::string src_path, const sp_clink& start, bool from_human_readable) {
+std::string convert_path(
+	std::string src_path, const sp_clink& start,
+	Key src_path_unit, Key dst_path_unit
+) {
 	std::string res_path;
 	// convert from ID-based path to human-readable
-	const auto id2name = [&res_path](std::string part, const sp_node& level) {
+	const auto converter = [&res_path, src_path_unit, dst_path_unit](std::string part, const sp_node& level) {
 		sp_link res;
 		if(part != "..") {
-			const auto next = level->find(part);
+			const auto next = level->find(part, src_path_unit);
 			if(next != level->end()) {
 				res = *next;
-				part = boost::uuids::to_string(res->id());
-			}
-		}
-		// append link ID to link's path
-		if(res_path.size()) res_path += '/';
-		res_path += std::move(part);
-		return res;
-	};
-	// convert from name-based to ID-based path
-	const auto name2id = [&res_path](std::string part, const sp_node& level) {
-		sp_link res;
-		if(part != "..") {
-			auto next = level->find(uuid_from_str(part));
-			if(next != level->end()) {
-				res = *next;
-				part = res->name();
+				part = link2path_unit(res, dst_path_unit);
 			}
 		}
 		// append link ID to link's path
@@ -160,9 +155,7 @@ std::string convert_path(std::string src_path, const sp_clink& start, bool from_
 
 	// do conversion
 	boost::trim(src_path);
-	from_human_readable ?
-		detail::deref_path(src_path, *start, name2id) :
-		detail::deref_path(src_path, *start, id2name);
+	detail::deref_path(src_path, *start, converter);
 	// if abs path given, return abs path
 	if(src_path[0] == '/')
 		res_path.insert(res_path.begin(), '/');

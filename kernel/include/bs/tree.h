@@ -16,10 +16,13 @@ NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
 /// returns absolute link's path consisting from link IDs separated by '/'
 /// if `human_readable` is set, replace IDs with link names
-BS_API std::string abspath(sp_clink l, bool human_readable = false);
+BS_API std::string abspath(sp_clink l, node::Key path_unit = node::Key::ID);
 
 /// convert path from ID-based to human readable (name-bases) or vice versa
-BS_API std::string convert_path(std::string src_path, const sp_clink& start, bool from_human_readable = false);
+BS_API std::string convert_path(
+	std::string src_path, const sp_clink& start,
+	node::Key src_path_unit = node::Key::ID, node::Key dst_path_unit = node::Key::Name
+);
 
 /// quick link search by given absolute or relative path (ID-based!)
 /// may be faster that full `node::deep_search()`

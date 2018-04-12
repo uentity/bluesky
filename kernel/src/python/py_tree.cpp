@@ -340,10 +340,10 @@ void py_bind_tree(py::module& m) {
 	;
 
 	// misc tree-related functions
-	m.def("abspath", &abspath, "lnk"_a, "human_readable"_a = false, "Get link's absolute path");
+	m.def("abspath", &abspath, "lnk"_a, "path_unit"_a = node::Key::ID, "Get link's absolute path");
 	m.def("convert_path", &convert_path,
-		"src_path"_a, "start"_a, "from_human_readable"_a = false,
-		"Convert path from ID-based to human readable (name-bases) or vice versa"
+		"src_path"_a, "start"_a, "src_path_unit"_a = node::Key::ID, "dst_path_unit"_a = node::Key::Name,
+		"Convert path string from one representation to another (for ex. link IDs -> link names)"
 	);
 	m.def("deref_path", &deref_path, "path"_a, "start"_a,
 		"Quick link search by given abs path (ID-based!)"
