@@ -155,6 +155,8 @@ public:
 	iterator<Key::AnyOrder> find(const std::string& link_name) const;
 	/// find link by given object ID (first found link is returned)
 	iterator<Key::AnyOrder> find_oid(const std::string& oid) const;
+	/// find link by given key with specified treatment
+	iterator<Key::AnyOrder> find(const std::string& key, Key key_meaning) const;
 
 	/// returns link pointer instead of iterator
 	template<Key K>
@@ -172,6 +174,8 @@ public:
 	sp_link deep_search(const id_type& id) const;
 	sp_link deep_search(const std::string& link_name) const;
 	sp_link deep_search_oid(const std::string& oid) const;
+	/// deep search by given key with specified treatment
+	sp_link deep_search(const std::string& key, Key key_meaning) const;
 
 	range<Key::Name> equal_range(const std::string& link_name) const;
 	range<Key::OID>  equal_range_oid(const std::string& oid) const;
@@ -215,6 +219,8 @@ public:
 	void erase(const std::string& link_name);
 	void erase_oid(const std::string& oid);
 	void erase_type(const std::string& type_id);
+	/// erase leaf adressed by string key with specified treatment
+	void erase(const std::string& key, Key key_meaning);
 
 	void erase(const range<Key::AnyOrder>& r);
 	void erase(const range<Key::ID>& r);

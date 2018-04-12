@@ -12,6 +12,8 @@
 #include <bs/kernel.h>
 #include <set>
 
+#include <boost/uuid/string_generator.hpp>
+
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
 
@@ -25,6 +27,12 @@ template<Key K> using insert_status = typename node::insert_status<K>;
 template<Key K> using range = typename node::range<K>;
 
 using Flags = link::Flags;
+
+NAMESPACE_BEGIN() // hidden namespace
+
+static boost::uuids::string_generator uuid_from_str;
+
+NAMESPACE_END()
 
 /*-----------------------------------------------------------------------------
  *  node_impl
@@ -338,6 +346,20 @@ iterator<Key::AnyOrder> node::find_oid(const std::string& oid) const {
 	return pimpl_->find<Key::OID>(oid);
 }
 
+iterator<Key::AnyOrder> node::find(const std::string& key, Key key_meaning) const {
+	switch(key_meaning) {
+	case Key::ID:
+		return pimpl_->find<Key::ID>(uuid_from_str(key));
+	case Key::OID:
+		return pimpl_->find<Key::OID>(key);
+	case Key::Type:
+		return pimpl_->find<Key::Type>(key);
+	default:
+	case Key::Name:
+		return pimpl_->find<Key::Name>(key);
+	}
+}
+
 // ---- index
 std::size_t node::index(const id_type& lid) const {
 	auto i = pimpl_->find<Key::ID, Key::AnyOrder>(lid);
@@ -427,6 +449,21 @@ void node::erase_type(const std::string& type_id) {
 	pimpl_->erase<Key::Type>(type_id);
 }
 
+void node::erase(const std::string& key, Key key_meaning) {
+	switch(key_meaning) {
+	case Key::ID:
+		pimpl_->erase<Key::ID>(uuid_from_str(key));
+	case Key::OID:
+		pimpl_->erase<Key::OID>(key);
+	case Key::Type:
+		pimpl_->erase<Key::Type>(key);
+	default:
+	case Key::Name:
+		return pimpl_->erase<Key::Name>(key);
+	}
+}
+
+// ---- erase range
 void node::erase(const range<Key::ID>& r) {
 	pimpl_->erase<>(r);
 }
@@ -455,6 +492,21 @@ sp_link node::deep_search(const std::string& link_name) const {
 sp_link node::deep_search_oid(const std::string& oid) const {
 	return pimpl_->deep_search<Key::OID>(oid);
 }
+
+sp_link node::deep_search(const std::string& key, Key key_meaning) const {
+	switch(key_meaning) {
+	case Key::ID:
+		return pimpl_->deep_search<Key::ID>(uuid_from_str(key));
+	case Key::OID:
+		return pimpl_->deep_search<Key::OID>(key);
+	case Key::Type:
+		return pimpl_->deep_search<Key::Type>(key);
+	default:
+	case Key::Name:
+		return pimpl_->deep_search<Key::Name>(key);
+	}
+}
+
 
 // ---- keys
 std::vector<Key_type<Key::ID>> node::keys(Key_const<Key::ID>) const {
