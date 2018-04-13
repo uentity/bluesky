@@ -169,11 +169,27 @@ public:
 	}
 
 	template<Key K>
-	bool rename(iterator<K> pos, std::string new_name) {
+	bool rename(iterator<K>&& pos, std::string&& new_name) {
 		if(pos == end<K>()) return false;
 		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
 			l->name_ = std::move(name);
 		});
+	}
+
+	template<Key K>
+	int rename(const Key_type<K>& key, std::string&& new_name, bool all = false) {
+		range<K> matched_items = equal_range<K>(key);
+		auto& storage = links_.get<Key_tag<K>>();
+		auto renamer = [name = std::move(new_name)](sp_link& l) {
+			l->name_ = std::move(name);
+		};
+		int cnt = 0;
+		for(auto pos = matched_items.begin(); pos != matched_items.end(); ++pos) {
+			storage.modify(pos, renamer);
+			++cnt;
+			if(!all) break;
+		}
+		return cnt;
 	}
 
 	template<Key K>
@@ -338,14 +354,6 @@ iterator<Key::AnyOrder> node::find(const id_type& id) const {
 	return pimpl_->find<Key::ID>(id);
 }
 
-iterator<Key::AnyOrder> node::find(const std::string& name) const {
-	return pimpl_->find<Key::Name>(name);
-}
-
-iterator<Key::AnyOrder> node::find_oid(const std::string& oid) const {
-	return pimpl_->find<Key::OID>(oid);
-}
-
 iterator<Key::AnyOrder> node::find(const std::string& key, Key key_meaning) const {
 	switch(key_meaning) {
 	case Key::ID:
@@ -370,6 +378,11 @@ std::size_t node::index(const iterator<Key::AnyOrder>& pos) const {
 	return std::distance(begin<Key::AnyOrder>(), pos);
 }
 
+std::size_t node::index(const std::string& key, Key key_meaning) const {
+	auto i = find(key, key_meaning);
+	return std::distance(begin<Key::AnyOrder>(), i);
+}
+
 // ---- equal_range
 range<Key::Name> node::equal_range(const std::string& link_name) const {
 	return pimpl_->equal_range<Key::Name>(link_name);
@@ -384,7 +397,7 @@ range<Key::Type> node::equal_type(const std::string& type_id) const {
 }
 
 // ---- insert
-insert_status<Key::ID> node::insert(const sp_link& l, InsertPolicy pol) {
+insert_status<Key::ID> node::insert(sp_link l, InsertPolicy pol) {
 	auto res = pimpl_->insert(l, pol);
 	if(res.second) {
 		// inserted link postprocessing
@@ -403,9 +416,9 @@ insert_status<Key::ID> node::insert(const sp_link& l, InsertPolicy pol) {
 	return res;
 }
 
-insert_status<Key::AnyOrder> node::insert(const sp_link& l, iterator<> pos, InsertPolicy pol) {
+insert_status<Key::AnyOrder> node::insert(sp_link l, iterator<> pos, InsertPolicy pol) {
 	// 1. insert an element using ID index
-	auto res = insert(l, pol);
+	auto res = insert(std::move(l), pol);
 	if(res.first != end<Key::ID>()) {
 		// 2. reposition an element in AnyOrder index
 		auto src = pimpl_->project<Key::ID>(res.first);
@@ -418,8 +431,8 @@ insert_status<Key::AnyOrder> node::insert(const sp_link& l, iterator<> pos, Inse
 	return {pimpl_->project<Key::ID>(res.first), res.second};
 }
 
-insert_status<Key::AnyOrder> node::insert(const sp_link& l, std::size_t idx, InsertPolicy pol) {
-	return insert(l, std::next(begin<Key::AnyOrder>(), std::min(idx, size())), pol);
+insert_status<Key::AnyOrder> node::insert(sp_link l, std::size_t idx, InsertPolicy pol) {
+	return insert(std::move(l), std::next(begin<Key::AnyOrder>(), std::min(idx, size())), pol);
 }
 
 insert_status<Key::ID> node::insert(std::string name, sp_obj obj, InsertPolicy pol) {
@@ -435,18 +448,6 @@ void node::erase(const std::size_t idx) {
 
 void node::erase(const id_type& lid) {
 	pimpl_->erase<>(lid);
-}
-
-void node::erase(const std::string& name) {
-	pimpl_->erase<Key::Name>(name);
-}
-
-void node::erase_oid(const std::string& oid) {
-	pimpl_->erase<Key::OID>(oid);
-}
-
-void node::erase_type(const std::string& type_id) {
-	pimpl_->erase<Key::Type>(type_id);
 }
 
 void node::erase(const std::string& key, Key key_meaning) {
@@ -485,14 +486,6 @@ sp_link node::deep_search(const id_type& id) const {
 	return pimpl_->deep_search<>(id);
 }
 
-sp_link node::deep_search(const std::string& link_name) const {
-	return pimpl_->deep_search<Key::Name>(link_name);
-}
-
-sp_link node::deep_search_oid(const std::string& oid) const {
-	return pimpl_->deep_search<Key::OID>(oid);
-}
-
 sp_link node::deep_search(const std::string& key, Key key_meaning) const {
 	switch(key_meaning) {
 	case Key::ID:
@@ -525,26 +518,47 @@ std::vector<Key_type<Key::Type>> node::keys(Key_const<Key::Type>) const {
 	return pimpl_->keys<Key::Type>();
 }
 
+// ---- rename
 bool node::rename(iterator<Key::AnyOrder> pos, std::string new_name) {
 	return pimpl_->rename<Key::AnyOrder>(std::move(pos), std::move(new_name));
 }
 
+bool node::rename(const id_type& lid, std::string new_name) {
+	return pimpl_->rename<Key::ID>(lid, std::move(new_name)) > 0;
+}
+
+int node::rename(const std::string& key, std::string new_name, Key key_meaning, bool all) {
+	switch(key_meaning) {
+	default:
+	case Key::ID:
+		return pimpl_->rename<Key::ID>(uuid_from_str(key), std::move(new_name), all);
+	case Key::OID:
+		return pimpl_->rename<Key::OID>(key, std::move(new_name), all);
+	case Key::Type:
+		return pimpl_->rename<Key::Type>(key, std::move(new_name), all);
+	case Key::Name:
+		return pimpl_->rename<Key::Name>(key, std::move(new_name), all);
+	}
+}
+
+// ---- project
 iterator<Key::AnyOrder> node::project(iterator<Key::ID> src) const {
-	return pimpl_->project<Key::ID>(src);
+	return pimpl_->project<Key::ID>(std::move(src));
 }
 
 iterator<Key::AnyOrder> node::project(iterator<Key::Name> src) const {
-	return pimpl_->project<Key::Name>(src);
+	return pimpl_->project<Key::Name>(std::move(src));
 }
 
 iterator<Key::AnyOrder> node::project(iterator<Key::OID> src) const {
-	return pimpl_->project<Key::OID>(src);
+	return pimpl_->project<Key::OID>(std::move(src));
 }
 
 iterator<Key::AnyOrder> node::project(iterator<Key::Type> src) const {
-	return pimpl_->project<Key::Type>(src);
+	return pimpl_->project<Key::Type>(std::move(src));
 }
 
+// ---- other
 bool node::accepts(const sp_link& what) const {
 	return pimpl_->accepts(what);
 }

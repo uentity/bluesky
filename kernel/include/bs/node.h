@@ -152,11 +152,8 @@ public:
 	// search link by given key
 	iterator<Key::AnyOrder> find(const std::size_t idx) const;
 	iterator<Key::AnyOrder> find(const id_type& id) const;
-	iterator<Key::AnyOrder> find(const std::string& link_name) const;
-	/// find link by given object ID (first found link is returned)
-	iterator<Key::AnyOrder> find_oid(const std::string& oid) const;
 	/// find link by given key with specified treatment
-	iterator<Key::AnyOrder> find(const std::string& key, Key key_meaning) const;
+	iterator<Key::AnyOrder> find(const std::string& key, Key key_meaning = Key::ID) const;
 
 	/// returns link pointer instead of iterator
 	template<Key K>
@@ -169,11 +166,10 @@ public:
 	/// get integer index of a link relative to beginning
 	std::size_t index(const id_type& lid) const;
 	std::size_t index(const iterator<Key::AnyOrder>& lid) const;
+	std::size_t index(const std::string& key, Key key_meaning) const;
 
 	/// search among all subtree elements
 	sp_link deep_search(const id_type& id) const;
-	sp_link deep_search(const std::string& link_name) const;
-	sp_link deep_search_oid(const std::string& oid) const;
 	/// deep search by given key with specified treatment
 	sp_link deep_search(const std::string& key, Key key_meaning) const;
 
@@ -190,11 +186,11 @@ public:
 		Merge = 8
 	};
 	/// leafs insertion
-	insert_status<Key::ID> insert(const sp_link& l, InsertPolicy pol = AllowDupNames);
+	insert_status<Key::ID> insert(sp_link l, InsertPolicy pol = AllowDupNames);
 	/// insert link just before given position
-	insert_status<Key::AnyOrder> insert(const sp_link& l, iterator<> pos, InsertPolicy pol = AllowDupNames);
+	insert_status<Key::AnyOrder> insert(sp_link l, iterator<> pos, InsertPolicy pol = AllowDupNames);
 	/// insert link at given index
-	insert_status<Key::AnyOrder> insert(const sp_link& l, std::size_t idx, InsertPolicy pol = AllowDupNames);
+	insert_status<Key::AnyOrder> insert(sp_link l, std::size_t idx, InsertPolicy pol = AllowDupNames);
 	/// auto-create and insert hard link that points to object
 	insert_status<Key::ID> insert(std::string name, sp_obj obj, InsertPolicy pol = AllowDupNames);
 	/// insert links from given container
@@ -216,9 +212,6 @@ public:
 	/// leafs removal
 	void erase(const std::size_t idx);
 	void erase(const id_type& link_id);
-	void erase(const std::string& link_name);
-	void erase_oid(const std::string& oid);
-	void erase_type(const std::string& type_id);
 	/// erase leaf adressed by string key with specified treatment
 	void erase(const std::string& key, Key key_meaning);
 
@@ -241,6 +234,11 @@ public:
 
 	/// rename given link
 	bool rename(iterator<Key::AnyOrder> pos, std::string new_name);
+	/// rename link with given ID
+	bool rename(const id_type& lid, std::string new_name);
+	/// rename link adresses by given key
+	/// if `all == true`, rename all links matced by key, otherwise first found link is renamed
+	int rename(const std::string& key, std::string new_name, Key key_meaning = Key::ID, bool all = false);
 
 	/// project any given iterator into custom order
 	iterator<Key::AnyOrder> project(iterator<Key::ID>) const;
