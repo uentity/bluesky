@@ -52,7 +52,8 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	using plugins_enum_t = std::map<
 		const plugin_descriptor*, lib_descriptor, pdp_comp_name,
 		boost::fast_pool_allocator<
-			std::pair< const plugin_descriptor*, lib_descriptor >,
+			typename std::map<const plugin_descriptor*, lib_descriptor>::value_type,
+			//std::pair< const plugin_descriptor*, lib_descriptor >,
 			boost::default_user_allocator_new_delete,
 			boost::details::pool::null_mutex
 		>
