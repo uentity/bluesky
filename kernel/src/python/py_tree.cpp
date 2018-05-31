@@ -99,7 +99,7 @@ auto find_by_idx(const node& N, const long idx, bool allow_end = false) {
 
 // ------- index
 template<Key K>
-auto index(const node& N, const std::string& key) {
+auto index(const node& N, const std::string& key) -> std::size_t {
 	return N.index(key, K);
 }
 auto index_link(const node& N, const sp_link& l) {
@@ -111,7 +111,7 @@ auto index_obj(const node& N, const sp_obj& obj) {
 
 // ------- deep search
 template<Key K>
-auto deep_search(const node& N, const std::string& key) {
+auto deep_search(const node& N, const std::string& key) -> sp_link {
 	return N.deep_search(key, K);
 }
 auto deep_search_obj(const node& N, const sp_obj& obj) {

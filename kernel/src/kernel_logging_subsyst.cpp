@@ -39,7 +39,7 @@ spdlog::sink_ptr create_file_sink(const char* desired_fname) {
 			auto res = std::make_shared< spdlog::sinks::rotating_file_sink_mt >(fname.str(), 1024*1024*5, 1);
 			if(res) return res;
 		}
-		catch(spdlog::spdlog_ex) {}
+		catch(const spdlog::spdlog_ex&) {}
 	}
 	// in fail casr just return null sink
 	return std::make_shared< spdlog::sinks::null_sink_st >();

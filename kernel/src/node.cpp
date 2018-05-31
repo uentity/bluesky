@@ -454,10 +454,13 @@ void node::erase(const std::string& key, Key key_meaning) {
 	switch(key_meaning) {
 	case Key::ID:
 		pimpl_->erase<Key::ID>(uuid_from_str(key));
+		break;
 	case Key::OID:
 		pimpl_->erase<Key::OID>(key);
+		break;
 	case Key::Type:
 		pimpl_->erase<Key::Type>(key);
+		break;
 	default:
 	case Key::Name:
 		return pimpl_->erase<Key::Name>(key);
