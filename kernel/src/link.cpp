@@ -18,7 +18,7 @@ NAMESPACE_BEGIN(tree)
 namespace {
 
 // global random UUID generator for BS links
-static auto gen = boost::uuids::random_generator();
+static boost::uuids::random_generator gen;
 
 } // eof hidden namespace
 
