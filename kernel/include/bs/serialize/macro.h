@@ -224,15 +224,15 @@ BSS_FCN_BEGIN_EXT(fcn, T, ())
  *  generate explicit specializations of `blue_sky::atomizer::[serialization function]`
  *  for commonly used archives and mark 'em as exported
  *-----------------------------------------------------------------------------*/
-#define BSS_FCN_EXPORT_EXT(fcn, T, tpl_args_prefix)                                                       \
-template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
-BSS_FCN_##fcn(::cereal::JSONOutputArchive, T, tpl_args_prefix);                                           \
-template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
-BSS_FCN_##fcn(::cereal::JSONInputArchive, T, tpl_args_prefix);                                            \
-template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
-BSS_FCN_##fcn(::cereal::BinaryOutputArchive, T, tpl_args_prefix);                                         \
-template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
-BSS_FCN_##fcn(::cereal::BinaryInputArchive, T, tpl_args_prefix);                                          \
+#define BSS_FCN_EXPORT_EXT(fcn, T, tpl_args_prefix)                                                         \
+template<> BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
+BSS_FCN_##fcn(::cereal::JSONInputArchive, T, tpl_args_prefix);                                              \
+template<> BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
+BSS_FCN_##fcn(::cereal::JSONOutputArchive, T, tpl_args_prefix);                                             \
+template<> BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
+BSS_FCN_##fcn(::cereal::BinaryInputArchive, T, tpl_args_prefix);                                            \
+template<> BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
+BSS_FCN_##fcn(::cereal::BinaryOutputArchive, T, tpl_args_prefix);                                           \
 
 // simpler version when only template args number is specified or type isn't a template
 #define BSS_FCN_EXPORT_T(fcn, T, tpl_args_num) \
