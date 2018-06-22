@@ -148,6 +148,19 @@ NAMESPACE_END() // hidden ns
  *  tree Python bindings
  *-----------------------------------------------------------------------------*/
 void py_bind_tree(py::module& m) {
+	// inode binding
+	py::class_<inode>(m, "inode")
+		.def_readonly("owner", &inode::owner)
+		.def_readonly("group", &inode::group)
+		.def_property_readonly("suid", [](const inode& i) { return i.suid; })
+		.def_property_readonly("sgid", [](const inode& i) { return i.sgid; })
+		.def_property_readonly("sticky", [](const inode& i) { return i.sticky; })
+		.def_property_readonly("u", [](const inode& i) { return i.u; })
+		.def_property_readonly("g", [](const inode& i) { return i.g; })
+		.def_property_readonly("o", [](const inode& i) { return i.o; })
+	;
+
+	// define link's binding class
 	py::class_<link, py_link<>, std::shared_ptr<link>> link_pyface(m, "link");
 
 	// export Flags enum
@@ -172,11 +185,10 @@ void py_bind_tree(py::module& m) {
 		})
 		.def_property_readonly("name", &link::name)
 		.def_property_readonly("owner", &link::owner)
-		.def("info", &link::info)
-		// here we have to make a copy, no way to pass unique_ptr as param
-		.def("set_info", [](py_link<>& l, const inode& i) {
-			l.set_info(std::make_unique<inode>(i));
-		}, "info"_a)
+		.def_property("info",
+			py::overload_cast<>(&link::info, py::const_), py::overload_cast<>(&link::info, py::const_),
+			py::return_value_policy::reference_internal, "Get/modify bounded link's information"
+		)
 		.def_property("flags", &link::flags, &link::set_flags)
 	;
 

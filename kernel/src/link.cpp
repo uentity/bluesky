@@ -69,6 +69,13 @@ bool link::rename(std::string new_name) {
 	return true;
 }
 
+const inode& link::info() const {
+	return inode_;
+}
+inode& link::info() {
+	return inode_;
+}
+
 NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 

@@ -58,15 +58,6 @@ sp_node sym_link::data_node() const {
 	return obj && obj->is_node() ? std::static_pointer_cast<tree::node>(obj) : nullptr;
 }
 
-inode sym_link::info() const {
-	const auto obj = data();
-	return obj ? obj->info() : inode();
-}
-void sym_link::set_info(inodeptr i) {
-	auto obj = data();
-	if(obj) obj->set_info(std::move(i));
-}
-
 bool sym_link::is_alive() const {
 	return bool(detail::deref_path(path_, *this));
 }

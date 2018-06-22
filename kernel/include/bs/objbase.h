@@ -15,31 +15,6 @@
 
 NAMESPACE_BEGIN(blue_sky)
 
-/// inode that stores access rights, timestampts, etc
-struct BS_API inode {
-	// link's owner
-	std::string owner;
-	std::string group;
-
-	// flags
-	bool : 1;
-	bool suid : 1;
-	bool sgid : 1;
-	bool sticky : 1;
-
-	// access rights
-	// user (owner)
-	bool : 1;
-	unsigned int u : 3;
-	// group
-	bool : 1;
-	unsigned int g : 3;
-	// others
-	bool : 1;
-	unsigned int o : 3;
-};
-using inodeptr = std::unique_ptr<inode>;
-
 /*!
 	\class objbase
 	\ingroup object_base
@@ -52,7 +27,7 @@ class BS_API objbase : public std::enable_shared_from_this< objbase > {
 public:
 	/// default ctor that accepts custom ID string
 	/// if ID is empty it will be auto-generated
-	objbase(std::string custom_oid = "", inodeptr i = nullptr);
+	objbase(std::string custom_oid = "");
 	/// default copy ctor
 	objbase(const objbase&);
 	/// default move ctor
@@ -98,21 +73,15 @@ public:
 	/// NOTE: no RTTI, no virtual functions, just checks flag
 	bool is_node() const;
 
-	/// get/set inode
-	inode info() const;
-	void set_info(inodeptr i);
-
 protected:
 	/// string ID storage
 	std::string id_;
-	/// contains object tree-related metadata
-	std::unique_ptr<inode> inode_;
 
 private:
 	/// flag indicating that this object is actually a tree::node
 	bool is_node_;
 	/// dedicated ctor that sets `is_node` flag
-	objbase(bool is_node, std::string custom_oid = "", inodeptr i = nullptr);
+	objbase(bool is_node, std::string custom_oid = "");
 };
 
 // alias
