@@ -45,13 +45,6 @@ public:
 		PYBIND11_OVERLOAD_PURE(tree::sp_node, Link, data_node, );
 	}
 
-	inode info() const override {
-		PYBIND11_OVERLOAD_PURE(inode, Link, info, );
-	}
-	void set_info(inodeptr i) override {
-		PYBIND11_OVERLOAD_PURE(void, Link, set_info, std::move(i));
-	}
-
 	typename Link::Flags flags() const override {
 		PYBIND11_OVERLOAD(typename Link::Flags, Link, flags, );
 	}

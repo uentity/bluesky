@@ -25,13 +25,12 @@ static boost::uuids::random_generator gen;
 
 } // eof hidden namespace
 
-objbase::objbase(std::string custom_oid, inodeptr i)
-	: objbase(false, custom_oid, std::move(i))
+objbase::objbase(std::string custom_oid)
+	: objbase(false, custom_oid)
 {}
 
-objbase::objbase(bool is_node, std::string custom_oid, inodeptr i)
+objbase::objbase(bool is_node, std::string custom_oid)
 	: id_(custom_oid.size() ? std::move(custom_oid) : boost::uuids::to_string(gen())),
-	inode_(std::move(i)),
 	is_node_(is_node)
 {}
 
@@ -73,15 +72,6 @@ std::string objbase::id() const {
 
 bool objbase::is_node() const {
 	return is_node_;
-}
-
-inode objbase::info() const {
-	return inode_ ? *inode_ : inode();
-}
-
-void objbase::set_info(inodeptr i) {
-	// TODO: add permissions processing
-	inode_ = std::move(i);
 }
 
 NAMESPACE_END(blue_sky)

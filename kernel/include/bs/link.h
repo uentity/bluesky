@@ -11,10 +11,41 @@
 #include "common.h"
 #include "objbase.h"
 #include "detail/enumops.h"
+#include <chrono>
 #include <boost/uuid/uuid.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
+
+// time point type for all timestaps
+using time_point = std::chrono::system_clock::time_point;
+
+/// inode that stores access rights, timestampts, etc
+struct BS_API inode {
+	// flags
+	bool : 1;
+	bool suid : 1;
+	bool sgid : 1;
+	bool sticky : 1;
+
+	// access rights
+	// user (owner)
+	bool : 1;
+	unsigned int u : 3;
+	// group
+	bool : 1;
+	unsigned int g : 3;
+	// others
+	bool : 1;
+	unsigned int o : 3;
+
+	// modification time
+	time_point mod_time;
+	// link's owner
+	std::string owner;
+	std::string group;
+};
+using inodeptr = std::unique_ptr<inode>;
 
 /// base class of all links
 class BS_API link  : public std::enable_shared_from_this<link> {
@@ -50,10 +81,6 @@ public:
 	/// derived class can return cached node info
 	virtual sp_node data_node() const = 0;
 
-	/// get/set object's inode
-	virtual inode info() const = 0;
-	virtual void set_info(inodeptr i) = 0;
-
 	/// flags reflect link properties and state
 	enum Flags {
 		Plain = 0,
@@ -62,6 +89,10 @@ public:
 	};
 	virtual Flags flags() const;
 	virtual void set_flags(Flags new_flags);
+
+	/// get/set object's inode
+	const inode& info() const;
+	inode& info();
 
 	/// access link's unique ID
 	const id_type& id() const {
@@ -95,6 +126,9 @@ protected:
 	std::string name_;
 	id_type id_;
 	Flags flags_;
+	/// contains link's metadata
+	inode inode_;
+	/// owner node
 	std::weak_ptr<node> owner_;
 
 	friend class node;
@@ -132,9 +166,6 @@ public:
 
 	sp_node data_node() const override;
 
-	inode info() const override;
-	void set_info(inodeptr i) override;
-
 private:
 	sp_obj data_;
 };
@@ -159,9 +190,6 @@ public:
 	std::string obj_type_id() const override;
 
 	sp_node data_node() const override;
-
-	inode info() const override;
-	void set_info(inodeptr i) override;
 
 private:
 	std::weak_ptr<objbase> data_;
@@ -189,9 +217,6 @@ public:
 	std::string obj_type_id() const override;
 
 	sp_node data_node() const override;
-
-	inode info() const override;
-	void set_info(inodeptr i) override;
 
 	/// additional sym link API
 	/// check is pointed link is alive
