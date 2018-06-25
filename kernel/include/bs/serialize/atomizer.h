@@ -10,7 +10,6 @@
 #pragma once
 
 #include "../setup_plugin_api.h"
-#include "../fwd.h"
 #include "macro.h"
 #include <type_traits>
 
