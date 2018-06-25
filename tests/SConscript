@@ -17,6 +17,7 @@ test_units = files(["."], excludes=["test_pymod.cpp", "test_nparray.cpp", "test_
 
 # setup default build environment
 tests_env = custom_env.Clone();
+bs_plugin_undefine(tests_env);
 
 # link with libraries
 tests_env.AppendUnique(LIBS = ['blue_sky'] + boost_get_libnames(utest_boost_lib));

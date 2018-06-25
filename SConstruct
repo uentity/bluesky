@@ -124,6 +124,10 @@ build_dir = '#build';
 exe_dir = '#exe';
 Export('build_dir', 'exe_dir', 'plugin_dir');
 
+# import some useful tools
+SConscript('scons_tools');
+Import('*');
+
 def process_sconscripts(src_env, build_kind) :
 	# inform everyone what are we building now
 	Export('build_kind');
@@ -138,6 +142,8 @@ def process_sconscripts(src_env, build_kind) :
 	platform = src_env['platform'];
 	if len(platform) > 0 :
 		SConscript('scons_platform.' + platform);
+	# append BS plugin defines by default
+	bs_plugin_define(src_env);
 	custom_proc_call();
 	custom_vars.Update(src_env);
 	Import('*');
@@ -167,9 +173,6 @@ def process_sconscripts(src_env, build_kind) :
 
 	# Update template env with possibly cahnged build variables
 	custom_vars.Update(src_env);
-
-# import some useful tools
-SConscript('scons_tools');
 
 # 6. Initialization stage is for correcting invariants, such as ss_list, etc
 build_kind = 'init';

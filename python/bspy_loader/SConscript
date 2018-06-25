@@ -24,6 +24,8 @@ base_env.AppendUnique(
 );
 # remove any lib prefix
 base_env['SHLIBPREFIX'] = '';
+# remove plugin defines
+bs_plugin_undefine(base_env);
 
 # actually build target
 bspy_loader = base_env.SharedLibrary(
