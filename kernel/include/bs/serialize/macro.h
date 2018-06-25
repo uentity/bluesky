@@ -45,8 +45,8 @@ BOOST_PP_CAT(param, i)
 #define _ARG24(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, ...) _23
 #define HAS_COMMA(...) _ARG24(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
 // _ISEMPTY(...) expands to HAS_COMMA(_IS_EMPTY_CASE_xxxx)
-#define PASTE5(_0, _1, _2, _3, _4) _0 ## _1 ## _2 ## _3 ## _4
 #define _ISEMPTY(_0, _1, _2, _3) HAS_COMMA(PASTE5(_IS_EMPTY_CASE_, _0, _1, _2, _3))
+#define PASTE5(_0, _1, _2, _3, _4) _0 ## _1 ## _2 ## _3 ## _4
 // define only one _IS_EMPTY_CASE to contain a comma, so _ISEMPTY(...) evaluates to 1 only for it
 #define _IS_EMPTY_CASE_0001 ,
 
@@ -159,6 +159,31 @@ CEREAL_BIND_TO_ARCHIVES(__VA_ARGS__)
 ) -> void
 
 /*-----------------------------------------------------------------------------
+ *  detect what kind of serialization function is passed as parameter
+ *-----------------------------------------------------------------------------*/
+// detect that passed function is `load_minimal`
+#define IS_FCN_load_minimal(fcn) HAS_COMMA(BOOST_PP_CAT(_IS_FCN0_, fcn))
+#define _IS_FCN0_load_minimal ,
+// detect that passed function is `load_and_construct`
+#define IS_FCN_load_and_construct(fcn) HAS_COMMA(BOOST_PP_CAT(_IS_FCN1_, fcn))
+#define _IS_FCN1_load_and_construct ,
+
+// detect that passed function is in 'saving' category
+// this fill expand to NOT(HAS_COMMA(_IS_FCN_loading_xxx))
+#define IS_FCN_saving(fcn) BOOST_PP_NOT( HAS_COMMA(BOOST_PP_CAT(_IS_FCNloading_, fcn)) )
+// define cases of strict `loading` category (to be excluded)
+#define _IS_FCNloading_load ,
+#define _IS_FCNloading_load_minimal ,
+#define _IS_FCNloading_load_and_construct ,
+
+// detect that passed function is in 'saving' category
+// this fill expand to NOT(HAS_COMMA(_IS_FCN_loading_xxx))
+#define IS_FCN_loading(fcn) BOOST_PP_NOT( HAS_COMMA(BOOST_PP_CAT(_IS_FCNsaving_, fcn)) )
+// define cases of strict `saving` category (to be excluded)
+#define _IS_FCNsaving_save ,
+#define _IS_FCNsaving_save_minimal ,
+
+/*-----------------------------------------------------------------------------
  *  declare `blue_sky::atomizer::[serialization function]` (serialize, save/load, ...)
  *-----------------------------------------------------------------------------*/
 // generate overload of cereal::LoadAndConstruct struct
@@ -172,13 +197,6 @@ namespace cereal {                                                              
         ) -> void { ::blue_sky::atomizer::load_and_construct(ar, c, version); }                                 \
     };                                                                                                          \
 }
-
-// detect that passed function is `load_minimal`
-#define IS_FCN_load_minimal(fcn) HAS_COMMA(BOOST_PP_CAT(_IS1_FCN_, fcn))
-#define _IS1_FCN_load_minimal ,
-// detect that passed function is `load_and_construct`
-#define IS_FCN_load_and_construct(fcn) HAS_COMMA(BOOST_PP_CAT(_IS2_FCN_, fcn))
-#define _IS2_FCN_load_and_construct ,
 
 // extended version of main DECL macro
 // tpl_args_prefix - tuple that specifies template prefixes, can be empty ()
@@ -224,15 +242,24 @@ BSS_FCN_BEGIN_EXT(fcn, T, ())
  *  generate explicit specializations of `blue_sky::atomizer::[serialization function]`
  *  for commonly used archives and mark 'em as exported
  *-----------------------------------------------------------------------------*/
-#define BSS_FCN_EXPORT_EXT(fcn, T, tpl_args_prefix)                                                       \
+// generate specializations for saving archives
+#define _BSS_FCN_EXPORT_save(fcn, T, tpl_args_prefix) \
 template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
 BSS_FCN_##fcn(::cereal::JSONOutputArchive, T, tpl_args_prefix);                                           \
 template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
+BSS_FCN_##fcn(::cereal::BinaryOutputArchive, T, tpl_args_prefix);
+
+// generate specializations for loading archives
+#define _BSS_FCN_EXPORT_load(fcn, T, tpl_args_prefix) \
+template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
 BSS_FCN_##fcn(::cereal::JSONInputArchive, T, tpl_args_prefix);                                            \
 template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
-BSS_FCN_##fcn(::cereal::BinaryOutputArchive, T, tpl_args_prefix);                                         \
-template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_ENUM_TPL(T, BS_TUPLE_SIZE(tpl_args_prefix)) >:: \
-BSS_FCN_##fcn(::cereal::BinaryInputArchive, T, tpl_args_prefix);                                          \
+BSS_FCN_##fcn(::cereal::BinaryInputArchive, T, tpl_args_prefix);
+
+// extended version of main macro
+#define BSS_FCN_EXPORT_EXT(fcn, T, tpl_args_prefix) \
+BOOST_PP_EXPR_IIF(IS_FCN_saving(fcn), _BSS_FCN_EXPORT_save(fcn, T, tpl_args_prefix)) \
+BOOST_PP_EXPR_IIF(IS_FCN_loading(fcn), _BSS_FCN_EXPORT_load(fcn, T, tpl_args_prefix))
 
 // simpler version when only template args number is specified or type isn't a template
 #define BSS_FCN_EXPORT_T(fcn, T, tpl_args_num) \

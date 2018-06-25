@@ -31,7 +31,8 @@ namespace blue_sky {
  *  make this class a friend to be able to access private variables
  *  from non-intrusive serialization code
  *-----------------------------------------------------------------------------*/
-struct BS_API_PLUGIN atomizer {
+class BS_API_PLUGIN atomizer {
+public:
 	template<typename T>
 	struct save {};
 
