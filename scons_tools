@@ -50,10 +50,20 @@ class files :
 			[self.root], [Glob(os.path.join(self.root, ex), strings = True)[0] for ex in excludes]
 		)
 
-def bs_common_defines(custom_env) :
+def bs_plugin_define(custom_env) :
 	custom_env.AppendUnique(CPPDEFINES = ["BS_EXPORTING_PLUGIN"]);
 	if custom_env['py'] == '1' :
 		custom_env.AppendUnique(CPPDEFINES = ["BSPY_EXPORTING_PLUGIN"]);
+
+def bs_plugin_undefine(custom_env) :
+	D = custom_env.subst('$CPPDEFINES').split(' ');
+	try:
+		D.remove("BS_EXPORTING_PLUGIN")
+	except: pass
+	try:
+		D.remove("BSPY_EXPORTING_PLUGIN")
+	except: pass
+	custom_env.Replace(CPPDEFINES = D)
 
 def print_config(msg, two_dee_iterable):
 	# this function is handy and can be used for other configuration-printing tasks
@@ -83,7 +93,8 @@ Export ("list_prefix")
 Export ("list_suffix")
 Export ("add_suffix")
 Export ("files")
-Export ("bs_common_defines")
+Export ("bs_plugin_define")
+Export ("bs_plugin_undefine")
 Export ("print_config")
 Export ("config_h_build")
 
