@@ -215,17 +215,22 @@ namespace cereal {                                                              
     };                                                                                \
 }
 
+// following helper macro introduced to reuse code for both declaration and inline definition of
+// `blue_sky::atomizer::[serialization function]`
+#define BSS_FCN_HEADER_(fcn, T, tpl_args_prefix)                                             \
+BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF( IS_FCN_load_and_construct(fcn),                            \
+    (BSS_CEREAL_OVERLOAD_load_and_construct(T, tpl_args_prefix)), () ))                      \
+template< BS_UNFOLD_TPL_PREFIX(tpl_args_prefix) >                                            \
+struct blue_sky::atomizer::fcn< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) > {         \
+    BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF(IS_FCN_load_minimal(fcn),                               \
+        (template<typename Archive, typename V>),                                            \
+        (template<typename Archive>)                                                         \
+    )) static auto BSS_FCN_##fcn( Archive, T, (BS_ENUM_TPL(BS_TUPLE_SIZE(tpl_args_prefix))) )
+
 // extended version of main DECL macro
 // tpl_args_prefix - tuple that specifies template prefixes, can be empty ()
-#define BSS_FCN_DECL_EXT(fcn, T, tpl_args_prefix)                                                \
-BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF( IS_FCN_load_and_construct(fcn),                                \
-    (BSS_CEREAL_OVERLOAD_load_and_construct(T, tpl_args_prefix)), () ))                          \
-template< BS_UNFOLD_TPL_PREFIX(tpl_args_prefix) >                                                \
-struct blue_sky::atomizer::fcn< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) > {             \
-    BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF(IS_FCN_load_minimal(fcn),                                   \
-        (template<typename Archive, typename V>),                                                \
-        (template<typename Archive>)                                                             \
-    )) static auto BSS_FCN_##fcn(Archive, T, (BS_ENUM_TPL(BS_TUPLE_SIZE(tpl_args_prefix))) ); };
+#define BSS_FCN_DECL_EXT(fcn, T, tpl_args_prefix) \
+BSS_FCN_HEADER_(fcn, T, tpl_args_prefix); };
 
 // simpler version when only template args number is specified or type isn't a template
 #define BSS_FCN_DECL_T(fcn, T, tpl_args_num) \
@@ -235,7 +240,7 @@ BSS_FCN_DECL_EXT(fcn, T, (BOOST_PP_ENUM(tpl_args_num, BS_ECHO_, typename)))
 BSS_FCN_DECL_EXT(fcn, T, ())
 
 /*-----------------------------------------------------------------------------
- *  define begin/end of BS serialization structs
+ *  begin/end of BS serialization structs that was previousely declared with `BSS_FCN_DECL*`
  *-----------------------------------------------------------------------------*/
 // [NOTE] automatically adds `type` alias equal to fully qualified `T`
 #define BSS_FCN_BEGIN_EXT(fcn, T, tpl_args_prefix)                                             \
@@ -257,6 +262,24 @@ BSS_FCN_BEGIN_EXT(fcn, T, ())
 
 #define BSS_FCN_END \
 (void)ar; (void)t; (void)version; }
+
+/*-----------------------------------------------------------------------------
+ *  begin/end of BS serialization structs declared and defined inplace (for cpp-hidden serialization)
+ *-----------------------------------------------------------------------------*/
+// extended version for complex templates
+#define BSS_FCN_INL_BEGIN_EXT(fcn, T, tpl_args_prefix)          \
+BSS_FCN_HEADER_(fcn, T, tpl_args_prefix) {                         \
+    using type = BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix));
+
+// simpler versions when only template args number is specified
+#define BSS_FCN_INL_BEGIN_T(fcn, T, tpl_args_num) \
+BSS_FCN_INL_BEGIN_EXT(fcn, T, (BOOST_PP_ENUM(tpl_args_num, BS_ECHO_, typename)))
+// ... and for non-template types
+#define BSS_FCN_INL_BEGIN(fcn, T) \
+BSS_FCN_INL_BEGIN_EXT(fcn, T, ())
+// special END macro should also close a struct
+#define BSS_FCN_INL_END \
+BSS_FCN_END };
 
 /*-----------------------------------------------------------------------------
  *  generate explicit specializations of `blue_sky::atomizer::[serialization function]`
