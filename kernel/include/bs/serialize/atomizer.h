@@ -14,11 +14,8 @@
 #include <type_traits>
 
 #include <cereal/cereal.hpp>
+// polymorphic types & strings support
 #include <cereal/types/polymorphic.hpp>
-#include <cereal/access.hpp>
-// STL support
-#include <cereal/types/map.hpp>
-#include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
 // Archives
 #include <cereal/archives/binary.hpp>
