@@ -217,14 +217,14 @@ namespace cereal {                                                              
 
 // following helper macro introduced to reuse code for both declaration and inline definition of
 // `blue_sky::atomizer::[serialization function]`
-#define BSS_FCN_HEADER_(fcn, T, tpl_args_prefix)                                             \
-BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF( IS_FCN_load_and_construct(fcn),                            \
-    (BSS_CEREAL_OVERLOAD_load_and_construct(T, tpl_args_prefix)), () ))                      \
-template< BS_UNFOLD_TPL_PREFIX(tpl_args_prefix) >                                            \
-struct blue_sky::atomizer::fcn< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) > {         \
-    BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF(IS_FCN_load_minimal(fcn),                               \
-        (template<typename Archive, typename V>),                                            \
-        (template<typename Archive>)                                                         \
+#define BSS_FCN_HEADER_(fcn, T, tpl_args_prefix)                                                   \
+BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF( IS_FCN_load_and_construct(fcn),                                  \
+    (BSS_CEREAL_OVERLOAD_load_and_construct(T, tpl_args_prefix)), () ))                            \
+template< BS_UNFOLD_TPL_PREFIX(tpl_args_prefix) >                                                  \
+struct BS_API_PLUGIN blue_sky::atomizer::fcn< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) > { \
+    BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF(IS_FCN_load_minimal(fcn),                                     \
+        (template<typename Archive, typename V>),                                                  \
+        (template<typename Archive>)                                                               \
     )) static auto BSS_FCN_##fcn( Archive, T, (BS_ENUM_TPL(BS_TUPLE_SIZE(tpl_args_prefix))) )
 
 // extended version of main DECL macro
@@ -267,7 +267,7 @@ BSS_FCN_BEGIN_EXT(fcn, T, ())
  *  begin/end of BS serialization structs declared and defined inplace (for cpp-hidden serialization)
  *-----------------------------------------------------------------------------*/
 // extended version for complex templates
-#define BSS_FCN_INL_BEGIN_EXT(fcn, T, tpl_args_prefix)          \
+#define BSS_FCN_INL_BEGIN_EXT(fcn, T, tpl_args_prefix)             \
 BSS_FCN_HEADER_(fcn, T, tpl_args_prefix) {                         \
     using type = BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix));
 
