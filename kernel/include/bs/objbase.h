@@ -23,6 +23,7 @@ NAMESPACE_BEGIN(blue_sky)
 class BS_API objbase : public std::enable_shared_from_this< objbase > {
 	friend class kernel;
 	friend class tree::node;
+	friend class atomizer;
 
 public:
 	/// default ctor that accepts custom ID string
