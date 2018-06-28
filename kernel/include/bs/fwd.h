@@ -21,6 +21,9 @@ class nil;
 class type_descriptor;
 struct plugin_descriptor;
 
+// serialization support
+class atomizer;
+
 // objbase & command
 class objbase;
 typedef std::shared_ptr< objbase > sp_obj;
