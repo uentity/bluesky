@@ -28,7 +28,7 @@ bs_tests = tests_env.Program(
 );
 
 # library for testing Python module
-py_env = custom_env.Clone();
+py_env = tests_env.Clone();
 py_env['SHLIBPREFIX'] = '';
 test_pymod = py_env.SharedLibrary(
 	target = osp.join(tar_exe_dir, 'test_pymod'),
