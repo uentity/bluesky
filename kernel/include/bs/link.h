@@ -49,6 +49,7 @@ using inodeptr = std::unique_ptr<inode>;
 
 /// base class of all links
 class BS_API link  : public std::enable_shared_from_this<link> {
+	friend class blue_sky::atomizer;
 public:
 	// give node access to all link's memebers
 	friend class node;
@@ -148,6 +149,7 @@ using sp_clink = std::shared_ptr<const link>;
 /// hard link stores direct pointer to object
 /// there can exist many hard links to single object
 class BS_API hard_link : public link {
+	friend class blue_sky::atomizer;
 public:
 
 	/// ctor -- additionaly accepts a pointer to object
@@ -173,6 +175,7 @@ private:
 /// weak link is same as hard link, but stores weak link to data
 /// intended to be used to add class memebers self tree structure
 class BS_API weak_link : public link {
+	friend class blue_sky::atomizer;
 public:
 
 	/// ctor -- additionaly accepts a pointer to object
@@ -198,6 +201,7 @@ private:
 /// symbolic link is actually a link to another link, which is specified as absolute or relative
 /// string path
 class BS_API sym_link : public link {
+	friend class blue_sky::atomizer;
 public:
 
 	/// ctor -- pointee is specified by string path
