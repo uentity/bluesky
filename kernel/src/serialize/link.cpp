@@ -113,5 +113,5 @@ BSS_FCN_EXPORT(serialize, tree::sym_link)
 
 NAMESPACE_END(blue_sky)
 
-CEREAL_REGISTER_DYNAMIC_INIT(link)
+BSS_REGISTER_DYNAMIC_INIT(link)
 

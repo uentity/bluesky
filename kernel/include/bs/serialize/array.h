@@ -19,5 +19,5 @@
 // bs_array
 BSS_FCN_DECL_EXT(serialize, blue_sky::bs_array, (class, template< class > class))
 
-CEREAL_FORCE_DYNAMIC_INIT(bs_array)
+BSS_FORCE_DYNAMIC_INIT(bs_array)
 

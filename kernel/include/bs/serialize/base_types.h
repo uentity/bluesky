@@ -22,5 +22,5 @@ BSS_FCN_DECL(serialize, blue_sky::objbase)
 
 NAMESPACE_END(blue_sky)
 
-CEREAL_FORCE_DYNAMIC_INIT(base_types)
+BSS_FORCE_DYNAMIC_INIT(base_types)
 

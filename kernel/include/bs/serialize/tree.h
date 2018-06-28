@@ -28,5 +28,5 @@ BSS_FCN_DECL(serialize, blue_sky::tree::weak_link)
 // sym link
 BSS_FCN_DECL(serialize, blue_sky::tree::sym_link)
 
-CEREAL_FORCE_DYNAMIC_INIT(link)
+BSS_FORCE_DYNAMIC_INIT(link)
 

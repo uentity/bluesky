@@ -52,5 +52,5 @@ BSS_FCN_END
 BSS_REGISTER_TYPE(blue_sky::objbase)
 BSS_FCN_EXPORT(serialize, blue_sky::objbase)
 
-CEREAL_REGISTER_DYNAMIC_INIT(base_types)
+BSS_REGISTER_DYNAMIC_INIT(base_types)
 

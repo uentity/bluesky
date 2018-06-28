@@ -314,3 +314,27 @@ BSS_FCN_EXPORT_EXT(fcn, T, (tpl_arg))
 #define BSS_FCN_EXPORT(fcn, T) \
 BSS_FCN_EXPORT_EXT(fcn, T, ())
 
+/*-----------------------------------------------------------------------------
+ *  dynamic init macro when types registration performed in sources
+ *  slightly modified Cereal counterparts that have proper DLL export decorators
+ *-----------------------------------------------------------------------------*/
+// place this macro into header
+// one macro per each translation unit (given unique id) with polymorphic types serialization
+#define BSS_FORCE_DYNAMIC_INIT(unit_id)                   \
+namespace cereal { namespace detail {                     \
+    void BS_API_PLUGIN dynamic_init_dummy_##unit_id();    \
+} } /* end cereal */                                      \
+namespace {                                               \
+struct dynamic_init_##unit_id {                           \
+    dynamic_init_##unit_id() {                            \
+        ::cereal::detail::dynamic_init_dummy_##unit_id(); \
+    }                                                     \
+} dynamic_init_instance_##unit_id;                        \
+} /* end anonymous namespace */
+
+// this macro should go to translation unit with polymorphic types
+#define BSS_REGISTER_DYNAMIC_INIT(unit_id)               \
+namespace cereal { namespace detail {                    \
+    void BS_API_PLUGIN dynamic_init_dummy_##unit_id() {} \
+} }
+

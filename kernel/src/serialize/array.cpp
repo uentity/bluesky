@@ -124,7 +124,7 @@ BSS_EXPORT_ARRAY(float              , bs_nparray_traits)
 BSS_EXPORT_ARRAY(double             , bs_nparray_traits)
 #endif
 
-CEREAL_REGISTER_DYNAMIC_INIT(bs_array)
+BSS_REGISTER_DYNAMIC_INIT(bs_array)
 
 ///////////////////////////////////////////////////////////////////////////////
 //  bs_array with vector traits is convertible to `std::vector`
