@@ -43,7 +43,8 @@ BOOST_PP_CAT(param, i)
 
 // 1. Define helper that detects if comma exists in arguments list
 #define _ARG24(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, ...) _23
-#define HAS_COMMA(...) _ARG24(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+#define _EXPAND(x) x
+#define HAS_COMMA(...) _EXPAND(_ARG24(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0))
 // _ISEMPTY(...) expands to HAS_COMMA(_IS_EMPTY_CASE_xxxx)
 #define _ISEMPTY(_0, _1, _2, _3) HAS_COMMA(PASTE5(_IS_EMPTY_CASE_, _0, _1, _2, _3))
 #define PASTE5(_0, _1, _2, _3, _4) _0 ## _1 ## _2 ## _3 ## _4
