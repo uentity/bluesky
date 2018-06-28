@@ -145,6 +145,10 @@ protected:
 			"Array of values of the same type indexed by integral type", true, true)
 		td.add_constructor< bs_array, size_type >();
 		td.add_constructor< bs_array, size_type, const value_type& >();
+		// add the same ctors but with size specified as `int`
+		// useful when size is specified as literal
+		td.add_constructor< bs_array, int >();
+		td.add_constructor< bs_array, int, const value_type& >();
 		td.add_constructor< bs_array, const_iterator, const_iterator >();
 	BS_TYPE_DECL_INL_END
 };
