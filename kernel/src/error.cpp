@@ -85,7 +85,7 @@ const char* error::domain() const noexcept {
 
 std::string error::to_string() const {
 	std::string s = fmt::format("[{}] [{}] {}", domain(), code.value(), what());
-#ifdef _DEBUG
+#if defined(_DEBUG) && !defined(_MSC_VER)
 	if(!ok()) s += kernel_tools::get_backtrace(20, 4);
 #endif
 	return s;
