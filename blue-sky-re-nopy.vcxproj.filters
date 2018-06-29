@@ -28,6 +28,12 @@
     <Filter Include="Файлы исходного кода\compat">
       <UniqueIdentifier>{4b755a68-dcd6-4403-8ded-cd0e3aca3d5d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Заголовочные файлы\bs\serialize">
+      <UniqueIdentifier>{6d69b453-13f4-46d5-8a0f-8eb605a39c1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы исходного кода\serialize">
+      <UniqueIdentifier>{e097f292-fa53-46f5-a650-5a85a6ab3328}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="kernel\include\bs\any_array.h">
@@ -201,6 +207,27 @@
     <ClInclude Include="kernel\include\bs\detail\tree_errors.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\array.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\atomizer.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\base_types.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\boost_uuid.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\carray.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\macro.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\tree.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -283,6 +310,15 @@
     </ClCompile>
     <ClCompile Include="kernel\src\kernel_errors.cpp">
       <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\array.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\base_types.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\link.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

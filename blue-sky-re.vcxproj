@@ -69,6 +69,13 @@
     <ClInclude Include="kernel\include\bs\python\nparray.h" />
     <ClInclude Include="kernel\include\bs\python\nparray_serialize.h" />
     <ClInclude Include="kernel\include\bs\python\tree.h" />
+    <ClInclude Include="kernel\include\bs\serialize\array.h" />
+    <ClInclude Include="kernel\include\bs\serialize\atomizer.h" />
+    <ClInclude Include="kernel\include\bs\serialize\base_types.h" />
+    <ClInclude Include="kernel\include\bs\serialize\boost_uuid.h" />
+    <ClInclude Include="kernel\include\bs\serialize\carray.h" />
+    <ClInclude Include="kernel\include\bs\serialize\macro.h" />
+    <ClInclude Include="kernel\include\bs\serialize\tree.h" />
     <ClInclude Include="kernel\include\bs\setup_common_api.h" />
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
@@ -119,6 +126,9 @@
     <ClCompile Include="kernel\src\python\py_misc.cpp" />
     <ClCompile Include="kernel\src\python\py_objbase.cpp" />
     <ClCompile Include="kernel\src\python\py_tree.cpp" />
+    <ClCompile Include="kernel\src\serialize\array.cpp" />
+    <ClCompile Include="kernel\src\serialize\base_types.cpp" />
+    <ClCompile Include="kernel\src\serialize\link.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
     <ClCompile Include="kernel\src\sym_link.cpp" />
     <ClCompile Include="kernel\src\tree.cpp" />
@@ -208,6 +218,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
@@ -223,6 +234,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
@@ -239,6 +251,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -257,6 +270,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
