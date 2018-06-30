@@ -52,6 +52,7 @@ kernel_cpp_list = [
 	"src/serialize/base_types.cpp",
 	"src/serialize/array.cpp",
 	"src/serialize/link.cpp",
+	"src/serialize/tree.cpp",
 ];
 #print kernel_cpp_list;
 
