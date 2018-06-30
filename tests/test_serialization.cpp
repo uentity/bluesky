@@ -8,14 +8,66 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #define BOOST_TEST_DYN_LINK
+#include "test_objects.h"
 #include <bs/kernel.h>
 #include <bs/log.h>
 
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/array.h>
+#include <cereal/types/vector.hpp>
 
 #include <boost/test/unit_test.hpp>
 #include <iostream>
+
+/*-----------------------------------------------------------------------------
+ *  serialization impl for test classes
+ *-----------------------------------------------------------------------------*/
+using namespace blue_sky;
+
+BSS_FCN_BEGIN(serialize, bs_person)
+	ar(
+		cereal::make_nvp("objbase", cereal::base_class<objbase>(&t)),
+		cereal::make_nvp("name", t.name_),
+		cereal::make_nvp("age", t.age_)
+	);
+BSS_FCN_END
+
+BSS_FCN_EXPORT(serialize, bs_person)
+
+BSS_FCN_BEGIN_T(serialize, my_strategy, 1)
+	ar(
+		cereal::make_nvp("objbase", cereal::base_class<objbase>(&t)),
+		cereal::make_nvp("name", t.name_)
+	);
+BSS_FCN_END
+
+BSS_REGISTER_TYPE_T(my_strategy, int)
+BSS_REGISTER_TYPE_T(my_strategy, double)
+BSS_FCN_EXPORT_T(serialize, my_strategy, int)
+BSS_FCN_EXPORT_T(serialize, my_strategy, double)
+
+BSS_FCN_BEGIN_T(serialize, uber_type, 2)
+	ar(
+		cereal::make_nvp("objbase", cereal::base_class<objbase>(&t)),
+		cereal::make_nvp("value", t.value_),
+		cereal::make_nvp("storage", t.storage_),
+		cereal::make_nvp("name", t.name_)
+	);
+BSS_FCN_END
+
+BSS_REGISTER_TYPE_EXT(uber_type, (int, my_strategy< int >))
+BSS_REGISTER_TYPE_EXT(uber_type, (double, my_strategy< double >))
+BSS_FCN_EXPORT_EXT(serialize, uber_type, (int, my_strategy< int >))
+BSS_FCN_EXPORT_EXT(serialize, uber_type, (double, my_strategy< double >))
+
+// register sample types
+
+CEREAL_REGISTER_DYNAMIC_INIT(test_objects)
+
+/*-----------------------------------------------------------------------------
+ *  test unit
+ *-----------------------------------------------------------------------------*/
+namespace {
 
 template<typename T>
 auto test_json(const T& obj) {
@@ -42,12 +94,21 @@ auto test_json(const T& obj) {
 	return obj1;
 }
 
+} // eof hidden namespace
+
+using namespace blue_sky;
+
 BOOST_AUTO_TEST_CASE(test_serialization) {
-	using namespace blue_sky;
 	using namespace blue_sky::log;
 
 	sp_obj obj = std::make_shared<objbase>();
 	test_json(obj);
+
+	// person
+	sp_person P = BS_KERNEL.create_object(bs_person::bs_type(), std::string("Monkey"), double(22));
+	BOOST_TEST(P);
+	auto P1 = test_json(P);
+	BOOST_TEST(P->name_ == P1->name_);
 
 	// array
 	using int_array = bs_array<int>;
