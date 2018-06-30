@@ -42,19 +42,19 @@ BSS_FCN_END
 //
 BSS_FCN_INL_BEGIN_T(serialize, bs_arrbase_shared_impl, 2)
 	ar(make_nvp("shared_data", t.shared_data_));
-BSS_FCN_INL_END
+BSS_FCN_INL_END_T(serialize, bs_arrbase_shared_impl, 2)
 
 BSS_FCN_INL_BEGIN_T(serialize, bs_arrbase_impl, 2)
 	ar(base_class<typename type::container>(&t));
-BSS_FCN_INL_END
+BSS_FCN_INL_END_T(serialize, bs_arrbase_impl, 2)
 
 BSS_FCN_INL_BEGIN_T(serialize, bs_vector_shared, 1)
 	ar(base_class<typename type::base_t>(&t));
-BSS_FCN_INL_END
+BSS_FCN_INL_END_T(serialize, bs_vector_shared, 1)
 
 BSS_FCN_INL_BEGIN_T(serialize, vector_traits, 1)
 	ar(base_class<typename type::base_t>(&t));
-BSS_FCN_INL_END
+BSS_FCN_INL_END_T(serialize, vector_traits, 1)
 
 /////////////////////////////////////////////////////////////////////////////
 //  serialization of nparray traits
@@ -68,7 +68,7 @@ BSS_FCN_INL_BEGIN_T(save, blue_sky::bs_nparray_traits, 1)
 	ar(make_nvp("shape", make_carray_view(shape, ndim)));
 	// save array data
 	ar(make_nvp("values", make_carray_view(t.data(), t.size())));
-BSS_FCN_INL_END
+BSS_FCN_INL_END_T(serialize, blue_sky::bs_nparray_traits, 1)
 
 BSS_FCN_INL_BEGIN_T(load, blue_sky::bs_nparray_traits, 1)
 	// load array dims
@@ -81,7 +81,7 @@ BSS_FCN_INL_BEGIN_T(load, blue_sky::bs_nparray_traits, 1)
 	type(shape[0], nullptr).swap(t);
 	// load array data
 	ar(make_nvp("values", make_carray_view(t.data(), t.size())));
-BSS_FCN_INL_END
+BSS_FCN_INL_END_T(serialize, blue_sky::bs_nparray_traits, 1)
 #endif
 
 NAMESPACE_END(blue_sky)

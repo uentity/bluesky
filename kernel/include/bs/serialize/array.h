@@ -19,5 +19,16 @@
 // bs_array
 BSS_FCN_DECL_EXT(serialize, blue_sky::bs_array, (class, template< class > class))
 
+///////////////////////////////////////////////////////////////////////////////
+//  bs_array with vector traits is convertible to `std::vector`
+//  so, we need to remove ambiguity by explicitly pointing to use provided load/save
+//
+namespace cereal {
+
+template <class Archive, class T, template< class > class traits> 
+struct specialize<Archive, blue_sky::bs_array<T, traits>, cereal::specialization::non_member_serialize> {};
+
+}
+
 BSS_FORCE_DYNAMIC_INIT(bs_array)
 

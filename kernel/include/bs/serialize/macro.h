@@ -170,9 +170,9 @@ BSS_REGISTER_TYPE_EXT(T, ())
     Archive const& ar, BS_UNFOLD_TPL_T(T, tpl_args)& t, \
     V const& v, std::uint32_t const version)
 
-#define BSS_FCN_load_and_construct(Archive, T, tpl_args) go( \
-    Archive& ar, cereal::construct< BS_UNFOLD_TPL_T(T, tpl_args) >& c, \
-    std::uint32_t const version                                        \
+#define BSS_FCN_load_and_construct(Archive, T, tpl_args) go(                   \
+    Archive& ar, cereal::construct< BS_UNFOLD_TPL_T(T, tpl_args) >& construct, \
+    std::uint32_t const version                                                \
 ) -> void
 
 /*-----------------------------------------------------------------------------
@@ -204,23 +204,23 @@ BSS_REGISTER_TYPE_EXT(T, ())
  *  declare `blue_sky::atomizer::[serialization function]` (serialize, save/load, ...)
  *-----------------------------------------------------------------------------*/
 // generate overload of cereal::LoadAndConstruct struct
-#define BSS_CEREAL_OVERLOAD_load_and_construct(T, tpl_args_prefix)                    \
-namespace cereal {                                                                    \
-    template< BS_UNFOLD_TPL_PREFIX(tpl_args_prefix) >                                 \
-    struct LoadAndConstruct< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) > {     \
-        template<typename Archive>                                                    \
-        static auto load_and_construct(Archive& ar,                                   \
-            cereal::construct< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) >& c, \
-            std::uint32_t const version                                               \
-        ) -> void { ::blue_sky::atomizer::load_and_construct(ar, c, version); }       \
-    };                                                                                \
-}
+#define BSS_CEREAL_OVERLOAD_load_and_construct(T, tpl_args_prefix)                                       \
+namespace cereal {                                                                                       \
+    template< BS_UNFOLD_TPL_PREFIX(tpl_args_prefix) >                                                    \
+    struct LoadAndConstruct< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) > {                        \
+        template<typename Archive>                                                                       \
+        static auto load_and_construct(Archive& ar,                                                      \
+            cereal::construct< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) >& c,                    \
+            std::uint32_t const version                                                                  \
+        ) -> void {                                                                                      \
+            ::blue_sky::atomizer::load_and_construct< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) > \
+            ::go(ar, c, version);                                                                        \
+        }                                                                                                \
+    }; }
 
 // following helper macro introduced to reuse code for both declaration and inline definition of
 // `blue_sky::atomizer::[serialization function]`
 #define BSS_FCN_HEADER_(fcn, T, tpl_args_prefix)                                                   \
-BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF( IS_FCN_load_and_construct(fcn),                                  \
-    (BSS_CEREAL_OVERLOAD_load_and_construct(T, tpl_args_prefix)), () ))                            \
 template< BS_UNFOLD_TPL_PREFIX(tpl_args_prefix) >                                                  \
 struct BS_API_PLUGIN blue_sky::atomizer::fcn< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix)) > { \
     BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF(IS_FCN_load_minimal(fcn),                                     \
@@ -230,8 +230,10 @@ struct BS_API_PLUGIN blue_sky::atomizer::fcn< BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl
 
 // extended version of main DECL macro
 // tpl_args_prefix - tuple that specifies template prefixes, can be empty ()
-#define BSS_FCN_DECL_EXT(fcn, T, tpl_args_prefix) \
-BSS_FCN_HEADER_(fcn, T, tpl_args_prefix); };
+#define BSS_FCN_DECL_EXT(fcn, T, tpl_args_prefix)                       \
+BSS_FCN_HEADER_(fcn, T, tpl_args_prefix); };                            \
+BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF( IS_FCN_load_and_construct(fcn),       \
+    (BSS_CEREAL_OVERLOAD_load_and_construct(T, tpl_args_prefix)), () )) \
 
 // simpler version when only template args number is specified or type isn't a template
 #define BSS_FCN_DECL_T(fcn, T, tpl_args_num) \
@@ -239,6 +241,34 @@ BSS_FCN_DECL_EXT(fcn, T, (BOOST_PP_ENUM(tpl_args_num, BS_ECHO_, typename)))
 
 #define BSS_FCN_DECL(fcn, T) \
 BSS_FCN_DECL_EXT(fcn, T, ())
+
+/*-----------------------------------------------------------------------------
+ *  begin/end of BS serialization structs declared and defined inplace (for cpp-hidden serialization)
+ *-----------------------------------------------------------------------------*/
+// extended version for complex templates
+#define BSS_FCN_INL_BEGIN_EXT(fcn, T, tpl_args_prefix)             \
+BSS_FCN_HEADER_(fcn, T, tpl_args_prefix) {                         \
+    using type = BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix));
+
+// simpler versions when only template args number is specified
+#define BSS_FCN_INL_BEGIN_T(fcn, T, tpl_args_num) \
+BSS_FCN_INL_BEGIN_EXT(fcn, T, (BOOST_PP_ENUM(tpl_args_num, BS_ECHO_, typename)))
+// ... and for non-template types
+#define BSS_FCN_INL_BEGIN(fcn, T) \
+BSS_FCN_INL_BEGIN_EXT(fcn, T, ())
+
+// special END macro should also close a struct
+#define BSS_FCN_INL_END_EXT(fcn, T, tpl_args_prefix)                    \
+BSS_FCN_END };                                                          \
+BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF( IS_FCN_load_and_construct(fcn),       \
+    (BSS_CEREAL_OVERLOAD_load_and_construct(T, tpl_args_prefix)), () )) \
+
+// simpler versions when only template args number is specified
+#define BSS_FCN_INL_END_T(fcn, T, tpl_args_num) \
+BSS_FCN_INL_END_EXT(fcn, T, (BOOST_PP_ENUM(tpl_args_num, BS_ECHO_, typename)))
+// ... and for non-template types
+#define BSS_FCN_INL_END(fcn, T) \
+BSS_FCN_INL_END_EXT(fcn, T, ())
 
 /*-----------------------------------------------------------------------------
  *  begin/end of BS serialization structs that was previousely declared with `BSS_FCN_DECL*`
@@ -262,25 +292,7 @@ BSS_FCN_BEGIN_EXT(fcn, T, (BOOST_PP_ENUM(tpl_args_num, BS_ECHO_, typename)))
 BSS_FCN_BEGIN_EXT(fcn, T, ())
 
 #define BSS_FCN_END \
-(void)ar; (void)t; (void)version; }
-
-/*-----------------------------------------------------------------------------
- *  begin/end of BS serialization structs declared and defined inplace (for cpp-hidden serialization)
- *-----------------------------------------------------------------------------*/
-// extended version for complex templates
-#define BSS_FCN_INL_BEGIN_EXT(fcn, T, tpl_args_prefix)             \
-BSS_FCN_HEADER_(fcn, T, tpl_args_prefix) {                         \
-    using type = BS_ENUM_TPL_T(T, BS_TUPLE_SIZE(tpl_args_prefix));
-
-// simpler versions when only template args number is specified
-#define BSS_FCN_INL_BEGIN_T(fcn, T, tpl_args_num) \
-BSS_FCN_INL_BEGIN_EXT(fcn, T, (BOOST_PP_ENUM(tpl_args_num, BS_ECHO_, typename)))
-// ... and for non-template types
-#define BSS_FCN_INL_BEGIN(fcn, T) \
-BSS_FCN_INL_BEGIN_EXT(fcn, T, ())
-// special END macro should also close a struct
-#define BSS_FCN_INL_END \
-BSS_FCN_END };
+(void)ar; (void)version; }
 
 /*-----------------------------------------------------------------------------
  *  generate explicit specializations of `blue_sky::atomizer::[serialization function]`
