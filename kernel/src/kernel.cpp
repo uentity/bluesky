@@ -123,5 +123,9 @@ bool kernel::register_plugin(const plugin_descriptor* pd) {
 	return pimpl_->register_plugin(pd, detail::lib_descriptor()).second;
 }
 
+void kernel::unify_serialization() const {
+	pimpl_->unify_serialization();
+}
+
 } /* namespace blue_sky */
 

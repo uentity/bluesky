@@ -184,6 +184,11 @@ public:
 	/// provide access to kernel's plugin_descriptor
 	const plugin_descriptor& self_descriptor() const;
 
+	/// unite bindings maps for polymorphic serialization code among all loaded plugins
+	/// such that they can utilize serialization from each other
+	/// function can be called multiple times, for ex. when new plugin is registered
+	void unify_serialization() const;
+
 private:
 	//! \brief Constructor of kernel
 	kernel();

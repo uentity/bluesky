@@ -143,6 +143,9 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 
 	// extract type information from stored factory, register as runtime type if wasn't found
 	type_tuple demand_type(const type_tuple& obj_t);
+
+	// unite serialization code among all loaded plugins
+	void unify_serialization() const;
 };
 
 }} // eof blue_sky::detail namespace
