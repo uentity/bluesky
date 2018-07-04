@@ -27,7 +27,8 @@ namespace blue_sky {
 
 //------------------------------plugin_descriptor-----------------------------------------------------------
 plugin_descriptor::plugin_descriptor()
-	: name(BS_NIL_PLUGIN_TAG), tag_(nil_type_info())
+	: name(BS_NIL_PLUGIN_TAG), serial_input_bindings(nullptr), serial_output_bindings(nullptr),
+	tag_(nil_type_info())
 {}
 
 //plugin_descriptor::plugin_descriptor(const char* name_)
@@ -36,10 +37,12 @@ plugin_descriptor::plugin_descriptor()
 
 plugin_descriptor::plugin_descriptor(
 	const BS_TYPE_INFO& plugin_tag, const char* name_, const char* version_,
-	const char* description_, const char* py_namespace_
+	const char* description_, const char* py_namespace_,
+	void* serial_input_bindings_, void* serial_output_bindings_
 ) :
-	name(name_), version(version_), description(description_),
-	py_namespace(py_namespace_), tag_(plugin_tag)
+	name(name_), version(version_), description(description_), py_namespace(py_namespace_),
+	serial_input_bindings(serial_input_bindings_), serial_output_bindings(serial_output_bindings_),
+	tag_(plugin_tag)
 {}
 
 bool plugin_descriptor::is_nil() const {

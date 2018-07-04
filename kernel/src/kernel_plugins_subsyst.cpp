@@ -60,7 +60,9 @@ NAMESPACE_BEGIN(detail)
 const plugin_descriptor& kernel_plugins_subsyst::kernel_pd() {
 	static const plugin_descriptor kernel_pd(
 		BS_GET_TI(__kernel_types_pd_tag__), "kernel", KERNEL_VERSION,
-		"BlueSky virtual kernel plugin", "bs"
+		"BlueSky virtual kernel plugin", "bs",
+		(void*)&cereal::detail::StaticObject<cereal::detail::InputBindingMap>::getInstance(),
+		(void*)&cereal::detail::StaticObject<cereal::detail::OutputBindingMap>::getInstance()
 	);
 	return kernel_pd;
 }
