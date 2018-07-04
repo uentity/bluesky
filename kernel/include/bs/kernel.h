@@ -89,6 +89,8 @@ public:
 	//! Call it to force system cleaning, although all should be cleaned automatically
 	ulong tree_gc() const;
 
+	//! Direct register plugin if shared lib is already loaded
+	bool register_plugin(const plugin_descriptor* pd);
 	//! \brief Dynamically loads particular plugin
 	int load_plugin(const std::string& fname, bool init_py_subsyst);
 	//! \brief Load blue-sky plugins method

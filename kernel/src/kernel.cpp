@@ -119,5 +119,9 @@ const plugin_descriptor& kernel::self_descriptor() const {
 	return pimpl_->kernel_pd();
 }
 
+bool kernel::register_plugin(const plugin_descriptor* pd) {
+	return pimpl_->register_plugin(pd, detail::lib_descriptor()).second;
+}
+
 } /* namespace blue_sky */
 
