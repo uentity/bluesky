@@ -181,7 +181,7 @@ public:
 			target = boost::any_cast< const value_type& >(trait::iter2val(pval));
 			return true;
 		}
-		catch(boost::bad_any_cast) {
+		catch(const boost::bad_any_cast&) {
 			return false;
 		}
 	}
