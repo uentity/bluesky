@@ -9,7 +9,9 @@
 
 #include <bs/kernel_tools.h>
 #include <bs/kernel.h>
+#include <bs/node.h>
 #include <sstream>
+#include <boost/uuid/uuid_io.hpp>
 
 #ifdef _DEBUG
 #ifdef _WIN32
@@ -71,5 +73,24 @@ std::string get_backtrace(int backtrace_depth, int skip) {
 }
 
 #endif
+
+using namespace blue_sky::tree;
+
+void print_link(const sp_link& l, int level) {
+	static const auto dumplnk = [](const sp_link& l_) {
+		std::cout << l_->name() << " [" << l_->type_id() << ' ' << l_->id() << "] -> ("
+		          << l_->obj_type_id() << ", " << l_->oid() << ")" << std::endl;
+	};
+
+	const std::string loffs(level*2, ' ');
+	// print link itself
+	std::cout << loffs;
+	dumplnk(l);
+	if(auto n = l->data_node()) {
+		// print leafs
+		for(const auto &leaf : *n)
+			print_link(leaf, level+1);
+	}
+}
 
 }} /* namespace blue_sky::kernel_tools */

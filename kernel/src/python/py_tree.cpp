@@ -31,23 +31,6 @@ using Key = node::Key;
  *-----------------------------------------------------------------------------*/
 NAMESPACE_BEGIN()
 
-void print_link(const sp_link& l, int level = 0) {
-	static const auto dumplnk = [](const sp_link& l_) {
-		std::cout << l_->name() << " [" << l_->type_id() << ' ' << l_->id() << "] -> ("
-		          << l_->obj_type_id() << ", " << l_->oid() << ")" << std::endl;
-	};
-
-	const std::string loffs(level*2, ' ');
-	// print link itself
-	std::cout << loffs;
-	dumplnk(l);
-	if(auto n = l->data_node()) {
-		// print leafs
-		for(const auto &leaf : *n)
-			print_link(leaf, level+1);
-	}
-}
-
 // helpers to omit code duplication
 // ------- contains
 template<Key K>
@@ -441,11 +424,6 @@ void py_bind_tree(py::module& m) {
 	//	static std::vector<double> v{0, 0};
 	//	return v;
 	//}, py::return_value_policy::reference);
-
-	m.def("print_link", [](const sp_link& l) { print_link(l, 0); });
-	m.def("print_link", [](const sp_node& n, std::string name = "/") {
-		print_link(std::make_shared<tree::hard_link>(name, n), 0);
-	}, "node"_a, "root_name"_a = "/");
 }
 
 NAMESPACE_END(python)
