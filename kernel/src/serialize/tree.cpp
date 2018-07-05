@@ -8,72 +8,70 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/serialize/tree.h>
-#include <bs/serialize/boost_uuid.h>
 #include <bs/serialize/base_types.h>
 #include <cereal/types/vector.hpp>
 
 #include "../node_impl.h"
 
-//CEREAL_SPECIALIZE_FOR_ALL_ARCHIVES(
-//	blue_sky::tree::node::links_container, cereal::specialization::non_member_load_save
-//)
-
 NAMESPACE_BEGIN(blue_sky)
 using namespace cereal;
 using namespace tree;
 
-///*-----------------------------------------------------------------------------
-// *  multi_index
-// *-----------------------------------------------------------------------------*/
-//BSS_FCN_INL_BEGIN(save, node::links_container)
-//	//t.save(ar, version);
-//	//boost::serialization::serialize(ar, t, version);
-//BSS_FCN_INL_END
-//
-//BSS_FCN_INL_BEGIN(load, node::links_container)
-//	//t.load(ar, version);
-//	//boost::serialization::serialize(ar, t, version);
-//BSS_FCN_INL_END
-
 /*-----------------------------------------------------------------------------
  *  node::node_impl
  *-----------------------------------------------------------------------------*/
-BSS_FCN_INL_BEGIN(save, node::node_impl)
-	ar(
-		make_nvp("handle", t.handle_),
-		make_nvp("allowed_otypes", t.allowed_otypes_)
-	);
-	// save leafs
-	ar(make_size_tag(t.links_.size()));
-	for(const auto& leaf : t.links_)
-		ar(leaf);
-BSS_FCN_INL_END(save, node::node_impl)
+namespace {
+// proxy leafs view to serialize 'em as separate block or 'unit'
+struct leafs_view {
+	links_container& links_;
 
-BSS_FCN_INL_BEGIN(load, node::node_impl)
+	leafs_view(const links_container& L) : links_(const_cast<links_container&>(L)) {}
+
+	template<typename Archive>
+	auto save(Archive& ar) const -> void {
+		ar(make_size_tag(links_.size()));
+		// save links in custom index order
+		const auto& any_order = links_.get<Key_tag<Key::AnyOrder>>();
+		for(const auto& leaf : any_order)
+			ar(leaf);
+	}
+
+	template<typename Archive>
+	auto load(Archive& ar) -> void {
+		std::size_t sz;
+		ar(make_size_tag(sz));
+		// load links in custom index order
+		auto& any_order = links_.get<Key_tag<Key::AnyOrder>>();
+		for(std::size_t i = 0; i < sz; ++i) {
+			sp_link leaf;
+			ar(leaf);
+			any_order.insert(any_order.end(), std::move(leaf));
+		}
+	}
+};
+
+} // eof hidden namespace
+
+BSS_FCN_INL_BEGIN(serialize, node::node_impl)
 	ar(
 		make_nvp("handle", t.handle_),
-		make_nvp("allowed_otypes", t.allowed_otypes_)
+		make_nvp("allowed_otypes", t.allowed_otypes_),
+		make_nvp("leafs", leafs_view(t.links_))
 	);
-	// load leafs
-	std::size_t sz;
-	ar(make_size_tag(sz));
-	for(std::size_t i = 0; i < sz; ++i) {
-		sp_link leaf;
-		ar(leaf);
-		t.insert(std::move(leaf), node::InsertPolicy::AllowDupNames);
-	}
-BSS_FCN_INL_END(load, node::node_impl)
+BSS_FCN_INL_END(save, node::node_impl)
 
 /*-----------------------------------------------------------------------------
  *  node
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, node)
+	//t.propagate_owner();
 	ar(
 		make_nvp("objbase", base_class<objbase>(&t)),
-		make_nvp("impl", t.pimpl_)
+		make_nvp("node_impl", t.pimpl_)
 	);
 	// correct owner of all loaded links
-	t.propagate_owner();
+	if(Archive::is_loading::value)
+		t.propagate_owner();
 	//node::links_container tmp;
 	//ar(tmp);
 BSS_FCN_END
