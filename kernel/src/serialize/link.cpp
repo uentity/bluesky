@@ -97,6 +97,7 @@ BSS_FCN_BEGIN(serialize, tree::hard_link)
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::hard_link)
+BSS_FCN_EXPORT(load_and_construct, tree::hard_link)
 
 /*-----------------------------------------------------------------------------
  *  weak_link
@@ -121,6 +122,7 @@ BSS_FCN_BEGIN(serialize, tree::weak_link)
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::weak_link)
+BSS_FCN_EXPORT(load_and_construct, tree::weak_link)
 
 /*-----------------------------------------------------------------------------
  *  sym_link
@@ -144,6 +146,7 @@ BSS_FCN_BEGIN(serialize, tree::sym_link)
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::sym_link)
+BSS_FCN_EXPORT(load_and_construct, tree::sym_link)
 
 // instantiate code for polymorphic types
 using namespace blue_sky;
