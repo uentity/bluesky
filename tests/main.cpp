@@ -11,9 +11,13 @@
 #define BOOST_TEST_MODULE blue_sky unit test
 //#define BOOST_TEST_ALTERNATIVE_INIT_API
 
-#include <bs/common.h>
+#include <bs/kernel.h>
 #include <bs/plugin_descriptor.h>
 #include <boost/test/unit_test.hpp>
 
 BS_PLUGIN_DESCRIPTOR("unit_test", "1.0", "Unit-test plugin");
+
+BOOST_AUTO_TEST_CASE(test_plugin_descriptor) {
+	BOOST_CHECK(BS_KERNEL.register_plugin(bs_get_plugin_descriptor()));
+}
 

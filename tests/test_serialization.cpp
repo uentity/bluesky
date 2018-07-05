@@ -101,6 +101,9 @@ using namespace blue_sky;
 BOOST_AUTO_TEST_CASE(test_serialization) {
 	using namespace blue_sky::log;
 
+	// explicitly init serialization subsystem
+	BS_KERNEL.unify_serialization();
+
 	sp_obj obj = std::make_shared<objbase>();
 	test_json(obj);
 
@@ -109,6 +112,20 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 	BOOST_TEST(P);
 	auto P1 = test_json(P);
 	BOOST_TEST(P->name_ == P1->name_);
+
+	// test NaN
+	P = BS_KERNEL.create_object(
+		bs_person::bs_type(), std::string("NaN"), std::numeric_limits<double>::quiet_NaN()
+	);
+	BOOST_TEST(P);
+	P1 = test_json(P);
+	BOOST_TEST(P1->age_ != P->age_);
+	P = BS_KERNEL.create_object(
+		bs_person::bs_type(), std::string("SNaN"), std::numeric_limits<double>::signaling_NaN()
+	);
+	BOOST_TEST(P);
+	P1 = test_json(P);
+	BOOST_TEST(P1->age_ != P->age_);
 
 	// array
 	using int_array = bs_array<int>;
@@ -123,9 +140,21 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 	BOOST_TEST(std::equal(arr->begin(), arr->end(), arr1->begin()));
 
 	// shared array
-	using sint_array = bs_array<double, bs_vector_shared>;
-	std::shared_ptr<sint_array> sarr = BS_KERNEL.create_object(sint_array::bs_type(), 20);
+	using sd_array = bs_array<double, bs_vector_shared>;
+	std::shared_ptr<sd_array> sarr = BS_KERNEL.create_object(sd_array::bs_type(), 20);
 	BOOST_TEST(arr);
+	std::cout << "array size = " << arr->size() << std::endl;
+	for(ulong i = 0; i < arr->size(); ++i)
+		arr->ss(i) = i;
+	// test some corner values
+	using dlimits = std::numeric_limits<double>;
+	sarr->ss(0) = dlimits::min();
+	sarr->ss(1) = dlimits::max();
+	sarr->ss(2) = dlimits::lowest();
+	sarr->ss(3) = dlimits::epsilon();
+	sarr->ss(4) = dlimits::round_error();
+	sarr->ss(5) = dlimits::infinity();
+	sarr->ss(6) = dlimits::denorm_min();
 
 	auto sarr1 = test_json(sarr);
 	BOOST_TEST(sarr->size() == sarr1->size());
