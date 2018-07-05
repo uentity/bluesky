@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/bs.h>
+#include <bs/node.h>
 #include <bs/python/kernel.h>
 #include <bs/python/any.h>
 #include <boost/lexical_cast.hpp>
@@ -81,6 +82,7 @@ void py_bind_kernel(py::module& m) {
 	bind_any_array<str_any_traits>(m, "str_any_array");
 	bind_any_array<idx_any_traits>(m, "idx_any_array");
 
+	// kernel
 	py::class_<kernel, std::unique_ptr<kernel, py::nodelete>>(m, "kernel")
 		.def("load_plugin", &kernel::load_plugin,
 			"fname"_a, "init_py_subsyst"_a)
@@ -114,13 +116,18 @@ void py_bind_kernel(py::module& m) {
 		}, "src"_a, "Make object copy")
 	;
 
-	auto kt_mod = m.def_submodule("tools", "Kernel tools");
-	kt_mod.def("print_loaded_types", &kernel_tools::print_loaded_types);
-
 	// expose kernel instance as attribute
 	m.attr("kernel") = &BS_KERNEL;
 	// and as function
 	m.def("give_kernel", &give_kernel::Instance, py::return_value_policy::reference);
+
+	// kernel tools module
+	auto kt_mod = m.def_submodule("tools", "Kernel tools");
+	kt_mod.def("print_loaded_types", &kernel_tools::print_loaded_types);
+	kt_mod.def("print_link", [](const tree::sp_link& l) { kernel_tools::print_link(l, 0); });
+	kt_mod.def("print_link", [](const tree::sp_node& n, std::string name = "/") {
+		kernel_tools::print_link(std::make_shared<tree::hard_link>(name, n), 0);
+	}, "node"_a, "root_name"_a = "/");
 }
 
 NAMESPACE_END(python)
