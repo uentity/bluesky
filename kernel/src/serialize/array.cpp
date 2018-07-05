@@ -33,7 +33,7 @@ BSS_FCN_BEGIN_EXT(serialize, bs_array, (class, template< class > class))
 		make_nvp("objbase", base_class<objbase>(&t))
 	);
 	ar(
-		make_nvp("values", base_class<typename type::base_t>(&t))
+		make_nvp("container", base_class<typename type::base_t>(&t))
 	);
 BSS_FCN_END
 
@@ -49,7 +49,7 @@ BSS_FCN_INL_BEGIN_T(serialize, bs_arrbase_impl, 2)
 BSS_FCN_INL_END_T(serialize, bs_arrbase_impl, 2)
 
 BSS_FCN_INL_BEGIN_T(serialize, bs_vector_shared, 1)
-	ar(base_class<typename type::base_t>(&t));
+	ar(make_nvp("shared_data", t.shared_data_));
 BSS_FCN_INL_END_T(serialize, bs_vector_shared, 1)
 
 BSS_FCN_INL_BEGIN_T(serialize, vector_traits, 1)
@@ -61,22 +61,16 @@ BSS_FCN_INL_END_T(serialize, vector_traits, 1)
 //
 #ifdef BSPY_EXPORTING
 BSS_FCN_INL_BEGIN_T(save, blue_sky::bs_nparray_traits, 1)
-	// save array sahpe
-	const std::size_t ndim = t.ndim();
-	const auto shape = t.shape();
-	ar(make_size_tag(ndim));
-	ar(make_nvp("shape", make_carray_view(shape, ndim)));
+	// save array shape
+	ar(make_nvp("shape", make_carray_view(t.shape(), t.ndim())));
 	// save array data
 	ar(make_nvp("values", make_carray_view(t.data(), t.size())));
 BSS_FCN_INL_END_T(serialize, blue_sky::bs_nparray_traits, 1)
 
 BSS_FCN_INL_BEGIN_T(load, blue_sky::bs_nparray_traits, 1)
-	// load array dims
-	std::size_t ndim;
-	ar(make_size_tag(ndim));
-	// load shape
-	std::vector< ssize_t > shape(ndim);
-	ar(make_nvp("shape", make_carray_view(&shape[0], ndim)));
+	// load array shape
+	std::vector< ssize_t > shape;
+	ar(make_nvp("shape", shape));
 	// create numpy array with given shape
 	type(shape[0], nullptr).swap(t);
 	// load array data
@@ -125,32 +119,4 @@ BSS_EXPORT_ARRAY(double             , bs_nparray_traits)
 #endif
 
 BSS_REGISTER_DYNAMIC_INIT(bs_array)
-
-///////////////////////////////////////////////////////////////////////////////
-//  bs_array with vector traits is convertible to `std::vector`
-//  so, we need to remove ambiguity by explicitly pointing to use provided load/save
-//
-//namespace cereal {
-//
-//template <class Archive, class T, template< class > class traits> 
-//struct specialize<Archive, blue_sky::bs_array<T, traits>, cereal::specialization::non_member_load_save> {};
-//
-//}
-//
-//void test() {
-//	using int_array = blue_sky::bs_array<int>;
-//	std::shared_ptr<int_array> arr = BS_KERNEL.create_object(int_array::bs_type(), 20);
-//	for(ulong i = 0; i < arr->size(); ++i)
-//		arr->ss(i) = i;
-//
-//	std::string dump;
-//	// dump object into string
-//	std::stringstream ss;
-//	{
-//		cereal::JSONOutputArchive ja(ss);
-//		ja(arr);
-//		dump = ss.str();
-//		blue_sky::bsout() << blue_sky::log::I("JSON dump\n: {}", dump) << blue_sky::log::end;
-//	}
-//}
 

@@ -113,6 +113,7 @@ public:
 
 private:
 	using base_t::shared_data_;
+	friend class atomizer;
 };
 
 // bs_vector_shared uses std::vector as underlying container
