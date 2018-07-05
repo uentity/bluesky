@@ -11,6 +11,7 @@
 
 #include <bs/node.h>
 #include <set>
+#include <mutex>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
@@ -100,11 +101,13 @@ public:
 
 	template<Key K = Key::ID>
 	void erase(const Key_type<K>& key) {
+		links_locker_t my_turn(links_guard_);
 		links_.get<Key_tag<K>>().erase(key);
 	}
 
 	template<Key K = Key::ID>
 	void erase(const range<K>& r) {
+		links_locker_t my_turn(links_guard_);
 		links_.get<Key_tag<K>>().erase(r.first, r.second);
 	}
 
@@ -148,6 +151,7 @@ public:
 			if(dup != end<Key::ID>()) return {dup, false};
 		}
 		// try to insert given link
+		links_locker_t my_turn(links_guard_);
 		return links_.get<Key_tag<Key::ID>>().insert(std::move(l));
 	}
 
@@ -162,6 +166,7 @@ public:
 
 	template<Key K>
 	bool rename(iterator<K>&& pos, std::string&& new_name) {
+		links_locker_t my_turn(links_guard_);
 		if(pos == end<K>()) return false;
 		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
 			l->name_ = std::move(name);
@@ -170,6 +175,7 @@ public:
 
 	template<Key K>
 	int rename(const Key_type<K>& key, std::string&& new_name, bool all = false) {
+		links_locker_t my_turn(links_guard_);
 		range<K> matched_items = equal_range<K>(key);
 		auto& storage = links_.get<Key_tag<K>>();
 		auto renamer = [name = std::move(new_name)](sp_link& l) {
@@ -251,6 +257,9 @@ public:
 	std::weak_ptr<link> handle_;
 	links_container links_;
 	std::vector<std::string> allowed_otypes_;
+	// temp guard until caf-based tree implementation is ready
+	std::recursive_mutex links_guard_;
+	using links_locker_t = std::lock_guard<std::recursive_mutex>;
 };
 
 NAMESPACE_END(tree)

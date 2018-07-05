@@ -22,6 +22,7 @@ static boost::uuids::string_generator uuid_from_str;
 
 NAMESPACE_END()
 
+using links_locker_t = std::lock_guard<std::recursive_mutex>;
 /*-----------------------------------------------------------------------------
  *  node
  *-----------------------------------------------------------------------------*/
@@ -36,6 +37,7 @@ node::node(const node& src)
 node::~node() = default;
 
 void node::propagate_owner(bool deep) {
+	links_locker_t my_turn(pimpl_->links_guard_);
 	// properly setup owner in node's leafs
 	const auto self = bs_shared_this<node>();
 	sp_node child_node;
@@ -188,6 +190,7 @@ insert_status<Key::AnyOrder> node::insert(sp_link l, iterator<> pos, InsertPolic
 	auto res = insert(std::move(l), pol);
 	if(res.first != end<Key::ID>()) {
 		// 2. reposition an element in AnyOrder index
+		links_locker_t my_turn(pimpl_->links_guard_);
 		auto src = pimpl_->project<Key::ID>(res.first);
 		if(pos != src) {
 			auto& ord_idx = pimpl_->links_.get<Key_tag<Key::AnyOrder>>();
@@ -210,6 +213,7 @@ insert_status<Key::ID> node::insert(std::string name, sp_obj obj, InsertPolicy p
 
 // ---- erase
 void node::erase(const std::size_t idx) {
+	links_locker_t my_turn(pimpl_->links_guard_);
 	pimpl_->links_.get<Key_tag<Key::AnyOrder>>().erase(find(idx));
 }
 
@@ -248,6 +252,7 @@ void node::erase(const range<Key::OID>& r) {
 }
 
 void node::clear() {
+	links_locker_t my_turn(pimpl_->links_guard_);
 	pimpl_->links_.clear();
 }
 
