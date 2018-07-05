@@ -22,6 +22,18 @@ static boost::uuids::random_generator gen;
 
 } // eof hidden namespace
 
+/*-----------------------------------------------------------------------------
+ *  inode impl
+ *-----------------------------------------------------------------------------*/
+inode::inode()
+	: suid(false), sgid(false), sticky(false),
+	u(7), g(5), o(5),
+	mod_time(std::chrono::system_clock::now())
+{}
+
+/*-----------------------------------------------------------------------------
+ *  link impl
+ *-----------------------------------------------------------------------------*/
 link::link(std::string name, Flags f)
 	: name_(std::move(name)),
 	id_(gen()), flags_(f)
