@@ -31,19 +31,22 @@ struct BS_API inode {
 	// access rights
 	// user (owner)
 	bool : 1;
-	unsigned int u : 3;
+	std::uint8_t u : 3;
 	// group
 	bool : 1;
-	unsigned int g : 3;
+	std::uint8_t g : 3;
 	// others
 	bool : 1;
-	unsigned int o : 3;
+	std::uint8_t o : 3;
 
 	// modification time
 	time_point mod_time;
 	// link's owner
 	std::string owner;
 	std::string group;
+
+	// do std initialization of all values
+	inode();
 };
 using inodeptr = std::unique_ptr<inode>;
 
