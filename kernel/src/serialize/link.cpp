@@ -21,20 +21,14 @@ using namespace blue_sky;
 BSS_FCN_BEGIN(save, tree::inode)
 	ar(
 		make_nvp("owner", t.owner),
-		make_nvp("group", t.group)
+		make_nvp("group", t.group),
+		make_nvp("suid", t.suid),
+		make_nvp("sgid", t.sgid),
+		make_nvp("sticky", t.sticky),
+		make_nvp("u", t.u),
+		make_nvp("g", t.g),
+		make_nvp("o", t.o)
 	);
-	bool bit = t.suid;
-	ar(make_nvp("suid", bit));
-	bit = t.sgid;
-	ar(make_nvp("sgid", bit));
-	bit = t.sticky;
-	ar(make_nvp("sticky", bit));
-	bit = t.u;
-	ar(make_nvp("u", bit));
-	bit = t.g;
-	ar(make_nvp("g", bit));
-	bit = t.o;
-	ar(make_nvp("o", bit));
 BSS_FCN_END
 
 BSS_FCN_BEGIN(load, tree::inode)
@@ -49,12 +43,14 @@ BSS_FCN_BEGIN(load, tree::inode)
 	t.sgid = bit;
 	ar(make_nvp("sticky", bit));
 	t.sticky = bit;
-	ar(make_nvp("u", bit));
-	t.u = bit;
-	ar(make_nvp("g", bit));
-	t.g = bit;
-	ar(make_nvp("o", bit));
-	t.o = bit;
+
+	std::uint8_t flags;
+	ar(make_nvp("u", flags));
+	t.u = flags;
+	ar(make_nvp("g", flags));
+	t.g = flags;
+	ar(make_nvp("o", flags));
+	t.o = flags;
 BSS_FCN_END
 
 BSS_FCN_EXPORT(save, tree::inode)
@@ -72,7 +68,7 @@ BSS_FCN_BEGIN(serialize, tree::link)
 		make_nvp("id", t.id_),
 		make_nvp("flags", t.flags_),
 		make_nvp("inode", t.inode_)
-//		make_nvp("owner", t.owner_)
+		// intentionally do net serialize owner, it will be set up when parent node is loaded
 	);
 BSS_FCN_END
 
@@ -88,15 +84,15 @@ BSS_FCN_BEGIN(load_and_construct, tree::hard_link)
 	sp_obj data;
 	ar(name, data);
 	construct(std::move(name), std::move(data));
-	// load the rest
-	ar(construct->data_);
+	// load base link
+	ar(base_class<tree::link>(construct.ptr()));
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::hard_link)
 	ar(
-		make_nvp("link_base", base_class<tree::link>(&t)),
 		make_nvp("name", t.name_),
-		make_nvp("data", t.data_)
+		make_nvp("data", t.data_),
+		make_nvp("link_base", base_class<tree::link>(&t))
 	);
 BSS_FCN_END
 
@@ -112,15 +108,15 @@ BSS_FCN_BEGIN(load_and_construct, tree::weak_link)
 	sp_obj data;
 	ar(name, data);
 	construct(std::move(name), std::move(data));
-	// load the rest
-	ar(construct->data_);
+	// load base link
+	ar(base_class<tree::link>(construct.ptr()));
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::weak_link)
 	ar(
-		make_nvp("link_base", base_class<tree::link>(&t)),
 		make_nvp("name", t.name_),
-		make_nvp("data", t.data_)
+		make_nvp("data", t.data_),
+		make_nvp("link_base", base_class<tree::link>(&t))
 	);
 BSS_FCN_END
 
@@ -135,13 +131,15 @@ BSS_FCN_BEGIN(load_and_construct, tree::sym_link)
 	std::string name, path;
 	ar(name, path);
 	construct(std::move(name), std::move(path));
+	// load base link
+	ar(base_class<tree::link>(construct.ptr()));
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::sym_link)
 	ar(
-		make_nvp("link_base", base_class<tree::link>(&t)),
 		make_nvp("name", t.name_),
-		make_nvp("path", t.path_)
+		make_nvp("path", t.path_),
+		make_nvp("link_base", base_class<tree::link>(&t))
 	);
 BSS_FCN_END
 
