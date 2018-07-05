@@ -11,6 +11,7 @@
 #include <bs/kernel.h>
 #include <bs/node.h>
 #include <sstream>
+#include <iostream>
 #include <boost/uuid/uuid_io.hpp>
 
 #ifdef _DEBUG

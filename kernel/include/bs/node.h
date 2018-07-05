@@ -269,7 +269,6 @@ public:
 	virtual ~node();
 
 private:
-	friend class blue_sky::atomizer;
 	// PIMPL
 	class node_impl;
 	std::unique_ptr< node_impl > pimpl_;
