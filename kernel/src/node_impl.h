@@ -215,9 +215,10 @@ public:
 		if(new_self && new_self->type_id() == "sym_link")
 			return;
 
-		// remove node from existing owner
+		// remove node from existing owner if it differs from owner of new handle
 		if(const auto pself = handle_.lock()) {
-			if(const auto owner = pself->owner())
+			const auto owner = pself->owner();
+			if(owner && (!new_self || owner != new_self->owner()))
 				owner->erase(pself->id());
 		}
 		// set new owner link
@@ -227,14 +228,19 @@ public:
 	// postprocessing of just inserted link
 	// if link points to node, return it
 	static sp_node adjust_inserted_link(const sp_link& lnk, const sp_node& n) {
+		// sanity
+		if(!lnk) return nullptr;
+		auto lnk_node = lnk->data_node();
+
 		// remove link from prev owner
-		if(auto prev_owner = lnk->owner())
+		if(auto prev_owner = lnk->owner()) {
+			// check if link is already linked to given parent node
+			if(prev_owner == n) return lnk_node;
 			prev_owner->erase(lnk->id());
-		// if we inserting a node, relink it to ensure a single hard link exists
-		sp_node lnk_node;
-		if((lnk_node = lnk->data_node())) {
-			lnk_node->pimpl_->set_handle(lnk);
 		}
+		// if we're inserting a node, relink it to ensure a single hard link exists
+		if(lnk_node)
+			lnk_node->pimpl_->set_handle(lnk);
 		// set new owner
 		lnk->reset_owner(n);
 		return lnk_node;
