@@ -116,7 +116,7 @@ BSS_FCN_END
 BSS_FCN_BEGIN(serialize, tree::weak_link)
 	ar(
 		make_nvp("name", t.name_),
-		make_nvp("data", t.data_),
+		make_nvp("data", t.data_.lock()),
 		make_nvp("link_base", base_class<tree::link>(&t))
 	);
 BSS_FCN_END
