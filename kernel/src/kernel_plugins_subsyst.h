@@ -98,6 +98,9 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	// allow obtain kernel's plugin descriptor
 	friend const plugin_descriptor* bs_get_plugin_descriptor();
 
+	// provide access to kernel's pybind11::module object
+	void* self_pymod() const;
+
 	/*-----------------------------------------------------------------
 	 * plugins managing
 	 *----------------------------------------------------------------*/

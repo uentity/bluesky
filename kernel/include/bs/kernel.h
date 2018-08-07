@@ -183,6 +183,8 @@ public:
 
 	/// provide access to kernel's plugin_descriptor
 	const plugin_descriptor& self_descriptor() const;
+	/// ... and to kernel's pybind11::module object
+	void* self_pymod() const;
 
 private:
 	//! \brief Constructor of kernel
