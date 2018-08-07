@@ -119,6 +119,10 @@ const plugin_descriptor& kernel::self_descriptor() const {
 	return pimpl_->kernel_pd();
 }
 
+void* kernel::self_pymod() const {
+	return pimpl_->self_pymod();
+}
+
 bool kernel::register_plugin(const plugin_descriptor* pd) {
 	return pimpl_->register_plugin(pd, detail::lib_descriptor()).second;
 }

@@ -116,6 +116,14 @@ struct kernel_plugins_subsyst::bspy_module {
 };
 #endif
 
+void* kernel_plugins_subsyst::self_pymod() const {
+#ifdef BSPY_EXPORTING
+	return pymod_ ? (void*)&pymod_->root_module_ : nullptr;
+#else
+	return nullptr;
+#endif
+}
+
 std::pair< const plugin_descriptor*, bool >
 kernel_plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) {
 	// deny registering nil plugin descriptors
