@@ -77,12 +77,25 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 			p_name, K.create_object("bs_person", p_name, double(i + 20))
 		));
 	}
-
+	// create hard link referencing first object
+	N->insert(std::make_shared<hard_link>(
+		"hard_Citizen_0", N->begin()->get()->data()
+	));
+	// create weak link referencing 2nd object
+	N->insert(std::make_shared<weak_link>(
+		"weak_Citizen_1", N->find(1)->get()->data()
+	));
+	// create sym link referencing 3rd object
+	N->insert(std::make_shared<sym_link>(
+		"sym_Citizen_2", abspath(*N->find(2))
+	));
+	// print resulting tree content
 	kernel_tools::print_link(std::make_shared<hard_link>("r", N));
-	N->propagate_owner();
 
 	// serializze node
 	auto N1 = test_json(N);
+	// print loaded tree content
+	kernel_tools::print_link(std::make_shared<hard_link>("r", N1));
 	BOOST_TEST(N1);
 	BOOST_TEST(N1->size() == N->size());
 }
