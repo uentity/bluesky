@@ -63,7 +63,7 @@ void py_bind_common(py::module& m) {
 	// empty constructor creates nil type
 	py::class_< bs_type_info >(m, "type_info")
 		.def(py::init( []() { return std::make_unique<bs_type_info>(nil_type_info()); } ))
-		.def_property_readonly("name", &bs_type_info::name, "name"_a)
+		.def_property_readonly("name", &bs_type_info::name)
 		.def_property_readonly_static(
 			"nil", [](py::object){ return nil_type_info(); }
 		)
