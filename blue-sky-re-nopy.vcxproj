@@ -56,10 +56,8 @@
     <ClInclude Include="kernel\include\bs\fwd.h" />
     <ClInclude Include="kernel\include\bs\kernel.h" />
     <ClInclude Include="kernel\include\bs\kernel_tools.h" />
-    <ClInclude Include="kernel\include\bs\link.h" />
     <ClInclude Include="kernel\include\bs\log.h" />
     <ClInclude Include="kernel\include\bs\misc.h" />
-    <ClInclude Include="kernel\include\bs\node.h" />
     <ClInclude Include="kernel\include\bs\objbase.h" />
     <ClInclude Include="kernel\include\bs\objbase_macro.h" />
     <ClInclude Include="kernel\include\bs\plugin_descriptor.h" />
@@ -74,15 +72,21 @@
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
+    <ClInclude Include="kernel\include\bs\tree\link.h" />
+    <ClInclude Include="kernel\include\bs\tree\node.h" />
+    <ClInclude Include="kernel\include\bs\tree\tree.h" />
     <ClInclude Include="kernel\include\bs\type_descriptor.h" />
     <ClInclude Include="kernel\include\bs\type_info.h" />
     <ClInclude Include="kernel\include\bs\type_macro.h" />
+    <ClInclude Include="kernel\src\backtrace_tools_unix.h" />
+    <ClInclude Include="kernel\src\backtrace_tools_win.h" />
     <ClInclude Include="kernel\src\kernel_impl.h" />
     <ClInclude Include="kernel\src\kernel_instance_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_plugins_discover.h" />
     <ClInclude Include="kernel\src\kernel_plugins_subsyst.h" />
-    <ClInclude Include="kernel\src\tree_impl.h" />
+    <ClInclude Include="kernel\src\tree\node_impl.h" />
+    <ClInclude Include="kernel\src\tree\tree_impl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp" />
@@ -101,19 +105,20 @@
     <ClCompile Include="kernel\src\kernel_tools.cpp" />
     <ClCompile Include="kernel\src\kernel_types_factory.cpp" />
     <ClCompile Include="kernel\src\lib_descriptor.cpp" />
-    <ClCompile Include="kernel\src\link.cpp" />
     <ClCompile Include="kernel\src\log.cpp" />
     <ClCompile Include="kernel\src\main.cpp" />
     <ClCompile Include="kernel\src\misc.cpp" />
-    <ClCompile Include="kernel\src\node.cpp" />
     <ClCompile Include="kernel\src\objbase.cpp" />
     <ClCompile Include="kernel\src\plugin_descriptor.cpp" />
     <ClCompile Include="kernel\src\serialize\array.cpp" />
     <ClCompile Include="kernel\src\serialize\base_types.cpp" />
     <ClCompile Include="kernel\src\serialize\link.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
-    <ClCompile Include="kernel\src\sym_link.cpp" />
-    <ClCompile Include="kernel\src\tree.cpp" />
+    <ClCompile Include="kernel\src\tree\hard_link.cpp" />
+    <ClCompile Include="kernel\src\tree\link.cpp" />
+    <ClCompile Include="kernel\src\tree\node.cpp" />
+    <ClCompile Include="kernel\src\tree\sym_link.cpp" />
+    <ClCompile Include="kernel\src\tree\tree.cpp" />
     <ClCompile Include="kernel\src\type_info.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
