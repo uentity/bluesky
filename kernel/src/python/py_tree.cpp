@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/bs.h>
-#include <bs/tree.h>
+#include <bs/tree/tree.h>
 #include <bs/python/tree.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <string>

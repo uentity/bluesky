@@ -7,8 +7,8 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/link.h>
-#include <bs/node.h>
+#include <bs/tree/link.h>
+#include <bs/tree/node.h>
 #include <bs/kernel.h>
 
 NAMESPACE_BEGIN(blue_sky)

@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <bs/node.h>
+#include <bs/tree/node.h>
 #include <set>
 
 NAMESPACE_BEGIN(blue_sky)

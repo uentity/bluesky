@@ -10,7 +10,7 @@
 #pragma once
 
 #include "kernel.h"
-#include "link.h"
+#include "tree/link.h"
 
 namespace blue_sky { namespace kernel_tools {
 

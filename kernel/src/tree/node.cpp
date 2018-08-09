@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "node_impl.h"
-#include <bs/tree.h>
+#include <bs/tree/tree.h>
 #include <bs/kernel.h>
 
 #include <boost/uuid/string_generator.hpp>

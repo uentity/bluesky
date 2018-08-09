@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <bs/tree.h>
+#include <bs/tree/tree.h>
 #include <boost/algorithm/string.hpp>
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree) NAMESPACE_BEGIN(detail)

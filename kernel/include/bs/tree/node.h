@@ -9,11 +9,11 @@
 
 #pragma once
 
-#include "objbase.h"
+#include "../objbase.h"
+#include "../detail/tree_errors.h"
+#include "../detail/is_container.h"
+#include "../detail/enumops.h"
 #include "link.h"
-#include "detail/tree_errors.h"
-#include "detail/is_container.h"
-#include "detail/enumops.h"
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/sequenced_index.hpp>

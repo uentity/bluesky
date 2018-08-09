@@ -7,8 +7,8 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/tree.h>
 #include <bs/log.h>
+#include <bs/tree/tree.h>
 #include "tree_impl.h"
 
 #include <boost/uuid/uuid_io.hpp>

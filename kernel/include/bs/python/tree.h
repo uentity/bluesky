@@ -8,8 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <pybind11/pybind11.h>
-#include <bs/link.h>
-#include <bs/node.h>
+#include <bs/tree/link.h>
+#include <bs/tree/node.h>
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(python)
 

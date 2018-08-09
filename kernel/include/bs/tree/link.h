@@ -8,9 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #pragma once
-#include "common.h"
-#include "objbase.h"
-#include "detail/enumops.h"
+#include "../objbase.h"
+#include "../detail/enumops.h"
 #include <chrono>
 #include <boost/uuid/uuid.hpp>
 

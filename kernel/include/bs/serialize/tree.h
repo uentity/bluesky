@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "../tree.h"
+#include "../tree/tree.h"
 #include "atomizer.h"
 
 // inode

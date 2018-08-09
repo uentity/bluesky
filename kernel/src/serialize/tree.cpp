@@ -11,7 +11,7 @@
 #include <bs/serialize/base_types.h>
 #include <cereal/types/vector.hpp>
 
-#include "../node_impl.h"
+#include "../tree/node_impl.h"
 
 NAMESPACE_BEGIN(blue_sky)
 using namespace cereal;

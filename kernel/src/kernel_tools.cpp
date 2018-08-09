@@ -9,7 +9,7 @@
 
 #include <bs/kernel_tools.h>
 #include <bs/kernel.h>
-#include <bs/node.h>
+#include <bs/tree/node.h>
 #include <sstream>
 #include <boost/uuid/uuid_io.hpp>
 
