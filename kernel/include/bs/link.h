@@ -169,7 +169,7 @@ public:
 
 	sp_node data_node() const override;
 
-private:
+protected:
 	sp_obj data_;
 };
 
