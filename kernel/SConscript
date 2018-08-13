@@ -53,6 +53,7 @@ kernel_cpp_list = [
 	"src/tree/sym_link.cpp",
 	"src/tree/node.cpp",
 	"src/tree/tree.cpp",
+	"src/tree/fusion_link.cpp",
 ];
 #print kernel_cpp_list;
 
