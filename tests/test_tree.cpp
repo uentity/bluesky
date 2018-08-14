@@ -13,7 +13,7 @@
 #include <bs/kernel.h>
 #include <bs/kernel_tools.h>
 #include <bs/log.h>
-#include <bs/tree.h>
+#include <bs/tree/tree.h>
 
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/array.h>
