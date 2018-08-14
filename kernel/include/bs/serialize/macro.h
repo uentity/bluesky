@@ -303,14 +303,14 @@ BSS_FCN_BEGIN_EXT(fcn, T, ())
 template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_UNFOLD_TPL_T(T, tpl_args) >:: \
 BSS_FCN_##fcn(::cereal::JSONOutputArchive, T, tpl_args);                                \
 template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_UNFOLD_TPL_T(T, tpl_args) >:: \
-BSS_FCN_##fcn(::cereal::BinaryOutputArchive, T, tpl_args);
+BSS_FCN_##fcn(::cereal::PortableBinaryOutputArchive, T, tpl_args);
 
 // generate specializations for loading archives
 #define _BSS_FCN_EXPORT_load(fcn, T, tpl_args) \
 template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_UNFOLD_TPL_T(T, tpl_args) >:: \
 BSS_FCN_##fcn(::cereal::JSONInputArchive, T, tpl_args);                                 \
 template BS_API_PLUGIN auto ::blue_sky::atomizer::fcn< BS_UNFOLD_TPL_T(T, tpl_args) >:: \
-BSS_FCN_##fcn(::cereal::BinaryInputArchive, T, tpl_args);
+BSS_FCN_##fcn(::cereal::PortableBinaryInputArchive, T, tpl_args);
 
 // extended version of main macro
 #define BSS_FCN_EXPORT_EXT(fcn, T, tpl_args)                             \
