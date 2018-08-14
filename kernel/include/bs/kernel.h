@@ -16,6 +16,8 @@
 #include "plugin_descriptor.h"
 #include "any_array.h"
 
+#include <caf/fwd.hpp>
+
 NAMESPACE_BEGIN(blue_sky)
 
 namespace detail {
@@ -190,6 +192,11 @@ public:
 	/// such that they can utilize serialization from each other
 	/// function can be called multiple times, for ex. when new plugin is registered
 	void unify_serialization() const;
+
+	/// access global CAF actor_system_config
+	caf::actor_system_config& actor_config() const;
+	/// ... and to actors system
+	caf::actor_system& actor_system() const;
 
 private:
 	//! \brief Constructor of kernel

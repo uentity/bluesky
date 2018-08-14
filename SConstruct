@@ -212,6 +212,7 @@ custom_env.AppendUnique(
 		osp.join("#kernel", "include"),
 		osp.join("#third_party", "spdlog", "include"),
 		osp.join("#third_party", "actor-framework", "libcaf_core"),
+		osp.join("#third_party", "actor-framework", "libcaf_io"),
 		osp.join("#third_party", "eigen"),
 		osp.join("#third_party", "cereal", "include")
 	],

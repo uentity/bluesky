@@ -9,12 +9,19 @@
 
 #include <bs/kernel.h>
 #include <bs/error.h>
+
+#include <caf/actor_system_config.hpp>
+#include <caf/actor_system.hpp>
+#include <caf/io/middleman.hpp>
+
 #include "kernel_logging_subsyst.h"
 #include "kernel_plugins_subsyst.h"
 #include "kernel_instance_subsyst.h"
 
 namespace blue_sky {
-
+/*-----------------------------------------------------------------------------
+ *  kernel impl
+ *-----------------------------------------------------------------------------*/
 class kernel::kernel_impl : public detail::kernel_plugins_subsyst, public detail::kernel_instance_subsyst
 {
 public:
@@ -24,6 +31,18 @@ public:
 
 	using idx_any_map_t = std::map< BS_TYPE_INFO, idx_any_array >;
 	idx_any_map_t idx_any_map_;
+
+	// kernel's actor system & config
+	caf::actor_system_config actor_cfg_;
+	std::unique_ptr<caf::actor_system> actor_sys_;
+
+	kernel_impl() {
+		// [TODO] implement actor system config parsing
+		// load middleman module
+		actor_cfg_.load<caf::io::middleman>();
+		// create actor system
+		actor_sys_ = std::make_unique<caf::actor_system>(actor_cfg_);
+	}
 
 	type_tuple find_type(const std::string& key) const {
 		using search_key = detail::kernel_plugins_subsyst::type_name_key;

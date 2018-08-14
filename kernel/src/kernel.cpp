@@ -131,5 +131,13 @@ void kernel::unify_serialization() const {
 	pimpl_->unify_serialization();
 }
 
+caf::actor_system_config& kernel::actor_config() const {
+	return pimpl_->actor_cfg_;
+}
+
+caf::actor_system& kernel::actor_system() const {
+	return *pimpl_->actor_sys_;
+}
+
 } /* namespace blue_sky */
 
