@@ -75,6 +75,7 @@
 #include "type_info.h"
 #include "assert.h"
 #include "detail/args.h"
+#include "detail/scope_guard.h"
 
 NAMESPACE_BEGIN(blue_sky)
 
