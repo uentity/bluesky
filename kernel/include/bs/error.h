@@ -65,8 +65,7 @@ public:
 	/// copy & move ctors - must not throw
 	error(const error& rhs) noexcept;
 	error(error&& rhs) noexcept;
-	/// virtual destructor for derived errors
-	virtual ~error() noexcept {}
+	~error() noexcept {}
 
 	/// construct quiet error that don't get logged in constructor
 	/// quiet error can be treated like operation result
