@@ -76,8 +76,8 @@ std::string get_backtrace(int backtrace_depth, int skip) {
 
 using namespace blue_sky::tree;
 
-void print_link(const sp_link& l, int level) {
-	static const auto dumplnk = [](const sp_link& l_) {
+void print_link(const sp_clink& l, int level) {
+	static const auto dumplnk = [](const sp_clink& l_) {
 		std::cout << l_->name() << " [" << l_->type_id() << ' ' << l_->id() << "] -> ("
 		          << l_->obj_type_id() << ", " << l_->oid() << ")" << std::endl;
 	};

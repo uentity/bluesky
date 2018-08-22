@@ -18,7 +18,7 @@ BS_API std::string print_loaded_types();
 
 BS_API std::string get_backtrace(int backtrace_depth = 16, int skip = 2);
 
-BS_API void print_link(const tree::sp_link& l, int level = 0);
+BS_API void print_link(const tree::sp_clink& l, int level = 0);
 
 }} /* namespace blue_sky::kernel_tools */
 
