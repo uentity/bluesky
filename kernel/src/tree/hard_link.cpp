@@ -29,23 +29,15 @@ link::sp_link hard_link::clone(bool deep) const {
 	);
 }
 
-sp_obj hard_link::data() const {
-	return data_;
-}
-
 std::string hard_link::type_id() const {
 	return "hard_link";
 }
 
-std::string hard_link::oid() const {
-	return data_->id();
+result_or_err<sp_obj> hard_link::data_ex() const {
+	return data_;
 }
 
-std::string hard_link::obj_type_id() const {
-	return data_->type_id();
-}
-
-sp_node hard_link::data_node() const {
+result_or_err<sp_node> hard_link::data_node_ex() const {
 	return data_->is_node() ? std::static_pointer_cast<tree::node>(data_) : nullptr;
 }
 
@@ -61,23 +53,15 @@ link::sp_link weak_link::clone(bool deep) const {
 	return deep ? nullptr : std::make_shared<weak_link>(name_, data_.lock(), flags_);
 }
 
-sp_obj weak_link::data() const {
-	return data_.lock();
-}
-
 std::string weak_link::type_id() const {
 	return "weak_link";
 }
 
-std::string weak_link::oid() const {
-	return data_.lock()->id();
+result_or_err<sp_obj> weak_link::data_ex() const {
+	return data_.lock();
 }
 
-std::string weak_link::obj_type_id() const {
-	return data_.lock()->type_id();
-}
-
-sp_node weak_link::data_node() const {
+result_or_err<sp_node> weak_link::data_node_ex() const {
 	auto sdata = data_.lock();
 	return sdata->is_node() ? std::static_pointer_cast<tree::node>(sdata) : nullptr;
 }

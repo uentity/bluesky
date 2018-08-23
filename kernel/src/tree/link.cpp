@@ -39,25 +39,16 @@ link::link(std::string name, Flags f)
 	id_(gen()), flags_(f)
 {}
 
-// copy ctor does not copy uuid from lhs
-// instead it creates a new one
-// [NOTE] important - owner kept empty in copied link
-link::link(const link& lhs)
-	: std::enable_shared_from_this<link>(lhs), name_(lhs.name_), id_(gen()), flags_(lhs.flags_), owner_()
-{}
-
 link::~link() {}
 
 // get link's object ID
 std::string link::oid() const {
-	auto obj = data();
-	if(obj) return obj->id();
+	if(auto obj = data()) return obj->id();
 	return boost::uuids::to_string(boost::uuids::nil_uuid());
 }
 
 std::string link::obj_type_id() const {
-	auto obj = data();
-	if(obj) return obj->type_id();
+	if(auto obj = data()) return obj->type_id();
 	return type_descriptor::nil().name;
 }
 

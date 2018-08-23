@@ -10,6 +10,7 @@
 #pragma once
 #include "../objbase.h"
 #include "../detail/enumops.h"
+#include "../error.h"
 #include <chrono>
 #include <boost/uuid/uuid.hpp>
 
@@ -67,22 +68,30 @@ public:
 	/// if `deep` flag is set, then clone pointed object as well
 	virtual sp_link clone(bool deep = false) const = 0;
 
-	/// get pointer to object link is pointing to
-	/// NOTE: returned pointer can be null
-	virtual sp_obj data() const = 0;
-
 	/// query what kind of link is this
 	virtual std::string type_id() const = 0;
 
-	/// get link's object ID
+	/// get link's object ID -- fast, can return empty string
 	virtual std::string oid() const;
 
-	/// get link's object type ID
+	/// get link's object type ID -- fast, can return nil type ID
 	virtual std::string obj_type_id() const;
 
-	/// return tree::node if contained object is a node
+	/// get pointer to object link is pointing to -- slow, can return error
+	/// NOTE: returned pointer can be null
+	virtual result_or_err<sp_obj> data_ex() const = 0;
+	/// simple data accessor that returns nullptr on error -- slow (same as `data_ex()`)
+	sp_obj data() const {
+		return data_ex().value_or(nullptr);
+	}
+
+	/// return tree::node if contained object is a node -- slow, can return error
 	/// derived class can return cached node info
-	virtual sp_node data_node() const = 0;
+	virtual result_or_err<sp_node> data_node_ex() const = 0;
+	/// simple tree::node accessor that returns nullptr on error -- slow (same as `data_node_ex()`)
+	sp_node data_node() const {
+		return data_node_ex().value_or(nullptr);
+	}
 
 	/// flags reflect link properties and state
 	enum Flags {
@@ -140,10 +149,12 @@ protected:
 	link(std::string name, Flags f = Plain);
 
 	/// direct copying of links change ID
-	link(const link&);
+	link(const link&) = delete;
 
 	/// switch link's owner
 	void reset_owner(const sp_node& new_owner);
+
+	static error& skip_err();
 };
 using sp_link = std::shared_ptr<link>;
 using sp_clink = std::shared_ptr<const link>;
@@ -160,15 +171,11 @@ public:
 	/// implement link's API
 	sp_link clone(bool deep = false) const override;
 
-	sp_obj data() const override;
-
 	std::string type_id() const override;
 
-	std::string oid() const override;
+	result_or_err<sp_obj> data_ex() const override;
 
-	std::string obj_type_id() const override;
-
-	sp_node data_node() const override;
+	result_or_err<sp_node> data_node_ex() const override;
 
 protected:
 	sp_obj data_;
@@ -186,15 +193,11 @@ public:
 	/// implement link's API
 	sp_link clone(bool deep = false) const override;
 
-	sp_obj data() const override;
-
 	std::string type_id() const override;
 
-	std::string oid() const override;
+	result_or_err<sp_obj> data_ex() const override;
 
-	std::string obj_type_id() const override;
-
-	sp_node data_node() const override;
+	result_or_err<sp_node> data_node_ex() const override;
 
 private:
 	std::weak_ptr<objbase> data_;
@@ -214,15 +217,11 @@ public:
 	/// implement link's API
 	sp_link clone(bool deep = false) const override;
 
-	sp_obj data() const override;
-
 	std::string type_id() const override;
 
-	std::string oid() const override;
+	result_or_err<sp_obj> data_ex() const override;
 
-	std::string obj_type_id() const override;
-
-	sp_node data_node() const override;
+	result_or_err<sp_node> data_node_ex() const override;
 
 	/// additional sym link API
 	/// check is pointed link is alive

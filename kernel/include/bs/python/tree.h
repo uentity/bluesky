@@ -25,10 +25,6 @@ public:
 		PYBIND11_OVERLOAD_PURE(tree::sp_link, Link, clone, deep);
 	}
 
-	sp_obj data() const override {
-		PYBIND11_OVERLOAD_PURE(sp_obj, Link, data, );
-	}
-
 	std::string type_id() const override {
 		PYBIND11_OVERLOAD_PURE(std::string, Link, type_id, );
 	}
@@ -41,7 +37,11 @@ public:
 		PYBIND11_OVERLOAD(std::string, Link, obj_type_id, );
 	}
 
-	tree::sp_node data_node() const override {
+	result_or_err<sp_obj> data_ex() const override {
+		PYBIND11_OVERLOAD_PURE(sp_obj, Link, data, );
+	}
+
+	result_or_err<tree::sp_node> data_node_ex() const override {
 		PYBIND11_OVERLOAD_PURE(tree::sp_node, Link, data_node, );
 	}
 
