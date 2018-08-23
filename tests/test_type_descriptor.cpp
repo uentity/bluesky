@@ -34,6 +34,7 @@ sp_obj create_single_person() {
 BS_TYPE_IMPL(bs_person, objbase, "bs_person", "BS Person", false, false)
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (const char*))
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (double))
+BS_TYPE_ADD_CONSTRUCTOR(bs_person, (const char*, double))
 // add free function constructor
 BS_TYPE_ADD_DEF_CONSTRUCTOR(bs_person)
 //BS_TYPE_ADD_CONSTRUCTOR_F(bs_person, create_single_person)

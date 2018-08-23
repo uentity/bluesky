@@ -21,8 +21,13 @@
 
 #include <boost/test/unit_test.hpp>
 #include <iostream>
+#include <caf/scoped_actor.hpp>
 
 #define K BS_KERNEL
+
+using namespace blue_sky;
+using namespace blue_sky::log;
+using namespace blue_sky::tree;
 
 namespace {
 
@@ -51,13 +56,21 @@ auto test_json(const T& obj) {
 	return obj1;
 }
 
+class fusion_client : public fusion_iface {
+	auto populate(const sp_node& root, const std::string& child_type_id = "") -> error override {
+		bsout() << "fusion_client::populate() called" << end;
+		return error::quiet();
+	}
+
+	auto pull_data(const sp_obj& root) -> error override {
+		bsout() << "fusion_client::pull_data() called" << end;
+		return error::quiet();
+	}
+};
+
 } // eof hidden namespace
 
 BOOST_AUTO_TEST_CASE(test_tree) {
-	using namespace blue_sky;
-	using namespace blue_sky::log;
-	using namespace blue_sky::tree;
-
 	std::cout << "*********************************************************************" << std::endl;
 
 	// person
@@ -98,5 +111,13 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	kernel_tools::print_link(std::make_shared<hard_link>("r", N1));
 	BOOST_TEST(N1);
 	BOOST_TEST(N1->size() == N->size());
+
+	// fusion link
+	{
+		auto fl = std::make_shared<fusion_link>(
+			"fuse1", std::make_shared<fusion_client>()
+		);
+		fl->test();
+	}
 }
 
