@@ -10,6 +10,7 @@
 #pragma once
 
 #include "link.h"
+#include "fusion.h"
 #include "node.h"
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)

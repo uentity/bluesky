@@ -30,14 +30,14 @@ using sp_fusion = std::shared_ptr<fusion_iface>;
  *-----------------------------------------------------------------------------*/
 class BS_API fusion_link : public link {
 	friend class blue_sky::atomizer;
-public:
 
+public:
 	// ctors
 	fusion_link(
-		sp_fusion bridge, std::string name, sp_node data, Flags f = Persistent
+		std::string name, sp_fusion bridge, sp_node data = nullptr, Flags f = Persistent
 	);
 	fusion_link(
-		sp_fusion bridge, std::string name, const char* obj_type,
+		std::string name, sp_fusion bridge, const char* obj_type,
 		std::string oid = "", Flags f = Persistent
 	);
 	// dtor
@@ -51,15 +51,15 @@ public:
 	auto obj_type_id() const -> std::string override;
 
 	// pull object's data via `fusion_iface::pull_data()`
-	auto data() const -> sp_obj override;
+	auto data_ex() const -> result_or_err<sp_obj> override;
 	// pull leafs via `fusion_iface::populate()`
-	auto data_node() const -> sp_node override;
+	auto data_node_ex() const -> result_or_err<sp_node> override;
 	// force `fusion_iface::populate()` call with specified children types
 	// regardless of populate status
 	auto populate(const std::string& child_type_id) -> error;
 
 	// enum states of request to fusion_iface
-	enum class OpStatus { Void, Busy, OK, Error, Pending };
+	enum class OpStatus { Void, Busy, OK, Error };
 
 	// get/set populate status
 	OpStatus populate_status() const;
@@ -69,10 +69,22 @@ public:
 	OpStatus data_status() const;
 	void reset_data_status(OpStatus new_status = OpStatus::Void);
 
+	/// obtain data in async manner passing it to callback
+	using process_data_cb = std::function<void(result_or_err<sp_clink>)>;
+	auto data(process_data_cb f) const -> void;
+	/// ... and data node
+	auto data_node(process_data_cb f) const -> void;
+	/// async populate
+	auto populate(process_data_cb f, std::string child_type_id) const -> void;
+
+	auto test() const -> void;
+
 private:
-	struct fusion_link_impl;
-	std::unique_ptr<fusion_link_impl> pimpl_;
+	struct impl;
+	std::unique_ptr<impl> pimpl_;
 };
+using sp_fusion_link = std::shared_ptr<fusion_link>;
+using sp_cfusion_link = std::shared_ptr<const fusion_link>;
 
 NAMESPACE_END(blue_sky) NAMESPACE_END(tree)
 
