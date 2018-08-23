@@ -10,6 +10,7 @@
 #pragma once
 
 #include "common.h"
+#include <tl/expected.hpp>
 #include <exception>
 #include <system_error>
 #include <ostream>
@@ -36,7 +37,6 @@ NAMESPACE_END(blue_sky)
 BS_REGISTER_ERROR_ENUM(blue_sky::Error)
 
 NAMESPACE_BEGIN(blue_sky)
-
 /*-----------------------------------------------------------------------------
  *  error class decalration
  *-----------------------------------------------------------------------------*/
@@ -106,6 +106,9 @@ private:
 	/// construct from int operation result
 	explicit error(IsQuiet, int err_code);
 };
+
+// introduce expected types
+template<class T> using result_or_err = tl::expected<T, error>;
 
 NAMESPACE_END(blue_sky)
 
