@@ -10,6 +10,8 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/boost_uuid.h>
 #include <bs/serialize/base_types.h>
+#include "../tree/fusion_link_impl.h"
+
 #include <cereal/types/polymorphic.hpp>
 
 using namespace cereal;
@@ -60,7 +62,7 @@ BSS_FCN_EXPORT(load, tree::inode)
  *  link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::link)
-	// [NOTE] intentinaly DON'T save name,
+	// [NOTE] intentionally DON'T save name,
 	// because name will be saved in derived classes to invoke minimal constructor
 	// also do not save owner, because owner will be correctly set by `node`
 	ar(
@@ -85,7 +87,7 @@ BSS_FCN_BEGIN(load_and_construct, tree::hard_link)
 	ar(name, data);
 	construct(std::move(name), std::move(data));
 	// load base link
-	ar(base_class<tree::link>(construct.ptr()));
+	ar( make_nvp("link_base", base_class<tree::link>(construct.ptr())) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::hard_link)
@@ -110,7 +112,7 @@ BSS_FCN_BEGIN(load_and_construct, tree::weak_link)
 	ar(name, data);
 	construct(std::move(name), std::move(data));
 	// load base link
-	ar(base_class<tree::link>(construct.ptr()));
+	ar( make_nvp("link_base", base_class<tree::link>(construct.ptr())) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::weak_link)
@@ -134,7 +136,7 @@ BSS_FCN_BEGIN(load_and_construct, tree::sym_link)
 	ar(name, path);
 	construct(std::move(name), std::move(path));
 	// load base link
-	ar(base_class<tree::link>(construct.ptr()));
+	ar( make_nvp("link_base", base_class<tree::link>(construct.ptr())) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::sym_link)
@@ -148,12 +150,46 @@ BSS_FCN_END
 BSS_FCN_EXPORT(serialize, tree::sym_link)
 BSS_FCN_EXPORT(load_and_construct, tree::sym_link)
 
-// instantiate code for polymorphic types
+/*-----------------------------------------------------------------------------
+ *  fusion_link
+ *-----------------------------------------------------------------------------*/
+BSS_FCN_BEGIN(serialize, tree::fusion_link)
+	ar(
+		make_nvp("name", t.name_),
+		make_nvp("bridge", t.pimpl_->bridge_),
+		make_nvp("data", t.pimpl_->data_),
+		make_nvp("pop_status", t.pimpl_->pop_status_),
+		make_nvp("data_status", t.pimpl_->data_status_),
+		make_nvp("link_base", base_class<tree::link>(&t))
+	);
+BSS_FCN_END
+
+BSS_FCN_BEGIN(load_and_construct, tree::fusion_link)
+	// load base data & construct instance
+	std::string name;
+	tree::sp_node data;
+	tree::sp_fusion bridge;
+	ar(name, bridge, data);
+	construct(std::move(name), std::move(bridge), std::move(data));
+	// load other data
+	auto& t = *construct.ptr();
+	ar(
+		make_nvp("pop_status", t.pimpl_->pop_status_),
+		make_nvp("data_status", t.pimpl_->data_status_),
+		// base link
+		make_nvp("link_base", base_class<tree::link>(&t))
+	);
+BSS_FCN_END
+
+/*-----------------------------------------------------------------------------
+ *  instantiate code for polymorphic types
+ *-----------------------------------------------------------------------------*/
 using namespace blue_sky;
 //CEREAL_REGISTER_TYPE_WITH_NAME(tree::link, "link")
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::hard_link, "hard_link")
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::weak_link, "weak_link")
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::sym_link, "sym_link")
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::fusion_link, "fusion_link")
 
 BSS_REGISTER_DYNAMIC_INIT(link)
 
