@@ -32,12 +32,12 @@ public:
 	using id_type = link::id_type;
 
 	// links are sorted by unique ID
-	using id_key = mi::member<
-		link, const id_type, &link::id_
+	using id_key = mi::const_mem_fun<
+		link, const id_type&, &link::id
 	>;
 	// and non-unique name
-	using name_key = mi::member<
-		link, const std::string, &link::name_
+	using name_key = mi::const_mem_fun<
+		link, std::string, &link::name
 	>;
 	// and non-unique object ID
 	using oid_key = mi::const_mem_fun<

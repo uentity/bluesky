@@ -10,6 +10,7 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/boost_uuid.h>
 #include <bs/serialize/base_types.h>
+#include "../tree/link_impl.h"
 #include "../tree/fusion_link_impl.h"
 
 #include <cereal/types/polymorphic.hpp>
@@ -67,9 +68,9 @@ BSS_FCN_BEGIN(serialize, tree::link)
 	// also do not save owner, because owner will be correctly set by `node`
 	ar(
 //		make_nvp("name", t.name_),
-		make_nvp("id", t.id_),
-		make_nvp("flags", t.flags_),
-		make_nvp("inode", t.inode_)
+		make_nvp("id", t.pimpl_->id_),
+		make_nvp("flags", t.pimpl_->flags_),
+		make_nvp("inode", t.pimpl_->inode_)
 		// intentionally do net serialize owner, it will be set up when parent node is loaded
 	);
 BSS_FCN_END
@@ -92,7 +93,7 @@ BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::hard_link)
 	ar(
-		make_nvp("name", t.name_),
+		make_nvp("name", t.pimpl_->name_),
 		make_nvp("data", t.data_),
 		make_nvp("link_base", base_class<tree::link>(&t))
 	);
@@ -117,7 +118,7 @@ BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::weak_link)
 	ar(
-		make_nvp("name", t.name_),
+		make_nvp("name", t.pimpl_->name_),
 		make_nvp("data", t.data_.lock()),
 		make_nvp("link_base", base_class<tree::link>(&t))
 	);
@@ -141,7 +142,7 @@ BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::sym_link)
 	ar(
-		make_nvp("name", t.name_),
+		make_nvp("name", t.pimpl_->name_),
 		make_nvp("path", t.path_),
 		make_nvp("link_base", base_class<tree::link>(&t))
 	);
@@ -155,7 +156,7 @@ BSS_FCN_EXPORT(load_and_construct, tree::sym_link)
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::fusion_link)
 	ar(
-		make_nvp("name", t.name_),
+		make_nvp("name", static_cast<tree::link&>(t).pimpl_->name_),
 		make_nvp("bridge", t.pimpl_->bridge_),
 		make_nvp("data", t.pimpl_->data_),
 		make_nvp("pop_status", t.pimpl_->pop_status_),

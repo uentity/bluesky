@@ -45,7 +45,7 @@ auto fusion_link::test() const -> void {
 
 auto fusion_link::clone(bool deep) const -> sp_link {
 	auto res = std::make_shared<fusion_link>(
-		name_, pimpl_->bridge_,
+		name(), pimpl_->bridge_,
 		deep ? BS_KERNEL.clone_object(std::static_pointer_cast<objbase>(pimpl_->data_)) : pimpl_->data_
 	);
 	return res;

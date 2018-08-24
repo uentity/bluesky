@@ -104,19 +104,13 @@ public:
 	inode& info();
 
 	/// access link's unique ID
-	const id_type& id() const {
-		return id_;
-	}
+	const id_type& id() const;
 
 	/// obtain link's symbolic name
-	std::string name() const {
-		return name_;
-	}
+	std::string name() const;
 
 	/// get link's container
-	sp_node owner() const {
-		return owner_.lock();
-	}
+	sp_node owner() const;
 
 	/// provide shared pointers casted to derived type
 	template< class Derived >
@@ -132,13 +126,10 @@ public:
 	auto rename(std::string new_name) -> void;
 
 protected:
-	std::string name_;
-	id_type id_;
-	Flags flags_;
-	/// contains link's metadata
-	inode inode_;
-	/// owner node
-	std::weak_ptr<node> owner_;
+	// serialization support
+	friend class blue_sky::atomizer;
+	// full access for node
+	friend class node;
 
 	/// ctor accept name of created link
 	link(std::string name, Flags f = Plain);
@@ -149,14 +140,12 @@ protected:
 	/// switch link's owner
 	void reset_owner(const sp_node& new_owner);
 
-private:
-	// serialization support
-	friend class blue_sky::atomizer;
-	// full access for node
-	friend class node;
-
 	// silent replace old name with new in link's internals
 	auto rename_silent(std::string new_name) -> void;
+
+	// PIMPL
+	struct impl;
+	std::unique_ptr<impl> pimpl_;
 };
 using sp_link = link::sp_link;
 using sp_clink = link::sp_clink;

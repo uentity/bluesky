@@ -25,7 +25,7 @@ sym_link::sym_link(std::string name, const sp_clink& src, Flags f)
 /// implement link's API
 sp_link sym_link::clone(bool deep) const {
 	// no deep copy support for symbolic link
-	return std::make_shared<sym_link>(name_, path_, flags());
+	return std::make_shared<sym_link>(name(), path_, flags());
 }
 
 std::string sym_link::type_id() const {
@@ -34,7 +34,7 @@ std::string sym_link::type_id() const {
 
 result_or_err<sp_obj> sym_link::data_ex() const {
 	// cannot dereference dangling sym link
-	if(owner_.expired()) return nullptr;
+	if(!owner()) return nullptr;
 	const auto src_link = detail::deref_path(path_, *this);
 	return src_link ? src_link->data_ex() : nullptr;
 }

@@ -23,9 +23,9 @@ hard_link::hard_link(std::string name, sp_obj data, Flags f) :
 
 link::sp_link hard_link::clone(bool deep) const {
 	return std::make_shared<hard_link>(
-		name_,
+		name(),
 		deep ? BS_KERNEL.clone_object(data_) : data_,
-		flags_
+		flags()
 	);
 }
 
@@ -50,7 +50,7 @@ weak_link::weak_link(std::string name, const sp_obj& data, Flags f) :
 
 link::sp_link weak_link::clone(bool deep) const {
 	// cannot make deep copy of object pointee
-	return deep ? nullptr : std::make_shared<weak_link>(name_, data_.lock(), flags_);
+	return deep ? nullptr : std::make_shared<weak_link>(name(), data_.lock(), flags());
 }
 
 std::string weak_link::type_id() const {
