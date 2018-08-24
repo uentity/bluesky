@@ -311,6 +311,10 @@ int node::rename(const std::string& key, std::string new_name, Key key_meaning, 
 	}
 }
 
+auto node::on_rename(const id_type& renamed_id) const -> void {
+	pimpl_->on_rename(renamed_id);
+}
+
 // ---- project
 iterator<Key::AnyOrder> node::project(iterator<Key::ID> src) const {
 	return pimpl_->project<Key::ID>(std::move(src));

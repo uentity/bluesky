@@ -270,6 +270,7 @@ public:
 
 private:
 	friend class blue_sky::atomizer;
+	friend class link;
 	// PIMPL
 	class node_impl;
 	std::unique_ptr< node_impl > pimpl_;
@@ -291,6 +292,8 @@ private:
 	std::vector<Key_type<Key::Name>> keys(Key_const<Key::Name>) const;
 	std::vector<Key_type<Key::OID>> keys(Key_const<Key::OID>) const;
 	std::vector<Key_type<Key::Type>> keys(Key_const<Key::Type>) const;
+
+	auto on_rename(const id_type& renamed_lnk) const -> void;
 
 	BS_TYPE_DECL
 };

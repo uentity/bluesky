@@ -52,13 +52,10 @@ using inodeptr = std::unique_ptr<inode>;
 
 /// base class of all links
 class BS_API link  : public std::enable_shared_from_this<link> {
-	friend class blue_sky::atomizer;
 public:
-	// give node access to all link's memebers
-	friend class node;
-
 	using id_type = boost::uuids::uuid;
-	using sp_link = std::shared_ptr< link >;
+	using sp_link = std::shared_ptr<link>;
+	using sp_clink = std::shared_ptr<const link>;
 
 	/// virtual dtor
 	virtual ~link();
@@ -132,7 +129,7 @@ public:
 		return std::static_pointer_cast< Derived, link >(this->shared_from_this());
 	}
 
-	bool rename(std::string new_name);
+	auto rename(std::string new_name) -> void;
 
 protected:
 	std::string name_;
@@ -143,8 +140,6 @@ protected:
 	/// owner node
 	std::weak_ptr<node> owner_;
 
-	friend class node;
-
 	/// ctor accept name of created link
 	link(std::string name, Flags f = Plain);
 
@@ -154,10 +149,17 @@ protected:
 	/// switch link's owner
 	void reset_owner(const sp_node& new_owner);
 
-	static error& skip_err();
+private:
+	// serialization support
+	friend class blue_sky::atomizer;
+	// full access for node
+	friend class node;
+
+	// silent replace old name with new in link's internals
+	auto rename_silent(std::string new_name) -> void;
 };
-using sp_link = std::shared_ptr<link>;
-using sp_clink = std::shared_ptr<const link>;
+using sp_link = link::sp_link;
+using sp_clink = link::sp_clink;
 
 /// hard link stores direct pointer to object
 /// there can exist many hard links to single object

@@ -64,12 +64,15 @@ void link::set_flags(Flags new_flags) {
 	flags_ = new_flags;
 }
 
-bool link::rename(std::string new_name) {
-	if(auto O = owner()) {
-		return O->rename(O->find(id()), std::move(new_name));
-	}
+auto link::rename(std::string new_name) -> void {
 	name_ = std::move(new_name);
-	return true;
+	if(auto O = owner()) {
+		O->on_rename(id());
+	}
+}
+
+auto link::rename_silent(std::string new_name) -> void {
+	name_ = std::move(new_name);
 }
 
 const inode& link::info() const {
