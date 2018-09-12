@@ -71,6 +71,7 @@ class fusion_client : public fusion_iface {
 } // eof hidden namespace
 
 BOOST_AUTO_TEST_CASE(test_tree) {
+	std::cout << "\n\n*** testing tree..." << std::endl;
 	std::cout << "*********************************************************************" << std::endl;
 
 	// person
@@ -117,7 +118,7 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 		auto fl = std::make_shared<fusion_link>(
 			"fuse1", std::make_shared<fusion_client>()
 		);
-		fl->test();
+		//fl->test();
 	}
 }
 

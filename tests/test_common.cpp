@@ -92,7 +92,7 @@ void parse_args(Args... args) {
 }
 
 BOOST_AUTO_TEST_CASE(test_bs_args) {
-	std::cout << "*** testing bs_args..." << std::endl;
+	std::cout << "\n\n*** testing bs_args..." << std::endl;
 
 	int my_ints[] = {0, 1, 2};
 	std::string my_stdstr = "std::string";

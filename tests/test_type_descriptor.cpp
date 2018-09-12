@@ -93,7 +93,7 @@ BS_REGISTER_TYPE_T("unit_test", uber_type, (double, my_strategy< double >))
 using namespace blue_sky;
 
 BOOST_AUTO_TEST_CASE(test_type_descriptor) {
-	std::cout << "*** testing bs_type_descriptor..." << std::endl;
+	std::cout << "\n\n*** testing bs_type_descriptor..." << std::endl;
 	// register type first
 	//BS_KERNEL.register_type(bs_person::bs_type());
 

@@ -101,6 +101,8 @@ using namespace blue_sky;
 BOOST_AUTO_TEST_CASE(test_serialization) {
 	using namespace blue_sky::log;
 
+	std::cout << "\n\n*** testing serialization..." << std::endl;
+
 	// explicitly init serialization subsystem
 	BS_KERNEL.unify_serialization();
 

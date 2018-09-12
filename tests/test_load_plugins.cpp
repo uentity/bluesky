@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(test_load_plugins) {
 	using namespace blue_sky::kernel_tools;
 
 	BS_KERNEL.load_plugins();
-	std::cout << "*** testing kernel_tools..." << std::endl;
+	std::cout << "\n\n*** testing load plugins..." << std::endl;
 	std::cout << print_loaded_types() << std::endl;
 }
 
