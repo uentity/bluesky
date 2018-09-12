@@ -9,6 +9,7 @@
 
 #include <bs/serialize/tree.h>
 #include <bs/serialize/boost_uuid.h>
+#include <bs/serialize/carray.h>
 #include <bs/serialize/base_types.h>
 #include "../tree/link_impl.h"
 #include "../tree/fusion_link_impl.h"
@@ -70,8 +71,9 @@ BSS_FCN_BEGIN(serialize, tree::link)
 //		make_nvp("name", t.name_),
 		make_nvp("id", t.pimpl_->id_),
 		make_nvp("flags", t.pimpl_->flags_),
-		make_nvp("inode", t.pimpl_->inode_)
+		make_nvp("inode", t.pimpl_->inode_),
 		// intentionally do net serialize owner, it will be set up when parent node is loaded
+		make_nvp("status", make_carray_view(t.pimpl_->status_, 2))
 	);
 BSS_FCN_END
 
@@ -159,8 +161,6 @@ BSS_FCN_BEGIN(serialize, tree::fusion_link)
 		make_nvp("name", static_cast<tree::link&>(t).pimpl_->name_),
 		make_nvp("bridge", t.pimpl_->bridge_),
 		make_nvp("data", t.pimpl_->data_),
-		make_nvp("pop_status", t.pimpl_->pop_status_),
-		make_nvp("data_status", t.pimpl_->data_status_),
 		make_nvp("link_base", base_class<tree::link>(&t))
 	);
 BSS_FCN_END
@@ -175,8 +175,6 @@ BSS_FCN_BEGIN(load_and_construct, tree::fusion_link)
 	// load other data
 	auto& t = *construct.ptr();
 	ar(
-		make_nvp("pop_status", t.pimpl_->pop_status_),
-		make_nvp("data_status", t.pimpl_->data_status_),
 		// base link
 		make_nvp("link_base", base_class<tree::link>(&t))
 	);

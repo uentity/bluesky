@@ -37,20 +37,20 @@ public:
 		PYBIND11_OVERLOAD(std::string, Link, obj_type_id, );
 	}
 
-	result_or_err<sp_obj> data_ex() const override {
-		PYBIND11_OVERLOAD_PURE(sp_obj, Link, data, );
+	result_or_err<sp_obj> data_impl() const override {
+		PYBIND11_OVERLOAD_PURE(sp_obj, Link, data_impl, );
 	}
 
-	result_or_err<tree::sp_node> data_node_ex() const override {
-		PYBIND11_OVERLOAD_PURE(tree::sp_node, Link, data_node, );
+	result_or_err<tree::sp_node> data_node_impl() const override {
+		PYBIND11_OVERLOAD(tree::sp_node, Link, data_node_impl, );
 	}
 
-	typename Link::Flags flags() const override {
-		PYBIND11_OVERLOAD(typename Link::Flags, Link, flags, );
-	}
-	void set_flags(typename Link::Flags new_flags) override {
-		PYBIND11_OVERLOAD(void, Link, set_flags, new_flags);
-	}
+	//typename Link::Flags flags() const override {
+	//	PYBIND11_OVERLOAD(typename Link::Flags, Link, flags, );
+	//}
+	//void set_flags(typename Link::Flags new_flags) override {
+	//	PYBIND11_OVERLOAD(void, Link, set_flags, new_flags);
+	//}
 };
 
 /*-----------------------------------------------------------------------------

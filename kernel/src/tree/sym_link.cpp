@@ -19,7 +19,7 @@ sym_link::sym_link(std::string name, std::string path, Flags f)
 {}
 /// ctor -- pointee is specified directly - absolute path will be stored
 sym_link::sym_link(std::string name, const sp_clink& src, Flags f)
-	: link(std::move(name), f), path_(abspath(src))
+	: sym_link(std::move(name), abspath(src), f)
 {}
 
 /// implement link's API
@@ -32,16 +32,23 @@ std::string sym_link::type_id() const {
 	return "sym_link";
 }
 
-result_or_err<sp_obj> sym_link::data_ex() const {
-	// cannot dereference dangling sym link
-	if(!owner()) return nullptr;
-	const auto src_link = detail::deref_path(path_, *this);
-	return src_link ? src_link->data_ex() : nullptr;
+void sym_link::reset_owner(sp_node new_owner) {
+	link::reset_owner(std::move(new_owner));
+	// update link's status
+	data_impl().map([this](const sp_obj& obj) {
+		rs_reset(Req::Data, ReqStatus::OK);
+		if(obj->is_node())
+			rs_reset(Req::DataNode, ReqStatus::OK);
+	});
 }
 
-result_or_err<sp_node> sym_link::data_node_ex() const {
-	const auto obj = data();
-	return obj && obj->is_node() ? std::static_pointer_cast<tree::node>(obj) : nullptr;
+result_or_err<sp_obj> sym_link::data_impl() const {
+	// cannot dereference dangling sym link
+	if(!owner()) return tl::make_unexpected(error::quiet("Unbound sym link"));
+	const auto src_link = detail::deref_path(path_, *this);
+	return src_link ?
+		result_or_err<sp_obj>(src_link->data_ex()) :
+		tl::make_unexpected(error::quiet("Sym link target missing"));
 }
 
 bool sym_link::is_alive() const {

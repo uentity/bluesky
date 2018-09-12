@@ -47,41 +47,21 @@ public:
 
 	// link API implementation
 	auto type_id() const -> std::string override;
-	auto oid() const -> std::string override;
-	auto obj_type_id() const -> std::string override;
+	//auto oid() const -> std::string override;
+	//auto obj_type_id() const -> std::string override;
 
-	// pull object's data via `fusion_iface::pull_data()`
-	auto data_ex() const -> result_or_err<sp_obj> override;
-	// pull leafs via `fusion_iface::populate()`
-	auto data_node_ex() const -> result_or_err<sp_node> override;
 	// force `fusion_iface::populate()` call with specified children types
 	// regardless of populate status
 	auto populate(const std::string& child_type_id) -> error;
 
-	// enum states of request to fusion_iface
-	enum class OpStatus { Void, Busy, OK, Error };
-
-	// get/set populate status
-	OpStatus populate_status() const;
-	void reset_populate_status(OpStatus new_status = OpStatus::Void);
-
-	// get/set pull data status
-	OpStatus data_status() const;
-	void reset_data_status(OpStatus new_status = OpStatus::Void);
-
-	/// obtain data in async manner passing it to callback
-	using process_data_cb = std::function<void(result_or_err<sp_clink>)>;
-	auto data(process_data_cb f) const -> void;
-	/// ... and data node
-	auto data_node(process_data_cb f) const -> void;
-	/// async populate
-	auto populate(process_data_cb f, std::string child_type_id) const -> void;
-
-	auto test() const -> void;
-
 private:
 	struct impl;
 	std::unique_ptr<impl> pimpl_;
+
+	// pull object's data via `fusion_iface::pull_data()`
+	auto data_impl() const -> result_or_err<sp_obj> override;
+	// pull leafs via `fusion_iface::populate()`
+	auto data_node_impl() const -> result_or_err<sp_node> override;
 };
 using sp_fusion_link = std::shared_ptr<fusion_link>;
 using sp_cfusion_link = std::shared_ptr<const fusion_link>;

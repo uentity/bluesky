@@ -10,10 +10,10 @@
 #include <caf/atom.hpp>
 
 namespace blue_sky {
-// async invoke `fusion_link::data()`
-using flnk_data_atom = caf::atom_constant<caf::atom("tfl data")>;
-// async invoke `fusion_link::populate()`
-using flnk_populate_atom = caf::atom_constant<caf::atom("tfl dnode")>;
+// async invoke `link::data()`
+using lnk_data_atom = caf::atom_constant<caf::atom("tl data")>;
+// async invoke `link::data_node()`
+using lnk_dnode_atom = caf::atom_constant<caf::atom("tl dnode")>;
 	
 } /* namespace blue_sky */
 

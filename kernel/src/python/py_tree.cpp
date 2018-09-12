@@ -158,11 +158,13 @@ void py_bind_tree(py::module& m) {
 	// link base class
 	link_pyface
 		.def("clone", &link::clone, "deep"_a = true, "Make shallow or deep copy of link")
-		.def("data", &link::data)
+		.def("data", (sp_obj (link::*)() const) &link::data)
+		.def("data", (void (link::*)(link::process_data_cb) const) &link::data)
 		.def("type_id", &link::type_id)
 		.def("oid", &link::oid)
 		.def("obj_type_id", &link::obj_type_id)
-		.def("data_node", &link::data_node)
+		.def("data_node", (sp_node (link::*)() const) &link::data_node)
+		.def("data_node", (void (link::*)(link::process_data_cb) const) &link::data_node)
 		.def_property_readonly("id", [](const link& L) {
 			return boost::uuids::to_string(L.id());
 		})
