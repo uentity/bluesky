@@ -107,7 +107,13 @@ private:
 	explicit error(IsQuiet, int err_code);
 };
 
-// introduce expected types
+/// produces quiet error with given params
+template<typename... Args>
+inline auto success(Args&&... args) -> error {
+	return error::quiet(std::forward<Args>(args)...);
+}
+
+/// carries result (of type T) OR error
 template<class T> using result_or_err = tl::expected<T, error>;
 
 NAMESPACE_END(blue_sky)
