@@ -54,7 +54,7 @@ struct leafs_view {
 
 BSS_FCN_INL_BEGIN(serialize, node::node_impl)
 	ar(
-		make_nvp("handle", t.handle_),
+		//make_nvp("handle", t.handle_),
 		make_nvp("allowed_otypes", t.allowed_otypes_),
 		make_nvp("leafs", leafs_view(t.links_))
 	);
