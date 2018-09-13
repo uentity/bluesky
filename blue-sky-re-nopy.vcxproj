@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="kernel\include\bs\any_array.h" />
     <ClInclude Include="kernel\include\bs\assert.h" />
+    <ClInclude Include="kernel\include\bs\atoms.h" />
     <ClInclude Include="kernel\include\bs\bs.h" />
     <ClInclude Include="kernel\include\bs\common.h" />
     <ClInclude Include="kernel\include\bs\compat\array.h" />
@@ -72,6 +73,7 @@
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
+    <ClInclude Include="kernel\include\bs\tree\fusion.h" />
     <ClInclude Include="kernel\include\bs\tree\link.h" />
     <ClInclude Include="kernel\include\bs\tree\node.h" />
     <ClInclude Include="kernel\include\bs\tree\tree.h" />
@@ -85,6 +87,8 @@
     <ClInclude Include="kernel\src\kernel_logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_plugins_discover.h" />
     <ClInclude Include="kernel\src\kernel_plugins_subsyst.h" />
+    <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
+    <ClInclude Include="kernel\src\tree\link_impl.h" />
     <ClInclude Include="kernel\src\tree\node_impl.h" />
     <ClInclude Include="kernel\src\tree\tree_impl.h" />
   </ItemGroup>
@@ -113,7 +117,9 @@
     <ClCompile Include="kernel\src\serialize\array.cpp" />
     <ClCompile Include="kernel\src\serialize\base_types.cpp" />
     <ClCompile Include="kernel\src\serialize\link.cpp" />
+    <ClCompile Include="kernel\src\serialize\tree.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
+    <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
     <ClCompile Include="kernel\src\tree\hard_link.cpp" />
     <ClCompile Include="kernel\src\tree\link.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
@@ -125,7 +131,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{B23F6F6B-A1C8-4525-9403-447F9D57ED1A}</ProjectGuid>
     <RootNamespace>blueskyre</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
