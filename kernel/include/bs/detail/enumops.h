@@ -12,25 +12,28 @@
 
 namespace blue_sky {
 
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value>> inline T operator~(T a) {
+template<typename T>
+struct allow_enumops { static constexpr bool value = false; };
+
+template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>> inline T operator~(T a) {
 	return T(~std::underlying_type_t<T>(a));
 }
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value>> inline T operator|(T a, T b) {
+template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>> inline T operator|(T a, T b) {
 	return T(std::underlying_type_t<T>(a) | std::underlying_type_t<T>(b));
 }
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value>> inline T operator&(T a, T b) {
+template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>> inline T operator&(T a, T b) {
 	return T(std::underlying_type_t<T>(a) & std::underlying_type_t<T>(b));
 }
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value>> inline T operator^(T a, T b) {
+template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>> inline T operator^(T a, T b) {
 	return T(std::underlying_type_t<T>(a) ^ std::underlying_type_t<T>(b));
 }
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value>> inline T& operator|=(T& a, T b) {
+template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>> inline T& operator|=(T& a, T b) {
 	return (T&)((std::underlying_type_t<T>&)a |= std::underlying_type_t<T>(b));
 }
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value>> inline T& operator&=(T& a, T b) {
+template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>> inline T& operator&=(T& a, T b) {
 	return (T&)((std::underlying_type_t<T>&)a &= std::underlying_type_t<T>(b));
 }
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value>> inline T& operator^=(T& a, T b) {
+template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>> inline T& operator^=(T& a, T b) {
 	return (T&)((std::underlying_type_t<T>&)a ^= std::underlying_type_t<T>(b));
 }
 	
