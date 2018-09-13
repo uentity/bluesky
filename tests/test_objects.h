@@ -119,5 +119,5 @@ NAMESPACE_END(blue_sky)
 
 BSS_REGISTER_TYPE(blue_sky::bs_person)
 
-CEREAL_FORCE_DYNAMIC_INIT(test_objects)
+BSS_FORCE_DYNAMIC_INIT(test_objects)
 

@@ -62,7 +62,7 @@ BSS_FCN_EXPORT_EXT(serialize, uber_type, (double, my_strategy< double >))
 
 // register sample types
 
-CEREAL_REGISTER_DYNAMIC_INIT(test_objects)
+BSS_REGISTER_DYNAMIC_INIT(test_objects)
 
 /*-----------------------------------------------------------------------------
  *  test unit
