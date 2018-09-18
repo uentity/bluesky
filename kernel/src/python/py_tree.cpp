@@ -237,11 +237,12 @@ void py_bind_tree(py::module& m) {
 	//  fusion link/iface
 	//
 	py::class_<fusion_link, link, py_link<fusion_link>, std::shared_ptr<fusion_link>>(m, "fusion_link")
-		.def(py::init<std::string, sp_fusion, sp_node, link::Flags>(),
-			"name"_a, "bridge"_a, "data"_a, "flags"_a = link::Flags::Plain)
-		.def(py::init<std::string, sp_fusion, const char*, std::string, link::Flags>(),
-			"name"_a, "bridge"_a, "obj_type"_a, "oid"_a = "", "flags"_a = link::Flags::Plain)
+		.def(py::init<std::string, sp_node, sp_fusion, link::Flags>(),
+			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = link::Flags::Plain)
+		.def(py::init<std::string, const char*, std::string, sp_fusion, link::Flags>(),
+			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = link::Flags::Plain)
 		.def("populate", &fusion_link::populate)
+		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge)
 	;
 
 	py::class_<fusion_iface, py_fusion<>, std::shared_ptr<fusion_iface>>(m, "fusion_iface")

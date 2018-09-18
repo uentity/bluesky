@@ -159,8 +159,8 @@ BSS_FCN_EXPORT(load_and_construct, tree::sym_link)
 BSS_FCN_BEGIN(serialize, tree::fusion_link)
 	ar(
 		make_nvp("name", static_cast<tree::link&>(t).pimpl_->name_),
-		make_nvp("bridge", t.pimpl_->bridge_),
 		make_nvp("data", t.pimpl_->data_),
+		make_nvp("bridge", t.pimpl_->bridge_),
 		make_nvp("link_base", base_class<tree::link>(&t))
 	);
 BSS_FCN_END
@@ -170,8 +170,8 @@ BSS_FCN_BEGIN(load_and_construct, tree::fusion_link)
 	std::string name;
 	tree::sp_node data;
 	tree::sp_fusion bridge;
-	ar(name, bridge, data);
-	construct(std::move(name), std::move(bridge), std::move(data));
+	ar(name, data, bridge);
+	construct(std::move(name), std::move(data), std::move(bridge));
 	// load other data
 	auto& t = *construct.ptr();
 	ar(

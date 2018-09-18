@@ -34,11 +34,12 @@ class BS_API fusion_link : public link {
 public:
 	// ctors
 	fusion_link(
-		std::string name, sp_fusion bridge, sp_node data = nullptr, Flags f = Persistent
+		std::string name, sp_node data = nullptr,
+		sp_fusion bridge = nullptr, Flags f = Persistent
 	);
 	fusion_link(
-		std::string name, sp_fusion bridge, const char* obj_type,
-		std::string oid = "", Flags f = Persistent
+		std::string name, const char* obj_type, std::string oid = "",
+		sp_fusion bridge = nullptr, Flags f = Persistent
 	);
 	// dtor
 	~fusion_link();
@@ -53,6 +54,10 @@ public:
 	// force `fusion_iface::populate()` call with specified children types
 	// regardless of populate status
 	auto populate(const std::string& child_type_id) -> error;
+
+	// access to link's fusion bridge
+	auto bridge() const -> sp_fusion;
+	auto reset_bridge(sp_fusion new_bridge = nullptr) -> void;
 
 private:
 	struct impl;
