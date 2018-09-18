@@ -10,6 +10,7 @@
 #include <bs/bs.h>
 #include <bs/tree/tree.h>
 #include <bs/python/tree.h>
+#include <bs/python/expected.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <string>
 
@@ -143,7 +144,9 @@ void py_bind_tree(py::module& m) {
 		.def_property_readonly("o", [](const inode& i) { return i.o; })
 	;
 
-	// define link's binding class
+	///////////////////////////////////////////////////////////////////////////////
+	//  Base link
+	//
 	py::class_<link, py_link<>, std::shared_ptr<link>> link_pyface(m, "link");
 
 	// export Flags enum
@@ -155,36 +158,71 @@ void py_bind_tree(py::module& m) {
 	py::implicitly_convertible<int, link::Flags>();
 	py::implicitly_convertible<long, link::Flags>();
 
+	// export link request & status enums
+	py::enum_<link::Req>(link_pyface, "Req")
+		.value("Data", link::Req::Data)
+		.value("DataNode", link::Req::DataNode)
+	;
+	py::enum_<link::ReqStatus>(link_pyface, "ReqStatus")
+		.value("Void", link::ReqStatus::Void)
+		.value("Busy", link::ReqStatus::Busy)
+		.value("OK", link::ReqStatus::OK)
+		.value("Error", link::ReqStatus::Error)
+	;
+
 	// link base class
 	link_pyface
 		.def("clone", &link::clone, "deep"_a = true, "Make shallow or deep copy of link")
+		.def("data_ex", &link::data_ex)
 		.def("data", (sp_obj (link::*)() const) &link::data)
 		.def("data", (void (link::*)(link::process_data_cb) const) &link::data)
 		.def("type_id", &link::type_id)
 		.def("oid", &link::oid)
 		.def("obj_type_id", &link::obj_type_id)
+		.def("data_node_ex", &link::data_node_ex)
 		.def("data_node", (sp_node (link::*)() const) &link::data_node)
 		.def("data_node", (void (link::*)(link::process_data_cb) const) &link::data_node)
+		.def("rename", &link::rename)
+		.def("req_status", &link::req_status, "Query for given operation status")
+		.def("rs_reset", &link::rs_reset,
+			"request"_a, "new_status"_a = link::ReqStatus::Void,
+			"Unconditionally set status of given request"
+		)
+		.def("rs_reset_if_eq", &link::rs_reset_if_eq,
+			"request"_a, "self_rs"_a, "new_rs"_a = link::ReqStatus::Void,
+			"Set status of given request if it is equal to given value, returns prev status"
+		)
+		.def("rs_reset_if_neq", &link::rs_reset_if_neq,
+			"request"_a, "self_rs"_a, "new_rs"_a = link::ReqStatus::Void,
+			"Set status of given request if it is NOT equal to given value, returns prev status"
+		)
+
 		.def_property_readonly("id", [](const link& L) {
 			return boost::uuids::to_string(L.id());
 		})
 		.def_property_readonly("name", &link::name)
 		.def_property_readonly("owner", &link::owner)
 		.def_property("info",
-			py::overload_cast<>(&link::info, py::const_), py::overload_cast<>(&link::info, py::const_),
-			py::return_value_policy::reference_internal, "Get/modify bounded link's information"
+			&link::info, &link::set_info,
+			//py::overload_cast<>(&link::info, py::const_), py::overload_cast<>(&link::info, py::const_),
+			py::return_value_policy::reference_internal, "Get/modify bounded link metadata (inode)"
 		)
 		.def_property("flags", &link::flags, &link::set_flags)
 	;
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  Derived links
+	//
 	py::class_<hard_link, link, py_link<hard_link>, std::shared_ptr<hard_link>>(m, "hard_link")
 		.def(py::init<std::string, sp_obj, link::Flags>(),
 			"name"_a, "data"_a, "flags"_a = link::Flags::Plain)
 	;
+
 	py::class_<weak_link, link, py_link<weak_link>, std::shared_ptr<weak_link>>(m, "weak_link")
 		.def(py::init<std::string, const sp_obj&, link::Flags>(),
 			"name"_a, "data"_a, "flags"_a = link::Flags::Plain)
 	;
+
 	py::class_<sym_link, link, py_link<sym_link>, std::shared_ptr<sym_link>>(m, "sym_link")
 		.def(py::init<std::string, std::string, link::Flags>(),
 			"name"_a, "path"_a, "flags"_a = link::Flags::Plain)
@@ -195,7 +233,26 @@ void py_bind_tree(py::module& m) {
 		.def("src_path", &sym_link::src_path, "human_readable"_a = false)
 	;
 
-	// forward define node
+	///////////////////////////////////////////////////////////////////////////////
+	//  fusion link/iface
+	//
+	py::class_<fusion_link, link, py_link<fusion_link>, std::shared_ptr<fusion_link>>(m, "fusion_link")
+		.def(py::init<std::string, sp_fusion, sp_node, link::Flags>(),
+			"name"_a, "bridge"_a, "data"_a, "flags"_a = link::Flags::Plain)
+		.def(py::init<std::string, sp_fusion, const char*, std::string, link::Flags>(),
+			"name"_a, "bridge"_a, "obj_type"_a, "oid"_a = "", "flags"_a = link::Flags::Plain)
+		.def("populate", &fusion_link::populate)
+	;
+
+	py::class_<fusion_iface, py_fusion<>, std::shared_ptr<fusion_iface>>(m, "fusion_iface")
+		.def("populate", &fusion_iface::populate, "root"_a, "child_type_id"_a = "",
+			"Populate root object structure (children)")
+		.def("pull_data", &fusion_iface::pull_data, "root"_a,
+			"Fill root object content")
+	;
+	///////////////////////////////////////////////////////////////////////////////
+	//  Node
+	//
 	py::class_<node, objbase, std::shared_ptr<node>> node_pyface(m, "node");
 
 	// export node's Key enum
