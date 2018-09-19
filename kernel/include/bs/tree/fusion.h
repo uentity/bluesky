@@ -22,6 +22,8 @@ public:
 	virtual auto populate(const sp_node& root, const std::string& child_type_id = "") -> error = 0;
 	/// download passed object's content from third-party backend
 	virtual auto pull_data(const sp_obj& root) -> error = 0;
+
+	virtual ~fusion_iface();
 };
 using sp_fusion = std::shared_ptr<fusion_iface>;
 
