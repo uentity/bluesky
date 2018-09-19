@@ -107,7 +107,7 @@ private:
 	explicit error(IsQuiet, int err_code);
 };
 
-/// produces quiet error with given params
+/// produces quiet error from given params
 template<typename... Args>
 inline auto success(Args&&... args) -> error {
 	return error::quiet(std::forward<Args>(args)...);

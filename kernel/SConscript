@@ -54,6 +54,7 @@ kernel_cpp_list = [
 	"src/tree/node.cpp",
 	"src/tree/tree.cpp",
 	"src/tree/fusion_link.cpp",
+	"src/tree/errors.cpp"
 ];
 #print kernel_cpp_list;
 
