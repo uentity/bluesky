@@ -10,6 +10,7 @@
 
 #include <bs/tree/link.h>
 #include <bs/tree/node.h>
+#include <bs/tree/errors.h>
 #include <bs/atoms.h>
 #include <bs/detail/async_api_mixin.h>
 #include <bs/serialize/tree.h>
@@ -96,7 +97,7 @@ static auto link_invoke(
 	try {
 		switch(status) {
 		case ReqStatus::Busy :
-			return tl::make_unexpected(error::quiet("link is busy"));
+			return tl::make_unexpected(error::quiet(Error::LinkBusy));
 		case ReqStatus::Void :
 		case ReqStatus::Error :
 			// set Busy status (OK status is not affected)

@@ -9,6 +9,7 @@
 
 #include <bs/tree/link.h>
 #include <bs/tree/node.h>
+#include <bs/tree/errors.h>
 #include <bs/kernel.h>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -70,7 +71,7 @@ std::string weak_link::type_id() const {
 
 result_or_err<sp_obj> weak_link::data_impl() const {
 	return data_.expired() ?
-		tl::make_unexpected(error::quiet("Link expired")) :
+		tl::make_unexpected(error::quiet(Error::LinkExpired)) :
 		result_or_err<sp_obj>(data_.lock());
 	//if(data_.expired())
 	//	return tl::make_unexpected(error::quiet("Link expired"));

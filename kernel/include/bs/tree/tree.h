@@ -12,6 +12,7 @@
 #include "link.h"
 #include "fusion.h"
 #include "node.h"
+#include "errors.h"
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
@@ -42,6 +43,25 @@ BS_API void walk(
 	const sp_link& root, const step_process_f& step_f,
 	bool topdown = true, bool follow_symlinks = true
 );
+
+// unify access to owner of link or node
+inline auto owner(const link* lnk) {
+	return lnk->owner();
+}
+inline auto owner(const node* N) {
+	const auto& h = N->handle();
+	return h ? h->owner() : nullptr;
+}
+// for shared ptrs
+template<typename T>
+auto owner(const std::shared_ptr<T>& obj) {
+	return owner(obj.get());
+}
+// with conversion to target type
+template<typename TargetOwner, typename T>
+auto owner_t(T&& obj) {
+	return std::static_pointer_cast<TargetOwner>( owner(std::forward<T>(obj)) );
+}
 
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
 

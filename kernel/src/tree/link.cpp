@@ -104,9 +104,9 @@ result_or_err<sp_node> link::data_node_impl() const {
 
 			obj->is_node() ?
 				result_or_err<sp_node>(std::static_pointer_cast<tree::node>(obj)) :
-				tl::make_unexpected(error::quiet("Not a node")) :
+				tl::make_unexpected(error::quiet(Error::NotANode)) :
 
-			tl::make_unexpected(error::quiet("Empty data"));
+			tl::make_unexpected(error::quiet(Error::EmptyData));
 	});
 }
 
@@ -117,7 +117,8 @@ result_or_err<sp_obj> link::data_ex() const {
 		[](const link* lnk) { return lnk->data_impl(); },
 		pimpl_->status_[0], pimpl_->status_flag_[0]
 	).and_then([](const sp_obj&& obj) {
-		return obj ? result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet("Empty data"));
+		return obj ?
+			result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet(Error::EmptyData));
 	});
 }
 
@@ -128,7 +129,8 @@ result_or_err<sp_node> link::data_node_ex() const {
 		[](const link* lnk) { return lnk->data_node_impl(); },
 		pimpl_->status_[1], pimpl_->status_flag_[1]
 	).and_then([](const sp_node&& N) {
-		return N ? result_or_err<sp_node>(std::move(N)) : tl::make_unexpected(error::quiet("Not a node"));
+		return N ?
+			result_or_err<sp_node>(std::move(N)) : tl::make_unexpected(error::quiet(Error::NotANode));
 	});
 }
 
@@ -137,7 +139,8 @@ auto link::invoke(
 ) -> result_or_err<sp_obj> {
 	// never returns NULL object
 	return link_invoke(this, std::move(f), status, status_flag).and_then([](const sp_obj&& obj) {
-		return obj ? result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet("Empty data"));
+		return obj ?
+			result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet(Error::EmptyData));
 	});
 }
 
@@ -146,7 +149,8 @@ auto link::invoke(
 ) const -> result_or_err<sp_obj> {
 	// never returns NULL object
 	return link_invoke(this, std::move(f), status, status_flag).and_then([](const sp_obj&& obj) {
-		return obj ? result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet("Empty data"));
+		return obj ?
+			result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet(Error::EmptyData));
 	});
 }
 
@@ -157,15 +161,15 @@ auto link::req_status(Req request) const -> ReqStatus {
 	return pimpl_->req_status(request);
 }
 
-auto link::rs_reset(Req request, ReqStatus new_rs) -> ReqStatus {
+auto link::rs_reset(Req request, ReqStatus new_rs) const -> ReqStatus {
 	return pimpl_->rs_reset(request, new_rs);
 }
 
-auto link::rs_reset_if_eq(Req request, ReqStatus self, ReqStatus new_rs) -> ReqStatus {
+auto link::rs_reset_if_eq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
 	return pimpl_->rs_reset_if_eq(request, self, new_rs);
 }
 
-auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) -> ReqStatus {
+auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
 	return pimpl_->rs_reset_if_neq(request, self, new_rs);
 }
 

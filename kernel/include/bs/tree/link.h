@@ -142,9 +142,9 @@ public:
 	// get/set request status
 	ReqStatus req_status(Req request) const;
 	// unconditional reset request status
-	ReqStatus rs_reset(Req request, ReqStatus new_status = ReqStatus::Void);
-	ReqStatus rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void);
-	ReqStatus rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void);
+	ReqStatus rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) const;
+	ReqStatus rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const;
+	ReqStatus rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const;
 
 	/// obtain data in async manner passing it to callback
 	using process_data_cb = std::function<void(result_or_err<sp_obj>, sp_clink)>;

@@ -16,9 +16,18 @@
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
+// default destructor for fusion_iface
+fusion_iface::~fusion_iface() {}
+
 /*-----------------------------------------------------------------------------
- *  fusion_link::impl
+ *  fusion_link
  *-----------------------------------------------------------------------------*/
+namespace {
+// treat Error::OKOK status as object is fully loaded by fusion_iface
+static const auto obj_fully_loaded = make_error_code(Error::OKOK);
+
+} // hidden
+
 fusion_link::fusion_link(
 	std::string name, sp_node data, sp_fusion bridge, Flags f
 ) :
@@ -68,9 +77,11 @@ auto fusion_link::data_impl() const -> result_or_err<sp_obj> {
 	}
 	if(const auto B = bridge()) {
 		auto err = B->pull_data(pimpl_->data_);
+		if(err.code == obj_fully_loaded)
+			rs_reset_if_neq(Req::DataNode, ReqStatus::Busy, ReqStatus::OK);
 		return err.ok() ? result_or_err<sp_obj>(pimpl_->data_) : tl::make_unexpected(std::move(err));
 	}
-	return tl::make_unexpected("Fusion bridge isn't set");
+	return tl::make_unexpected(Error::NoFusionBridge);
 }
 
 auto fusion_link::data_node_impl() const -> result_or_err<sp_node> {
@@ -79,27 +90,32 @@ auto fusion_link::data_node_impl() const -> result_or_err<sp_node> {
 	}
 	if(const auto B = bridge()) {
 		auto err = B->populate(pimpl_->data_);
+		if(err.code == obj_fully_loaded)
+			rs_reset_if_neq(Req::Data, ReqStatus::Busy, ReqStatus::OK);
 		return err.ok() ? result_or_err<sp_node>(pimpl_->data_) : tl::make_unexpected(std::move(err));
 	}
-	return tl::make_unexpected("Fusion bridge isn't set");
+	return tl::make_unexpected(Error::NoFusionBridge);
 }
 
 auto fusion_link::populate(const std::string& child_type_id) -> error {
 	// start populating only if link isn't already being populated
 	if(rs_reset_if_neq(Req::DataNode, ReqStatus::Busy, ReqStatus::Busy) != ReqStatus::Busy) {
 		const auto B = bridge();
-		if(!B) return {"Fusion bridge isn't set"};
+		if(!B) return Error::NoFusionBridge;
 		const auto err = B->populate(pimpl_->data_, child_type_id);
 		// populate raises structure populated status
 		if(err.ok()) {
 			pimpl_->data_ ?
 				rs_reset(Req::DataNode, ReqStatus::OK) :
 				rs_reset(Req::DataNode, ReqStatus::Void);
+			// additionally set `Data` status to OK if object is fully loaded
+			if(err.code == obj_fully_loaded)
+				rs_reset_if_neq(Req::Data, ReqStatus::Busy, ReqStatus::OK);
 		}
 		else rs_reset(Req::DataNode, ReqStatus::Error);
 		return err;
 	}
-	return error::quiet("Link is busy");
+	return error::quiet(Error::LinkBusy);
 }
 
 auto fusion_link::bridge() const -> sp_fusion {

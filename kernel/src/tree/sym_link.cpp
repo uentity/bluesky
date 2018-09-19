@@ -9,6 +9,7 @@
 
 #include <bs/log.h>
 #include <bs/tree/tree.h>
+#include <bs/tree/errors.h>
 #include "tree_impl.h"
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
@@ -44,11 +45,11 @@ void sym_link::reset_owner(sp_node new_owner) {
 
 result_or_err<sp_obj> sym_link::data_impl() const {
 	// cannot dereference dangling sym link
-	if(!owner()) return tl::make_unexpected(error::quiet("Unbound sym link"));
+	if(!owner()) return tl::make_unexpected(error::quiet(Error::UnboundSymLink));
 	const auto src_link = detail::deref_path(path_, *this);
 	return src_link ?
 		result_or_err<sp_obj>(src_link->data_ex()) :
-		tl::make_unexpected(error::quiet("Sym link target missing"));
+		tl::make_unexpected(error::quiet(Error::LinkExpired));
 }
 
 bool sym_link::is_alive() const {
