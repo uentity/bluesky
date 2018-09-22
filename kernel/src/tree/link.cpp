@@ -34,6 +34,10 @@ link::link(std::string name, Flags f)
 
 link::~link() {}
 
+auto link::pimpl() const -> impl* {
+	return pimpl_.get();
+}
+
 /// access link's unique ID
 auto link::id() const -> const id_type& {
 	return pimpl_->id_;
@@ -110,47 +114,27 @@ result_or_err<sp_node> link::data_node_impl() const {
 	});
 }
 
-result_or_err<sp_obj> link::data_ex() const {
+result_or_err<sp_obj> link::data_ex(bool wait_if_busy) const {
 	// never returns NULL object
 	return link_invoke(
 		this,
 		[](const link* lnk) { return lnk->data_impl(); },
-		pimpl_->status_[0], pimpl_->status_flag_[0]
+		pimpl_->status_[0], wait_if_busy
 	).and_then([](const sp_obj&& obj) {
 		return obj ?
 			result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet(Error::EmptyData));
 	});
 }
 
-result_or_err<sp_node> link::data_node_ex() const {
+result_or_err<sp_node> link::data_node_ex(bool wait_if_busy) const {
 	// never returns NULL node
 	return link_invoke(
 		this,
 		[](const link* lnk) { return lnk->data_node_impl(); },
-		pimpl_->status_[1], pimpl_->status_flag_[1]
+		pimpl_->status_[1], wait_if_busy
 	).and_then([](const sp_node&& N) {
 		return N ?
 			result_or_err<sp_node>(std::move(N)) : tl::make_unexpected(error::quiet(Error::NotANode));
-	});
-}
-
-auto link::invoke(
-	method f, ReqStatus& status, std::atomic_flag& status_flag
-) -> result_or_err<sp_obj> {
-	// never returns NULL object
-	return link_invoke(this, std::move(f), status, status_flag).and_then([](const sp_obj&& obj) {
-		return obj ?
-			result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet(Error::EmptyData));
-	});
-}
-
-auto link::invoke(
-	const_method f, ReqStatus& status, std::atomic_flag& status_flag
-) const -> result_or_err<sp_obj> {
-	// never returns NULL object
-	return link_invoke(this, std::move(f), status, status_flag).and_then([](const sp_obj&& obj) {
-		return obj ?
-			result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet(Error::EmptyData));
 	});
 }
 
@@ -173,12 +157,12 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const 
 	return pimpl_->rs_reset_if_neq(request, self, new_rs);
 }
 
-auto link::data(process_data_cb f) const -> void {
-	pimpl_->send(lnk_data_atom(), this->shared_from_this(), std::move(f));
+auto link::data(process_data_cb f, bool wait_if_busy) const -> void {
+	pimpl_->send(lnk_data_atom(), this->shared_from_this(), std::move(f), wait_if_busy);
 }
 
-auto link::data_node(process_data_cb f) const -> void {
-	pimpl_->send(lnk_dnode_atom(), this->shared_from_this(), std::move(f));
+auto link::data_node(process_data_cb f, bool wait_if_busy) const -> void {
+	pimpl_->send(lnk_dnode_atom(), this->shared_from_this(), std::move(f), wait_if_busy);
 }
 
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)

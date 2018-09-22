@@ -22,7 +22,9 @@ NAMESPACE_BEGIN(tree)
 // time point type for all timestaps
 using time_point = std::chrono::system_clock::time_point;
 
-/// inode that stores access rights, timestampts, etc
+/*-----------------------------------------------------------------------------
+ s inode that stores access rights, timestampts, etc
+ *-----------------------------------------------------------------------------*/
 struct BS_API inode {
 	// flags
 	bool : 1;
@@ -52,7 +54,9 @@ struct BS_API inode {
 };
 using inodeptr = std::unique_ptr<inode>;
 
-/// base class of all links
+/*-----------------------------------------------------------------------------
+ *  base class of all links
+ *-----------------------------------------------------------------------------*/
 class BS_API link  : public std::enable_shared_from_this<link> {
 public:
 	using id_type = boost::uuids::uuid;
@@ -117,7 +121,7 @@ public:
 
 	/// get pointer to object link is pointing to -- slow, never returns invalid (NULL) sp_obj
 	/// NOTE: returned pointer can be null
-	result_or_err<sp_obj> data_ex() const;
+	result_or_err<sp_obj> data_ex(bool wait_if_busy = false) const;
 	/// simple data accessor that returns nullptr on error
 	sp_obj data() const {
 		return data_ex().value_or(nullptr);
@@ -125,7 +129,7 @@ public:
 
 	/// return tree::node if contained object is a node -- slow, never returns invalid (NULL) sp_obj
 	/// derived class can return cached node info
-	result_or_err<sp_node> data_node_ex() const;
+	result_or_err<sp_node> data_node_ex(bool wait_if_busy = false) const;
 	/// simple tree::node accessor that returns nullptr on error
 	sp_node data_node() const {
 		return data_node_ex().value_or(nullptr);
@@ -148,9 +152,9 @@ public:
 
 	/// obtain data in async manner passing it to callback
 	using process_data_cb = std::function<void(result_or_err<sp_obj>, sp_clink)>;
-	auto data(process_data_cb f) const -> void;
+	auto data(process_data_cb f, bool wait_if_busy = true) const -> void;
 	/// ... and data node
-	auto data_node(process_data_cb f) const -> void;
+	auto data_node(process_data_cb f, bool wait_if_busy = true) const -> void;
 
 protected:
 	// serialization support
@@ -183,27 +187,21 @@ protected:
 	/// download pointee structure -- link provide default implementation via `data_ex()` call
 	virtual result_or_err<sp_node> data_node_impl() const;
 
-	using method = std::function<result_or_err<sp_obj> (link*)>;
-	using const_method = std::function<result_or_err<sp_obj> (const link*)>;
-
-	/// helper to invoke any given link method and atomically set status
-	auto invoke(
-		method f, ReqStatus& status, std::atomic_flag& status_flag
-	) -> result_or_err<sp_obj>;
-
-	auto invoke(
-		const_method f, ReqStatus& status, std::atomic_flag& status_flag
-	) const -> result_or_err<sp_obj>;
-
 	// PIMPL
 	struct impl;
+	// some derived links may need to access base link's internals
+	impl* pimpl() const;
+
+private:
 	std::unique_ptr<impl> pimpl_;
 };
 using sp_link = link::sp_link;
 using sp_clink = link::sp_clink;
 
-/// hard link stores direct pointer to object
-/// there can exist many hard links to single object
+/*-----------------------------------------------------------------------------
+ *  hard link stores direct pointer to object
+ *  multiple hard links can point to the same object
+ *-----------------------------------------------------------------------------*/
 class BS_API hard_link : public link {
 	friend class blue_sky::atomizer;
 
@@ -225,8 +223,10 @@ private:
 	//result_or_err<sp_node> data_node_impl() const override;
 };
 
-/// weak link is same as hard link, but stores weak link to data
-/// intended to be used to add class memebers self tree structure
+/*-----------------------------------------------------------------------------
+ *  weak link is same as hard link, but stores weak link to data
+ *  intended to be used to add class memebers self tree structure
+ *-----------------------------------------------------------------------------*/
 class BS_API weak_link : public link {
 	friend class blue_sky::atomizer;
 
@@ -245,8 +245,10 @@ private:
 	result_or_err<sp_obj> data_impl() const override;
 };
 
-/// symbolic link is actually a link to another link, which is specified as absolute or relative
-/// string path
+/*-----------------------------------------------------------------------------
+ *  symbolic link is actually a link to another link, which is specified
+ *  as absolute or relative string path
+ *-----------------------------------------------------------------------------*/
 class BS_API sym_link : public link {
 	friend class blue_sky::atomizer;
 public:

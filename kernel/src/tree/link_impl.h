@@ -8,16 +8,14 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <bs/tree/link.h>
+#include "link_invoke.h"
 #include <bs/tree/node.h>
-#include <bs/tree/errors.h>
 #include <bs/atoms.h>
 #include <bs/detail/async_api_mixin.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
 #include <caf/all.hpp>
-#include <boost/smart_ptr/detail/yield_k.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
@@ -25,117 +23,25 @@ CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::link::process_data_cb)
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
+using namespace tree::detail;
+
 using id_type = link::id_type;
 using Flags = link::Flags;
 
+/*-----------------------------------------------------------------------------
+ *  hidden details
+ *-----------------------------------------------------------------------------*/
 namespace {
 
 // global random UUID generator for BS links
 static boost::uuids::random_generator gen;
-
-// microsleep until flag is released by someone else
-inline auto raise_atomic_flag(std::atomic_flag& flag) -> void {
-	for(unsigned k = 0; flag.test_and_set(std::memory_order_acquire); ++k)
-		boost::detail::yield(k);
-}
-
-inline auto drop_atomic_flag(std::atomic_flag& flag) {
-	flag.clear(std::memory_order_release);
-}
-
-// RAII raise-drop flag
-struct scope_atomic_flag {
-	std::atomic_flag& f_;
-
-	explicit scope_atomic_flag(std::atomic_flag& flag)
-		: f_(flag)
-	{
-		raise_atomic_flag(f_);
-	}
-
-	~scope_atomic_flag() {
-		drop_atomic_flag(f_);
-	}
-};
-
-using Req = link::Req;
-using ReqStatus = link::ReqStatus;
-
-template<typename L, typename F>
-static auto link_invoke(
-	L* lnk, F f, ReqStatus& status, std::atomic_flag& status_flag
-) -> decltype(f(lnk)) {
-	//using req_result = decltype((lnk->*f)(std::forward<Args>(args)...));
-
-	bool flag_set = false;
-
-	// helper that captures the status flag
-	const auto lock_status = [&status_flag, &flag_set] {
-		raise_atomic_flag(status_flag);
-		flag_set = true;
-	};
-	// helper that release flag only if it was set before
-	const auto unlock_status = [&status_flag, &flag_set] {
-		if(flag_set) {
-			status_flag.clear(std::memory_order_release);
-			flag_set = false;
-		}
-	};
-	// always release status flag on exit
-	const auto release_on_exit = make_scope_guard(unlock_status);
-
-	// helper that sets populate status depending on result
-	static const auto set_status = [&status](error e) {
-		status = (e ? ReqStatus::Error : ReqStatus::OK);
-		return e;
-	};
-
-	// 0. capture the flag
-	lock_status();
-
-	// 1. invoke link::f
-	try {
-		switch(status) {
-		case ReqStatus::Busy :
-			return tl::make_unexpected(error::quiet(Error::LinkBusy));
-		case ReqStatus::Void :
-		case ReqStatus::Error :
-			// set Busy status (OK status is not affected)
-			status = ReqStatus::Busy;
-		default :
-			// release status flag before possibly long operation
-			unlock_status();
-			// invoke operation
-			auto res = f(lnk);
-			// set flag depending on result
-			lock_status();
-			status = res ?
-				res.value() ?
-					ReqStatus::OK :
-					ReqStatus::Void :
-				ReqStatus::Error;
-			// and return
-			return res;
-			// [TODO] we have to notify parent node that content changed
-		}
-	}
-	catch(const error& e) {
-		return tl::make_unexpected( set_status(e) );
-	}
-	catch(const std::exception& e) {
-		return tl::make_unexpected( set_status(e.what()) );
-	}
-	catch(...) {
-		return tl::make_unexpected( set_status(error()) );
-	}
-}
 
 } // eof hidden namespace
 
 /*-----------------------------------------------------------------------------
  *  link::impl
  *-----------------------------------------------------------------------------*/
-struct link::impl : public detail::async_api_mixin<link::impl> {
+struct BS_HIDDEN_API link::impl : public blue_sky::detail::async_api_mixin<link::impl> {
 	id_type id_;
 	std::string name_;
 	Flags flags_;
@@ -144,8 +50,7 @@ struct link::impl : public detail::async_api_mixin<link::impl> {
 	/// owner node
 	std::weak_ptr<node> owner_;
 	/// status of operations
-	ReqStatus status_[2] = {ReqStatus::Void, ReqStatus::Void};
-	mutable std::atomic_flag status_flag_[2] = {ATOMIC_FLAG_INIT, ATOMIC_FLAG_INIT};
+	status_handle status_[2];
 	// sync access to link's essentail data
 	std::mutex solo_;
 
@@ -169,10 +74,8 @@ struct link::impl : public detail::async_api_mixin<link::impl> {
 
 	auto req_status(Req request) const -> ReqStatus {
 		const auto i = (unsigned)request;
-		if(i < 2) {
-			// atomic read
-			auto S = scope_atomic_flag(status_flag_[i]);
-			return status_[i];
+		if(i < 2){
+			return status_[i].value;
 		}
 		return ReqStatus::Void;
 	}
@@ -182,9 +85,9 @@ struct link::impl : public detail::async_api_mixin<link::impl> {
 		if(i >= 2) return ReqStatus::Error;
 
 		// atomic set value
-		auto S = scope_atomic_flag(status_flag_[i]);
-		const auto self = status_[i];
-		status_[i] = new_rs;
+		auto S = scope_atomic_flag(status_[i].flag);
+		const auto self = status_[i].value;
+		status_[i].value = new_rs;
 		return self;
 	}
 
@@ -193,9 +96,9 @@ struct link::impl : public detail::async_api_mixin<link::impl> {
 		if(i >= 2) return ReqStatus::Error;
 
 		// atomic set value
-		auto S = scope_atomic_flag(status_flag_[i]);
-		const auto self = status_[i];
-		if(status_[i] == self_rs) status_[i] = new_rs;
+		auto S = scope_atomic_flag(status_[i].flag);
+		const auto self = status_[i].value;
+		if(status_[i].value == self_rs) status_[i].value = new_rs;
 		return self;
 	}
 
@@ -204,9 +107,9 @@ struct link::impl : public detail::async_api_mixin<link::impl> {
 		if(i >= 2) return ReqStatus::Error;
 
 		// atomic set value
-		auto S = scope_atomic_flag(status_flag_[i]);
-		const auto self = status_[i];
-		if(status_[i] != self_rs) status_[i] = new_rs;
+		auto S = scope_atomic_flag(status_[i].flag);
+		const auto self = status_[i].value;
+		if(status_[i].value != self_rs) status_[i].value = new_rs;
 		return self;
 	}
 
@@ -215,8 +118,8 @@ struct link::impl : public detail::async_api_mixin<link::impl> {
 	//
 	// actor type for async API
 	using actor_t = caf::typed_actor<
-		caf::reacts_to<lnk_data_atom, sp_clink, link::process_data_cb>,
-		caf::reacts_to<lnk_dnode_atom, sp_clink, link::process_data_cb>,
+		caf::reacts_to<lnk_data_atom, sp_clink, link::process_data_cb, bool>,
+		caf::reacts_to<lnk_dnode_atom, sp_clink, link::process_data_cb, bool>,
 		caf::reacts_to<int>
 	>;
 
@@ -232,11 +135,11 @@ struct link::impl : public detail::async_api_mixin<link::impl> {
 			std::cout << "******* link::actor down ***********" << std::endl;
 		});
 		return {
-			[](lnk_data_atom, const sp_clink& lnk, const process_data_cb& f) {
-				f(lnk->data_ex(), lnk);
+			[](lnk_data_atom, const sp_clink& lnk, const process_data_cb& f, bool wait_if_busy) {
+				f(lnk->data_ex(wait_if_busy), lnk);
 			},
-			[](lnk_dnode_atom, const sp_clink& lnk, const process_data_cb& f) {
-				f(lnk->data_node_ex(), lnk);
+			[](lnk_dnode_atom, const sp_clink& lnk, const process_data_cb& f, bool wait_if_busy) {
+				f(lnk->data_node_ex(wait_if_busy), lnk);
 			},
 			[](int) {
 				using namespace std::chrono_literals;
@@ -248,9 +151,8 @@ struct link::impl : public detail::async_api_mixin<link::impl> {
 
 	~impl() {
 		//sender()->wait_for(actor());
-		std::cout << "<<<<< link::impl::destructor" << std::endl;
+		//std::cout << "<<<<< link::impl::destructor" << std::endl;
 	}
-
 };
 
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)

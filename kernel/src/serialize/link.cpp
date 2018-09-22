@@ -73,7 +73,9 @@ BSS_FCN_BEGIN(serialize, tree::link)
 		make_nvp("flags", t.pimpl_->flags_),
 		make_nvp("inode", t.pimpl_->inode_),
 		// intentionally do net serialize owner, it will be set up when parent node is loaded
-		make_nvp("status", make_carray_view(t.pimpl_->status_, 2))
+		make_nvp("data_status", t.pimpl_->status_[0].value),
+		make_nvp("data_node_status", t.pimpl_->status_[1].value)
+		//make_nvp("status", make_carray_view(t.pimpl_->status_, 2))
 	);
 BSS_FCN_END
 

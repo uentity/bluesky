@@ -173,15 +173,23 @@ void py_bind_tree(py::module& m) {
 	// link base class
 	link_pyface
 		.def("clone", &link::clone, "deep"_a = true, "Make shallow or deep copy of link")
-		.def("data_ex", &link::data_ex)
-		.def("data", (sp_obj (link::*)() const) &link::data)
-		.def("data", (void (link::*)(link::process_data_cb) const) &link::data)
+		.def("data_ex", &link::data_ex, "wait_if_busy"_a = false)
+		.def("data", py::overload_cast<>(&link::data, py::const_)
+			//"wait_if_busy"_a = false
+		)
+		.def("data", py::overload_cast<link::process_data_cb, bool>(&link::data, py::const_),
+			"f"_a, "wait_if_busy"_a = false
+		)
+		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = false)
+		.def("data_node", py::overload_cast<>(&link::data_node, py::const_)
+			//"wait_if_busy"_a = false
+		)
+		.def("data_node", py::overload_cast<link::process_data_cb, bool>(&link::data_node, py::const_),
+			"f"_a, "wait_if_busy"_a = false
+		)
 		.def("type_id", &link::type_id)
 		.def("oid", &link::oid)
 		.def("obj_type_id", &link::obj_type_id)
-		.def("data_node_ex", &link::data_node_ex)
-		.def("data_node", (sp_node (link::*)() const) &link::data_node)
-		.def("data_node", (void (link::*)(link::process_data_cb) const) &link::data_node)
 		.def("rename", &link::rename)
 		.def("req_status", &link::req_status, "Query for given operation status")
 		.def("rs_reset", &link::rs_reset,
