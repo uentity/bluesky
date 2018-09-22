@@ -11,6 +11,7 @@
 //#include <bs/tree/fusion.h>
 //#include <bs/tree/node.h>
 
+#include "link_invoke.h"
 #include "link_impl.h"
 #include "fusion_link_impl.h"
 
@@ -22,38 +23,26 @@ fusion_iface::~fusion_iface() {}
 /*-----------------------------------------------------------------------------
  *  fusion_link
  *-----------------------------------------------------------------------------*/
-namespace {
-// treat Error::OKOK status as object is fully loaded by fusion_iface
-static const auto obj_fully_loaded = make_error_code(Error::OKOK);
-
-} // hidden
-
 fusion_link::fusion_link(
 	std::string name, sp_node data, sp_fusion bridge, Flags f
 ) :
 	link(std::move(name), f),
 	pimpl_(std::make_unique<impl>(std::move(bridge), std::move(data)))
 {
-	if(pimpl_->data_) {
-		rs_reset(Req::Data, ReqStatus::OK);
-		rs_reset(Req::DataNode, ReqStatus::OK);
-	}
+	// run actor
+	pimpl_->actor_ = BS_KERNEL.actor_system().spawn(impl::async_api);
+	// connect actor with sender
+	pimpl_->init_sender();
 }
 
 fusion_link::fusion_link(
 	std::string name, const char* obj_type, std::string oid, sp_fusion bridge, Flags f
 ) :
-	link(std::move(name), f),
-	pimpl_(std::make_unique<impl>(
-		std::move(bridge), BS_KERNEL.create_object(obj_type, std::move(oid))
-	))
+	fusion_link(std::move(name), BS_KERNEL.create_object(obj_type, std::move(oid)), std::move(bridge), f)
 {
-	if(pimpl_->data_) {
-		rs_reset(Req::Data, ReqStatus::OK);
-		rs_reset(Req::DataNode, ReqStatus::OK);
-	}
-	else
-		bserr() << log::E("fusion_link: cannot create object of type '{}'! Empty link!") << obj_type << log::end;
+	if(!pimpl_->data_)
+		bserr() << log::E("fusion_link: cannot create object of type '{}'! Empty link!") <<
+			obj_type << log::end;
 }
 
 fusion_link::~fusion_link() {}
@@ -61,7 +50,7 @@ fusion_link::~fusion_link() {}
 auto fusion_link::clone(bool deep) const -> sp_link {
 	auto res = std::make_shared<fusion_link>(
 		name(),
-		deep ? BS_KERNEL.clone_object(std::static_pointer_cast<objbase>(pimpl_->data_)) : pimpl_->data_,
+		deep ? BS_KERNEL.clone_object(pimpl_->data_) : pimpl_->data_,
 		pimpl_->bridge_, flags()
 	);
 	return res;
@@ -85,37 +74,26 @@ auto fusion_link::data_impl() const -> result_or_err<sp_obj> {
 }
 
 auto fusion_link::data_node_impl() const -> result_or_err<sp_node> {
-	if(req_status(Req::DataNode) == ReqStatus::OK) {
-		return pimpl_->data_;
-	}
-	if(const auto B = bridge()) {
-		auto err = B->populate(pimpl_->data_);
-		if(err.code == obj_fully_loaded)
-			rs_reset_if_neq(Req::Data, ReqStatus::Busy, ReqStatus::OK);
-		return err.ok() ? result_or_err<sp_node>(pimpl_->data_) : tl::make_unexpected(std::move(err));
-	}
-	return tl::make_unexpected(Error::NoFusionBridge);
+	return impl::populate(this);
 }
 
-auto fusion_link::populate(const std::string& child_type_id) -> error {
-	// start populating only if link isn't already being populated
-	if(rs_reset_if_neq(Req::DataNode, ReqStatus::Busy, ReqStatus::Busy) != ReqStatus::Busy) {
-		const auto B = bridge();
-		if(!B) return Error::NoFusionBridge;
-		const auto err = B->populate(pimpl_->data_, child_type_id);
-		// populate raises structure populated status
-		if(err.ok()) {
-			pimpl_->data_ ?
-				rs_reset(Req::DataNode, ReqStatus::OK) :
-				rs_reset(Req::DataNode, ReqStatus::Void);
-			// additionally set `Data` status to OK if object is fully loaded
-			if(err.code == obj_fully_loaded)
-				rs_reset_if_neq(Req::Data, ReqStatus::Busy, ReqStatus::OK);
-		}
-		else rs_reset(Req::DataNode, ReqStatus::Error);
-		return err;
-	}
-	return error::quiet(Error::LinkBusy);
+auto fusion_link::populate(const std::string& child_type_id, bool wait_if_busy) const
+-> result_or_err<sp_node> {
+	// [NOTE] we access here internals of base link
+	// to obtain status of DataNode operation
+	return detail::link_invoke(
+		this,
+		[&child_type_id](const fusion_link* lnk) { return impl::populate(lnk, child_type_id); },
+		pimpl()->status_[1], wait_if_busy
+	);
+}
+
+auto fusion_link::populate(link::process_data_cb f, std::string child_type_id, bool wait_if_busy) const
+-> void {
+	pimpl_->send(
+		flnk_populate_atom(), this->bs_shared_this<link>(), std::move(f),
+		std::move(child_type_id), wait_if_busy
+	);
 }
 
 auto fusion_link::bridge() const -> sp_fusion {

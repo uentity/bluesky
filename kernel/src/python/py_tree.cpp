@@ -249,8 +249,14 @@ void py_bind_tree(py::module& m) {
 			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = link::Flags::Plain)
 		.def(py::init<std::string, const char*, std::string, sp_fusion, link::Flags>(),
 			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = link::Flags::Plain)
-		.def("populate", &fusion_link::populate)
 		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge)
+		.def("populate", py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),
+			"child_type_id"_a, "wait_if_busy"_a = false
+		)
+		.def("populate", py::overload_cast<link::process_data_cb, std::string, bool>(
+			&fusion_link::populate, py::const_),
+			"f"_a, "obj_type_id"_a, "wait_if_busy"_a = false
+		)
 	;
 
 	py::class_<fusion_iface, py_fusion<>, std::shared_ptr<fusion_iface>>(m, "fusion_iface")

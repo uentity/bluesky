@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	// fusion link
 	{
 		auto fl = std::make_shared<fusion_link>(
-			"fuse1", std::make_shared<fusion_client>()
+			"fuse1", nullptr, std::make_shared<fusion_client>()
 		);
 		//fl->test();
 	}

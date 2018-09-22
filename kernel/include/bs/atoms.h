@@ -14,6 +14,8 @@ namespace blue_sky {
 using lnk_data_atom = caf::atom_constant<caf::atom("tl data")>;
 // async invoke `link::data_node()`
 using lnk_dnode_atom = caf::atom_constant<caf::atom("tl dnode")>;
+// async invoke `fusion_link::populate()`
+using flnk_populate_atom = caf::atom_constant<caf::atom("tfl pull")>;
 	
 } /* namespace blue_sky */
 

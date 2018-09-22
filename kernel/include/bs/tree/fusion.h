@@ -55,7 +55,11 @@ public:
 
 	// force `fusion_iface::populate()` call with specified children types
 	// regardless of populate status
-	auto populate(const std::string& child_type_id) -> error;
+	auto populate(const std::string& child_type_id, bool wait_if_busy = false) const
+		-> result_or_err<sp_node>;
+	// async populate
+	auto populate(process_data_cb f, std::string child_type_id, bool wait_if_busy = true) const
+		-> void;
 
 	// access to link's fusion bridge
 	auto bridge() const -> sp_fusion;
