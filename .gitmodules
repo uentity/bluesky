@@ -8,8 +8,9 @@
 	#url = https://github.com/pybind/pybind11.git
 [submodule "third_party/actor-framework"]
 	path = third_party/actor-framework
-	url = https://github.com/actor-framework/actor-framework.git
+	url = https://github.com/uentity/actor-framework.git
 	ignore = untracked
+	#url = https://github.com/actor-framework/actor-framework.git
 [submodule "third_party/eigen"]
 	path = third_party/eigen
 	url = https://github.com/eigenteam/eigen-git-mirror.git
