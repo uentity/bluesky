@@ -136,7 +136,7 @@ caf::actor_system_config& kernel::actor_config() const {
 }
 
 caf::actor_system& kernel::actor_system() const {
-	return *pimpl_->actor_sys_;
+	return pimpl_->actor_system();
 }
 
 } /* namespace blue_sky */

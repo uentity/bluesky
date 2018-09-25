@@ -34,14 +34,18 @@ public:
 
 	// kernel's actor system & config
 	caf::actor_system_config actor_cfg_;
-	std::unique_ptr<caf::actor_system> actor_sys_;
 
 	kernel_impl() {
 		// [TODO] implement actor system config parsing
 		// load middleman module
 		actor_cfg_.load<caf::io::middleman>();
-		// create actor system
-		actor_sys_ = std::make_unique<caf::actor_system>(actor_cfg_);
+		// [NOTE] We can't create `caf::actor_system` here.
+		// `actor_system` starts worker and other service threads in constructor.
+		// At the same time kernel singleton is constructed most of the time during
+		// initialization of kernel shared library. And on Windows it is PROHIBITED to start threads
+		// in `DllMain()`, because that cause a deadlock.
+		// Solution: delay construction of actor_system until first usage, don't use CAf in kernel
+		// ctor.
 	}
 
 	type_tuple find_type(const std::string& key) const {
@@ -80,6 +84,11 @@ public:
 		return idx_any_map_[find_type_info(master)];
 	}
 
+	caf::actor_system& actor_system() {
+		// delayed actor system initialization
+		static auto actor_sys = std::make_unique<caf::actor_system>(actor_cfg_);
+		return *actor_sys;
+	}
 };
 
 } /* namespace blue_sky */
