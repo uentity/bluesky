@@ -282,6 +282,12 @@
     <ClInclude Include="kernel\src\tree\link_impl.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\src\tree\link_invoke.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\errors.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -405,6 +411,9 @@
       <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\fusion_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\errors.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
   </ItemGroup>
