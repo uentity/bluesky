@@ -34,6 +34,8 @@ public:
 
 	// kernel's actor system & config
 	caf::actor_system_config actor_cfg_;
+	// delayed actor system initialization
+	std::unique_ptr<caf::actor_system> actor_sys_;
 
 	kernel_impl() {
 		// [TODO] implement actor system config parsing
@@ -86,7 +88,13 @@ public:
 
 	caf::actor_system& actor_system() {
 		// delayed actor system initialization
-		static auto actor_sys = std::make_unique<caf::actor_system>(actor_cfg_);
+		// [TODO] write safer code
+		static auto* actor_sys = [this] {
+			actor_sys_ = std::make_unique<caf::actor_system>(actor_cfg_);
+			if(!actor_sys_)
+				throw error("Can't create CAF actor_system!");
+			return actor_sys_.get();
+		}();
 		return *actor_sys;
 	}
 };

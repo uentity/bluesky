@@ -19,7 +19,10 @@ kernel::~kernel() {}
 
 void kernel::init() {}
 
-void kernel::cleanup() {}
+void kernel::cleanup() {
+	pimpl_->actor_sys_->await_all_actors_done();
+	pimpl_->actor_sys_.release();
+}
 
 spdlog::logger& kernel::get_log(const char* name) {
 	return kernel_impl::get_log(name);

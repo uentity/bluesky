@@ -198,6 +198,11 @@ public:
 	/// ... and to actors system
 	caf::actor_system& actor_system() const;
 
+	/// executable should call this function before program ends
+	/// and before kernel's static instance will get destryed
+	/// this is mostly needed on Windows where omitting this call will lead to hangup on exit
+	void cleanup();
+
 private:
 	//! \brief Constructor of kernel
 	kernel();
@@ -213,8 +218,6 @@ private:
 
 	// kernel initialization routine
 	void init();
-	// called before kernel dies
-	void cleanup();
 
 	// extract type_descriptor for given type from internal kernel storage
 	const type_descriptor& demand_type(const type_descriptor& obj_type);
