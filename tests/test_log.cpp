@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE(test_bs_log) {
 	using namespace blue_sky;
 	using namespace blue_sky::log;
 
-	std::cout << "*** testing bs_log..." << std::endl;
+	std::cout << "\n\n*** testing log..." << std::endl;
 
 	//bsout().logger().info("{}", example());
 

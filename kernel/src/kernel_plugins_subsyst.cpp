@@ -60,7 +60,9 @@ NAMESPACE_BEGIN(detail)
 const plugin_descriptor& kernel_plugins_subsyst::kernel_pd() {
 	static const plugin_descriptor kernel_pd(
 		BS_GET_TI(__kernel_types_pd_tag__), "kernel", KERNEL_VERSION,
-		"BlueSky virtual kernel plugin", "bs"
+		"BlueSky virtual kernel plugin", "bs",
+		(void*)&cereal::detail::StaticObject<cereal::detail::InputBindingMap>::getInstance(),
+		(void*)&cereal::detail::StaticObject<cereal::detail::OutputBindingMap>::getInstance()
 	);
 	return kernel_pd;
 }
@@ -160,6 +162,9 @@ kernel_plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_d
 		auto tplug = temp_plugins_.find(*pplug);
 		if(tplug != temp_plugins_.end())
 			temp_plugins_.erase(tplug);
+
+		// merge serialization bindings maps
+		unify_serialization();
 	}
 
 	return {pplug, res.second};
@@ -375,6 +380,66 @@ int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
 #endif
 
 	return 0;
+}
+
+namespace {
+// helper to unify input or output bindings
+template<typename bindings_t>
+auto unify_bindings(const kernel_plugins_subsyst& K, void *const plugin_descriptor::*binding_var) {
+	using Serializers_map = typename bindings_t::Serializers_map;
+	using Archives_map = typename bindings_t::Archives_map;
+	Archives_map united;
+	bindings_t* plug_bnd = nullptr;
+
+	// lambda helper to merge bindings from source to destination
+	auto merge_bindings = [](const auto& src, auto& dest) {
+		// loop over archive entries
+		for(const auto& ar : src) {
+			auto ar_dest = dest.find(ar.first);
+			// if entries for archive not found at all - insert 'em all at once
+			// otherwise go deeper and loop over entries per selected archive
+			if(ar_dest == dest.end())
+				dest.insert(ar);
+			else {
+				// loop over bindings for selected archive
+				// and insert bindings that are missing in destination
+				auto& dest_binds = ar_dest->second;
+				for(const auto& src_bind : ar.second) {
+					if(dest_binds.find(src_bind.first) == dest_binds.end())
+						dest_binds.insert(src_bind);
+				}
+			}
+		}
+	};
+
+	// first pass -- collect all bindings into single map
+	for(const auto& plugin : K.loaded_plugins_) {
+		// extract bindings global from plugin descriptor
+		if( !(plug_bnd = reinterpret_cast<bindings_t*>(plugin.first->*binding_var)) )
+			continue;
+		// merge plugin bindings into united map
+		merge_bindings(plug_bnd->archives_map, united);
+	}
+
+	// 2nd pass - merge united into plugins' bindings
+	for(const auto& plugin : K.loaded_plugins_) {
+		// extract bindings global from plugin descriptor
+		if( !(plug_bnd = reinterpret_cast<bindings_t*>(plugin.first->*binding_var)) )
+			continue;
+		// merge all entries from plugin into united
+		merge_bindings(united, plug_bnd->archives_map);
+	}
+}
+
+} // eof hidden namespace
+
+void kernel_plugins_subsyst::unify_serialization() const {
+	unify_bindings<cereal::detail::InputBindingMap>(
+		*this, &plugin_descriptor::serial_input_bindings
+	);
+	unify_bindings<cereal::detail::OutputBindingMap>(
+		*this, &plugin_descriptor::serial_output_bindings
+	);
 }
 
 NAMESPACE_END(detail)

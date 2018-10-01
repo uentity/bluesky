@@ -9,12 +9,19 @@
 
 #include <bs/kernel.h>
 #include <bs/error.h>
+
+#include <caf/actor_system_config.hpp>
+#include <caf/actor_system.hpp>
+#include <caf/io/middleman.hpp>
+
 #include "kernel_logging_subsyst.h"
 #include "kernel_plugins_subsyst.h"
 #include "kernel_instance_subsyst.h"
 
 namespace blue_sky {
-
+/*-----------------------------------------------------------------------------
+ *  kernel impl
+ *-----------------------------------------------------------------------------*/
 class kernel::kernel_impl : public detail::kernel_plugins_subsyst, public detail::kernel_instance_subsyst
 {
 public:
@@ -24,6 +31,24 @@ public:
 
 	using idx_any_map_t = std::map< BS_TYPE_INFO, idx_any_array >;
 	idx_any_map_t idx_any_map_;
+
+	// kernel's actor system & config
+	caf::actor_system_config actor_cfg_;
+	// delayed actor system initialization
+	std::unique_ptr<caf::actor_system> actor_sys_;
+
+	kernel_impl() {
+		// [TODO] implement actor system config parsing
+		// load middleman module
+		actor_cfg_.load<caf::io::middleman>();
+		// [NOTE] We can't create `caf::actor_system` here.
+		// `actor_system` starts worker and other service threads in constructor.
+		// At the same time kernel singleton is constructed most of the time during
+		// initialization of kernel shared library. And on Windows it is PROHIBITED to start threads
+		// in `DllMain()`, because that cause a deadlock.
+		// Solution: delay construction of actor_system until first usage, don't use CAf in kernel
+		// ctor.
+	}
 
 	type_tuple find_type(const std::string& key) const {
 		using search_key = detail::kernel_plugins_subsyst::type_name_key;
@@ -61,6 +86,17 @@ public:
 		return idx_any_map_[find_type_info(master)];
 	}
 
+	caf::actor_system& actor_system() {
+		// delayed actor system initialization
+		// [TODO] write safer code
+		static auto* actor_sys = [this] {
+			actor_sys_ = std::make_unique<caf::actor_system>(actor_cfg_);
+			if(!actor_sys_)
+				throw error("Can't create CAF actor_system!");
+			return actor_sys_.get();
+		}();
+		return *actor_sys;
+	}
 };
 
 } /* namespace blue_sky */

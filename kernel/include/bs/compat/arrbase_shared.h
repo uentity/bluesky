@@ -22,6 +22,7 @@ namespace blue_sky {
  *----------------------------------------------------------------*/
 template< class T, class array_t >
 class bs_arrbase_shared_impl : public bs_arrbase< T > {
+	friend class atomizer;
 public:
 	// traits for bs_array
 	using arrbase = bs_arrbase< T >;

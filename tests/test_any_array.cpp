@@ -28,7 +28,7 @@ NAMESPACE_END(blue_sky)
 BOOST_AUTO_TEST_CASE(test_any_array) {
 	using namespace blue_sky;
 
-	std::cout << "*** testing any_array..." << std::endl;
+	std::cout << "\n\n*** testing any_array..." << std::endl;
 
 	// map of string key -> any value
 	auto a = str_any_array();

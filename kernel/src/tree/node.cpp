@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "node_impl.h"
-#include <bs/tree.h>
+#include <bs/tree/tree.h>
 #include <bs/kernel.h>
 
 #include <boost/uuid/string_generator.hpp>
@@ -22,7 +22,7 @@ static boost::uuids::string_generator uuid_from_str;
 
 NAMESPACE_END()
 
-using links_locker_t = std::lock_guard<std::recursive_mutex>;
+using links_locker_t = std::lock_guard<std::mutex>;
 /*-----------------------------------------------------------------------------
  *  node
  *-----------------------------------------------------------------------------*/
@@ -314,6 +314,10 @@ int node::rename(const std::string& key, std::string new_name, Key key_meaning, 
 	case Key::Name:
 		return pimpl_->rename<Key::Name>(key, std::move(new_name), all);
 	}
+}
+
+auto node::on_rename(const id_type& renamed_id) const -> void {
+	pimpl_->on_rename(renamed_id);
 }
 
 // ---- project

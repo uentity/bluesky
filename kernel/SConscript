@@ -41,14 +41,20 @@ kernel_cpp_list = [
 	"src/lib_descriptor.cpp",
 	"src/log.cpp",
 	"src/main.cpp",
-	"src/link.cpp",
-	"src/hard_link.cpp",
-	"src/sym_link.cpp",
-	"src/node.cpp",
-	"src/tree.cpp",
 	"src/compat/messaging.cpp",
 	"src/compat/array.cpp",
-	"src/compat/array_serialize.cpp"
+	"src/compat/array_serialize.cpp",
+	"src/serialize/base_types.cpp",
+	"src/serialize/array.cpp",
+	"src/serialize/link.cpp",
+	"src/serialize/tree.cpp",
+	"src/tree/link.cpp",
+	"src/tree/hard_link.cpp",
+	"src/tree/sym_link.cpp",
+	"src/tree/node.cpp",
+	"src/tree/tree.cpp",
+	"src/tree/fusion_link.cpp",
+	"src/tree/errors.cpp"
 ];
 #print kernel_cpp_list;
 
@@ -67,7 +73,7 @@ py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in Split("""
 # setup default build environment
 base_env = custom_env.Clone();
 base_env.AppendUnique(
-	CPPDEFINES = ['BS_EXPORTING', 'BS_EXPORTING_PLUGIN'],
+	CPPDEFINES = ['BS_EXPORTING'],
 	CPPPATH = ['#kernel/src'],
 	LIBS = ['loki']
 );
@@ -80,7 +86,7 @@ if (base_env["unmanaged"] == "1") :
 # are we building with python support?
 if base_env['py'] == '1' :
 	base_env.AppendUnique(
-		CPPDEFINES = ['BSPY_EXPORTING'],
+		CPPDEFINES = ['BSPY_EXPORTING']
 	);
 	kernel_cpp_list += py_kernel_cpp_list;
 

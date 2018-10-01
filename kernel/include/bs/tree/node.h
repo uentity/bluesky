@@ -9,11 +9,11 @@
 
 #pragma once
 
-#include "objbase.h"
+#include "../objbase.h"
+#include "../detail/tree_errors.h"
+#include "../detail/is_container.h"
+#include "../detail/enumops.h"
 #include "link.h"
-#include "detail/tree_errors.h"
-#include "detail/is_container.h"
-#include "detail/enumops.h"
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
@@ -32,12 +32,12 @@ public:
 	using id_type = link::id_type;
 
 	// links are sorted by unique ID
-	using id_key = mi::member<
-		link, const id_type, &link::id_
+	using id_key = mi::const_mem_fun<
+		link, const id_type&, &link::id
 	>;
 	// and non-unique name
-	using name_key = mi::member<
-		link, const std::string, &link::name_
+	using name_key = mi::const_mem_fun<
+		link, std::string, &link::name
 	>;
 	// and non-unique object ID
 	using oid_key = mi::const_mem_fun<
@@ -269,6 +269,8 @@ public:
 	virtual ~node();
 
 private:
+	friend class blue_sky::atomizer;
+	friend class link;
 	// PIMPL
 	class node_impl;
 	std::unique_ptr< node_impl > pimpl_;
@@ -290,6 +292,8 @@ private:
 	std::vector<Key_type<Key::Name>> keys(Key_const<Key::Name>) const;
 	std::vector<Key_type<Key::OID>> keys(Key_const<Key::OID>) const;
 	std::vector<Key_type<Key::Type>> keys(Key_const<Key::Type>) const;
+
+	auto on_rename(const id_type& renamed_lnk) const -> void;
 
 	BS_TYPE_DECL
 };

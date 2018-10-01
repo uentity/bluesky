@@ -10,6 +10,7 @@
 #pragma once
 
 #include "common.h"
+#include <tl/expected.hpp>
 #include <exception>
 #include <system_error>
 #include <ostream>
@@ -36,7 +37,6 @@ NAMESPACE_END(blue_sky)
 BS_REGISTER_ERROR_ENUM(blue_sky::Error)
 
 NAMESPACE_BEGIN(blue_sky)
-
 /*-----------------------------------------------------------------------------
  *  error class decalration
  *-----------------------------------------------------------------------------*/
@@ -65,8 +65,7 @@ public:
 	/// copy & move ctors - must not throw
 	error(const error& rhs) noexcept;
 	error(error&& rhs) noexcept;
-	/// virtual destructor for derived errors
-	virtual ~error() noexcept {}
+	~error() noexcept {}
 
 	/// construct quiet error that don't get logged in constructor
 	/// quiet error can be treated like operation result
@@ -107,6 +106,15 @@ private:
 	/// construct from int operation result
 	explicit error(IsQuiet, int err_code);
 };
+
+/// produces quiet error from given params
+template<typename... Args>
+inline auto success(Args&&... args) -> error {
+	return error::quiet(std::forward<Args>(args)...);
+}
+
+/// carries result (of type T) OR error
+template<class T> using result_or_err = tl::expected<T, error>;
 
 NAMESPACE_END(blue_sky)
 

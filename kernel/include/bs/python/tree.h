@@ -8,8 +8,9 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <pybind11/pybind11.h>
-#include <bs/link.h>
-#include <bs/node.h>
+#include <bs/tree/link.h>
+#include <bs/tree/fusion.h>
+//#include <bs/tree/node.h>
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(python)
 
@@ -25,10 +26,6 @@ public:
 		PYBIND11_OVERLOAD_PURE(tree::sp_link, Link, clone, deep);
 	}
 
-	sp_obj data() const override {
-		PYBIND11_OVERLOAD_PURE(sp_obj, Link, data, );
-	}
-
 	std::string type_id() const override {
 		PYBIND11_OVERLOAD_PURE(std::string, Link, type_id, );
 	}
@@ -41,15 +38,29 @@ public:
 		PYBIND11_OVERLOAD(std::string, Link, obj_type_id, );
 	}
 
-	tree::sp_node data_node() const override {
-		PYBIND11_OVERLOAD_PURE(tree::sp_node, Link, data_node, );
+	//result_or_err<sp_obj> data_impl() const override {
+	//	PYBIND11_OVERLOAD_PURE(sp_obj, Link, data_impl, );
+	//}
+
+	//result_or_err<tree::sp_node> data_node_impl() const override {
+	//	PYBIND11_OVERLOAD(tree::sp_node, Link, data_node_impl, );
+	//}
+};
+
+/*-----------------------------------------------------------------------------
+ *  trampoline for fusion_iface
+ *-----------------------------------------------------------------------------*/
+template<typename Fusion = tree::fusion_iface>
+class py_fusion : public Fusion {
+public:
+	using Fusion::Fusion;
+
+	auto populate(const tree::sp_node& root, const std::string& child_type_id = "") -> error override {
+		PYBIND11_OVERLOAD_PURE(error, Fusion, populate, root, child_type_id);
 	}
 
-	typename Link::Flags flags() const override {
-		PYBIND11_OVERLOAD(typename Link::Flags, Link, flags, );
-	}
-	void set_flags(typename Link::Flags new_flags) override {
-		PYBIND11_OVERLOAD(void, Link, set_flags, new_flags);
+	auto pull_data(const sp_obj& root) -> error override {
+		PYBIND11_OVERLOAD_PURE(error, Fusion, pull_data, root);
 	}
 };
 

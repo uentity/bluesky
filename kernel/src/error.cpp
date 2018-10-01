@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/error.h>
+#include <bs/tree/errors.h>
 #include <bs/misc.h>
 #include <bs/log.h>
 #include <bs/kernel_tools.h>
@@ -100,7 +101,9 @@ void error::dump() const {
 }
 
 bool error::ok() const {
-	return !(bool)code;
+	static const auto tree_extra_ok = tree::make_error_code(tree::Error::OKOK);
+
+	return !(bool)code || (code == tree_extra_ok);
 }
 
 // error printing

@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #define BOOST_TEST_DYN_LINK
-#include <bs/objbase.h>
+#include "test_objects.h"
 #include <bs/type_macro.h>
 #include <bs/kernel.h>
 #include <bs/log.h>
@@ -16,35 +16,14 @@
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 
-BS_PLUGIN_DESCRIPTOR("test_type_descriptor", "1.0", "Types factory unit test");
-
 namespace blue_sky {
 
+///////////////////////////////////////////////////////////////////////////////
+//  Declarations of classes below are in `test_objects.h`
+//
 /*-----------------------------------------------------------------------------
- * test simple class
+ * type_descriptor for `person`
  *-----------------------------------------------------------------------------*/
-class bs_person : public objbase {
-public:
-	bs_person() : name_("[NONAME]"), age_(0) {}
-
-	bs_person(const char* name) : name_(name), age_(0) {}
-
-	bs_person(double age) : name_("[NONAME]"), age_(age) {}
-
-	bs_person(const std::string& name, double age = 0) : name_(name), age_(age) {}
-
-	template< class Ostream >
-	friend Ostream& operator<<(Ostream& os, const bs_person& p) {
-		return os << "Person name = " << p.name_ << ", age = " << p.age_;
-	}
-
-	std::string name_;
-	double age_;
-
-	BS_TYPE_DECL
-};
-using sp_person = std::shared_ptr< bs_person >;
-
 // define free function that returns bs_person singleton
 sp_obj create_single_person() {
 	static bs_person P("[SINGLE]");
@@ -55,9 +34,10 @@ sp_obj create_single_person() {
 BS_TYPE_IMPL(bs_person, objbase, "bs_person", "BS Person", false, false)
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (const char*))
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (double))
+BS_TYPE_ADD_CONSTRUCTOR(bs_person, (const char*, double))
 // add free function constructor
-//BS_TYPE_ADD_DEF_CONSTRUCTOR(bs_person)
-BS_TYPE_ADD_CONSTRUCTOR_F(bs_person, create_single_person)
+BS_TYPE_ADD_DEF_CONSTRUCTOR(bs_person)
+//BS_TYPE_ADD_CONSTRUCTOR_F(bs_person, create_single_person)
 
 // these two should coincide
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (const std::string&))
@@ -66,33 +46,11 @@ BS_TYPE_ADD_CONSTRUCTOR(bs_person, (std::string))
 BS_TYPE_ADD_CONSTRUCTOR(bs_person, (const std::string&, double))
 BS_TYPE_ADD_COPY_CONSTRUCTOR(bs_person)
 
-BS_REGISTER_TYPE("test_type_descriptor", bs_person)
+BS_REGISTER_TYPE("unit_test", bs_person)
 
 /*-----------------------------------------------------------------------------
- * test templated class
+ * .. for `my_strategy` templated class
  *-----------------------------------------------------------------------------*/
-template< class T >
-struct my_strategy : public objbase {
-	using cont_type = std::vector< T >;
-
-	my_strategy() : name_("[NONAME]") {}
-	my_strategy(const my_strategy&) = default;
-	my_strategy(my_strategy&&) = default;
-	my_strategy(const std::string& name) : name_(name) {}
-
-	std::string name_;
-
-	//template< class Ostream >
-	friend std::ostream& operator<<(std::ostream& os, const my_strategy& s) {
-		return os << "Strategy type : " << bs_type().name << "; strategy name = " << s.name_;
-	}
-
-	// expect that only one strategy can exist
-	BS_TYPE_DECL_INL(my_strategy, objbase, "", "Strategy", true, true)
-};
-template< class T >
-using sp_strat = std::shared_ptr< my_strategy< T > >;
-
 // register strategy
 BS_TYPE_IMPL_INL_T1(my_strategy, int)
 BS_TYPE_IMPL_INL_T1(my_strategy, double)
@@ -101,50 +59,12 @@ BS_TYPE_ADD_CONSTRUCTOR(my_strategy< double >, (const char*))
 BS_TYPE_ADD_CONSTRUCTOR(my_strategy< int >, (const std::string&))
 BS_TYPE_ADD_CONSTRUCTOR(my_strategy< double >, (const std::string&))
 
-BS_REGISTER_TYPE("test_type_descriptor", my_strategy< int >)
-BS_REGISTER_TYPE("test_type_descriptor", my_strategy< double >)
+BS_REGISTER_TYPE("unit_test", my_strategy< int >)
+BS_REGISTER_TYPE("unit_test", my_strategy< double >)
 
 /*-----------------------------------------------------------------------------
- * test complex templated class
+ * .. for `my_strategy`
  *-----------------------------------------------------------------------------*/
-// Strategy is passed with tuple argument just for testing
-template< class T, class Strategy >
-class uber_type : public objbase {
-public:
-	using uber_T = T;
-	using cont_T = typename Strategy::cont_type;
-
-	uber_type() : name_("[NONAME]") {};
-	uber_type(const uber_type&) = default;
-	uber_type(const char* name) : name_(name) {}
-	uber_type(const std::string& name) : name_(name) {}
-
-	void add_value(uber_T val) { storage_.emplace_back(std::move(val)); }
-
-	//template< class Ostream >
-	friend std::ostream& operator<<(std::ostream& os, const uber_type& s) {
-		os << "Uber type: " << bs_type().name << "; Uber name = " << s.name_ <<
-			" has elements [" << s.storage_.size() << "]: ";
-		for(auto& v : s.storage_) {
-			os << v << ' ';
-		}
-		return os;
-	}
-
-	T value_;
-	cont_T storage_;
-	std::string name_;
-
-	BS_TYPE_DECL_INL_BEGIN(uber_type, objbase, "", "Uber complex type", true, false)
-		td.add_constructor< uber_type, const char* >();
-		td.add_copy_constructor< uber_type >();
-	BS_TYPE_DECL_INL_END
-};
-template< class T >
-using uber_t = uber_type< T, my_strategy< T > >;
-template< class T >
-using sp_uber = std::shared_ptr< uber_t< T > >;
-
 // define free function that returns bs_person singleton
 template< class T >
 sp_obj create_single_uber(T val) {
@@ -165,15 +85,15 @@ BS_TYPE_ADD_CONSTRUCTOR_T(uber_type, (double, my_strategy< double >), (std::stri
 BS_TYPE_ADD_CONSTRUCTOR_T_F(uber_type, (int, my_strategy< int >), create_single_uber, (int))
 BS_TYPE_ADD_CONSTRUCTOR_T_F(uber_type, (double, my_strategy< double >), create_single_uber, (double))
 
-BS_REGISTER_TYPE_T("test_type_descriptor", uber_type, (int, my_strategy< int >))
-BS_REGISTER_TYPE_T("test_type_descriptor", uber_type, (double, my_strategy< double >))
+BS_REGISTER_TYPE_T("unit_test", uber_type, (int, my_strategy< int >))
+BS_REGISTER_TYPE_T("unit_test", uber_type, (double, my_strategy< double >))
 
 } // eof blue_sky namespace
 
 using namespace blue_sky;
 
 BOOST_AUTO_TEST_CASE(test_type_descriptor) {
-	std::cout << "*** testing bs_type_descriptor..." << std::endl;
+	std::cout << "\n\n*** testing bs_type_descriptor..." << std::endl;
 	// register type first
 	//BS_KERNEL.register_type(bs_person::bs_type());
 

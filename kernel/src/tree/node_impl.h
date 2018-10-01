@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <bs/node.h>
+#include <bs/tree/node.h>
 #include <set>
 #include <mutex>
 
@@ -135,7 +135,7 @@ public:
 						new_name = l->name() + '_' + std::to_string(i);
 						if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
 							// we've found a unique name
-							l->name_ = std::move(new_name);
+							l->rename_silent(std::move(new_name));
 							unique_found = true;
 							break;
 						}
@@ -169,17 +169,16 @@ public:
 		links_locker_t my_turn(links_guard_);
 		if(pos == end<K>()) return false;
 		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
-			l->name_ = std::move(name);
+			l->rename_silent(std::move(name));
 		});
 	}
 
 	template<Key K>
-	int rename(const Key_type<K>& key, std::string&& new_name, bool all = false) {
-		links_locker_t my_turn(links_guard_);
+	int rename(const Key_type<K>& key, const std::string& new_name, bool all = false) {
 		range<K> matched_items = equal_range<K>(key);
 		auto& storage = links_.get<Key_tag<K>>();
-		auto renamer = [name = std::move(new_name)](sp_link& l) {
-			l->name_ = std::move(name);
+		auto renamer = [&new_name](sp_link& l) {
+			l->rename_silent(new_name);
 		};
 		int cnt = 0;
 		for(auto pos = matched_items.begin(); pos != matched_items.end(); ++pos) {
@@ -188,6 +187,15 @@ public:
 			if(!all) break;
 		}
 		return cnt;
+	}
+
+	void on_rename(const Key_type<Key::ID>& key) {
+		// find target link by it's ID
+		auto& I = links_.get<Key_tag<Key::ID>>();
+		auto pos = I.find(key);
+		// invoke replace as most safe & easy choice
+		if(pos != I.end())
+			I.replace(pos, *pos);
 	}
 
 	template<Key K>
@@ -258,8 +266,8 @@ public:
 	links_container links_;
 	std::vector<std::string> allowed_otypes_;
 	// temp guard until caf-based tree implementation is ready
-	std::recursive_mutex links_guard_;
-	using links_locker_t = std::lock_guard<std::recursive_mutex>;
+	std::mutex links_guard_;
+	using links_locker_t = std::lock_guard<std::mutex>;
 };
 
 NAMESPACE_END(tree)

@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="kernel\include\bs\any_array.h" />
     <ClInclude Include="kernel\include\bs\assert.h" />
+    <ClInclude Include="kernel\include\bs\atoms.h" />
     <ClInclude Include="kernel\include\bs\bs.h" />
     <ClInclude Include="kernel\include\bs\common.h" />
     <ClInclude Include="kernel\include\bs\compat\array.h" />
@@ -56,26 +57,40 @@
     <ClInclude Include="kernel\include\bs\fwd.h" />
     <ClInclude Include="kernel\include\bs\kernel.h" />
     <ClInclude Include="kernel\include\bs\kernel_tools.h" />
-    <ClInclude Include="kernel\include\bs\link.h" />
     <ClInclude Include="kernel\include\bs\log.h" />
     <ClInclude Include="kernel\include\bs\misc.h" />
-    <ClInclude Include="kernel\include\bs\node.h" />
     <ClInclude Include="kernel\include\bs\objbase.h" />
     <ClInclude Include="kernel\include\bs\objbase_macro.h" />
     <ClInclude Include="kernel\include\bs\plugin_descriptor.h" />
+    <ClInclude Include="kernel\include\bs\serialize\array.h" />
+    <ClInclude Include="kernel\include\bs\serialize\atomizer.h" />
+    <ClInclude Include="kernel\include\bs\serialize\base_types.h" />
+    <ClInclude Include="kernel\include\bs\serialize\boost_uuid.h" />
+    <ClInclude Include="kernel\include\bs\serialize\carray.h" />
+    <ClInclude Include="kernel\include\bs\serialize\macro.h" />
+    <ClInclude Include="kernel\include\bs\serialize\tree.h" />
     <ClInclude Include="kernel\include\bs\setup_common_api.h" />
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
+    <ClInclude Include="kernel\include\bs\tree\fusion.h" />
+    <ClInclude Include="kernel\include\bs\tree\link.h" />
+    <ClInclude Include="kernel\include\bs\tree\node.h" />
+    <ClInclude Include="kernel\include\bs\tree\tree.h" />
     <ClInclude Include="kernel\include\bs\type_descriptor.h" />
     <ClInclude Include="kernel\include\bs\type_info.h" />
     <ClInclude Include="kernel\include\bs\type_macro.h" />
+    <ClInclude Include="kernel\src\backtrace_tools_unix.h" />
+    <ClInclude Include="kernel\src\backtrace_tools_win.h" />
     <ClInclude Include="kernel\src\kernel_impl.h" />
     <ClInclude Include="kernel\src\kernel_instance_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_plugins_discover.h" />
     <ClInclude Include="kernel\src\kernel_plugins_subsyst.h" />
-    <ClInclude Include="kernel\src\tree_impl.h" />
+    <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
+    <ClInclude Include="kernel\src\tree\link_impl.h" />
+    <ClInclude Include="kernel\src\tree\node_impl.h" />
+    <ClInclude Include="kernel\src\tree\tree_impl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp" />
@@ -94,23 +109,29 @@
     <ClCompile Include="kernel\src\kernel_tools.cpp" />
     <ClCompile Include="kernel\src\kernel_types_factory.cpp" />
     <ClCompile Include="kernel\src\lib_descriptor.cpp" />
-    <ClCompile Include="kernel\src\link.cpp" />
     <ClCompile Include="kernel\src\log.cpp" />
     <ClCompile Include="kernel\src\main.cpp" />
     <ClCompile Include="kernel\src\misc.cpp" />
-    <ClCompile Include="kernel\src\node.cpp" />
     <ClCompile Include="kernel\src\objbase.cpp" />
     <ClCompile Include="kernel\src\plugin_descriptor.cpp" />
+    <ClCompile Include="kernel\src\serialize\array.cpp" />
+    <ClCompile Include="kernel\src\serialize\base_types.cpp" />
+    <ClCompile Include="kernel\src\serialize\link.cpp" />
+    <ClCompile Include="kernel\src\serialize\tree.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
-    <ClCompile Include="kernel\src\sym_link.cpp" />
-    <ClCompile Include="kernel\src\tree.cpp" />
+    <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
+    <ClCompile Include="kernel\src\tree\hard_link.cpp" />
+    <ClCompile Include="kernel\src\tree\link.cpp" />
+    <ClCompile Include="kernel\src\tree\node.cpp" />
+    <ClCompile Include="kernel\src\tree\sym_link.cpp" />
+    <ClCompile Include="kernel\src\tree\tree.cpp" />
     <ClCompile Include="kernel\src\type_info.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{B23F6F6B-A1C8-4525-9403-447F9D57ED1A}</ProjectGuid>
     <RootNamespace>blueskyre</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -190,6 +211,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib</AdditionalLibraryDirectories>
@@ -205,6 +227,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib</AdditionalLibraryDirectories>
@@ -221,6 +244,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -239,6 +263,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)kernel\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

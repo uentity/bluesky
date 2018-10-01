@@ -19,7 +19,10 @@ kernel::~kernel() {}
 
 void kernel::init() {}
 
-void kernel::cleanup() {}
+void kernel::cleanup() {
+	pimpl_->actor_sys_->await_all_actors_done();
+	pimpl_->actor_sys_.release();
+}
 
 spdlog::logger& kernel::get_log(const char* name) {
 	return kernel_impl::get_log(name);
@@ -125,6 +128,18 @@ void* kernel::self_pymod() const {
 
 bool kernel::register_plugin(const plugin_descriptor* pd) {
 	return pimpl_->register_plugin(pd, detail::lib_descriptor()).second;
+}
+
+void kernel::unify_serialization() const {
+	pimpl_->unify_serialization();
+}
+
+caf::actor_system_config& kernel::actor_config() const {
+	return pimpl_->actor_cfg_;
+}
+
+caf::actor_system& kernel::actor_system() const {
+	return pimpl_->actor_system();
 }
 
 } /* namespace blue_sky */

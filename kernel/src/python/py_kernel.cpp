@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/bs.h>
-#include <bs/node.h>
+#include <bs/tree/node.h>
 #include <bs/python/kernel.h>
 #include <bs/python/any.h>
 #include <boost/lexical_cast.hpp>
@@ -114,6 +114,8 @@ void py_bind_kernel(py::module& m) {
 		.def("clone_object", [](const kernel& k, bs_type_copy_param src) -> sp_obj {
 			return k.clone_object(src);
 		}, "src"_a, "Make object copy")
+
+		.def("cleanup", &kernel::cleanup, "Call this manually before program ends (before exit from main)")
 	;
 
 	// expose kernel instance as attribute

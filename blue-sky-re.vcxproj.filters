@@ -34,6 +34,18 @@
     <Filter Include="Файлы исходного кода\python">
       <UniqueIdentifier>{6aab8e85-ee57-4f02-b6fa-f9f6c9777764}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Заголовочные файлы\bs\serialize">
+      <UniqueIdentifier>{f26eed1c-908d-4270-93ff-0bdbe5d0f98d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы исходного кода\serialize">
+      <UniqueIdentifier>{91f10ef7-f687-4d41-b0b7-349d15ad0ed9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Заголовочные файлы\bs\tree">
+      <UniqueIdentifier>{76e495fa-6979-462e-a1a0-46cb64bccea6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы исходного кода\tree">
+      <UniqueIdentifier>{05cd7168-238a-438d-8f3c-786eece0e4a4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="kernel\include\bs\any_array.h">
@@ -60,16 +72,10 @@
     <ClInclude Include="kernel\include\bs\kernel_tools.h">
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\include\bs\link.h">
-      <Filter>Заголовочные файлы\bs</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\include\bs\log.h">
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
     <ClInclude Include="kernel\include\bs\misc.h">
-      <Filter>Заголовочные файлы\bs</Filter>
-    </ClInclude>
-    <ClInclude Include="kernel\include\bs\node.h">
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
     <ClInclude Include="kernel\include\bs\objbase.h">
@@ -210,14 +216,8 @@
     <ClInclude Include="kernel\include\bs\detail\enumops.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\include\bs\tree.h">
-      <Filter>Заголовочные файлы\bs</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\include\bs\python\tree.h">
       <Filter>Заголовочные файлы\bs\python</Filter>
-    </ClInclude>
-    <ClInclude Include="kernel\src\tree_impl.h">
-      <Filter>Файлы исходного кода</Filter>
     </ClInclude>
     <ClInclude Include="kernel\include\bs\error.h">
       <Filter>Заголовочные файлы\bs</Filter>
@@ -234,15 +234,66 @@
     <ClInclude Include="kernel\src\backtrace_tools_win.h">
       <Filter>Файлы исходного кода</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\array.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\atomizer.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\base_types.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\boost_uuid.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\carray.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\macro.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\tree.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\link.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\node.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\tree.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\node_impl.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\tree_impl.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\fusion.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\atoms.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\fusion_link_impl.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\link_impl.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\link_invoke.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\errors.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\common.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\hard_link.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\kernel.cpp">
@@ -269,9 +320,6 @@
     <ClCompile Include="kernel\src\lib_descriptor.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
-    <ClCompile Include="kernel\src\link.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
     <ClCompile Include="kernel\src\log.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
@@ -279,9 +327,6 @@
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\misc.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\node.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\objbase.cpp">
@@ -329,12 +374,6 @@
     <ClCompile Include="kernel\src\python\py_tree.cpp">
       <Filter>Файлы исходного кода\python</Filter>
     </ClCompile>
-    <ClCompile Include="kernel\src\tree.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\sym_link.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
     <ClCompile Include="kernel\src\error.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
@@ -343,6 +382,39 @@
     </ClCompile>
     <ClCompile Include="kernel\src\python\py_error.cpp">
       <Filter>Файлы исходного кода\python</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\array.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\base_types.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\link.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\hard_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\node.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\sym_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\tree.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\tree.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\fusion_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\errors.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
