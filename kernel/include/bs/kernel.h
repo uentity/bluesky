@@ -198,10 +198,14 @@ public:
 	/// ... and to actors system
 	caf::actor_system& actor_system() const;
 
-	/// executable should call this function before program ends
-	/// and before kernel's static instance will get destryed
+	/// kernel initialization routine
+	/// call this AFTER initialization of statics is done (adter `DllMain()` exit on Windows)
+	/// this is mostly needed on Windows where omitting this call may lead to deadlock
+	void init();
+
+	/// executable should call this function before program ends (before exit from `main()`)
 	/// this is mostly needed on Windows where omitting this call will lead to hangup on exit
-	void cleanup();
+	void shutdown();
 
 private:
 	//! \brief Constructor of kernel
@@ -215,9 +219,6 @@ private:
 	//! PIMPL for kernel
 	class kernel_impl;
 	std::unique_ptr< kernel_impl > pimpl_;
-
-	// kernel initialization routine
-	void init();
 
 	// extract type_descriptor for given type from internal kernel storage
 	const type_descriptor& demand_type(const type_descriptor& obj_type);

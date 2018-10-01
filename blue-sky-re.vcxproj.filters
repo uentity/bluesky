@@ -288,6 +288,9 @@
     <ClInclude Include="kernel\include\bs\tree\errors.h">
       <Filter>Заголовочные файлы\bs\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\scope_guard.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">

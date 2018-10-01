@@ -45,7 +45,7 @@ struct wrapper_kernel {
 		// first switch to usual getter to avoid infinite constructor recursion during load_plugins()
 		ref_fun_ = &wrapper_kernel::usual_kernel_getter;
 		// initialize kernel
-		k_.init();
+		//k_.init();
 
 #ifdef BS_AUTOLOAD_PLUGINS
 		// load plugins
@@ -95,7 +95,7 @@ BS_API kernel& singleton< kernel >::Instance() {
 }
 
 void detail::wrapper_kernel::kernel_cleanup() {
-	BS_KERNEL.cleanup();
+	BS_KERNEL.shutdown();
 }
 
 }	// namespace blue_sky

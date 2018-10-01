@@ -115,7 +115,8 @@ void py_bind_kernel(py::module& m) {
 			return k.clone_object(src);
 		}, "src"_a, "Make object copy")
 
-		.def("cleanup", &kernel::cleanup, "Call this manually before program ends (before exit from main)")
+		.def("init", &kernel::init, "Call this manually in the very beginning of main()")
+		.def("shutdown", &kernel::shutdown, "Call this manually before program ends (before exit from main)")
 	;
 
 	// expose kernel instance as attribute

@@ -50,6 +50,7 @@
     <ClInclude Include="kernel\include\bs\detail\kernel_errors.h" />
     <ClInclude Include="kernel\include\bs\detail\lib_descriptor.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
+    <ClInclude Include="kernel\include\bs\detail\scope_guard.h" />
     <ClInclude Include="kernel\include\bs\detail\str_utils.h" />
     <ClInclude Include="kernel\include\bs\detail\tree_errors.h" />
     <ClInclude Include="kernel\include\bs\detail\tuple_utils.h" />

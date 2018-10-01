@@ -17,9 +17,18 @@ kernel::kernel() : pimpl_(new kernel_impl) {}
 
 kernel::~kernel() {}
 
-void kernel::init() {}
+void kernel::init() {
+	// init actor system
+	auto& actor_sys = pimpl_->actor_sys_;
+	if(!actor_sys) {
+		actor_sys = std::make_unique<caf::actor_system>(pimpl_->actor_cfg_);
+		if(!actor_sys)
+			throw error("Can't create CAF actor_system!");
+	}
+}
 
-void kernel::cleanup() {
+void kernel::shutdown() {
+	// destroy actor system
 	pimpl_->actor_sys_->await_all_actors_done();
 	pimpl_->actor_sys_.release();
 }
