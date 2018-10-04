@@ -11,6 +11,8 @@
 #include <bs/misc.h>
 #include "kernel_impl.h"
 
+#include <spdlog/spdlog.h>
+
 namespace blue_sky {
 
 kernel::kernel() : pimpl_(new kernel_impl) {}
@@ -18,23 +20,37 @@ kernel::kernel() : pimpl_(new kernel_impl) {}
 kernel::~kernel() {}
 
 void kernel::init() {
-	// init actor system
-	auto& actor_sys = pimpl_->actor_sys_;
-	if(!actor_sys) {
-		actor_sys = std::make_unique<caf::actor_system>(pimpl_->actor_cfg_);
-		if(!actor_sys)
-			throw error("Can't create CAF actor_system!");
+	using InitState = kernel_impl::InitState;
+
+	// do initialization only once from non-initialized state
+	auto expected_state = InitState::NonInitialized;
+	if(pimpl_->init_state_.compare_exchange_strong(expected_state, InitState::Initialized)) {
+		// switch to mt logs
+		pimpl_->toggle_mt_logs(true);
+		// init actor system
+		auto& actor_sys = pimpl_->actor_sys_;
+		if(!actor_sys) {
+			actor_sys = std::make_unique<caf::actor_system>(pimpl_->actor_cfg_);
+			if(!actor_sys)
+				throw error("Can't create CAF actor_system!");
+		}
 	}
 }
 
 void kernel::shutdown() {
-	// destroy actor system
-	pimpl_->actor_sys_->await_all_actors_done();
-	pimpl_->actor_sys_.release();
-}
+	using InitState = kernel_impl::InitState;
 
-spdlog::logger& kernel::get_log(const char* name) {
-	return kernel_impl::get_log(name);
+	// shut down if not already Down
+	if(pimpl_->init_state_.exchange(InitState::Down) != InitState::Down) {
+		// destroy actor system
+		if(pimpl_->actor_sys_) {
+			pimpl_->actor_sys_->await_all_actors_done();
+			pimpl_->actor_sys_.release();
+		}
+		// shutdown mt logs
+		pimpl_->toggle_mt_logs(false);
+		spdlog::shutdown();
+	}
 }
 
 int kernel::load_plugin(const std::string& fname, bool init_py_subsyst) {
@@ -95,12 +111,12 @@ kernel::plugins_enum kernel::loaded_plugins() const {
 	return res;
 }
 
-int kernel::register_instance(const sp_obj& obj) {
-	return pimpl_->register_instance(obj);
+int kernel::register_instance(sp_cobj obj) {
+	return pimpl_->register_instance(std::move(obj));
 }
 
-int kernel::free_instance(const sp_obj& obj) {
-	return pimpl_->free_instance(obj);
+int kernel::free_instance(sp_cobj obj) {
+	return pimpl_->free_instance(std::move(obj));
 }
 
 kernel::instances_enum kernel::instances(const BS_TYPE_INFO& ti) const {

@@ -19,10 +19,16 @@
 
 namespace blue_sky { namespace log {
 
+/// Create spdlog::logger backend with given name
+BS_API auto get_logger(const char* name) -> spdlog::logger&;
+
 // import spdlog level_enum
 using level_enum = spdlog::level::level_enum;
 template< level_enum level > using level_const = std::integral_constant< level_enum, level>;
 
+/*-----------------------------------------------------------------------------
+ *  bs_log wraps `spdlog::logger` with stream-like API
+ *-----------------------------------------------------------------------------*/
 class BS_API bs_log {
 public:
 	using manip_t = bs_log& (*)(bs_log&);
@@ -121,11 +127,6 @@ public:
 
 	bs_log(spdlog::logger& log) : log_(log) {}
 	bs_log(const char* name);
-
-	/// @brief Create spdlog::logger backend with given name
-	///
-	/// @param name
-	static spdlog::logger& get_logger(const char* name);
 
 	// access spdlog::logger backend
 	spdlog::logger& logger() {

@@ -22,7 +22,10 @@ namespace blue_sky {
 /*-----------------------------------------------------------------------------
  *  kernel impl
  *-----------------------------------------------------------------------------*/
-class kernel::kernel_impl : public detail::kernel_plugins_subsyst, public detail::kernel_instance_subsyst
+class kernel::kernel_impl :
+	public detail::kernel_plugins_subsyst,
+	public detail::kernel_instance_subsyst,
+	public detail::kernel_logging_subsyst
 {
 public:
 	// per-type kernel any arrays storage
@@ -37,10 +40,17 @@ public:
 	// delayed actor system initialization
 	std::unique_ptr<caf::actor_system> actor_sys_;
 
-	kernel_impl() {
+	// indicator of kernel initialization state
+	enum class InitState { NonInitialized, Initialized, Down };
+	std::atomic<InitState> init_state_;
+
+	kernel_impl()
+		: init_state_(InitState::NonInitialized)
+	{
 		// [TODO] implement actor system config parsing
 		// load middleman module
 		actor_cfg_.load<caf::io::middleman>();
+
 		// [NOTE] We can't create `caf::actor_system` here.
 		// `actor_system` starts worker and other service threads in constructor.
 		// At the same time kernel singleton is constructed most of the time during
@@ -72,10 +82,6 @@ public:
 				fmt::format("Cannot find type info for type {}, seems like not registered", master.name)
 			);
 		return info;
-	}
-
-	static spdlog::logger& get_log(const char* name) {
-		return detail::kernel_logging_subsyst::get_log(name);
 	}
 
 	str_any_array& pert_str_any_array(const type_descriptor& master) {

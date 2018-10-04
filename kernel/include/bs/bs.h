@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "log.h"
 // kernel already contains a lot
 #include "kernel.h"
 #include "kernel_tools.h"

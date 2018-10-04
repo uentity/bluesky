@@ -10,15 +10,24 @@
 #pragma once
 
 #include <bs/common.h>
+#include <bs/log.h>
 #include <spdlog/logger.h>
 
 namespace blue_sky { namespace detail {
 
 struct BS_HIDDEN_API kernel_logging_subsyst {
 
-	static spdlog::logger& get_log(const char* log_name = "out");
+	kernel_logging_subsyst() {
+		// ensure that log globals are created before kernel
+		// that means log will be alive as long as kernel alive
+		const spdlog::logger* const init_logs[] = {
+			&log::get_logger("out"), &log::get_logger("err")
+		};
+		(void)init_logs;
+	}
 
+	static auto toggle_mt_logs(bool turn_on) -> void;
 };
-	
+
 }} /* namespace blue_sky::detail */
 

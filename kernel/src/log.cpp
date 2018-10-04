@@ -16,10 +16,6 @@ using namespace spdlog;
 /*-----------------------------------------------------------------
  * bs_log implementation
  *----------------------------------------------------------------*/
-logger& bs_log::get_logger(const char* name) {
-	return kernel::get_log(name);
-}
-
 bs_log::bs_log(const char* name) : log_(get_logger(name)) {}
 
 /*-----------------------------------------------------------------
@@ -65,19 +61,6 @@ bs_log& tracel(bs_log& l) {
 }
 
 } // eof namespace blue_sky::log
-
-/*-----------------------------------------------------------------
- * access to main log channels
- *----------------------------------------------------------------*/
-log::bs_log& bsout() {
-	static log::bs_log out("out");
-	return out;
-}
-
-log::bs_log& bserr() {
-	static log::bs_log out("err");
-	return out;
-}
 
 } /* namespace blue_sky */
 

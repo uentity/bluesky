@@ -11,7 +11,7 @@
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
-BS_API_PLUGIN std::error_code make_error_code(Error e) {
+BS_API std::error_code make_error_code(Error e) {
 	static const struct : public std::error_category {
 		const char* name() const noexcept override {
 			return "blue-sky::tree";

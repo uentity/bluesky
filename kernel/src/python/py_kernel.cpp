@@ -105,8 +105,8 @@ void py_bind_kernel(py::module& m) {
 			"plugin_descriptor"_a)
 		.def("plugin_types", py::overload_cast<const std::string&>(&kernel::plugin_types, py::const_),
 			"plugin_name"_a)
-		.def("register_instance", (int (kernel::*)(const sp_obj&)) &kernel::register_instance)
-		.def("free_instance", (int (kernel::*)(const sp_obj&)) &kernel::free_instance)
+		.def("register_instance", (int (kernel::*)(sp_cobj)) &kernel::register_instance)
+		.def("free_instance", (int (kernel::*)(sp_cobj)) &kernel::free_instance)
 		.def("instances", (kernel::instances_enum (kernel::*)(const BS_TYPE_INFO&) const) &kernel::instances)
 		.def("pert_str_any_array", &kernel::pert_str_any_array, py::return_value_policy::reference_internal)
 		.def("pert_idx_any_array", &kernel::pert_idx_any_array, py::return_value_policy::reference_internal)

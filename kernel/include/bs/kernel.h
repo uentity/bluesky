@@ -11,7 +11,6 @@
 
 #include "common.h"
 #include "objbase.h"
-#include "log.h"
 #include "type_descriptor.h"
 #include "plugin_descriptor.h"
 #include "any_array.h"
@@ -103,8 +102,6 @@ public:
 	void unload_plugins();
 
 	std::string last_error() const;
-
-	static spdlog::logger& get_log(const char* name);
 
 	bool register_type(const type_descriptor& td, const plugin_descriptor* pd = nullptr);
 	// register type with plugin_descriptor specified by name
