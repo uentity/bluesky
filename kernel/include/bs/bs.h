@@ -16,8 +16,8 @@
 // errors handling
 #include "error.h"
 #include "throw_exception.h"
-#include "detail/kernel_errors.h"
-#include "detail/tree_errors.h"
+#include "kernel_errors.h"
+#include "tree/errors.h"
 // other things
 #include "misc.h"
 

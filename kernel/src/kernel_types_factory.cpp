@@ -7,8 +7,9 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/detail/kernel_errors.h>
 #include <bs/log.h>
+#include <bs/error.h>
+#include <bs/kernel_errors.h>
 #include "kernel_plugins_subsyst.h"
 
 NAMESPACE_BEGIN(blue_sky)
@@ -81,7 +82,7 @@ type_tuple kernel_plugins_subsyst::demand_type(const type_tuple& obj_t) {
 			tt_ref = *tt;
 	}
 	if(tt_ref.td().is_nil()) {
-		//type wasn't found - try to register it first
+		// type wasn't found - try to register it first
 		if(obj_t.pd().is_nil())
 			register_rt_type(obj_t.td(), &tt_ref);
 		else

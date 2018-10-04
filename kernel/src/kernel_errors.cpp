@@ -7,9 +7,8 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/detail/kernel_errors.h>
-#include <bs/detail/tree_errors.h>
-#include <bs/detail/lib_descriptor.h>
+#include <bs/kernel_errors.h>
+//#include <bs/detail/lib_descriptor.h>
 
 NAMESPACE_BEGIN(blue_sky)
 
@@ -17,7 +16,7 @@ BS_API std::error_code make_error_code(KernelError e) {
 	// error_category for kernel errors
 	static const struct : std::error_category {
 		const char* name() const noexcept override {
-			return "kernel";
+			return "blue_sky::kernel";
 		}
 
 		std::string message(int ec) const override {
@@ -40,29 +39,5 @@ BS_API std::error_code make_error_code(KernelError e) {
 	return { static_cast<int>(e), kernel_category };
 }
 
-NAMESPACE_BEGIN(tree)
-
-BS_API std::error_code make_error_code(TreeError e) {
-	// error_category for kernel errors
-	static const struct : std::error_category {
-		const char* name() const noexcept override {
-			return "tree";
-		}
-
-		std::string message(int ec) const override {
-			switch(static_cast<TreeError>(ec)) {
-			case TreeError::KeyMismatch :
-				return "Given key is not found";
-
-			default:
-				return "";
-			}
-		}
-	} tree_category;
-
-	return { static_cast<int>(e), tree_category };
-}
-
-NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 

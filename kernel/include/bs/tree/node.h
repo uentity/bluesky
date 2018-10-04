@@ -10,7 +10,7 @@
 #pragma once
 
 #include "../objbase.h"
-#include "../detail/tree_errors.h"
+#include "../tree/errors.h"
 #include "../detail/is_container.h"
 #include "../detail/enumops.h"
 #include "link.h"
@@ -159,7 +159,7 @@ public:
 	template<Key K>
 	sp_link search(const Key_type<K>& k) const {
 		auto i = find(k);
-		if(i == end<K>()) throw error("node::search", TreeError::KeyMismatch);
+		if(i == end<K>()) throw error("node::search", Error::KeyMismatch);
 		return *i;
 	}
 

@@ -11,7 +11,7 @@
 #include <bs/plugin_descriptor.h>
 #include <bs/error.h>
 #include <bs/misc.h>
-#include <bs/detail/kernel_errors.h>
+#include <bs/kernel_errors.h>
 
 #ifdef _WIN32
 #include <Psapi.h>

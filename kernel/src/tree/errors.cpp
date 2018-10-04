@@ -38,6 +38,9 @@ BS_API std::error_code make_error_code(Error e) {
 			case Error::NoFusionBridge:
 				return "Fusion bridge isn't set";
 
+			case Error::KeyMismatch :
+				return "Given key is not found";
+
 			default:
 				return "";
 			}

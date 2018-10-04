@@ -13,7 +13,6 @@ NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(python)
 
 void py_bind_error(py::module& m) {
-	using namespace tree;
 	/*-----------------------------------------------------------------------------
 	 *  Error codes
 	 *-----------------------------------------------------------------------------*/
@@ -27,11 +26,21 @@ void py_bind_error(py::module& m) {
 		.value("CantLoadDLL", KernelError::CantLoadDLL)
 		.value("CantUnloadDLL", KernelError::CantUnloadDLL)
 		.value("CantRegisterType", KernelError::CantRegisterType)
+		.value("TypeIsNil", KernelError::TypeIsNil)
+		.value("CantUnloadDLL", KernelError::TypeAlreadyRegistered)
+		.value("CantCreateLogger", KernelError::CantCreateLogger)
 	;
 
-	py::enum_<TreeError>(m, "TreeError")
-		.value("OK", TreeError::OK)
-		.value("KeyMismatch", TreeError::KeyMismatch)
+	py::enum_<tree::Error>(m, "TreeError")
+		.value("OK", tree::Error::OK)
+		.value("OKOK", tree::Error::OKOK)
+		.value("EmptyData", tree::Error::EmptyData)
+		.value("NotANode", tree::Error::NotANode)
+		.value("LinkExpired", tree::Error::LinkExpired)
+		.value("UnboundSymLink", tree::Error::UnboundSymLink)
+		.value("LinkBusy", tree::Error::LinkBusy)
+		.value("NoFusionBridge", tree::Error::NoFusionBridge)
+		.value("KeyMismatch", tree::Error::KeyMismatch)
 	;
 
 	/*-----------------------------------------------------------------------------
@@ -44,7 +53,7 @@ void py_bind_error(py::module& m) {
 		// construct from known error enums -- plugins can add ctors like this
 		.def(py::init<Error>())
 		.def(py::init<KernelError>())
-		.def(py::init<TreeError>())
+		.def(py::init<tree::Error>())
 
 		.def_property_readonly("value", &std::error_code::value, "Get numeric error code")
 		.def_property_readonly(
@@ -67,7 +76,7 @@ void py_bind_error(py::module& m) {
 	// implcitly construct error_code from corresponding enum value
 	py::implicitly_convertible<Error, std::error_code>();
 	py::implicitly_convertible<KernelError, std::error_code>();
-	py::implicitly_convertible<TreeError, std::error_code>();
+	py::implicitly_convertible<tree::Error, std::error_code>();
 
 	// bind blue_sky::error
 	py::class_<error>(m, "error")

@@ -24,10 +24,11 @@ enum class Error {
 	LinkExpired,
 	UnboundSymLink,
 	LinkBusy,
-	NoFusionBridge
+	NoFusionBridge,
+	KeyMismatch
 };
 
-BS_API_PLUGIN std::error_code make_error_code(Error);
+BS_API std::error_code make_error_code(Error);
 
 }} /* namespace blue_sky::tree */
 
