@@ -83,7 +83,7 @@ class BS_API kernel {
 public:
 	using plugins_enum = std::vector< const plugin_descriptor* >;
 	using types_enum = std::vector< type_tuple >;
-	using instances_enum = std::vector< sp_obj >;
+	using instances_enum = std::vector< sp_cobj >;
 
 	//! \brief Deletes all dangling objects that aren't contained in data storage
 	//! This is a garbage collection method
@@ -133,16 +133,7 @@ public:
 	types_enum plugin_types(const std::string& plugin_name) const;
 
 	// store and access instances of BS types
-	int register_instance(const sp_obj& obj);
-	template< class T > int register_instance(const std::shared_ptr< T >& obj) {
-		// check that T is inherited from objbase
-		static_assert(
-			std::is_base_of< objbase, T >::value,
-			"Only blue_sky::objbase derived instances can be registered!"
-		);
-		return register_instance(obj);
-		//return register_instance(std::static_pointer_cast< objbase >(obj));
-	}
+	int register_instance(sp_cobj obj);
 	template< class T > int register_instance(T* obj) {
 		// check that T is inherited from objbase
 		static_assert(
@@ -152,16 +143,7 @@ public:
 		return register_instance(obj->shared_from_this());
 	}
 
-	int free_instance(const sp_obj& obj);
-	template< class T > int free_instance(const std::shared_ptr< T >& obj) {
-		// check that T is inherited from objbase
-		static_assert(
-			std::is_base_of< objbase, T >::value,
-			"Only blue_sky::objbase derived instances can be registered!"
-		);
-		return free_instance(obj);
-		//return free_instance(std::static_pointer_cast< objbase >(obj));
-	}
+	int free_instance(sp_cobj obj);
 	template< class T > int free_instance(T* obj) {
 		// check that T is inherited from objbase
 		static_assert(

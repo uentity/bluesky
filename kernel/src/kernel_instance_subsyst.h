@@ -11,7 +11,8 @@
 
 #include <bs/kernel.h>
 #include <set>
-#include <boost/pool/pool_alloc.hpp>
+#include <mutex>
+//#include <boost/pool/pool_alloc.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(detail)
@@ -20,18 +21,20 @@ struct BS_HIDDEN_API kernel_instance_subsyst {
 	using instances_enum = kernel::instances_enum;
 
 	using instances_storage_t = std::set<
-		sp_obj
+		sp_cobj
 		//boost::fast_pool_allocator<
 		//	sp_obj, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
 		//>
 	>;
 	using instances_map_t = std::unordered_map< BS_TYPE_INFO, instances_storage_t >;
 	instances_map_t instances_;
+	// sync access to instances
+	std::mutex solo_;
 
 	//register instance of any BlueSky type
-	int register_instance(const sp_obj& obj);
+	int register_instance(sp_cobj&& obj);
 
-	int free_instance(const sp_obj& obj);
+	int free_instance(sp_cobj&& obj);
 
 	instances_enum instances(const BS_TYPE_INFO& ti) const;
 };

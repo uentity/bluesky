@@ -13,26 +13,26 @@ NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(detail)
 
 // register instance of any BlueSky type
-int kernel_instance_subsyst::register_instance(const sp_obj& obj) {
+int kernel_instance_subsyst::register_instance(sp_cobj&& obj) {
 	if(!obj) return 0;
 	const type_descriptor* td = &obj->bs_resolve_type();
 	// go through chain of type_descriptors up to objbase
 	int arity = 0;
 	while(!td->is_nil()) {
-		arity += instances_[td->type()].insert(obj).second;
+		arity += instances_[td->type()].insert(std::move(obj)).second;
 		td = &td->parent_td();
 	}
 	return arity;
 }
 
-int kernel_instance_subsyst::free_instance(const sp_obj& obj) {
+int kernel_instance_subsyst::free_instance(sp_cobj&& obj) {
 	if(!obj) return 0;
 
 	// go through chain of type_descriptors up to objbase
 	const type_descriptor* td = &obj->bs_resolve_type();
 	int arity = 0;
 	while(!td->is_nil()) {
-		arity += (int)instances_[td->type()].erase(obj);
+		arity += (int)instances_[td->type()].erase(std::move(obj));
 		td = &td->parent_td();
 	}
 	return arity;
@@ -45,9 +45,7 @@ kernel::instances_enum kernel_instance_subsyst::instances(const BS_TYPE_INFO& ti
 
 	instances_enum res;
 	res.reserve(Is->second.size());
-	for(const auto& i : Is->second) {
-		res.push_back(i);
-	}
+	std::copy(Is->second.begin(), Is->second.end(), std::back_inserter(res));
 	return res;
 }
 
