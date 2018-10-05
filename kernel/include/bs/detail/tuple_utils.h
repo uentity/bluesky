@@ -61,5 +61,62 @@ constexpr decltype(auto) subtuple(
 	);
 }
 
+/*-----------------------------------------------------------------------------
+ *  check if type is a tuple
+ *-----------------------------------------------------------------------------*/
+namespace detail {
+
+template<typename T>
+struct is_tuple_impl : std::false_type {};
+
+template<typename... Ts>
+struct is_tuple_impl<std::tuple<Ts...>> : std::true_type {};
+
+} // eof namespace detail
+
+template<typename T>
+constexpr auto is_tuple() -> bool
+{ return detail::is_tuple_impl<std::decay_t<T>>::value; }
+
+/*-----------------------------------------------------------------------------
+ *  grow tuple from beginning or end
+ *  if argument is another tuple then result is tuple concatenation
+ *-----------------------------------------------------------------------------*/
+// grow from beginning
+// T - non-tuple argument, U - tuple
+template<typename T, typename U>
+constexpr decltype(auto) grow_tuple(
+	T&& t, U&& u,
+	std::enable_if_t< !is_tuple<T>() && is_tuple<U>() >* = nullptr
+) {
+	return std::tuple_cat(
+		std::tuple<T>(std::forward<T>(t)), std::forward<U>(u)
+	);
+}
+
+// grow tail
+// T - tuple, U - non-tuple argument
+template<typename T, typename U>
+constexpr decltype(auto) grow_tuple(
+	T&& t, U&& u,
+	std::enable_if_t< is_tuple<T>() && !is_tuple<U>() >* = nullptr
+) {
+	return std::tuple_cat(
+		std::forward<T>(t), std::tuple<U>(std::forward<U>(u))
+	);
+}
+
+// concat tuples
+// T - tuple, U - tuple
+template<typename T, typename U>
+constexpr decltype(auto) grow_tuple(
+	T&& t, U&& u,
+	std::enable_if_t< is_tuple<T>() && is_tuple<U>() >* = nullptr
+) {
+	return std::tuple_cat(
+		std::forward<T>(t), std::forward<U>(u)
+	);
+}
+
 } /* namespace blue_sky */
 
