@@ -27,7 +27,7 @@ void py_bind_error(py::module& m) {
 		.value("CantUnloadDLL", KernelError::CantUnloadDLL)
 		.value("CantRegisterType", KernelError::CantRegisterType)
 		.value("TypeIsNil", KernelError::TypeIsNil)
-		.value("CantUnloadDLL", KernelError::TypeAlreadyRegistered)
+		.value("TypeAlreadyRegistered", KernelError::TypeAlreadyRegistered)
 		.value("CantCreateLogger", KernelError::CantCreateLogger)
 	;
 
