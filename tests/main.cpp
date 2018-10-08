@@ -17,7 +17,8 @@
 
 BS_PLUGIN_DESCRIPTOR("unit_test", "1.0", "Unit-test plugin");
 
-BOOST_AUTO_TEST_CASE(test_plugin_descriptor) {
+BOOST_AUTO_TEST_CASE(test_main) {
+	BS_KERNEL.init();
 	BOOST_CHECK(BS_KERNEL.register_plugin(bs_get_plugin_descriptor()));
 }
 
