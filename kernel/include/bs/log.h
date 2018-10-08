@@ -26,103 +26,209 @@ BS_API auto get_logger(const char* name) -> spdlog::logger&;
 using level_enum = spdlog::level::level_enum;
 template< level_enum level > using level_const = std::integral_constant< level_enum, level>;
 
+// forward declarations
+// main log class
+class bs_log;
+// manipulator fucntion type
+using manip_t = bs_log& (*)(bs_log&);
+
+NAMESPACE_BEGIN(detail)
 /*-----------------------------------------------------------------------------
- *  bs_log wraps `spdlog::logger` with stream-like API
+ *  helper that collects all arguments to be logged into a tape (tuple)
+ *  prefixed by `bs_log` reference
+ *-----------------------------------------------------------------------------*/
+template<level_enum Level, typename... Args> struct log_tape;
+
+///////////////////////////////////////////////////////////////////////////////
+// check if type is log tape
+//
+template<typename T>
+struct is_log_tape_impl : std::false_type {};
+
+template<level_enum Level, typename... Args>
+struct is_log_tape_impl<log_tape<Level, Args...>> : std::true_type {};
+
+template<typename T>
+constexpr auto is_log_tape() -> bool
+{ return is_log_tape_impl<std::decay_t<T>>::value; }
+
+///////////////////////////////////////////////////////////////////////////////
+// extract tape tuple if `log_tape` is passed, otherwise do arg passthrough
+//
+template<typename T>
+constexpr decltype(auto) make_tape_elem(
+	T&& t,
+	std::enable_if_t<is_log_tape<T>()>* = nullptr
+) {
+	return std::forward<T>(t).tape_;
+}
+
+template<typename T>
+constexpr decltype(auto) make_tape_elem(
+	T&& t,
+	std::enable_if_t<!is_log_tape<T>()>* = nullptr
+) {
+	return std::forward<T>(t);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  `log_tape` implementation
+//
+template< level_enum Level, typename... Args >
+struct log_tape {
+	using tape_tuple_t = std::tuple<Args...>;
+
+	// perfect forwarding ctor for underlying tuple
+	template<typename... Ts>
+	log_tape(Ts&&... args) :
+		tape_(std::forward<Ts>(args)...)
+	{}
+
+	// generate tapes of this Level inferring tape elements from passed tuple
+	template<typename... Ts>
+	static auto create(std::tuple<Ts...>&& t) {
+		return log_tape<Level, Ts...>(std::move(t));
+	}
+
+	// insert value in the beginning of tape
+	// [NOTE] rvalues are copied into tape, lvalues are stored as references
+	template<typename T>
+	constexpr auto prepend(T&& data) const & {
+		return create(grow_tuple(
+			make_tape_elem(std::forward<T>(data)), tape_
+		));
+	}
+	// overload for rvalue tapes, allows moving from this instead of copying
+	template<typename T>
+	constexpr auto prepend(T&& data) && {
+		return create(grow_tuple(
+			make_tape_elem(std::forward<T>(data)), std::move(tape_)
+		));
+	}
+
+	// append next value to tape tail
+	// [NOTE] rvalues are copied into tape, lvalues are stored as references
+	template<typename T>
+	constexpr auto append(T&& data) const & {
+		return create(grow_tuple(
+			tape_, make_tape_elem(std::forward<T>(data))
+		));
+	}
+	// overload for rvalue tapes, allows moving from this instead of copying
+	template<typename T>
+	constexpr auto append(T&& data) && {
+		return create(grow_tuple(
+			std::move(tape_), make_tape_elem(std::forward<T>(data))
+		));
+	}
+
+	// append next value to tape tail
+	// enabled for all non-tuple types except manipulators
+	// [NOTE] rvalues are copied into tape, lvalues are stored as references
+	template<
+		typename T,
+		typename = std::enable_if_t< !std::is_same< std::decay_t<T>, manip_t >::value >
+	>
+	constexpr auto operator <<(T&& data) const &{
+		return append(std::forward<T>(data));
+	}
+	// overload for rvalue tapes, allows moving from this instead of copying
+	template<
+		typename T,
+		typename = std::enable_if_t< !std::is_same< std::decay_t<T>, manip_t >::value >
+	>
+	constexpr auto operator <<(T&& data) && {
+		return append(std::forward<T>(data));
+	}
+
+	// overload for manipulators
+	bs_log& operator <<(manip_t op) const {
+		// flush data and call manipulator
+		return (*op)(flush());
+	}
+
+	// flush self to backend spdlog::logger
+	auto flush() const -> bs_log& {
+		return apply(
+			write<Args...>,
+			tape_
+		);
+	}
+
+	// write (forward) raw arguments to spdlog::logger backend
+	// [NOTE] taking tape elemants by const lvalue refs for printing
+	template< typename BsLog, typename... Ts >
+	static auto write(BsLog& L, const Ts&... args) -> BsLog& {
+		L.logger().log(Level, args...);
+		return L;
+	}
+
+	// tuple that collects data to log
+	tape_tuple_t tape_;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//  log_tape generators from given set of arguments
+//
+
+// construct tape from arbitrary set of elements
+template< level_enum level, typename... Args >
+constexpr auto make_log_tape(Args&&... args) {
+	return log_tape< level, Args... >(std::forward<Args>(args)...);
+}
+
+// construct tape with `Info` level from generic non-tape arguments
+template<typename L, typename R>
+constexpr auto make_log_tape(
+	L&& lhs, R&& rhs,
+	std::enable_if_t<!is_log_tape<L>() && !is_log_tape<R>()>* = nullptr
+) {
+	return log_tape< level_enum::info, L, R >(
+		std::forward<L>(lhs), std::forward<R>(rhs)
+	);
+}
+
+// append argument to lhs tape
+template<typename L, typename R>
+constexpr auto make_log_tape(
+	L&& lhs, R&& rhs,
+	std::enable_if_t<is_log_tape<L>()>* = nullptr
+) {
+	return std::forward<L>(lhs).append(std::forward<R>(rhs));
+}
+
+// prepend rhs tape with lhs argument
+template<typename L, typename R>
+constexpr auto make_log_tape(
+	L&& lhs, R&& rhs,
+	std::enable_if_t<!is_log_tape<L>() && is_log_tape<R>()>* = nullptr
+) {
+	return std::forward<R>(rhs).prepend(std::forward<L>(lhs));
+}
+
+NAMESPACE_END(detail)
+
+/*-----------------------------------------------------------------------------
+ *  `bs_log` wraps `spdlog::logger` with stream-like API
  *-----------------------------------------------------------------------------*/
 class BS_API bs_log {
 public:
-	using manip_t = bs_log& (*)(bs_log&);
+	/// import detail::log_tape as tape
+	template<level_enum Level, typename... Args> using tape = detail::log_tape<Level, Args...>;
 
-	template< level_enum Level, typename... Args >
-	struct log_tape {
-		// helper to find out type of tape without first param (bs_log&)
-		template< typename T, typename... Ts >
-		struct rem_tape_head;
+	/// returns a log tape with reference to this as first element
+	template<
+		typename T,
+		typename = std::enable_if_t<!std::is_same< std::decay_t<T>, manip_t >::value>
+	>
+	constexpr friend auto
+	operator <<(bs_log& lhs, T&& rhs) {
+		return detail::make_log_tape(lhs, std::forward<T>(rhs));
+	}
 
-		template< typename T >
-		struct rem_tape_head< T > {};
-
-		template< typename T, typename... Ts >
-		struct rem_tape_head {
-			using type = log_tape< Level, Ts... >;
-#ifdef _MSC_VER
-			using write_overl_t = decltype(&type::template write< Ts... >);
-			static constexpr write_overl_t write_overl = &type::template write< Ts... >;
-#else
-			using write_overl_t = decltype((type::template write< Ts... >));
-			static constexpr write_overl_t write_overl = type::template write< Ts... >;
-#endif
-		};
-
-		// construct from args tuple
-		log_tape(std::tuple< Args... > args_tup) :
-			tape_(std::move(args_tup))
-		{}
-
-		// append next value to tape
-		// enabled for all types except manipulators
-		template<
-			typename T,
-			typename = std::enable_if_t< !std::is_same< std::decay_t<T>, manip_t >::value >
-		>
-		decltype(auto) operator <<(T&& data) const {
-			return log_tape< Level, Args..., T >(
-				std::tuple_cat(tape_, std::forward_as_tuple(data))
-			);
-		}
-
-		// overload for manipulators
-		bs_log& operator <<(manip_t op) const {
-			// flush data and call manipulator
-			return (*op)(flush());
-		}
-
-		// flush self to backend spdlog::logger
-		// assume that bs_log& is the first tape entry
-		bs_log& flush() const {
-			//using params_tape_t = typename rem_tape_head< Args... >::type;
-			bs_log& L = std::get<0>(tape_);
-			apply(
-				rem_tape_head< Args... >::write_overl,
-				std::tuple_cat(
-					std::forward_as_tuple(L.log_),
-					// cut 1st tuple argument -- bs_log reference
-					subtuple(tape_, std::integral_constant< std::size_t, 1 >())
-				)
-			);
-			return L;
-		}
-
-		// write (forward) raw arguments to spdlog::logger backend
-		template< typename... Ts >
-		static void write(spdlog::logger& L, Ts&&... args) {
-			L.log(Level, std::forward< Ts >(args)...);
-		}
-
-		std::tuple< Args... > tape_;
-	};
-
-	// overload << for manipulators
-	BS_API friend bs_log& operator<<(bs_log& lhs, manip_t op) {
+	/// overload << for manipulators
+	friend bs_log& operator<<(bs_log& lhs, manip_t op) {
 		return (*op)(lhs);
-	}
-
-	// overload for log_tape
-	template< level_enum Level, typename... Args >
-	friend decltype(auto)
-	operator <<(bs_log& lhs, const log_tape< Level, Args... >& rhs) {
-		return log_tape< Level, bs_log&, Args... >(
-			std::tuple_cat(std::forward_as_tuple(lhs), rhs.tape_)
-		);
-	}
-
-	// overload for arbitrary type just costructs log_tape
-	// with 'info' level
-	template< class T >
-	friend decltype(auto) operator <<(bs_log& lhs, const T& rhs) {
-		return log_tape< level_enum::info, bs_log&, const T& >(
-			std::tuple_cat(std::forward_as_tuple(lhs), std::forward_as_tuple(rhs))
-		);
 	}
 
 	bs_log(spdlog::logger& log) : log_(log) {}
@@ -163,97 +269,87 @@ BS_API bs_log& debugl(bs_log& l);
 /*-----------------------------------------------------------------
  * Log levels
  *----------------------------------------------------------------*/
-namespace detail {
-
-// generic log_tape constructor for any given level
-template< level_enum level, typename... Args >
-decltype(auto) make_log_tape(level_const< level >, Args&&... args) {
-	return bs_log::log_tape< level, Args... >(std::forward_as_tuple(args...));
-}
-
-} // eof namespace detail
-
 // info
 template< typename... Args >
-decltype(auto) info(Args&&... args) {
-	return detail::make_log_tape(
-		level_const< level_enum::info >(), std::forward< Args >(args)...
+constexpr auto info(Args&&... args) {
+	return detail::make_log_tape<level_enum::info>(
+		std::forward< Args >(args)...
 	);
 }
 template< typename... Args >
-decltype(auto) I(Args&&... args) {
+constexpr auto I(Args&&... args) {
 	return info(std::forward< Args >(args)...);
 }
 
 // warn
 template< typename... Args >
-decltype(auto) warn(Args&&... args) {
-	return detail::make_log_tape(
-		level_const< level_enum::warn >(), std::forward< Args >(args)...
+constexpr auto warn(Args&&... args) {
+	return detail::make_log_tape<level_enum::warn>(
+		std::forward< Args >(args)...
 	);
 }
 template< typename... Args >
-decltype(auto) W(Args&&... args) {
+constexpr auto W(Args&&... args) {
 	return warn(std::forward< Args >(args)...);
 }
 
 // error
 template< typename... Args >
-decltype(auto) err(Args&&... args) {
-	return detail::make_log_tape(
-		level_const< level_enum::err >(), std::forward< Args >(args)...
+constexpr auto err(Args&&... args) {
+	return detail::make_log_tape<level_enum::err>(
+		std::forward< Args >(args)...
 	);
 }
 template< typename... Args >
-decltype(auto) E(Args&&... args) {
+constexpr auto E(Args&&... args) {
 	return err(std::forward< Args >(args)...);
 }
 
 // critial
 template< typename... Args >
-decltype(auto) critical(Args&&... args) {
-	return detail::make_log_tape(
-		level_const< level_enum::critical >(), std::forward< Args >(args)...
+constexpr auto critical(Args&&... args) {
+	return detail::make_log_tape<level_enum::critical>(
+		std::forward< Args >(args)...
 	);
 }
 template< typename... Args >
-decltype(auto) C(Args&&... args) {
+constexpr auto C(Args&&... args) {
 	return critical(std::forward< Args >(args)...);
 }
 
 // trace
 template< typename... Args >
-decltype(auto) trace(Args&&... args) {
-	return detail::make_log_tape(
-		level_const< level_enum::trace >(), std::forward< Args >(args)...
+constexpr auto trace(Args&&... args) {
+	return detail::make_log_tape<level_enum::trace>(
+		std::forward< Args >(args)...
 	);
 }
 template< typename... Args >
-decltype(auto) T(Args&&... args) {
+constexpr auto T(Args&&... args) {
 	return trace(std::forward< Args >(args)...);
 }
 
 // debug
 template< typename... Args >
-decltype(auto) debug(Args&&... args) {
-	return detail::make_log_tape(
-		level_const< level_enum::debug >(), std::forward< Args >(args)...
+constexpr auto debug(Args&&... args) {
+	return detail::make_log_tape<level_enum::debug>(
+		std::forward< Args >(args)...
 	);
 }
 template< typename... Args >
-decltype(auto) D(Args&&... args) {
+constexpr auto D(Args&&... args) {
 	return debug(std::forward< Args >(args)...);
 }
 
 // off
 template< typename... Args >
-decltype(auto) off(Args&&... args) {
-	return detail::make_log_tape(
-		level_const< level_enum::off >(), std::forward< Args >(args)...
+constexpr auto off(Args&&... args) {
+	return detail::make_log_tape<level_enum::off>(
+		std::forward< Args >(args)...
 	);
 }
 template< typename... Args >
-decltype(auto) O(Args&&... args) {
+constexpr auto O(Args&&... args) {
 	return off(std::forward< Args >(args)...);
 }
 
