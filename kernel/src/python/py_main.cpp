@@ -20,12 +20,14 @@ void py_bind_misc(py::module& m);
 void py_bind_kernel(py::module& m);
 void py_bind_tree(py::module& m);
 void py_bind_error(py::module& m);
+void py_bind_log(py::module& m);
 
 BS_INIT_PY(bs) {
 	// initialize kernel first
 	BS_KERNEL.init();
 	// bind
 	py_bind_common(m);
+	py_bind_log(m);
 	py_bind_error(m);
 	py_bind_objbase(m);
 	py_bind_messaging(m);
