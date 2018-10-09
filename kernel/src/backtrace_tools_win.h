@@ -10,6 +10,7 @@
 #pragma once
 
 #include <bs/error.h>
+#include <bs/log.h>
 #include <windows.h>
 #include <dbghelp.h>
 #include <vector>

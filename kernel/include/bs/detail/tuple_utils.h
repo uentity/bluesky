@@ -99,7 +99,7 @@ constexpr decltype(auto) grow_tuple(
 template<typename T, typename U>
 constexpr decltype(auto) grow_tuple(
 	T&& t, U&& u,
-	std::enable_if_t< is_tuple<T>() && !is_tuple<U>() >* = nullptr
+	std::enable_if_t< is_tuple<T>() && !is_tuple<U>(), short >* = nullptr
 ) {
 	return std::tuple_cat(
 		std::forward<T>(t), std::tuple<U>(std::forward<U>(u))
@@ -111,7 +111,7 @@ constexpr decltype(auto) grow_tuple(
 template<typename T, typename U>
 constexpr decltype(auto) grow_tuple(
 	T&& t, U&& u,
-	std::enable_if_t< is_tuple<T>() && is_tuple<U>() >* = nullptr
+	std::enable_if_t< is_tuple<T>() && is_tuple<U>(), int >* = nullptr
 ) {
 	return std::tuple_cat(
 		std::forward<T>(t), std::forward<U>(u)

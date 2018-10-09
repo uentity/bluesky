@@ -66,7 +66,7 @@ constexpr decltype(auto) make_tape_elem(
 template<typename T>
 constexpr decltype(auto) make_tape_elem(
 	T&& t,
-	std::enable_if_t<!is_log_tape<T>()>* = nullptr
+	std::enable_if_t<!is_log_tape<T>(), int>* = nullptr
 ) {
 	return std::forward<T>(t);
 }
@@ -192,7 +192,7 @@ constexpr auto make_log_tape(
 template<typename L, typename R>
 constexpr auto make_log_tape(
 	L&& lhs, R&& rhs,
-	std::enable_if_t<is_log_tape<L>()>* = nullptr
+	std::enable_if_t<is_log_tape<L>(), short>* = nullptr
 ) {
 	return std::forward<L>(lhs).append(std::forward<R>(rhs));
 }
@@ -201,7 +201,7 @@ constexpr auto make_log_tape(
 template<typename L, typename R>
 constexpr auto make_log_tape(
 	L&& lhs, R&& rhs,
-	std::enable_if_t<!is_log_tape<L>() && is_log_tape<R>()>* = nullptr
+	std::enable_if_t<!is_log_tape<L>() && is_log_tape<R>(), int>* = nullptr
 ) {
 	return std::forward<R>(rhs).prepend(std::forward<L>(lhs));
 }
