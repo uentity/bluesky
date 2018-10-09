@@ -291,6 +291,9 @@
     <ClInclude Include="kernel\include\bs\detail\scope_guard.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\kernel_errors.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -418,6 +421,9 @@
     </ClCompile>
     <ClCompile Include="kernel\src\tree\errors.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\python\py_log.cpp">
+      <Filter>Файлы исходного кода\python</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

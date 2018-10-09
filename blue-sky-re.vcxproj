@@ -59,6 +59,7 @@
     <ClInclude Include="kernel\include\bs\force_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\fwd.h" />
     <ClInclude Include="kernel\include\bs\kernel.h" />
+    <ClInclude Include="kernel\include\bs\kernel_errors.h" />
     <ClInclude Include="kernel\include\bs\kernel_tools.h" />
     <ClInclude Include="kernel\include\bs\log.h" />
     <ClInclude Include="kernel\include\bs\misc.h" />
@@ -126,6 +127,7 @@
     <ClCompile Include="kernel\src\python\py_common.cpp" />
     <ClCompile Include="kernel\src\python\py_error.cpp" />
     <ClCompile Include="kernel\src\python\py_kernel.cpp" />
+    <ClCompile Include="kernel\src\python\py_log.cpp" />
     <ClCompile Include="kernel\src\python\py_main.cpp" />
     <ClCompile Include="kernel\src\python\py_messaging.cpp" />
     <ClCompile Include="kernel\src\python\py_misc.cpp" />
