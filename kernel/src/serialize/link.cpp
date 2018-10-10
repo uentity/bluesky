@@ -14,8 +14,6 @@
 #include "../tree/link_impl.h"
 #include "../tree/fusion_link_impl.h"
 
-#include <cereal/types/polymorphic.hpp>
-
 using namespace cereal;
 using namespace blue_sky;
 

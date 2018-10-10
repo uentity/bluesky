@@ -10,7 +10,7 @@
 #pragma once
 
 #include <bs/objbase.h>
-#include <bs/serialize/atomizer.h>
+#include <bs/serialize/serialize.h>
 
 NAMESPACE_BEGIN(blue_sky)
 

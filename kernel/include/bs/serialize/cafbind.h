@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "atomizer.h"
+#include "serialize.h"
 #include <caf/sec.hpp>
 #include <caf/detail/scope_guard.hpp>
 #include <caf/detail/stringification_inspector.hpp>

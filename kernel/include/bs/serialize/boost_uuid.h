@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "atomizer.h"
+#include "serialize.h"
 #include <cereal/types/common.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>

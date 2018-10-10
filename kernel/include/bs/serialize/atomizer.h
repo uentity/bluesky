@@ -1,7 +1,7 @@
 /// @file
 /// @author uentity
 /// @date 04.06.2018
-/// @brief Common BS serialization-related headers and declarations
+/// @brief Atomizer is used to access private fields of class to be serialized
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -10,16 +10,8 @@
 #pragma once
 
 #include "../setup_plugin_api.h"
-#include "macro.h"
 #include <type_traits>
-
-#include <cereal/cereal.hpp>
-// polymorphic types & strings support
-#include <cereal/types/polymorphic.hpp>
-#include <cereal/types/string.hpp>
-// Archives
-#include <cereal/archives/portable_binary.hpp>
-#include <cereal/archives/json.hpp>
+#include <cstdint>
 
 namespace blue_sky {
 

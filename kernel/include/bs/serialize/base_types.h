@@ -11,7 +11,7 @@
 
 #include "../objbase.h"
 
-#include "atomizer.h"
+#include "serialize.h"
 #include "carray.h"
 
 NAMESPACE_BEGIN(blue_sky)
