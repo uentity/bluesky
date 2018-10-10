@@ -26,11 +26,15 @@
 #define OUT_FNAME_DEFAULT "blue_sky.log"
 #define ERR_FNAME_DEFAULT "blue_sky_err.log"
 constexpr auto ROTATING_FSIZE_DEFAULT = 1024*1024*10;
+constexpr auto DEF_FLUSH_INTERVAL = std::chrono::seconds(5);
+constexpr auto DEF_FLUSH_LEVEL = spdlog::level::err;
 
 using namespace blue_sky::detail;
 using namespace blue_sky;
 
 namespace {
+// [TODO] collect spdlog tune code in one place instead of distributing it here and there
+// Can be done after config subsystem is ready
 
 ///////////////////////////////////////////////////////////////////////////////
 //  log-related globals
@@ -38,7 +42,13 @@ namespace {
 // fallback to null sink
 const auto null_sink = std::make_shared<spdlog::sinks::null_sink_mt>();
 // fallback null st logger
-const auto null_st_logger = spdlog::create<spdlog::sinks::null_sink_mt>("null");
+// + init default flush level
+const auto null_st_logger = [] {
+	// set global minimum flush level
+	spdlog::flush_on(DEF_FLUSH_LEVEL);
+	return spdlog::create<spdlog::sinks::null_sink_mt>("null");
+}();
+
 // flag that indicates whether we have switched to mt logs
 std::atomic<bool> are_logs_mt(false);
 
@@ -185,6 +195,8 @@ auto kernel_logging_subsyst::toggle_mt_logs(bool turn_on) -> void {
 		// and create new ones
 		bs_out_instance = std::make_unique<log::bs_log>("out");
 		bs_err_instance = std::make_unique<log::bs_log>("err");
+		// setup periodic flush
+		spdlog::flush_every(DEF_FLUSH_INTERVAL);
 	}
 }
 
