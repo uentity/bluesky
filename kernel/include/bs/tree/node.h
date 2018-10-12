@@ -178,7 +178,7 @@ public:
 	range<Key::Type> equal_type(const std::string& type_id) const;
 
 	/// links insertions policy
-	enum InsertPolicy {
+	enum class InsertPolicy {
 		AllowDupNames = 0,
 		DenyDupNames = 1,
 		RenameDup = 2,
@@ -186,20 +186,20 @@ public:
 		Merge = 8
 	};
 	/// leafs insertion
-	insert_status<Key::ID> insert(sp_link l, InsertPolicy pol = AllowDupNames);
+	insert_status<Key::ID> insert(sp_link l, InsertPolicy pol = InsertPolicy::AllowDupNames);
 	/// insert link just before given position
-	insert_status<Key::AnyOrder> insert(sp_link l, iterator<> pos, InsertPolicy pol = AllowDupNames);
+	insert_status<Key::AnyOrder> insert(sp_link l, iterator<> pos, InsertPolicy pol = InsertPolicy::AllowDupNames);
 	/// insert link at given index
-	insert_status<Key::AnyOrder> insert(sp_link l, std::size_t idx, InsertPolicy pol = AllowDupNames);
+	insert_status<Key::AnyOrder> insert(sp_link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames);
 	/// auto-create and insert hard link that points to object
-	insert_status<Key::ID> insert(std::string name, sp_obj obj, InsertPolicy pol = AllowDupNames);
+	insert_status<Key::ID> insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames);
 	/// insert links from given container
 	/// NOTE: container elements will be moved from passed container!
 	template<
 		typename C,
 		typename = std::enable_if_t<is_container<C>::value>
 	>
-	void insert(const C& links, InsertPolicy pol = AllowDupNames) {
+	void insert(const C& links, InsertPolicy pol = InsertPolicy::AllowDupNames) {
 		for(auto L : links) {
 			static_assert(
 				std::is_base_of<link, std::decay_t<decltype(*L)>>::value,
@@ -299,5 +299,9 @@ private:
 };
 
 NAMESPACE_END(tree)
+
+// allow bitwise operations for InsertPoiicy enum class
+BS_ALLOW_ENUMOPS(tree::node::InsertPolicy)
+
 NAMESPACE_END(blue_sky)
 

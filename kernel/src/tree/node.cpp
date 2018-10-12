@@ -172,7 +172,7 @@ insert_status<Key::ID> node::insert(sp_link l, InsertPolicy pol) {
 		// inserted link postprocessing
 		node_impl::adjust_inserted_link(*res.first, bs_shared_this<node>());
 	}
-	else if(pol & InsertPolicy::Merge && res.first != end<Key::ID>()) {
+	else if(enumval(pol & InsertPolicy::Merge) && res.first != end<Key::ID>()) {
 		// check if we need to deep merge given links
 		// go one step down the hierarchy
 		auto src_node = l->data_node();

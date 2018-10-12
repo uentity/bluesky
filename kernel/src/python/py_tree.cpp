@@ -26,6 +26,7 @@ NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(python)
 using namespace tree;
 using Key = node::Key;
+using InsertPolicy = node::InsertPolicy;
 
 /*-----------------------------------------------------------------------------
  *  hidden details
@@ -285,10 +286,10 @@ void py_bind_tree(py::module& m) {
 		.value("RenameDup", node::InsertPolicy::RenameDup)
 		.value("DenyDupOID", node::InsertPolicy::DenyDupOID)
 		.value("Merge", node::InsertPolicy::Merge)
-		.export_values();
+		//.export_values();
 	;
-	py::implicitly_convertible<int, node::InsertPolicy>();
-	py::implicitly_convertible<long, node::InsertPolicy>();
+	//py::implicitly_convertible<int, node::InsertPolicy>();
+	//py::implicitly_convertible<long, node::InsertPolicy>();
 
 	// `node` binding
 	node_pyface
@@ -367,17 +368,17 @@ void py_bind_tree(py::module& m) {
 		}, py::keep_alive<0, 1>(), "obj_type_id"_a)
 
 		// insert given link
-		.def("insert", [](node& N, const sp_link& l, node::InsertPolicy pol = node::AllowDupNames) {
+		.def("insert", [](node& N, const sp_link& l, node::InsertPolicy pol = InsertPolicy::AllowDupNames) {
 			return N.insert(l, uint(pol)).second;
-		}, "link"_a, "pol"_a = node::AllowDupNames, "Insert given link")
+		}, "link"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert given link")
 		// insert link at given index
-		.def("insert", [](node& N, const sp_link& l, const long idx, node::InsertPolicy pol = node::AllowDupNames) {
+		.def("insert", [](node& N, const sp_link& l, const long idx, node::InsertPolicy pol = InsertPolicy::AllowDupNames) {
 			return N.insert(l, find_by_idx(N, idx, true), pol).second;
-		}, "link"_a, "idx"_a, "pol"_a = node::AllowDupNames, "Insert link at given index")
+		}, "link"_a, "idx"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert link at given index")
 		// insert hard link to given object
-		.def("insert", [](node& N, std::string name, sp_obj obj, node::InsertPolicy pol = node::AllowDupNames) {
+		.def("insert", [](node& N, std::string name, sp_obj obj, node::InsertPolicy pol = InsertPolicy::AllowDupNames) {
 			return N.insert(std::move(name), std::move(obj), pol).second;
-		}, "name"_a, "obj"_a, "pol"_a = node::AllowDupNames, "Insert hard link to given object")
+		}, "name"_a, "obj"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert hard link to given object")
 
 		// erase by given index
 		.def("__delitem__", &erase_idx, "idx"_a)

@@ -122,13 +122,15 @@ public:
 			return {end<Key::ID>(), false};
 		// check if we have duplication name
 		iterator<Key::ID> dup;
-		if((pol & 3) > 0) {
+		InsertPolicy tt;
+		tt = InsertPolicy(3);
+		if(enumval(pol & 3) > 0) {
 			dup = find<Key::Name, Key::ID>(l->name());
 			if(dup != end<Key::ID>() && (*dup)->id() != l->id()) {
 				bool unique_found = false;
 				// first check if dup names are prohibited
-				if(pol & InsertPolicy::DenyDupNames) return {dup, false};
-				else if(pol & InsertPolicy::RenameDup && !(l->flags() & Flags::Persistent)) {
+				if(enumval(pol & InsertPolicy::DenyDupNames)) return {dup, false};
+				else if(enumval(pol & InsertPolicy::RenameDup) && !(l->flags() & Flags::Persistent)) {
 					// try to auto-rename link
 					std::string new_name;
 					for(int i = 0; i < 10000; ++i) {
@@ -146,7 +148,7 @@ public:
 			}
 		}
 		// check for duplicating OID
-		if(pol & InsertPolicy::DenyDupOID) {
+		if(enumval(pol & InsertPolicy::DenyDupOID)) {
 			dup = find<Key::OID, Key::ID>(l->oid());
 			if(dup != end<Key::ID>()) return {dup, false};
 		}
