@@ -275,6 +275,9 @@ private:
 	class node_impl;
 	std::unique_ptr< node_impl > pimpl_;
 
+	// set node's handle
+	void set_handle(const sp_link& handle);
+
 	/// Implementation details
 	iterator<Key::ID> begin(Key_const<Key::ID>) const;
 	iterator<Key::Name> begin(Key_const<Key::Name>) const;

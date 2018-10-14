@@ -350,6 +350,10 @@ std::vector<std::string> node::allowed_object_types() const {
 	return pimpl_->allowed_otypes_;
 }
 
+void node::set_handle(const sp_link& handle) {
+	pimpl_->set_handle(handle);
+}
+
 BS_TYPE_IMPL(node, objbase, "node", "BS tree node", true, true);
 BS_TYPE_ADD_CONSTRUCTOR(node, (std::string))
 BS_REGISTER_TYPE("kernel", node)
