@@ -73,6 +73,8 @@ private:
 	auto data_impl() const -> result_or_err<sp_obj> override;
 	// pull leafs via `fusion_iface::populate()`
 	auto data_node_impl() const -> result_or_err<sp_node> override;
+	// bypass `data_node_ex()` call and directly set handle of contained node object
+	auto propagate_handle() -> result_or_err<sp_node> override;
 };
 using sp_fusion_link = std::shared_ptr<fusion_link>;
 using sp_cfusion_link = std::shared_ptr<const fusion_link>;

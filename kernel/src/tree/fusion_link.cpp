@@ -113,5 +113,12 @@ auto fusion_link::reset_bridge(sp_fusion new_bridge) -> void {
 	pimpl_->reset_bridge(std::move(new_bridge));
 }
 
+auto fusion_link::propagate_handle() -> result_or_err<sp_node> {
+	// set handle of cached node object to this link instance
+	self_handle_node(pimpl_->data_);
+	return pimpl_->data_ ?
+		result_or_err<sp_node>(pimpl_->data_) : tl::make_unexpected(Error::EmptyData);
+}
+
 NAMESPACE_END(blue_sky) NAMESPACE_END(tree)
 
