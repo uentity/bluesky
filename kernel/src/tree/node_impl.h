@@ -122,8 +122,6 @@ public:
 			return {end<Key::ID>(), false};
 		// check if we have duplication name
 		iterator<Key::ID> dup;
-		InsertPolicy tt;
-		tt = InsertPolicy(3);
 		if(enumval(pol & 3) > 0) {
 			dup = find<Key::Name, Key::ID>(l->name());
 			if(dup != end<Key::ID>() && (*dup)->id() != l->id()) {

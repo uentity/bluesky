@@ -299,9 +299,8 @@ private:
 };
 
 NAMESPACE_END(tree)
+NAMESPACE_END(blue_sky)
 
 // allow bitwise operations for InsertPoiicy enum class
-BS_ALLOW_ENUMOPS(tree::node::InsertPolicy)
-
-NAMESPACE_END(blue_sky)
+BS_ALLOW_ENUMOPS(blue_sky::tree::node::InsertPolicy)
 

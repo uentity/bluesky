@@ -12,7 +12,7 @@
 #include <utility>
 
 #define BS_ALLOW_ENUMOPS(...) \
-template<> struct ::blue_sky::allow_enumops< __VA_ARGS__ > : std::true_type {};
+template<> struct blue_sky::allow_enumops< __VA_ARGS__ > : std::true_type {};
 
 namespace blue_sky {
 
