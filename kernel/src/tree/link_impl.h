@@ -131,9 +131,9 @@ struct BS_HIDDEN_API link::impl : public blue_sky::detail::async_api_mixin<link:
 	static auto async_api(actor_t::pointer self) -> actor_t::behavior_type {
 		using cb_arg = result_or_err<sp_clink>;
 
-		self->set_exit_handler([](caf::exit_msg&) {
-			std::cout << "******* link::actor down ***********" << std::endl;
-		});
+		//self->set_exit_handler([](caf::exit_msg&) {
+		//	std::cout << "******* link::actor down ***********" << std::endl;
+		//});
 		return {
 			[](lnk_data_atom, const sp_clink& lnk, const process_data_cb& f, bool wait_if_busy) {
 				f(lnk->data_ex(wait_if_busy), lnk);
