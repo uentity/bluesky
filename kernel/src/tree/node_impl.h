@@ -224,19 +224,16 @@ public:
 		// correct this by manually calling `node::propagate_owner()` after copy is constructed
 	}
 
-	void set_handle(const sp_link& new_self) {
-		// sym links cannot own a node
-		if(new_self && new_self->type_id() == "sym_link")
-			return;
-
+	void set_handle(const sp_link& new_handle) {
 		// remove node from existing owner if it differs from owner of new handle
-		if(const auto pself = handle_.lock()) {
-			const auto owner = pself->owner();
-			if(owner && (!new_self || owner != new_self->owner()))
-				owner->erase(pself->id());
+		if(const auto old_handle = handle_.lock()) {
+			const auto owner = old_handle->owner();
+			if(owner && (!new_handle || owner != new_handle->owner()))
+				owner->erase(old_handle->id());
 		}
-		// set new owner link
-		handle_ = new_self;
+
+		// set new handle link
+		handle_ = new_handle;
 	}
 
 	// postprocessing of just inserted link
@@ -244,20 +241,19 @@ public:
 	static sp_node adjust_inserted_link(const sp_link& lnk, const sp_node& n) {
 		// sanity
 		if(!lnk) return nullptr;
-		auto lnk_node = lnk->data_node();
+
+		// if we're inserting a node, relink it to ensure a single hard link exists
+		auto lnk_node = lnk->propagate_handle();
 
 		// remove link from prev owner
 		if(auto prev_owner = lnk->owner()) {
 			// check if link is already linked to given parent node
-			if(prev_owner == n) return lnk_node;
+			if(prev_owner == n) return lnk_node.value_or(nullptr);
 			prev_owner->erase(lnk->id());
 		}
-		// if we're inserting a node, relink it to ensure a single hard link exists
-		if(lnk_node)
-			lnk_node->pimpl_->set_handle(lnk);
 		// set new owner
 		lnk->reset_owner(n);
-		return lnk_node;
+		return lnk_node.value_or(nullptr);
 	}
 
 	node_impl() = default;
