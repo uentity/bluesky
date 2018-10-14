@@ -63,5 +63,11 @@ auto owner_t(T&& obj) {
 	return std::static_pointer_cast<TargetOwner>( owner(std::forward<T>(obj)) );
 }
 
+/// make root link to node which handle is preset to returned link
+BS_API auto make_root_link(
+	const std::string& link_type, std::string name = "/",
+	sp_node root_node = nullptr
+) -> sp_link;
+
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
 

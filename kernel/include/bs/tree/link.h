@@ -107,6 +107,16 @@ public:
 	/// if `deep` flag is set, then clone pointed object as well
 	virtual sp_link clone(bool deep = false) const = 0;
 
+	/// create root link to node with handle preset to returned link
+	template<typename Link, typename... Args>
+	static auto make_root(Args&&... args) -> std::shared_ptr<Link> {
+		if(auto lnk = std::make_shared<Link>(std::forward<Args>(args)...)) {
+			static_cast<link*>(lnk.get())->propagate_handle();
+			return lnk;
+		}
+		return nullptr;
+	}
+
 	/// query what kind of link is this
 	virtual std::string type_id() const = 0;
 

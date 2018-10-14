@@ -484,6 +484,12 @@ void py_bind_tree(py::module& m) {
 		"Walk the tree similar to Python `os.walk()`"
 	);
 
+	// make root link
+	m.def("make_root_link", &make_root_link,
+		"link_type"_a = "hard_link", "name"_a = "/", "root_node"_a = nullptr,
+		"Make root link pointing to node which handle is preset to returned link"
+	);
+
 	// TEST CODE
 	//py::bind_vector<std::vector<double>>(m, "d_list", py::module_local(false));
 	//m.def("test_callback", [](std::function<void(std::vector<double>&)> f) {

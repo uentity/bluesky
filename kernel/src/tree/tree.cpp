@@ -176,5 +176,16 @@ void walk(const sp_link& root, const step_process_f& step_f,bool topdown, bool f
 }
 
 
+auto make_root_link(
+	const std::string& link_type, std::string name, sp_node root_node
+) -> sp_link {
+	if(!root_node) root_node = std::make_shared<node>();
+	// create link depending on type
+	if(link_type == "fusion_link")
+		return link::make_root<fusion_link>(std::move(name), std::move(root_node));
+	else
+		return link::make_root<hard_link>(std::move(name), std::move(root_node));
+}
+
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
 
