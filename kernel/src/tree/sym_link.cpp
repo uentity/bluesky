@@ -33,8 +33,8 @@ std::string sym_link::type_id() const {
 	return "sym_link";
 }
 
-void sym_link::reset_owner(sp_node new_owner) {
-	link::reset_owner(std::move(new_owner));
+void sym_link::reset_owner(const sp_node& new_owner) {
+	link::reset_owner(new_owner);
 	// update link's status
 	data_impl().map([this](const sp_obj& obj) {
 		rs_reset(Req::Data, ReqStatus::OK);
@@ -59,6 +59,11 @@ bool sym_link::is_alive() const {
 /// return stored pointee path
 std::string sym_link::src_path(bool human_readable) const {
 	return human_readable ? convert_path(path_, bs_shared_this<sym_link>()) : path_;
+}
+
+result_or_err<sp_node> sym_link::propagate_handle() {
+	// sym link cannot be a node's handle
+	return data_node_ex();
 }
 
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)

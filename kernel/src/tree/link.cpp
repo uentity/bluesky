@@ -53,9 +53,9 @@ auto link::owner() const -> sp_node {
 	return pimpl_->owner_.lock();
 }
 
-void link::reset_owner(sp_node new_owner) {
+void link::reset_owner(const sp_node& new_owner) {
 	std::lock_guard<std::mutex> g(pimpl_->solo_);
-	pimpl_->owner_ = std::move(new_owner);
+	pimpl_->owner_ = new_owner;
 }
 
 auto link::info() const -> inode {
@@ -120,7 +120,7 @@ result_or_err<sp_obj> link::data_ex(bool wait_if_busy) const {
 		this,
 		[](const link* lnk) { return lnk->data_impl(); },
 		pimpl_->status_[0], wait_if_busy
-	).and_then([](const sp_obj&& obj) {
+	).and_then([](sp_obj&& obj) {
 		return obj ?
 			result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet(Error::EmptyData));
 	});
@@ -132,9 +132,20 @@ result_or_err<sp_node> link::data_node_ex(bool wait_if_busy) const {
 		this,
 		[](const link* lnk) { return lnk->data_node_impl(); },
 		pimpl_->status_[1], wait_if_busy
-	).and_then([](const sp_node&& N) {
+	).and_then([](sp_node&& N) {
 		return N ?
 			result_or_err<sp_node>(std::move(N)) : tl::make_unexpected(error::quiet(Error::NotANode));
+	});
+}
+
+void link::self_handle_node(const sp_node& N) {
+	if(N) N->set_handle(shared_from_this());
+}
+
+result_or_err<sp_node> link::propagate_handle() {
+	return data_node_ex().and_then([this](sp_node&& N) -> result_or_err<sp_node> {
+		N->set_handle(shared_from_this());
+		return std::move(N);
 	});
 }
 

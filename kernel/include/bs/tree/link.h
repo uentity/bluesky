@@ -8,9 +8,9 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #pragma once
+#include "../error.h"
 #include "../objbase.h"
 #include "../detail/enumops.h"
-#include "../error.h"
 
 #include <atomic>
 #include <chrono>
@@ -168,6 +168,9 @@ protected:
 	/// direct copying of links change ID
 	link(const link&) = delete;
 
+	// set handle of passed node to self
+	void self_handle_node(const sp_node& N);
+
 	// silent replace old name with new in link's internals
 	auto rename_silent(std::string new_name) -> void;
 
@@ -179,13 +182,18 @@ protected:
 	//
 
 	/// switch link's owner
-	virtual void reset_owner(sp_node new_owner);
+	virtual void reset_owner(const sp_node& new_owner);
 
 	/// download pointee data
 	virtual result_or_err<sp_obj> data_impl() const = 0;
 
 	/// download pointee structure -- link provide default implementation via `data_ex()` call
 	virtual result_or_err<sp_node> data_node_impl() const;
+
+	// if pointee is a node - set node's handle to self and return pointee
+	// default implementation obtains node via `data_node_ex()` and sets it's handle to self
+	// but derived link can change default behaviour
+	virtual result_or_err<sp_node> propagate_handle();
 
 	// PIMPL
 	struct impl;
@@ -251,8 +259,8 @@ private:
  *-----------------------------------------------------------------------------*/
 class BS_API sym_link : public link {
 	friend class blue_sky::atomizer;
-public:
 
+public:
 	/// ctor -- pointee is specified by string path
 	sym_link(std::string name, std::string path, Flags f = Plain);
 	/// ctor -- pointee is specified directly - absolute path will be stored
@@ -273,9 +281,11 @@ public:
 private:
 	std::string path_;
 
-	void reset_owner(sp_node new_owner) override;
+	void reset_owner(const sp_node& new_owner) override;
 
 	result_or_err<sp_obj> data_impl() const override;
+
+	result_or_err<sp_node> propagate_handle() override;
 };
 
 
