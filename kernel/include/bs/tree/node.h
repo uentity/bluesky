@@ -194,13 +194,13 @@ public:
 	/// auto-create and insert hard link that points to object
 	insert_status<Key::ID> insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames);
 	/// insert links from given container
-	/// NOTE: container elements will be moved from passed container!
+	/// [NOTE] container elements will be moved from passed container!
 	template<
 		typename C,
 		typename = std::enable_if_t<is_container<C>::value>
 	>
-	void insert(const C& links, InsertPolicy pol = InsertPolicy::AllowDupNames) {
-		for(auto L : links) {
+	void insert(C&& links, InsertPolicy pol = InsertPolicy::AllowDupNames) {
+		for(auto& L : links) {
 			static_assert(
 				std::is_base_of<link, std::decay_t<decltype(*L)>>::value,
 				"Links container should contain pointers to `tree::link` objects!"

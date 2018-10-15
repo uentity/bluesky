@@ -179,7 +179,9 @@ insert_status<Key::ID> node::insert(sp_link l, InsertPolicy pol) {
 		auto dst_node = (*res.first)->data_node();
 		if(src_node && dst_node) {
 			// insert all links from source node into destination
-			dst_node->insert(*src_node, pol);
+			dst_node->insert(
+				std::vector<sp_link>(src_node->begin(), src_node->end()), pol
+			);
 		}
 	}
 	return res;
