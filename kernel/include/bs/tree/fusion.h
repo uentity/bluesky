@@ -37,11 +37,11 @@ public:
 	// ctors
 	fusion_link(
 		std::string name, sp_node data = nullptr,
-		sp_fusion bridge = nullptr, Flags f = Persistent
+		sp_fusion bridge = nullptr, Flags f = Plain
 	);
 	fusion_link(
 		std::string name, const char* obj_type, std::string oid = "",
-		sp_fusion bridge = nullptr, Flags f = Persistent
+		sp_fusion bridge = nullptr, Flags f = Plain
 	);
 	// dtor
 	~fusion_link();
