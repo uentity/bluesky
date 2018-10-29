@@ -26,6 +26,8 @@ template<Key K> using insert_status = typename node::insert_status<K>;
 template<Key K> using range = typename node::range<K>;
 
 using Flags = link::Flags;
+using Req = link::Req;
+using ReqStatus = link::ReqStatus;
 
 /*-----------------------------------------------------------------------------
  *  node_impl
@@ -53,9 +55,12 @@ public:
 					active_symlinks.insert(l->id());
 				else continue;
 			}
+			// check populated status before moving to next level
+			if(l->flags() & link::LazyLoad && l->req_status(Req::DataNode) != ReqStatus::OK)
+				continue;
 			// search on next level
 			if(const auto next_n = l->data_node()) {
-				const auto next_l = deep_search_impl<K>(*next_n->pimpl_, key, active_symlinks);
+				auto next_l = deep_search_impl<K>(*next_n->pimpl_, key, active_symlinks);
 				if(next_l) return next_l;
 			}
 			// remove symlink

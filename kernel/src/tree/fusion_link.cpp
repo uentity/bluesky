@@ -26,7 +26,8 @@ fusion_iface::~fusion_iface() {}
 fusion_link::fusion_link(
 	std::string name, sp_node data, sp_fusion bridge, Flags f
 ) :
-	ilink(std::move(name), data, f),
+	// set LazyLoad flag by default
+	ilink(std::move(name), data, Flags(f | link::LazyLoad)),
 	pimpl_(std::make_unique<impl>(std::move(bridge), std::move(data)))
 {
 	// run actor
