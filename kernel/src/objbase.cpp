@@ -9,6 +9,9 @@
 
 #include <bs/objbase.h>
 #include <bs/kernel.h>
+#include <bs/tree/errors.h>
+#include <bs/tree/inode.h>
+
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
@@ -72,6 +75,13 @@ std::string objbase::id() const {
 
 bool objbase::is_node() const {
 	return is_node_;
+}
+
+auto objbase::info() const -> result_or_err<tree::inode> {
+	auto I = inode_.lock();
+	return I ?
+		result_or_err<tree::inode>(*I) :
+		tl::make_unexpected(error::quiet(tree::Error::EmptyInode));
 }
 
 NAMESPACE_END(blue_sky)

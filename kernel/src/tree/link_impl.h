@@ -45,8 +45,6 @@ struct BS_HIDDEN_API link::impl : public blue_sky::detail::async_api_mixin<link:
 	id_type id_;
 	std::string name_;
 	Flags flags_;
-	/// contains link's metadata
-	inode inode_;
 	/// owner node
 	std::weak_ptr<node> owner_;
 	/// status of operations

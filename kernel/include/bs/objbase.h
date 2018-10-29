@@ -10,6 +10,7 @@
 #pragma once
 
 #include "common.h"
+#include "error.h"
 #include "type_descriptor.h"
 #include "objbase_macro.h"
 
@@ -22,6 +23,7 @@ NAMESPACE_BEGIN(blue_sky)
 */
 class BS_API objbase : public std::enable_shared_from_this< objbase > {
 	friend class kernel;
+	friend class tree::link;
 	friend class tree::node;
 	friend class atomizer;
 
@@ -74,6 +76,9 @@ public:
 	/// NOTE: no RTTI, no virtual functions, just checks flag
 	bool is_node() const;
 
+	/// access inode (if exists)
+	auto info() const -> result_or_err<tree::inode>;
+
 protected:
 	/// string ID storage
 	std::string id_;
@@ -81,6 +86,9 @@ protected:
 private:
 	/// flag indicating that this object is actually a tree::node
 	bool is_node_;
+	/// pointer to associated inode
+	std::weak_ptr<tree::inode> inode_;
+
 	/// dedicated ctor that sets `is_node` flag
 	objbase(bool is_node, std::string custom_oid = "");
 };

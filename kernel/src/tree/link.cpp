@@ -12,16 +12,7 @@
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
 /*-----------------------------------------------------------------------------
- *  inode
- *-----------------------------------------------------------------------------*/
-inode::inode()
-	: suid(false), sgid(false), sticky(false),
-	u(7), g(5), o(5),
-	mod_time(std::chrono::system_clock::now())
-{}
-
-/*-----------------------------------------------------------------------------
- *  link
+ *  misc
  *-----------------------------------------------------------------------------*/
 link::link(std::string name, Flags f)
 	: pimpl_(std::make_unique<impl>(std::move(name), f))
@@ -58,13 +49,35 @@ void link::reset_owner(const sp_node& new_owner) {
 	pimpl_->owner_ = new_owner;
 }
 
-auto link::info() const -> inode {
-	return pimpl_->inode_;
+auto link::info() const -> result_or_err<inode> {
+	return get_inode().and_then([](const inodeptr& i) {
+		return i ?
+			result_or_err<inode>(*i) :
+			tl::make_unexpected(error::quiet(Error::EmptyInode));
+	});
 }
-auto link::set_info(inode I) -> void {
-	std::lock_guard<std::mutex> g(pimpl_->solo_);
-	pimpl_->inode_ = std::move(I);
-	// [TODO] send message that inode changed
+
+auto link::get_inode() const -> result_or_err<inodeptr> {
+	// default implementation obtains inode from `data_ex()->inode_`
+	return data_ex().and_then([](const sp_obj& obj) {
+		return obj ?
+			result_or_err<inodeptr>(obj->inode_.lock()) :
+			tl::make_unexpected(error::quiet(Error::EmptyData));
+	});
+}
+
+auto link::make_inode(const sp_obj& obj, inodeptr new_i) -> inodeptr {
+	if(!obj) return nullptr;
+
+	auto obj_i = obj->inode_.lock();
+	if(!obj_i) {
+		obj_i = new_i ? std::move(new_i) : std::make_shared<inode>();
+		obj->inode_ = obj_i;
+	}
+	else if(new_i) {
+		*obj_i = *new_i;
+	}
+	return obj_i;
 }
 
 link::Flags link::flags() const {
@@ -122,7 +135,8 @@ result_or_err<sp_obj> link::data_ex(bool wait_if_busy) const {
 		pimpl_->status_[0], wait_if_busy
 	).and_then([](sp_obj&& obj) {
 		return obj ?
-			result_or_err<sp_obj>(std::move(obj)) : tl::make_unexpected(error::quiet(Error::EmptyData));
+			result_or_err<sp_obj>(std::move(obj)) :
+			tl::make_unexpected(error::quiet(Error::EmptyData));
 	});
 }
 
@@ -134,7 +148,8 @@ result_or_err<sp_node> link::data_node_ex(bool wait_if_busy) const {
 		pimpl_->status_[1], wait_if_busy
 	).and_then([](sp_node&& N) {
 		return N ?
-			result_or_err<sp_node>(std::move(N)) : tl::make_unexpected(error::quiet(Error::NotANode));
+			result_or_err<sp_node>(std::move(N)) :
+			tl::make_unexpected(error::quiet(Error::NotANode));
 	});
 }
 
@@ -148,6 +163,7 @@ result_or_err<sp_node> link::propagate_handle() {
 		return std::move(N);
 	});
 }
+
 
 /*-----------------------------------------------------------------------------
  *  async API
@@ -174,6 +190,17 @@ auto link::data(process_data_cb f, bool wait_if_busy) const -> void {
 
 auto link::data_node(process_data_cb f, bool wait_if_busy) const -> void {
 	pimpl_->send(lnk_dnode_atom(), this->shared_from_this(), std::move(f), wait_if_busy);
+}
+
+/*-----------------------------------------------------------------------------
+ *  ilink
+ *-----------------------------------------------------------------------------*/
+ilink::ilink(std::string name, const sp_obj& data, Flags f)
+	: link(std::move(name), f), inode_(make_inode(data))
+{}
+
+auto ilink::get_inode() const -> result_or_err<inodeptr> {
+	return inode_;
 }
 
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)

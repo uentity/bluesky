@@ -30,7 +30,7 @@ using sp_fusion = std::shared_ptr<fusion_iface>;
 /*-----------------------------------------------------------------------------
  *  Fusion link populates object children when `data_node()` or `data()` is called
  *-----------------------------------------------------------------------------*/
-class BS_API fusion_link : public link {
+class BS_API fusion_link : public ilink {
 	friend class blue_sky::atomizer;
 
 public:

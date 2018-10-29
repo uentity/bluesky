@@ -20,6 +20,7 @@ enum class Error {
 	OKOK,
 
 	EmptyData,
+	EmptyInode,
 	NotANode,
 	LinkExpired,
 	UnboundSymLink,

@@ -26,7 +26,7 @@ fusion_iface::~fusion_iface() {}
 fusion_link::fusion_link(
 	std::string name, sp_node data, sp_fusion bridge, Flags f
 ) :
-	link(std::move(name), f),
+	ilink(std::move(name), data, f),
 	pimpl_(std::make_unique<impl>(std::move(bridge), std::move(data)))
 {
 	// run actor

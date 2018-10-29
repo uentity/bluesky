@@ -11,6 +11,7 @@
 #include "../error.h"
 #include "../objbase.h"
 #include "../detail/enumops.h"
+#include "inode.h"
 
 #include <atomic>
 #include <chrono>
@@ -18,41 +19,6 @@
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
-
-// time point type for all timestaps
-using time_point = std::chrono::system_clock::time_point;
-
-/*-----------------------------------------------------------------------------
- s inode that stores access rights, timestampts, etc
- *-----------------------------------------------------------------------------*/
-struct BS_API inode {
-	// flags
-	bool : 1;
-	bool suid : 1;
-	bool sgid : 1;
-	bool sticky : 1;
-
-	// access rights
-	// user (owner)
-	bool : 1;
-	std::uint8_t u : 3;
-	// group
-	bool : 1;
-	std::uint8_t g : 3;
-	// others
-	bool : 1;
-	std::uint8_t o : 3;
-
-	// modification time
-	time_point mod_time;
-	// link's owner
-	std::string owner;
-	std::string group;
-
-	// do std initialization of all values
-	inode();
-};
-using inodeptr = std::unique_ptr<inode>;
 
 /*-----------------------------------------------------------------------------
  *  base class of all links
@@ -78,34 +44,34 @@ public:
 	}
 
 	/// access link's unique ID
-	const id_type& id() const;
+	auto id() const -> const id_type&;
 
 	/// obtain link's symbolic name
-	std::string name() const;
+	auto name() const -> std::string;
 
 	/// get link's container
-	sp_node owner() const;
-
-	/// get/set object's inode
-	auto info() const -> inode;
-	auto set_info(inode I) -> void;
+	auto owner() const -> sp_node;
 
 	/// flags reflect link properties and state
 	enum Flags {
 		Plain = 0,
 		Persistent = 1,
-		Disabled = 2
+		Disabled = 2,
+		LazyLoad = 4
 	};
-	Flags flags() const;
-	void set_flags(Flags new_flags);
+	auto flags() const -> Flags;
+	auto set_flags(Flags new_flags) -> void;
 
 	/// rename link & notify owner node
 	auto rename(std::string new_name) -> void;
 
+	/// inspect object's inode
+	auto info() const -> result_or_err<inode>;
+
 	/// because we cannot make explicit copies of link
 	/// we need a dedicated function to make links clones
 	/// if `deep` flag is set, then clone pointed object as well
-	virtual sp_link clone(bool deep = false) const = 0;
+	virtual auto clone(bool deep = false) const -> sp_link = 0;
 
 	/// create root link to node with handle preset to returned link
 	template<typename Link, typename... Args>
@@ -118,30 +84,30 @@ public:
 	}
 
 	/// query what kind of link is this
-	virtual std::string type_id() const = 0;
+	virtual auto type_id() const -> std::string = 0;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  sync API
 	//
 	/// get link's object ID -- fast, can return empty string
-	virtual std::string oid() const;
+	virtual auto oid() const -> std::string;
 
 	/// get link's object type ID -- fast, can return nil type ID
-	virtual std::string obj_type_id() const;
+	virtual auto obj_type_id() const -> std::string;
 
 	/// get pointer to object link is pointing to -- slow, never returns invalid (NULL) sp_obj
 	/// NOTE: returned pointer can be null
-	result_or_err<sp_obj> data_ex(bool wait_if_busy = false) const;
+	auto data_ex(bool wait_if_busy = false) const -> result_or_err<sp_obj>;
 	/// simple data accessor that returns nullptr on error
-	sp_obj data() const {
+	auto data() const -> sp_obj {
 		return data_ex().value_or(nullptr);
 	}
 
 	/// return tree::node if contained object is a node -- slow, never returns invalid (NULL) sp_obj
 	/// derived class can return cached node info
-	result_or_err<sp_node> data_node_ex(bool wait_if_busy = false) const;
+	auto data_node_ex(bool wait_if_busy = false) const -> result_or_err<sp_node>;
 	/// simple tree::node accessor that returns nullptr on error
-	sp_node data_node() const {
+	auto data_node() const -> sp_node {
 		return data_node_ex().value_or(nullptr);
 	}
 
@@ -154,11 +120,11 @@ public:
 	enum class ReqStatus { Void, Busy, OK, Error };
 
 	// get/set request status
-	ReqStatus req_status(Req request) const;
+	auto req_status(Req request) const -> ReqStatus;
 	// unconditional reset request status
-	ReqStatus rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) const;
-	ReqStatus rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const;
-	ReqStatus rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const;
+	auto rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) const -> ReqStatus;
+	auto rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
+	auto rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
 
 	/// obtain data in async manner passing it to callback
 	using process_data_cb = std::function<void(result_or_err<sp_obj>, sp_clink)>;
@@ -175,40 +141,50 @@ protected:
 	/// ctor accept name of created link
 	link(std::string name, Flags f = Plain);
 
-	/// direct copying of links change ID
+	/// deby link copying
 	link(const link&) = delete;
-
-	// set handle of passed node to self
-	void self_handle_node(const sp_node& N);
 
 	// silent replace old name with new in link's internals
 	auto rename_silent(std::string new_name) -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  sync API
+	//  sync data API
 	//  Implementation need not to bother with reuqest status
 	//  Performance hint: you can check if status is OK
 	//  to omit useless repeating possibly long operation calls
 	//
 
 	/// switch link's owner
-	virtual void reset_owner(const sp_node& new_owner);
+	virtual auto reset_owner(const sp_node& new_owner) -> void;
 
 	/// download pointee data
-	virtual result_or_err<sp_obj> data_impl() const = 0;
+	virtual auto data_impl() const -> result_or_err<sp_obj> = 0;
 
 	/// download pointee structure -- link provide default implementation via `data_ex()` call
-	virtual result_or_err<sp_node> data_node_impl() const;
+	virtual auto data_node_impl() const -> result_or_err<sp_node>;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  misc API for inherited links
+	//
 
 	// if pointee is a node - set node's handle to self and return pointee
 	// default implementation obtains node via `data_node_ex()` and sets it's handle to self
 	// but derived link can change default behaviour
-	virtual result_or_err<sp_node> propagate_handle();
+	virtual auto propagate_handle() -> result_or_err<sp_node>;
+	/// set handle of passed node to self
+	auto self_handle_node(const sp_node& N) -> void;
+
+	/// obtain inode pointer
+	/// default impl do it via `data_ex()` call
+	virtual auto get_inode() const -> result_or_err<inodeptr>;
+	/// create or set or create inode for given target object
+	/// [NOTE] if `new_info` is non-null, returned inode may be NOT EQUAL to `new_info`
+	static auto make_inode(const sp_obj& target, inodeptr new_info = nullptr) -> inodeptr;
 
 	// PIMPL
 	struct impl;
 	// some derived links may need to access base link's internals
-	impl* pimpl() const;
+	auto pimpl() const -> impl*;
 
 private:
 	std::unique_ptr<impl> pimpl_;
@@ -216,11 +192,29 @@ private:
 using sp_link = link::sp_link;
 using sp_clink = link::sp_clink;
 
+///////////////////////////////////////////////////////////////////////////////
+//  link with bundled inode
+//
+class BS_API ilink : public link {
+protected:
+	/// ctor accept name of created link
+	ilink(std::string name, const sp_obj& data, Flags f = Plain);
+
+	/// return stored inode pointer
+	auto get_inode() const -> result_or_err<inodeptr> override final;
+
+private:
+	inodeptr inode_;
+
+	// serialization support
+	friend class blue_sky::atomizer;
+};
+
 /*-----------------------------------------------------------------------------
  *  hard link stores direct pointer to object
  *  multiple hard links can point to the same object
  *-----------------------------------------------------------------------------*/
-class BS_API hard_link : public link {
+class BS_API hard_link : public ilink {
 	friend class blue_sky::atomizer;
 
 public:
@@ -228,15 +222,15 @@ public:
 	hard_link(std::string name, sp_obj data, Flags f = Plain);
 
 	/// implement link's API
-	sp_link clone(bool deep = false) const override;
+	auto clone(bool deep = false) const -> sp_link override;
 
-	std::string type_id() const override;
+	auto type_id() const -> std::string override;
 
 protected:
 	sp_obj data_;
 
 private:
-	result_or_err<sp_obj> data_impl() const override;
+	auto data_impl() const -> result_or_err<sp_obj> override;
 
 	//result_or_err<sp_node> data_node_impl() const override;
 };
@@ -245,7 +239,7 @@ private:
  *  weak link is same as hard link, but stores weak link to data
  *  intended to be used to add class memebers self tree structure
  *-----------------------------------------------------------------------------*/
-class BS_API weak_link : public link {
+class BS_API weak_link : public ilink {
 	friend class blue_sky::atomizer;
 
 public:
@@ -253,14 +247,14 @@ public:
 	weak_link(std::string name, const sp_obj& data, Flags f = Plain);
 
 	/// implement link's API
-	sp_link clone(bool deep = false) const override;
+	auto clone(bool deep = false) const -> sp_link override;
 
-	std::string type_id() const override;
+	auto type_id() const -> std::string override;
 
 private:
 	std::weak_ptr<objbase> data_;
 
-	result_or_err<sp_obj> data_impl() const override;
+	auto data_impl() const -> result_or_err<sp_obj> override;
 };
 
 /*-----------------------------------------------------------------------------
@@ -277,25 +271,25 @@ public:
 	sym_link(std::string name, const sp_clink& src, Flags f = Plain);
 
 	/// implement link's API
-	sp_link clone(bool deep = false) const override;
+	auto clone(bool deep = false) const -> sp_link override;
 
-	std::string type_id() const override;
+	auto type_id() const -> std::string override;
 
 	/// additional sym link API
 	/// check is pointed link is alive
-	bool is_alive() const;
+	auto is_alive() const -> bool;
 
 	/// return stored pointee path
-	std::string src_path(bool human_readable = false) const;
+	auto src_path(bool human_readable = false) const -> std::string;
 
 private:
 	std::string path_;
 
-	void reset_owner(const sp_node& new_owner) override;
+	auto reset_owner(const sp_node& new_owner) -> void override;
 
-	result_or_err<sp_obj> data_impl() const override;
+	auto data_impl() const -> result_or_err<sp_obj> override;
 
-	result_or_err<sp_node> propagate_handle() override;
+	auto propagate_handle() -> result_or_err<sp_node> override;
 };
 
 

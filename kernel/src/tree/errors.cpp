@@ -23,6 +23,9 @@ BS_API std::error_code make_error_code(Error e) {
 			case Error::EmptyData:
 				return "Empty data";
 
+			case Error::EmptyInode:
+				return "inode is missing";
+
 			case Error::NotANode:
 				return "Not a node";
 

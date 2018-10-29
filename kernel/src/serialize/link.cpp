@@ -14,6 +14,8 @@
 #include "../tree/link_impl.h"
 #include "../tree/fusion_link_impl.h"
 
+#include <cereal/types/chrono.hpp>
+
 using namespace cereal;
 using namespace blue_sky;
 
@@ -22,37 +24,32 @@ using namespace blue_sky;
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(save, tree::inode)
 	ar(
-		make_nvp("owner", t.owner),
-		make_nvp("group", t.group),
-		make_nvp("suid", t.suid),
-		make_nvp("sgid", t.sgid),
-		make_nvp("sticky", t.sticky),
+		make_nvp("flags", t.flags),
 		make_nvp("u", t.u),
 		make_nvp("g", t.g),
-		make_nvp("o", t.o)
+		make_nvp("o", t.o),
+		make_nvp("mod_time", t.mod_time),
+		make_nvp("owner", t.owner),
+		make_nvp("group", t.group)
 	);
 BSS_FCN_END
 
 BSS_FCN_BEGIN(load, tree::inode)
+	tree::inode::Flags flags;
+	ar(make_nvp("flags", flags));
+	t.flags = flags;
+	std::uint8_t r;
+	ar(make_nvp("u", r));
+	t.u = r;
+	ar(make_nvp("g", r));
+	t.g = r;
+	ar(make_nvp("o", r));
+	t.o = r;
 	ar(
+		make_nvp("mod_time", t.mod_time),
 		make_nvp("owner", t.owner),
 		make_nvp("group", t.group)
 	);
-	bool bit;
-	ar(make_nvp("suid", bit));
-	t.suid = bit;
-	ar(make_nvp("sgid", bit));
-	t.sgid = bit;
-	ar(make_nvp("sticky", bit));
-	t.sticky = bit;
-
-	std::uint8_t flags;
-	ar(make_nvp("u", flags));
-	t.u = flags;
-	ar(make_nvp("g", flags));
-	t.g = flags;
-	ar(make_nvp("o", flags));
-	t.o = flags;
 BSS_FCN_END
 
 BSS_FCN_EXPORT(save, tree::inode)
@@ -65,19 +62,29 @@ BSS_FCN_BEGIN(serialize, tree::link)
 	// [NOTE] intentionally DON'T save name,
 	// because name will be saved in derived classes to invoke minimal constructor
 	// also do not save owner, because owner will be correctly set by `node`
+	// [NOTE] intentionally do net serialize owner, it will be set up when parent node is loaded
 	ar(
-//		make_nvp("name", t.name_),
 		make_nvp("id", t.pimpl_->id_),
 		make_nvp("flags", t.pimpl_->flags_),
-		make_nvp("inode", t.pimpl_->inode_),
-		// intentionally do net serialize owner, it will be set up when parent node is loaded
 		make_nvp("data_status", t.pimpl_->status_[0].value),
 		make_nvp("data_node_status", t.pimpl_->status_[1].value)
-		//make_nvp("status", make_carray_view(t.pimpl_->status_, 2))
 	);
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::link)
+
+/*-----------------------------------------------------------------------------
+ *  ilink
+ *-----------------------------------------------------------------------------*/
+BSS_FCN_BEGIN(serialize, tree::ilink)
+	// serialize base link by direct call in order to omit creating inner JSON section
+	serialize<tree::link>::go(ar, t, version);
+	// serialize inode
+	ar(make_nvp("inode", t.inode_));
+BSS_FCN_END
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link, tree::ilink)
+BSS_FCN_EXPORT(serialize, tree::ilink)
 
 /*-----------------------------------------------------------------------------
  *  hard_link
@@ -90,14 +97,14 @@ BSS_FCN_BEGIN(load_and_construct, tree::hard_link)
 	ar(name, data);
 	construct(std::move(name), std::move(data));
 	// load base link
-	ar( make_nvp("link_base", base_class<tree::link>(construct.ptr())) );
+	ar( make_nvp("link_base", base_class<tree::ilink>(construct.ptr())) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::hard_link)
 	ar(
 		make_nvp("name", t.pimpl_->name_),
 		make_nvp("data", t.data_),
-		make_nvp("link_base", base_class<tree::link>(&t))
+		make_nvp("link_base", base_class<tree::ilink>(&t))
 	);
 BSS_FCN_END
 
@@ -115,14 +122,14 @@ BSS_FCN_BEGIN(load_and_construct, tree::weak_link)
 	ar(name, data);
 	construct(std::move(name), std::move(data));
 	// load base link
-	ar( make_nvp("link_base", base_class<tree::link>(construct.ptr())) );
+	ar( make_nvp("link_base", base_class<tree::ilink>(construct.ptr())) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::weak_link)
 	ar(
 		make_nvp("name", t.pimpl_->name_),
 		make_nvp("data", t.data_.lock()),
-		make_nvp("link_base", base_class<tree::link>(&t))
+		make_nvp("link_base", base_class<tree::ilink>(&t))
 	);
 BSS_FCN_END
 

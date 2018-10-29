@@ -15,6 +15,7 @@
 #include <string>
 
 #include <pybind11/functional.h>
+#include <pybind11/chrono.h>
 #include <iostream>
 
 // make it possible to exchange vector of links without copying
@@ -137,9 +138,8 @@ void py_bind_tree(py::module& m) {
 	py::class_<inode>(m, "inode")
 		.def_readonly("owner", &inode::owner)
 		.def_readonly("group", &inode::group)
-		.def_property_readonly("suid", [](const inode& i) { return i.suid; })
-		.def_property_readonly("sgid", [](const inode& i) { return i.sgid; })
-		.def_property_readonly("sticky", [](const inode& i) { return i.sticky; })
+		.def_readonly("mod_time", &inode::mod_time)
+		.def_property_readonly("flags", [](const inode& i) { return i.flags; })
 		.def_property_readonly("u", [](const inode& i) { return i.u; })
 		.def_property_readonly("g", [](const inode& i) { return i.g; })
 		.def_property_readonly("o", [](const inode& i) { return i.o; })
@@ -211,11 +211,7 @@ void py_bind_tree(py::module& m) {
 		})
 		.def_property_readonly("name", &link::name)
 		.def_property_readonly("owner", &link::owner)
-		.def_property("info",
-			&link::info, &link::set_info,
-			//py::overload_cast<>(&link::info, py::const_), py::overload_cast<>(&link::info, py::const_),
-			py::return_value_policy::reference_internal, "Get/modify bounded link metadata (inode)"
-		)
+		.def_property_readonly("info", &link::info)
 		.def_property("flags", &link::flags, &link::set_flags)
 	;
 

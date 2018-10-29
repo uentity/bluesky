@@ -58,9 +58,10 @@ template< class, template< class > class > class bs_array;
 template< class > struct vector_traits;
 template< class > struct str_val_traits;
 
+// tree-like data storage model
 namespace tree {
 
-// data storage
+struct inode;
 class link;
 class node;
 typedef std::shared_ptr< link > sp_link;

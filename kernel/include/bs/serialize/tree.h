@@ -19,6 +19,9 @@ BSS_FCN_DECL(load, blue_sky::tree::inode)
 // link
 BSS_FCN_DECL(serialize, blue_sky::tree::link)
 
+// ilink
+BSS_FCN_DECL(serialize, blue_sky::tree::ilink)
+
 // hard link
 BSS_FCN_DECL(serialize, blue_sky::tree::hard_link)
 BSS_FCN_DECL(load_and_construct, blue_sky::tree::hard_link)

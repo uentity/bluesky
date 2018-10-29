@@ -19,7 +19,7 @@ NAMESPACE_BEGIN(tree)
  *  hard_link
  *-----------------------------------------------------------------------------*/
 hard_link::hard_link(std::string name, sp_obj data, Flags f) :
-	link(std::move(name), f), data_(std::move(data))
+	ilink(std::move(name), data, f), data_(std::move(data))
 {
 	if(data_) {
 		rs_reset(Req::Data, ReqStatus::OK);
@@ -48,7 +48,7 @@ result_or_err<sp_obj> hard_link::data_impl() const {
  *  weak_link
  *-----------------------------------------------------------------------------*/
 weak_link::weak_link(std::string name, const sp_obj& data, Flags f) :
-	link(std::move(name), f), data_(data)
+	ilink(std::move(name), data, f), data_(data)
 {
 	// can call `data_impl()` directly, because parallel requests aren't possible in ctor
 	data_impl().map([this](const sp_obj& obj) {
