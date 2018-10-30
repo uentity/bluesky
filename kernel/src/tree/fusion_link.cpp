@@ -121,5 +121,15 @@ auto fusion_link::propagate_handle() -> result_or_err<sp_node> {
 		result_or_err<sp_node>(pimpl_->data_) : tl::make_unexpected(Error::EmptyData);
 }
 
+auto fusion_link::obj_type_id() const -> std::string {
+	return pimpl_->data_ ?
+		pimpl_->data_->type_id() : type_descriptor::nil().name;
+}
+
+auto fusion_link::oid() const -> std::string {
+	return pimpl_->data_ ?
+		pimpl_->data_->id() : boost::uuids::to_string(boost::uuids::nil_uuid());
+}
+
 NAMESPACE_END(blue_sky) NAMESPACE_END(tree)
 

@@ -50,8 +50,9 @@ public:
 
 	// link API implementation
 	auto type_id() const -> std::string override;
-	//auto oid() const -> std::string override;
-	//auto obj_type_id() const -> std::string override;
+	// ID functions operate directly on cached object and don't invoke `data()` inside
+	auto oid() const -> std::string override;
+	auto obj_type_id() const -> std::string override;
 
 	// force `fusion_iface::populate()` call with specified children types
 	// regardless of populate status
