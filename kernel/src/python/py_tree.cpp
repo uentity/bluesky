@@ -138,7 +138,9 @@ void py_bind_tree(py::module& m) {
 	py::class_<inode>(m, "inode")
 		.def_readonly("owner", &inode::owner)
 		.def_readonly("group", &inode::group)
-		.def_readonly("mod_time", &inode::mod_time)
+		.def_property_readonly("mod_time", [](const inode& i) {
+			return std::chrono::time_point_cast<std::chrono::system_clock::duration>(i.mod_time);
+		})
 		.def_property_readonly("flags", [](const inode& i) { return i.flags; })
 		.def_property_readonly("u", [](const inode& i) { return i.u; })
 		.def_property_readonly("g", [](const inode& i) { return i.g; })
