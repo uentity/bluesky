@@ -294,6 +294,9 @@
     <ClInclude Include="kernel\include\bs\kernel_errors.h">
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\inode.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -424,6 +427,9 @@
     </ClCompile>
     <ClCompile Include="kernel\src\python\py_log.cpp">
       <Filter>Файлы исходного кода\python</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\inode.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

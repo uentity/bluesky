@@ -83,6 +83,7 @@
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
     <ClInclude Include="kernel\include\bs\tree\errors.h" />
     <ClInclude Include="kernel\include\bs\tree\fusion.h" />
+    <ClInclude Include="kernel\include\bs\tree\inode.h" />
     <ClInclude Include="kernel\include\bs\tree\link.h" />
     <ClInclude Include="kernel\include\bs\tree\node.h" />
     <ClInclude Include="kernel\include\bs\tree\tree.h" />
@@ -141,6 +142,7 @@
     <ClCompile Include="kernel\src\tree\errors.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
     <ClCompile Include="kernel\src\tree\hard_link.cpp" />
+    <ClCompile Include="kernel\src\tree\inode.cpp" />
     <ClCompile Include="kernel\src\tree\link.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
     <ClCompile Include="kernel\src\tree\sym_link.cpp" />
