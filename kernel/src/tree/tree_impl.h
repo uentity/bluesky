@@ -26,9 +26,9 @@ auto gen_walk_down_tree(node::Key path_unit = node::Key::ID) {
 	};
 }
 
-inline auto can_call_dnode(const link& L) -> bool {
-	return ( !(L.flags() & link::LazyLoad) || L.req_status(link::Req::DataNode) == link::ReqStatus::OK );
-}
+//inline auto can_call_dnode(const link& L) -> bool {
+//	return ( !(L.flags() & link::LazyLoad) || L.req_status(link::Req::DataNode) == link::ReqStatus::OK );
+//}
 
 NAMESPACE_END()
 
@@ -41,7 +41,7 @@ sp_link deref_path(
 	boost::split(path_parts, path, boost::is_any_of("/"));
 	// setup search root
 	sp_node root = l.owner();
-	if(!root && can_call_dnode(l)) {
+	if(!root) {
 		// given link points to tree root?
 		root = l.data_node();
 	}
@@ -68,7 +68,7 @@ sp_link deref_path(
 			// go up one level
 			root = res->owner();
 		}
-		else if(res && can_call_dnode(*res)) {
+		else if(res) {
 			root = res->data_node();
 		}
 		else root.reset();
