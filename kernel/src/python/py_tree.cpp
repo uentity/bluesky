@@ -14,7 +14,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <string>
 
-#include <pybind11/functional.h>
+#include <bs/python/functional.h>
 #include <pybind11/chrono.h>
 #include <iostream>
 
