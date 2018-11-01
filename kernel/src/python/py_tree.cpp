@@ -470,7 +470,13 @@ void py_bind_tree(py::module& m) {
 		"src_path"_a, "start"_a, "src_path_unit"_a = node::Key::ID, "dst_path_unit"_a = node::Key::Name,
 		"Convert path string from one representation to another (for ex. link IDs -> link names)"
 	);
-	m.def("deref_path", &deref_path, "path"_a, "start"_a, "path_unit"_a = node::Key::ID,
+	m.def("deref_path", py::overload_cast<const std::string&, const sp_link&, node::Key>(&deref_path),
+		"path"_a, "start"_a, "path_unit"_a = node::Key::ID,
+		"Quick link search by given abs path (ID-based!)"
+	);
+	// async deref_path
+	m.def("deref_path", py::overload_cast<deref_process_f, std::string, sp_link, node::Key>(&deref_path),
+		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = node::Key::ID,
 		"Quick link search by given abs path (ID-based!)"
 	);
 

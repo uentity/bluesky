@@ -104,7 +104,8 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 		"sym_Citizen_2", abspath(*N->find(2))
 	));
 	// print resulting tree content
-	kernel_tools::print_link(std::make_shared<hard_link>("r", N));
+	auto hN = link::make_root<hard_link>("r", N);
+	kernel_tools::print_link(hN);
 
 	// serializze node
 	auto N1 = test_json(N);
@@ -112,6 +113,12 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	kernel_tools::print_link(std::make_shared<hard_link>("r", N1));
 	BOOST_TEST(N1);
 	BOOST_TEST(N1->size() == N->size());
+
+	// test async dereference
+	deref_path([](const sp_link& lnk) {
+		std::cout << "*** Async deref callback: link : " <<
+		(lnk ? abspath(lnk, node::Key::Name) : "None") << std::endl;
+	}, "hard_Citizen_0", hN, node::Key::Name);
 
 	// fusion link
 	{

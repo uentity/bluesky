@@ -162,7 +162,7 @@ std::string convert_path(
 	return res_path;
 }
 
-sp_link deref_path(const std::string& path, const sp_clink& start, node::Key path_unit) {
+sp_link deref_path(const std::string& path, const sp_link& start, node::Key path_unit) {
 	if(!start) return nullptr;
 	return detail::deref_path(path, *start, detail::gen_walk_down_tree(path_unit));
 }
