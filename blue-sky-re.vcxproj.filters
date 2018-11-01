@@ -431,5 +431,8 @@
     <ClCompile Include="kernel\src\tree\inode.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
+    <ClCompile Include="kernel\src\tree\tree_async.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

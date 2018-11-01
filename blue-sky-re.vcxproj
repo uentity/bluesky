@@ -147,6 +147,7 @@
     <ClCompile Include="kernel\src\tree\node.cpp" />
     <ClCompile Include="kernel\src\tree\sym_link.cpp" />
     <ClCompile Include="kernel\src\tree\tree.cpp" />
+    <ClCompile Include="kernel\src\tree\tree_async.cpp" />
     <ClCompile Include="kernel\src\type_info.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
