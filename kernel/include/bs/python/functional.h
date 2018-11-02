@@ -54,18 +54,19 @@ public:
 			}
 		}
 
-		type* value_f = new type{[func](Args... args) -> Return {
+		// dynamically allocated lambda that actually invokes passed functor
+		auto f = new auto([func](Args... args) -> Return {
 			object retval(func(std::forward<Args>(args)...));
 			/* Visual studio 2015 parser issue: need parentheses around this expression */
 			return (retval.template cast<Return>());
-		}};
-		if(!value_f) return false;
+		});
+		if(!f) return false;
 
-		// ensure GIL is released AFTER functor desctructor is called
-		value = [value_f](Args... args) -> Return {
+		// ensure GIL is released AFTER functor destructor is called
+		value = [f](Args... args) -> Return {
 			gil_scoped_acquire acq;
-			(*value_f)(std::forward<Args>(args)...);
-			delete value_f;
+			(*f)(std::forward<Args>(args)...);
+			delete f;
 		};
 
 		return true;
