@@ -56,7 +56,7 @@ public:
 
 	// force `fusion_iface::populate()` call with specified children types
 	// regardless of populate status
-	auto populate(const std::string& child_type_id, bool wait_if_busy = false) const
+	auto populate(const std::string& child_type_id, bool wait_if_busy = true) const
 		-> result_or_err<sp_node>;
 	// async populate
 	auto populate(process_data_cb f, std::string child_type_id, bool wait_if_busy = true) const

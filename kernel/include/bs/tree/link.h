@@ -97,7 +97,7 @@ public:
 
 	/// get pointer to object link is pointing to -- slow, never returns invalid (NULL) sp_obj
 	/// NOTE: returned pointer can be null
-	auto data_ex(bool wait_if_busy = false) const -> result_or_err<sp_obj>;
+	auto data_ex(bool wait_if_busy = true) const -> result_or_err<sp_obj>;
 	/// simple data accessor that returns nullptr on error
 	auto data() const -> sp_obj {
 		return data_ex().value_or(nullptr);
@@ -105,7 +105,7 @@ public:
 
 	/// return tree::node if contained object is a node -- slow, never returns invalid (NULL) sp_obj
 	/// derived class can return cached node info
-	auto data_node_ex(bool wait_if_busy = false) const -> result_or_err<sp_node>;
+	auto data_node_ex(bool wait_if_busy = true) const -> result_or_err<sp_node>;
 	/// simple tree::node accessor that returns nullptr on error
 	auto data_node() const -> sp_node {
 		return data_node_ex().value_or(nullptr);

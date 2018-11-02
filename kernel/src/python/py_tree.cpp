@@ -176,19 +176,15 @@ void py_bind_tree(py::module& m) {
 	// link base class
 	link_pyface
 		.def("clone", &link::clone, "deep"_a = true, "Make shallow or deep copy of link")
-		.def("data_ex", &link::data_ex, "wait_if_busy"_a = false)
-		.def("data", py::overload_cast<>(&link::data, py::const_)
-			//"wait_if_busy"_a = false
-		)
+		.def("data_ex", &link::data_ex, "wait_if_busy"_a = true)
+		.def("data", py::overload_cast<>(&link::data, py::const_))
 		.def("data", py::overload_cast<link::process_data_cb, bool>(&link::data, py::const_),
-			"f"_a, "wait_if_busy"_a = false
+			"f"_a, "wait_if_busy"_a = true
 		)
-		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = false)
-		.def("data_node", py::overload_cast<>(&link::data_node, py::const_)
-			//"wait_if_busy"_a = false
-		)
+		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = true)
+		.def("data_node", py::overload_cast<>(&link::data_node, py::const_))
 		.def("data_node", py::overload_cast<link::process_data_cb, bool>(&link::data_node, py::const_),
-			"f"_a, "wait_if_busy"_a = false
+			"f"_a, "wait_if_busy"_a = true
 		)
 		.def("type_id", &link::type_id)
 		.def("oid", &link::oid)
@@ -250,11 +246,11 @@ void py_bind_tree(py::module& m) {
 			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = link::Flags::Plain)
 		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge)
 		.def("populate", py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),
-			"child_type_id"_a, "wait_if_busy"_a = false
+			"child_type_id"_a, "wait_if_busy"_a = true
 		)
 		.def("populate", py::overload_cast<link::process_data_cb, std::string, bool>(
 			&fusion_link::populate, py::const_),
-			"f"_a, "obj_type_id"_a, "wait_if_busy"_a = false
+			"f"_a, "obj_type_id"_a, "wait_if_busy"_a = true
 		)
 	;
 
