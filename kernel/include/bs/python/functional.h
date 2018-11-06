@@ -54,19 +54,13 @@ public:
 			}
 		}
 
-		// dynamically allocated lambda that actually invokes passed functor
-		auto f = new auto([func](Args... args) -> Return {
-			object retval(func(std::forward<Args>(args)...));
+		value = [func](Args... args) mutable -> Return {
+			gil_scoped_acquire acq;
+			// move into local var to ensure GIL is released AFTER functor destructor is called
+			function f(std::move(func));
+			object retval(f(std::forward<Args>(args)...));
 			/* Visual studio 2015 parser issue: need parentheses around this expression */
 			return (retval.template cast<Return>());
-		});
-		if(!f) return false;
-
-		// ensure GIL is released AFTER functor destructor is called
-		value = [f](Args... args) -> Return {
-			gil_scoped_acquire acq;
-			(*f)(std::forward<Args>(args)...);
-			delete f;
 		};
 
 		return true;
