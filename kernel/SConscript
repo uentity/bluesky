@@ -47,6 +47,7 @@ kernel_cpp_list = [
 	"src/serialize/base_types.cpp",
 	"src/serialize/array.cpp",
 	"src/serialize/link.cpp",
+	"src/serialize/python.cpp",
 	"src/serialize/tree.cpp",
 	"src/tree/inode.cpp",
 	"src/tree/link.cpp",
