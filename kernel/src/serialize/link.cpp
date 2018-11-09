@@ -69,6 +69,9 @@ BSS_FCN_BEGIN(serialize, tree::link)
 		make_nvp("data_status", t.pimpl_->status_[0].value),
 		make_nvp("data_node_status", t.pimpl_->status_[1].value)
 	);
+	// assume link is root by default -- it's safe when restoring link or tree from archive
+	if(typename Archive::is_loading())
+		t.propagate_handle();
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::link)
@@ -179,13 +182,13 @@ BSS_FCN_BEGIN(load_and_construct, tree::fusion_link)
 	tree::sp_fusion bridge;
 	ar(name, data, bridge);
 	construct(std::move(name), std::move(data), std::move(bridge));
-	// load other data
 	auto& t = *construct.ptr();
-	ar(
-		// base link
-		make_nvp("link_base", base_class<tree::link>(&t))
-	);
+	// base link
+	ar(make_nvp("link_base", base_class<tree::ilink>(&t)));
 BSS_FCN_END
+
+BSS_FCN_EXPORT(serialize, tree::fusion_link)
+BSS_FCN_EXPORT(load_and_construct, tree::fusion_link)
 
 /*-----------------------------------------------------------------------------
  *  instantiate code for polymorphic types
