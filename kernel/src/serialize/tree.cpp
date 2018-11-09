@@ -9,9 +9,11 @@
 
 #include <bs/serialize/tree.h>
 #include <bs/serialize/base_types.h>
-#include <cereal/types/vector.hpp>
-
+#include <bs/log.h>
 #include "../tree/node_impl.h"
+
+#include <fstream>
+#include <cereal/types/vector.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
 using namespace cereal;
@@ -78,6 +80,34 @@ BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, node)
 
+NAMESPACE_BEGIN(tree)
+/*-----------------------------------------------------------------------------
+ *  tree save/load impl
+ *-----------------------------------------------------------------------------*/
+auto save_tree(const sp_link& root, const std::string& filename) -> error {
+	// open file for writing
+	std::ofstream fs(filename, std::ios::out | std::ios::trunc);
+	if(!fs) return error(std::string("Cannot create file {}") + filename);
+
+	// dump link to JSON archive
+	cereal::JSONOutputArchive ja(fs);
+	ja(root);
+	return success();
+}
+
+auto load_tree(const std::string& filename) -> result_or_err<sp_link> {
+	// open file for writing
+	std::ifstream fs(filename);
+	if(!fs) return tl::make_unexpected(error(std::string("Cannot create file {}") + filename));
+
+	// load link from JSON archive
+	cereal::JSONInputArchive ja(fs);
+	sp_link res;
+	ja(res);
+	return res;
+}
+
+NAMESPACE_END(tree)
 NAMESPACE_END(blue_sky)
 
 BSS_REGISTER_TYPE(blue_sky::tree::node)

@@ -7,16 +7,17 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/bs.h>
 #include <bs/tree/tree.h>
+#include <bs/serialize/tree.h>
+#include <bs/python/common.h>
 #include <bs/python/tree.h>
 #include <bs/python/expected.h>
-#include <boost/uuid/uuid_io.hpp>
-#include <string>
 
+#include <string>
+#include <iostream>
+#include <boost/uuid/uuid_io.hpp>
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
-#include <iostream>
 
 // make it possible to exchange vector of links without copying
 // (and modify it in-place in Python for `walk()`)
@@ -489,6 +490,10 @@ void py_bind_tree(py::module& m) {
 		"link_type"_a = "hard_link", "name"_a = "/", "root_node"_a = nullptr,
 		"Make root link pointing to node which handle is preset to returned link"
 	);
+
+	// save/load tree
+	m.def("save_tree", &save_tree, "root"_a, "filename"_a);
+	m.def("load_tree", &load_tree, "filename"_a);
 
 	// TEST CODE
 	//py::bind_vector<std::vector<double>>(m, "d_list", py::module_local(false));
