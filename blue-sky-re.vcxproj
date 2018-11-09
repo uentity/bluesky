@@ -74,8 +74,11 @@
     <ClInclude Include="kernel\include\bs\serialize\atomizer.h" />
     <ClInclude Include="kernel\include\bs\serialize\base_types.h" />
     <ClInclude Include="kernel\include\bs\serialize\boost_uuid.h" />
+    <ClInclude Include="kernel\include\bs\serialize\cafbind.h" />
     <ClInclude Include="kernel\include\bs\serialize\carray.h" />
     <ClInclude Include="kernel\include\bs\serialize\macro.h" />
+    <ClInclude Include="kernel\include\bs\serialize\python.h" />
+    <ClInclude Include="kernel\include\bs\serialize\serialize.h" />
     <ClInclude Include="kernel\include\bs\serialize\tree.h" />
     <ClInclude Include="kernel\include\bs\setup_common_api.h" />
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
@@ -137,6 +140,7 @@
     <ClCompile Include="kernel\src\serialize\array.cpp" />
     <ClCompile Include="kernel\src\serialize\base_types.cpp" />
     <ClCompile Include="kernel\src\serialize\link.cpp" />
+    <ClCompile Include="kernel\src\serialize\python.cpp" />
     <ClCompile Include="kernel\src\serialize\tree.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
     <ClCompile Include="kernel\src\tree\errors.cpp" />

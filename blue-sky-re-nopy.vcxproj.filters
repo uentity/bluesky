@@ -258,6 +258,12 @@
     <ClInclude Include="kernel\src\tree\link_impl.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\cafbind.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\serialize.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">

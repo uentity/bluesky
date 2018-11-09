@@ -66,8 +66,10 @@
     <ClInclude Include="kernel\include\bs\serialize\atomizer.h" />
     <ClInclude Include="kernel\include\bs\serialize\base_types.h" />
     <ClInclude Include="kernel\include\bs\serialize\boost_uuid.h" />
+    <ClInclude Include="kernel\include\bs\serialize\cafbind.h" />
     <ClInclude Include="kernel\include\bs\serialize\carray.h" />
     <ClInclude Include="kernel\include\bs\serialize\macro.h" />
+    <ClInclude Include="kernel\include\bs\serialize\serialize.h" />
     <ClInclude Include="kernel\include\bs\serialize\tree.h" />
     <ClInclude Include="kernel\include\bs\setup_common_api.h" />
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />

@@ -297,6 +297,15 @@
     <ClInclude Include="kernel\include\bs\tree\inode.h">
       <Filter>Заголовочные файлы\bs\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\cafbind.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\python.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\serialize.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -433,6 +442,9 @@
     </ClCompile>
     <ClCompile Include="kernel\src\tree\tree_async.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\python.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
