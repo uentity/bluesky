@@ -171,7 +171,7 @@ void walk(const sp_link& root, step_process_fp step_f, bool topdown, bool follow
 	walk_impl({root}, step_f, topdown, follow_symlinks);
 }
 
-void walk(const sp_link& root, const step_process_f& step_f,bool topdown, bool follow_symlinks) {
+void walk(const sp_link& root, step_process_f step_f, bool topdown, bool follow_symlinks) {
 	walk_impl({root}, step_f, topdown, follow_symlinks);
 }
 

@@ -42,7 +42,7 @@ BS_API void walk(
 // overload for std::function instead of function pointer
 using step_process_f = std::function<void(const sp_link&, std::vector<sp_link>&, std::vector<sp_link>&)>;
 BS_API void walk(
-	const sp_link& root, const step_process_f& step_f,
+	const sp_link& root, step_process_f step_f,
 	bool topdown = true, bool follow_symlinks = true
 );
 
