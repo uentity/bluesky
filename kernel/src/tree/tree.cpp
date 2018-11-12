@@ -36,32 +36,40 @@ void walk_impl(
 	std::vector<sp_link> next_leafs;
 	// for each node
 	for(const auto& N : nodes) {
-		if(!N || !(cur_node = N->data_node())) continue;
+		if(!N) continue;
 		// remember symlink
 		const auto is_symlink = N->type_id() == "sym_link";
-		if(is_symlink){
+		if(is_symlink) {
 			if(follow_symlinks && active_symlinks.find(N->id()) == active_symlinks.end())
 				active_symlinks.insert(N->id());
 			else continue;
 		}
 
+		// obtain node from link honoring LazyLoad flag
+		cur_node = ( !(N->flags() & link::LazyLoad) || N->req_status(link::Req::DataNode) == link::ReqStatus::OK ) ?
+			N->data_node() : nullptr;
+
 		next_nodes.clear();
 		next_leafs.clear();
-		// for each link in node
-		for(const auto& l : *cur_node) {
-			// collect nodes
-			if(l->data_node()) {
-				next_nodes.push_back(l);
+
+		if(cur_node) {
+			// for each link in node
+			for(const auto& l : *cur_node) {
+				// collect nodes
+				if(l->data_node()) {
+					next_nodes.push_back(l);
+				}
+				else
+					next_leafs.push_back(l);
 			}
-			else
-				next_leafs.push_back(l);
 		}
 
 		// if `topdown` == true, process this node BEFORE leafs processing
 		if(topdown)
 			step_f(N, next_nodes, next_leafs);
 		// process list of next nodes
-		walk_impl(next_nodes, step_f, topdown, follow_symlinks, active_symlinks);
+		if(!next_nodes.empty())
+			walk_impl(next_nodes, step_f, topdown, follow_symlinks, active_symlinks);
 		// if walking from most deep subdir, process current node after all subtree
 		if(!topdown)
 			step_f(N, next_nodes, next_leafs);
