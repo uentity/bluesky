@@ -129,6 +129,51 @@ int rename(node& N, const std::string& key, std::string new_name, bool all = fal
 	return N.rename(key, std::move(new_name), K, all);
 }
 
+// ------- add some mmethods to opaque list-like class
+template<typename Vector, typename List>
+auto make_rich_pylist(List& cl) -> List& {
+	using size_type = typename Vector::size_type;
+	using T = typename Vector::value_type;
+
+	cl.def(py::init<size_type>());
+
+	cl.def("resize",
+		 (void (Vector::*) (size_type count)) & Vector::resize,
+		 "changes the number of elements stored");
+
+	cl.def("erase",
+		[](Vector &v, size_type i) {
+		if (i >= v.size())
+			throw py::index_error();
+		v.erase(v.begin() + i);
+	}, "erases element at index ``i``");
+
+	cl.def("empty",         &Vector::empty,         "checks whether the container is empty");
+	cl.def("size",          &Vector::size,          "returns the number of elements");
+	cl.def("push_back", (void (Vector::*)(const T&)) &Vector::push_back, "adds an element to the end");
+	cl.def("pop_back",                               &Vector::pop_back, "removes the last element");
+
+	//cl.def("max_size",      &Vector::max_size,      "returns the maximum possible number of elements");
+	//cl.def("reserve",       &Vector::reserve,       "reserves storage");
+	//cl.def("capacity",      &Vector::capacity,      "returns the number of elements that can be held in currently allocated storage");
+	//cl.def("shrink_to_fit", &Vector::shrink_to_fit, "reduces memory usage by freeing unused memory");
+
+	cl.def("clear", &Vector::clear, "clears the contents");
+	cl.def("swap",   &Vector::swap, "swaps the contents");
+
+	cl.def("front", [](Vector &v) {
+		if (v.size()) return v.front();
+		else throw py::index_error();
+	}, "access the first element");
+
+	cl.def("back", [](Vector &v) {
+		if (v.size()) return v.back();
+		else throw py::index_error();
+	}, "access the last element ");
+
+	return cl;
+}
+
 NAMESPACE_END() // hidden ns
 
 /*-----------------------------------------------------------------------------
@@ -478,7 +523,10 @@ void py_bind_tree(py::module& m) {
 	);
 
 	// bind list of links as opaque type to allow in-place modification
-	py::bind_vector<std::vector<sp_link>>(m, "links_list");
+	auto clV = py::bind_vector<std::vector<sp_link>>(m, "links_list");
+	make_rich_pylist<std::vector<sp_link>>(clV);
+
+	// bind other misc functions
 	m.def("walk",
 		py::overload_cast<const sp_link&, const step_process_f&, bool, bool>(&walk),
 		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true,
