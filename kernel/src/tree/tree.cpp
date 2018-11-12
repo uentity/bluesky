@@ -14,6 +14,9 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
 
+#define CAN_CALL_DNODE(L) \
+( !(L->flags() & link::LazyLoad) || L->req_status(link::Req::DataNode) == link::ReqStatus::OK )
+
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
 using Key = node::Key;
@@ -46,8 +49,7 @@ void walk_impl(
 		}
 
 		// obtain node from link honoring LazyLoad flag
-		cur_node = ( !(N->flags() & link::LazyLoad) || N->req_status(link::Req::DataNode) == link::ReqStatus::OK ) ?
-			N->data_node() : nullptr;
+		cur_node = CAN_CALL_DNODE(N) ? N->data_node() : nullptr;
 
 		next_nodes.clear();
 		next_leafs.clear();
@@ -56,7 +58,7 @@ void walk_impl(
 			// for each link in node
 			for(const auto& l : *cur_node) {
 				// collect nodes
-				if(l->data_node()) {
+				if(CAN_CALL_DNODE(l) && l->data_node()) {
 					next_nodes.push_back(l);
 				}
 				else
