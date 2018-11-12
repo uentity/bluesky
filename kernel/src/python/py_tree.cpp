@@ -527,11 +527,31 @@ void py_bind_tree(py::module& m) {
 	make_rich_pylist<std::vector<sp_link>>(clV);
 
 	// bind other misc functions
+	using py_walk_cb = std::function<void(const sp_link&, py::list, py::list)>;
+	using v_links = std::vector<sp_link>;
 	m.def("walk",
-		py::overload_cast<const sp_link&, const step_process_f&, bool, bool>(&walk),
+		[](sp_link root, py_walk_cb f, bool topdown = true, bool follow_symlinks = true) {
+			walk(root, [root = std::move(root), f = std::move(f)] (
+					const sp_link& L, v_links& nodes, v_links& leafs
+				) {
+					// make py:lists from passed vectors
+					py::list py_nodes = py::cast(nodes), py_leafs = py::cast(leafs);
+					// invoke Python functor
+					f(root, py_nodes, py_leafs);
+					// copy values back to C++ vectors
+					nodes = py_nodes.cast<const v_links>();
+					leafs = py_leafs.cast<const v_links>();
+				},
+				topdown, follow_symlinks);
+		},
 		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true,
 		"Walk the tree similar to Python `os.walk()`"
 	);
+	//m.def("walk",
+	//	py::overload_cast<const sp_link&, const step_process_f&, bool, bool>(&walk),
+	//	"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true,
+	//	"Walk the tree similar to Python `os.walk()`"
+	//);
 
 	// make root link
 	m.def("make_root_link", &make_root_link,
