@@ -480,7 +480,7 @@ void py_bind_tree(py::module& m) {
 	// bind list of links as opaque type to allow in-place modification
 	py::bind_vector<std::vector<sp_link>>(m, "links_list");
 	m.def("walk",
-		py::overload_cast<const sp_link&, step_process_f, bool, bool>(&walk),
+		py::overload_cast<const sp_link&, const step_process_f&, bool, bool>(&walk),
 		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true,
 		"Walk the tree similar to Python `os.walk()`"
 	);
