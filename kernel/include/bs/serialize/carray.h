@@ -20,9 +20,11 @@ namespace cereal {
 namespace detail {
 
 namespace {
-	// dummy size callback for deserialization
-	auto noop_size_callback(std::size_t) -> void {}
-}
+
+// dummy size callback for deserialization
+auto noop_size_callback(std::size_t) -> void {}
+
+} // eof hidden namespace
 
 ///////////////////////////////////////////////////////////////////////////////
 // Serialization for C arrays if BinaryData is supported and we are arithmetic
@@ -36,9 +38,9 @@ auto save_carray(
 }
 
 // [NOTE] F is a functor that will be called with size passed in before elements are loaded
-template< typename Archive, typename T, typename F = decltype(detail::noop_size_callback) > inline
+template< typename Archive, typename T, typename F = decltype(noop_size_callback) > inline
 auto load_carray(
-	Archive& ar, T* array, std::true_type, F f = noop_size_callback
+	Archive& ar, T* array, std::true_type, const F& f = noop_size_callback
 ) -> void {
 	// read number of elements and invoke f(size)
 	std::size_t size;
@@ -60,9 +62,9 @@ auto save_carray(Archive& ar, T* array, const std::size_t size, std::false_type 
 }
 
 // [NOTE] F is a functor that will be called with size passed in before elements are loaded
-template< typename Archive, typename T, typename F = decltype(detail::noop_size_callback) > inline
+template< typename Archive, typename T, typename F = decltype(noop_size_callback) > inline
 auto load_carray(
-	Archive& ar, T* array, std::false_type, F f = noop_size_callback
+	Archive& ar, T* array, std::false_type, const F& f = noop_size_callback
 ) -> void {
 	// read number of elements and invoke f(size)
 	std::size_t size;
@@ -76,16 +78,14 @@ auto load_carray(
 ///////////////////////////////////////////////////////////////////////////////
 //  proxy view class for C arrays
 //
-template<typename T>
+template<typename T, typename F = decltype(noop_size_callback)>
 struct carray_view {
 	T* data_;
-	std::size_t size_;
-	using size_callback_f = void (*)(std::size_t);
-	const size_callback_f size_cb_;
+	const std::size_t size_;
+	const std::decay_t<F> size_cb_;
 
-	template<typename F = decltype(detail::noop_size_callback)>
 	explicit carray_view(T* data, std::size_t size, F f = noop_size_callback)
-		: data_(data), size_(size),  size_cb_(f)
+		: data_(data), size_(size),  size_cb_(std::move(f))
 	{}
 
 	// test if archive supports binary data serialization
@@ -117,7 +117,7 @@ auto save_carray(Archive& ar, T* array, const std::size_t size) -> void {
 }
 
 template< typename Archive, typename T, typename F = decltype(detail::noop_size_callback) > inline
-auto load_carray(Archive& ar, T* array, F size_callback = detail::noop_size_callback) -> void {
+auto load_carray(Archive& ar, T* array, const F& size_callback = detail::noop_size_callback) -> void {
 	detail::load_carray(
 		ar, array, detail::carray_view<T>::template binary_supported<Archive>(), size_callback
 	);
@@ -128,19 +128,19 @@ auto load_carray(Archive& ar, T* array, F size_callback = detail::noop_size_call
 //
 template< typename Archive, typename T, typename F = decltype(detail::noop_size_callback) > inline
 auto serialize_carray(
-	Archive& ar, T* array, const std::size_t size, F size_callback = detail::noop_size_callback
+	Archive& ar, T* array, const std::size_t size, const F& size_callback = detail::noop_size_callback
 ) -> void {
 	// helper to select save or load op depending on archive
 	struct select_saveload {
 		// save
-		static auto go(Archive& ar_, T* array_, const std::size_t size_, F, std::true_type)
+		static auto go(Archive& ar_, T* array_, const std::size_t size_, const F&, std::true_type)
 		-> void {
 			detail::save_carray(
 				ar_, array_, size_, detail::carray_view<T>::template binary_supported<Archive>())
 			;
 		}
 		// load
-		static auto go(Archive& ar_, T* array_, const std::size_t size_, F f, std::false_type)
+		static auto go(Archive& ar_, T* array_, const std::size_t size_, const F& f, std::false_type)
 		-> void{
 			detail::load_carray(
 				ar_, array_, detail::carray_view<T>::template binary_supported<Archive>(), f
@@ -156,7 +156,7 @@ auto serialize_carray(
 //
 template< typename T, typename F = decltype(detail::noop_size_callback) > inline
 auto make_carray_view(T* array, std::size_t size, F size_callback = detail::noop_size_callback) {
-	return detail::carray_view<T>(array, size, size_callback);
+	return detail::carray_view<T>(array, size, std::move(size_callback));
 }
 
 } // eof namespace cereal
