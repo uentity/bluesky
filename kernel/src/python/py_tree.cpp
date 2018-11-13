@@ -9,12 +9,11 @@
 
 #include <bs/tree/tree.h>
 #include <bs/serialize/tree.h>
+#include <bs/log.h>
 #include <bs/python/common.h>
 #include <bs/python/tree.h>
 #include <bs/python/expected.h>
 
-#include <string>
-#include <iostream>
 #include <boost/uuid/uuid_io.hpp>
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
@@ -22,7 +21,6 @@
 // make it possible to exchange vector of links without copying
 // (and modify it in-place in Python for `walk()`)
 PYBIND11_MAKE_OPAQUE(std::vector<blue_sky::tree::sp_link>);
-//PYBIND11_MAKE_OPAQUE(std::vector<double>);
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(python)
@@ -522,36 +520,29 @@ void py_bind_tree(py::module& m) {
 		"Quick link search by given abs path (ID-based!)"
 	);
 
-	// bind list of links as opaque type to allow in-place modification
-	auto clV = py::bind_vector<std::vector<sp_link>>(m, "links_list");
-	make_rich_pylist<std::vector<sp_link>>(clV);
-
-	// bind other misc functions
-	using py_walk_cb = std::function<void(const sp_link&, py::list, py::list)>;
+	// bind list of links as opaque type 
 	using v_links = std::vector<sp_link>;
+	auto clV = py::bind_vector<v_links>(m, "links_list", py::module_local(false));
+	make_rich_pylist<v_links>(clV);
+
+	// walk
+	// [NOTE] use proxy functor to allow nodes list modification in Python callback
+	// [HINT] pass vectors to be modified as pointers - in this case pybind11 applies reference policy
+	using py_walk_cb = std::function<void(const sp_link&, v_links*, v_links*)>;
 	m.def("walk",
-		[](sp_link root, py_walk_cb f, bool topdown = true, bool follow_symlinks = true) {
-			walk(root, [root = std::move(root), f = std::move(f)] (
-					const sp_link& L, v_links& nodes, v_links& leafs
+		[](const sp_link& root, py_walk_cb pyf, bool topdown = true, bool follow_symlinks = true) {
+			walk(root, [pyf = std::move(pyf)] (
+					const sp_link& cur_root, v_links& nodes, v_links& leafs
 				) {
-					// make py:lists from passed vectors
-					py::list py_nodes = py::cast(nodes), py_leafs = py::cast(leafs);
-					// invoke Python functor
-					f(root, py_nodes, py_leafs);
-					// copy values back to C++ vectors
-					nodes = py_nodes.cast<const v_links>();
-					leafs = py_leafs.cast<const v_links>();
+					// convert references to pointers
+					pyf(cur_root, &nodes, &leafs);
 				},
-				topdown, follow_symlinks);
+				topdown, follow_symlinks
+			);
 		},
 		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true,
 		"Walk the tree similar to Python `os.walk()`"
 	);
-	//m.def("walk",
-	//	py::overload_cast<const sp_link&, const step_process_f&, bool, bool>(&walk),
-	//	"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true,
-	//	"Walk the tree similar to Python `os.walk()`"
-	//);
 
 	// make root link
 	m.def("make_root_link", &make_root_link,
@@ -562,22 +553,6 @@ void py_bind_tree(py::module& m) {
 	// save/load tree
 	m.def("save_tree", &save_tree, "root"_a, "filename"_a);
 	m.def("load_tree", &load_tree, "filename"_a);
-
-	// TEST CODE
-	//py::bind_vector<std::vector<double>>(m, "d_list", py::module_local(false));
-	//m.def("test_callback", [](std::function<void(std::vector<double>&)> f) {
-	//	//std::vector<sp_link> v{nullptr, nullptr, nullptr};
-	//	std::vector<double> v{0, 0};
-	//	f(v);
-	//	for(const auto& l : v) {
-	//		std::cout << l << ' ';
-	//	}
-	//	std::cout << std::endl;
-	//});
-	//m.def("test_static_d", []() -> std::vector<double>& {
-	//	static std::vector<double> v{0, 0};
-	//	return v;
-	//}, py::return_value_policy::reference);
 }
 
 NAMESPACE_END(python)
