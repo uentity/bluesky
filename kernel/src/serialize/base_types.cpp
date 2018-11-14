@@ -41,12 +41,15 @@ BSS_FCN_BEGIN(serialize, blue_sky::objbase)
 			//	));
 		}
 
-		static auto save_typeid(Archive& ar, const type& t) -> void {
+		// emit only in text archives
+		static auto save_typeid(Archive& ar, const type& t, std::true_type) -> void {
 			save_(ar, t, is_saving());
 		}
+		// and not in binary
+		static auto save_typeid(Archive& ar, const type& t, std::false_type) -> void {}
 	};
 
-	if_saving::save_typeid(ar, t);
+	if_saving::save_typeid(ar, t, cereal::traits::is_text_archive<Archive>());
 	ar(
 		make_nvp("id", t.id_),
 		make_nvp("is_node", t.is_node_)
