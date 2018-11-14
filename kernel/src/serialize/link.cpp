@@ -80,10 +80,10 @@ BSS_FCN_EXPORT(serialize, tree::link)
  *  ilink
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::ilink)
-	// serialize base link by direct call in order to omit creating inner JSON section
-	serialize<tree::link>::go(ar, t, version);
 	// serialize inode
 	ar(make_nvp("inode", t.inode_));
+	// serialize base link by direct call in order to omit creating inner JSON section
+	serialize<tree::link>::go(ar, t, version);
 BSS_FCN_END
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link, tree::ilink)
@@ -100,14 +100,14 @@ BSS_FCN_BEGIN(load_and_construct, tree::hard_link)
 	ar(name, data);
 	construct(std::move(name), std::move(data));
 	// load base link
-	ar( make_nvp("link_base", base_class<tree::ilink>(construct.ptr())) );
+	ar( make_nvp("linkbase", base_class<tree::ilink>(construct.ptr())) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::hard_link)
 	ar(
 		make_nvp("name", t.pimpl_->name_),
 		make_nvp("data", t.data_),
-		make_nvp("link_base", base_class<tree::ilink>(&t))
+		make_nvp("linkbase", base_class<tree::ilink>(&t))
 	);
 BSS_FCN_END
 
@@ -125,14 +125,14 @@ BSS_FCN_BEGIN(load_and_construct, tree::weak_link)
 	ar(name, data);
 	construct(std::move(name), std::move(data));
 	// load base link
-	ar( make_nvp("link_base", base_class<tree::ilink>(construct.ptr())) );
+	ar( make_nvp("linkbase", base_class<tree::ilink>(construct.ptr())) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::weak_link)
 	ar(
 		make_nvp("name", t.pimpl_->name_),
 		make_nvp("data", t.data_.lock()),
-		make_nvp("link_base", base_class<tree::ilink>(&t))
+		make_nvp("linkbase", base_class<tree::ilink>(&t))
 	);
 BSS_FCN_END
 
@@ -149,14 +149,14 @@ BSS_FCN_BEGIN(load_and_construct, tree::sym_link)
 	ar(name, path);
 	construct(std::move(name), std::move(path));
 	// load base link
-	ar( make_nvp("link_base", base_class<tree::link>(construct.ptr())) );
+	ar( make_nvp("linkbase", base_class<tree::link>(construct.ptr())) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::sym_link)
 	ar(
 		make_nvp("name", t.pimpl_->name_),
 		make_nvp("path", t.path_),
-		make_nvp("link_base", base_class<tree::link>(&t))
+		make_nvp("linkbase", base_class<tree::link>(&t))
 	);
 BSS_FCN_END
 
@@ -171,7 +171,7 @@ BSS_FCN_BEGIN(serialize, tree::fusion_link)
 		make_nvp("name", static_cast<tree::link&>(t).pimpl_->name_),
 		make_nvp("data", t.pimpl_->data_),
 		make_nvp("bridge", t.pimpl_->bridge_),
-		make_nvp("link_base", base_class<tree::link>(&t))
+		make_nvp("linkbase", base_class<tree::ilink>(&t))
 	);
 BSS_FCN_END
 
@@ -184,7 +184,7 @@ BSS_FCN_BEGIN(load_and_construct, tree::fusion_link)
 	construct(std::move(name), std::move(data), std::move(bridge));
 	auto& t = *construct.ptr();
 	// base link
-	ar(make_nvp("link_base", base_class<tree::ilink>(&t)));
+	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::fusion_link)
