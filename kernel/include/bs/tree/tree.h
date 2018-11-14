@@ -46,6 +46,17 @@ BS_API void walk(
 	bool topdown = true, bool follow_symlinks = true
 );
 
+///////////////////////////////////////////////////////////////////////////////
+//  Tree save/load to JSON or binary archive
+//
+enum class TreeArchive { Text, Binary };
+BS_API auto
+	save_tree(const sp_link& root, const std::string& filename, TreeArchive ar = TreeArchive::Text)
+-> error;
+BS_API auto
+	load_tree(const std::string& filename, TreeArchive ar = TreeArchive::Text)
+-> result_or_err<sp_link>;
+
 /*-----------------------------------------------------------------------------
  *  Async API
  *-----------------------------------------------------------------------------*/

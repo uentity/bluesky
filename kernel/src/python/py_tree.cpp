@@ -8,7 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/tree/tree.h>
-#include <bs/serialize/tree.h>
 #include <bs/log.h>
 #include <bs/python/common.h>
 #include <bs/python/tree.h>
@@ -551,8 +550,12 @@ void py_bind_tree(py::module& m) {
 	);
 
 	// save/load tree
-	m.def("save_tree", &save_tree, "root"_a, "filename"_a);
-	m.def("load_tree", &load_tree, "filename"_a);
+	py::enum_<TreeArchive>(m, "TreeArchive")
+		.value("Text", TreeArchive::Text)
+		.value("Binary", TreeArchive::Binary)
+	;
+	m.def("save_tree", &save_tree, "root"_a, "filename"_a, "ar"_a = TreeArchive::Text);
+	m.def("load_tree", &load_tree, "filename"_a, "ar"_a = TreeArchive::Text);
 }
 
 NAMESPACE_END(python)

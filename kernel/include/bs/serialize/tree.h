@@ -44,13 +44,3 @@ BSS_FCN_DECL(serialize, blue_sky::tree::node)
 BSS_FORCE_DYNAMIC_INIT(link)
 BSS_FORCE_DYNAMIC_INIT(node)
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
-
-/*-----------------------------------------------------------------------------
- *  Tree save/load to JSON archive
- *-----------------------------------------------------------------------------*/
-auto save_tree(const sp_link& root, const std::string& filename) -> error;
-auto load_tree(const std::string& filename) -> result_or_err<sp_link>;
-
-NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
-

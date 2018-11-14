@@ -84,26 +84,42 @@ NAMESPACE_BEGIN(tree)
 /*-----------------------------------------------------------------------------
  *  tree save/load impl
  *-----------------------------------------------------------------------------*/
-auto save_tree(const sp_link& root, const std::string& filename) -> error {
+auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar) -> error {
 	// open file for writing
-	std::ofstream fs(filename, std::ios::out | std::ios::trunc);
+	auto open_flags = std::ios::out | std::ios::trunc;
+	if(ar == TreeArchive::Binary) open_flags |= std::ios::binary;
+	std::ofstream fs(filename, open_flags);
 	if(!fs) return error(std::string("Cannot create file {}") + filename);
 
 	// dump link to JSON archive
-	cereal::JSONOutputArchive ja(fs);
-	ja(root);
+	if(ar == TreeArchive::Binary) {
+		cereal::PortableBinaryOutputArchive ja(fs);
+		ja(root);
+	}
+	else {
+		cereal::JSONOutputArchive ja(fs);
+		ja(root);
+	}
 	return success();
 }
 
-auto load_tree(const std::string& filename) -> result_or_err<sp_link> {
-	// open file for writing
-	std::ifstream fs(filename);
+auto load_tree(const std::string& filename, TreeArchive ar) -> result_or_err<sp_link> {
+	// open file for reading
+	auto open_flags = std::ios::in;
+	if(ar == TreeArchive::Binary) open_flags |= std::ios::binary;
+	std::ifstream fs(filename, open_flags);
 	if(!fs) return tl::make_unexpected(error(std::string("Cannot create file {}") + filename));
 
 	// load link from JSON archive
-	cereal::JSONInputArchive ja(fs);
 	sp_link res;
-	ja(res);
+	if(ar == TreeArchive::Binary) {
+		cereal::PortableBinaryInputArchive ja(fs);
+		ja(res);
+	}
+	else {
+		cereal::JSONInputArchive ja(fs);
+		ja(res);
+	}
 	return res;
 }
 
