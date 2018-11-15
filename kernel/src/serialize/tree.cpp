@@ -86,9 +86,10 @@ NAMESPACE_BEGIN(tree)
  *-----------------------------------------------------------------------------*/
 auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar) -> error {
 	// open file for writing
-	auto open_flags = std::ios::out | std::ios::trunc;
-	if(ar == TreeArchive::Binary) open_flags |= std::ios::binary;
-	std::ofstream fs(filename, open_flags);
+	std::ofstream fs(
+		filename,
+		std::ios::out | std::ios::trunc | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode())
+	);
 	if(!fs) return error(std::string("Cannot create file {}") + filename);
 
 	// dump link to JSON archive
@@ -105,9 +106,10 @@ auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar)
 
 auto load_tree(const std::string& filename, TreeArchive ar) -> result_or_err<sp_link> {
 	// open file for reading
-	auto open_flags = std::ios::in;
-	if(ar == TreeArchive::Binary) open_flags |= std::ios::binary;
-	std::ifstream fs(filename, open_flags);
+	std::ifstream fs(
+		filename,
+		std::ios::in | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode())
+	);
 	if(!fs) return tl::make_unexpected(error(std::string("Cannot create file {}") + filename));
 
 	// load link from JSON archive
