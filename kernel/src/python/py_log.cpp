@@ -92,6 +92,10 @@ void py_bind_log(py::module& m) {
 	m.def("print", [](Log channel, const py::args& args) {
 		print(channel, level_enum::info, args);
 	});
+	// if log channel is omitted -- print to bsout
+	m.def("print", [](level_enum level, const py::args& args) {
+		print(Log::Out, level, args);
+	});
 	// if channel is omitted -- print to 'out'
 	m.def("print", [](const py::args& args) {
 		print(Log::Out, level_enum::info, args);
@@ -101,9 +105,9 @@ void py_bind_log(py::module& m) {
 	m.def("print_err", [](level_enum level, const py::args& args) {
 		print(Log::Err, level, args);
 	});
-	// if level is omitted -- print info to error channel
+	// if level is omitted -- print error to bserr channel
 	m.def("print_err", [](const py::args& args) {
-		print(Log::Err, level_enum::info, args);
+		print(Log::Err, level_enum::err, args);
 	});
 }
 
