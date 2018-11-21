@@ -100,8 +100,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(ProjectDir)..\..\third_party\expected;$(ProjectDir)..\..\third_party\cereal\include;$(ProjectDir)..\..\third_party\actor-framework\libcaf_core;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -118,8 +118,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(ProjectDir)..\..\third_party\expected;$(ProjectDir)..\..\third_party\cereal\include;$(ProjectDir)..\..\third_party\actor-framework\libcaf_core;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
@@ -134,8 +134,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(ProjectDir)..\..\third_party\expected;$(ProjectDir)..\..\third_party\cereal\include;$(ProjectDir)..\..\third_party\actor-framework\libcaf_core;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(PYTHON64_PATH)\libs</AdditionalLibraryDirectories>
@@ -152,8 +152,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\kernel\include;$(ProjectDir)..\..\third_party\pybind11\include;$(ProjectDir)..\..\third_party\spdlog\include;$(ProjectDir)..\..\third_party\expected;$(ProjectDir)..\..\third_party\cereal\include;$(ProjectDir)..\..\third_party\actor-framework\libcaf_core;$(BLUE_SKY_WINDEPS)\boost;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
