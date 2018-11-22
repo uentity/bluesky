@@ -76,7 +76,7 @@ struct is_tuple_impl<std::tuple<Ts...>> : std::true_type {};
 
 template<typename T>
 constexpr auto is_tuple() -> bool
-{ return detail::is_tuple_impl<std::decay_t<T>>::value; }
+{ return blue_sky::detail::is_tuple_impl<std::decay_t<T>>::value; }
 
 /*-----------------------------------------------------------------------------
  *  grow tuple from beginning or end
