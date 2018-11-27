@@ -44,7 +44,6 @@ void kernel::shutdown() {
 	if(pimpl_->init_state_.exchange(InitState::Down) != InitState::Down) {
 		// destroy actor system
 		if(pimpl_->actor_sys_) {
-			pimpl_->actor_sys_->await_all_actors_done();
 			pimpl_->actor_sys_.release();
 		}
 		// shutdown mt logs
