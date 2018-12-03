@@ -201,9 +201,6 @@
     <ClInclude Include="kernel\src\kernel_logging_subsyst.h">
       <Filter>Файлы исходного кода</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\src\kernel_plugins_discover.h">
-      <Filter>Файлы исходного кода</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\src\kernel_plugins_subsyst.h">
       <Filter>Файлы исходного кода</Filter>
     </ClInclude>
@@ -305,6 +302,9 @@
     </ClInclude>
     <ClInclude Include="kernel\include\bs\serialize\serialize.h">
       <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\kernel_config_subsyst.h">
+      <Filter>Файлы исходного кода</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -445,6 +445,12 @@
     </ClCompile>
     <ClCompile Include="kernel\src\serialize\python.cpp">
       <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\kernel_config_subsyst.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\kernel_plugins_discover.cpp">
+      <Filter>Файлы исходного кода</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

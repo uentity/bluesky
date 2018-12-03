@@ -84,10 +84,10 @@
     <ClInclude Include="kernel\include\bs\type_macro.h" />
     <ClInclude Include="kernel\src\backtrace_tools_unix.h" />
     <ClInclude Include="kernel\src\backtrace_tools_win.h" />
+    <ClInclude Include="kernel\src\kernel_config_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_impl.h" />
     <ClInclude Include="kernel\src\kernel_instance_subsyst.h" />
     <ClInclude Include="kernel\src\kernel_logging_subsyst.h" />
-    <ClInclude Include="kernel\src\kernel_plugins_discover.h" />
     <ClInclude Include="kernel\src\kernel_plugins_subsyst.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
     <ClInclude Include="kernel\src\tree\link_impl.h" />
@@ -103,9 +103,11 @@
     <ClCompile Include="kernel\src\error.cpp" />
     <ClCompile Include="kernel\src\hard_link.cpp" />
     <ClCompile Include="kernel\src\kernel.cpp" />
+    <ClCompile Include="kernel\src\kernel_config_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel_errors.cpp" />
     <ClCompile Include="kernel\src\kernel_instance_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel_logging_subsyst.cpp" />
+    <ClCompile Include="kernel\src\kernel_plugins_discover.cpp" />
     <ClCompile Include="kernel\src\kernel_plugins_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel_ston.cpp" />
     <ClCompile Include="kernel\src\kernel_tools.cpp" />
