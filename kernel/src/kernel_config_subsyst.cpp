@@ -126,6 +126,9 @@ kernel_config_subsyst::kernel_config_subsyst() {
 		.add<std::string>("err-file-format", "Format of stderr log messages")
 		.add<std::string>("console-out-format", "Format of stdout log messages in console")
 		.add<std::string>("console-err-format", "Format of stdout log messages in console")
+		.add<std::uint32_t>("flush-interval", "Multithreaded logs background flush interval")
+		.add<std::uint8_t>("out-flush-level", "Minimum message level that triggers out log flush")
+		.add<std::uint8_t>("err-flush-level", "Minimum message level that triggers err log flush")
 	;
 
 	/*-----------------------------------------------------------------------------
