@@ -25,6 +25,8 @@ void kernel::init() {
 	// do initialization only once from non-initialized state
 	auto expected_state = InitState::NonInitialized;
 	if(pimpl_->init_state_.compare_exchange_strong(expected_state, InitState::Initialized)) {
+		// configure kernel
+		pimpl_->configure();
 		// switch to mt logs
 		pimpl_->toggle_mt_logs(true);
 		// init actor system
@@ -50,6 +52,17 @@ void kernel::shutdown() {
 		pimpl_->toggle_mt_logs(false);
 		spdlog::shutdown();
 	}
+}
+
+auto kernel::configure(
+	std::vector<std::string> args, std::string ini_fname, bool force
+) -> const caf::config_value_map& {
+	pimpl_->configure(std::move(args), ini_fname, force);
+	return pimpl_->confdata_;
+}
+
+auto kernel::config() const -> const caf::config_value_map& {
+	return pimpl_->confdata_;
 }
 
 int kernel::load_plugin(const std::string& fname, bool init_py_subsyst) {

@@ -16,6 +16,7 @@
 #include "any_array.h"
 
 #include <caf/fwd.hpp>
+#include <caf/config_value.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
 
@@ -166,6 +167,13 @@ public:
 	const plugin_descriptor& self_descriptor() const;
 	/// ... and to kernel's pybind11::module object
 	void* self_pymod() const;
+
+	/// configure kernel
+	const caf::config_value_map& configure(
+		std::vector<std::string> args = {}, std::string ini_fname = "", bool force = false
+	);
+	/// access to kernel's config variables
+	const caf::config_value_map& config() const;
 
 	/// unite bindings maps for polymorphic serialization code among all loaded plugins
 	/// such that they can utilize serialization from each other

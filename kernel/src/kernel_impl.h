@@ -10,19 +10,19 @@
 #include <bs/kernel.h>
 #include <bs/error.h>
 
-#include <caf/actor_system_config.hpp>
 #include <caf/actor_system.hpp>
-#include <caf/io/middleman.hpp>
 
 #include "kernel_logging_subsyst.h"
 #include "kernel_plugins_subsyst.h"
 #include "kernel_instance_subsyst.h"
+#include "kernel_config_subsyst.h"
 
 namespace blue_sky {
 /*-----------------------------------------------------------------------------
  *  kernel impl
  *-----------------------------------------------------------------------------*/
 class kernel::kernel_impl :
+	public detail::kernel_config_subsyst,
 	public detail::kernel_plugins_subsyst,
 	public detail::kernel_instance_subsyst,
 	public detail::kernel_logging_subsyst
@@ -35,8 +35,7 @@ public:
 	using idx_any_map_t = std::map< BS_TYPE_INFO, idx_any_array >;
 	idx_any_map_t idx_any_map_;
 
-	// kernel's actor system & config
-	caf::actor_system_config actor_cfg_;
+	// kernel's actor system
 	// delayed actor system initialization
 	std::unique_ptr<caf::actor_system> actor_sys_;
 
@@ -47,10 +46,6 @@ public:
 	kernel_impl()
 		: init_state_(InitState::NonInitialized)
 	{
-		// [TODO] implement actor system config parsing
-		// load middleman module
-		actor_cfg_.load<caf::io::middleman>();
-
 		// [NOTE] We can't create `caf::actor_system` here.
 		// `actor_system` starts worker and other service threads in constructor.
 		// At the same time kernel singleton is constructed most of the time during

@@ -31,6 +31,7 @@ kernel_cpp_list = [
 	"src/str_utils.cpp",
 	"src/error.cpp",
 	"src/kernel_ston.cpp",
+	"src/kernel_config_subsyst.cpp",
 	"src/kernel_logging_subsyst.cpp",
 	"src/kernel_plugins_subsyst.cpp",
 	"src/kernel_instance_subsyst.cpp",
