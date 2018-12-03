@@ -104,6 +104,9 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	/*-----------------------------------------------------------------
 	 * plugins managing
 	 *----------------------------------------------------------------*/
+	using fname_set = std::set< std::string >;
+	auto discover_plugins() -> fname_set;
+
 	void clean_plugin_types(const plugin_descriptor& pd);
 
 	void unload_plugin(const plugin_descriptor& pd);

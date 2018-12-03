@@ -12,11 +12,10 @@
 #endif
 
 #include "kernel_plugins_subsyst.h"
-#include "kernel_plugins_discover.h"
 #include <bs/error.h>
 #include <bs/log.h>
 
-#define KERNEL_VERSION "0.1" //!< version of blue-sky kernel
+#define BS_KERNEL_VERSION "0.1" //!< version of blue-sky kernel
 
 /*-----------------------------------------------------------------------------
  *  BS kernel plugin descriptor
@@ -59,7 +58,7 @@ NAMESPACE_BEGIN(detail)
 // init kernel plugin descriptors
 const plugin_descriptor& kernel_plugins_subsyst::kernel_pd() {
 	static const plugin_descriptor kernel_pd(
-		BS_GET_TI(__kernel_types_pd_tag__), "kernel", KERNEL_VERSION,
+		BS_GET_TI(__kernel_types_pd_tag__), "kernel", BS_KERNEL_VERSION,
 		"BlueSky virtual kernel plugin", "bs",
 		(void*)&cereal::detail::StaticObject<cereal::detail::InputBindingMap>::getInstance(),
 		(void*)&cereal::detail::StaticObject<cereal::detail::OutputBindingMap>::getInstance()
@@ -69,7 +68,7 @@ const plugin_descriptor& kernel_plugins_subsyst::kernel_pd() {
 
 const plugin_descriptor& kernel_plugins_subsyst::runtime_pd() {
 	static const plugin_descriptor runtime_pd(
-		BS_GET_TI(__runtime_types_pd_tag__), "runtime", KERNEL_VERSION,
+		BS_GET_TI(__runtime_types_pd_tag__), "runtime", BS_KERNEL_VERSION,
 		"BlueSky virtual plugin for runtime types", "bs"
 	);
 	return runtime_pd;
@@ -344,7 +343,7 @@ int kernel_plugins_subsyst::load_plugin(
 
 int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
 	// discover plugins
-	auto plugins = plugins_discover().go();
+	auto plugins = discover_plugins();
 	BSOUT << "--------" << bs_end;
 	if(!plugins.size())
 		BSOUT << "No plugins were found!" << bs_end;
