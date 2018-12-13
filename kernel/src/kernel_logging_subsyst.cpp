@@ -66,23 +66,23 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 	std::lock_guard<std::mutex> play_solo(solo_);
 
 	spdlog::sink_ptr res;
-	// check if we already created sink with desired fname
+	// check if sink with desired fname is already created
 	auto S = sinks_.find(desired_fname);
 	if(S != sinks_.end()) {
 		res = S->second;
 	}
 	else {
 		// if not -- create it
-		// split desired fname into name and extension
 		const bfs::path logf(desired_fname);
 		const auto logf_ext = logf.extension();
-		const auto logf_body = logf.parent_path() / logf.stem();
+		const auto logf_parent = logf.parent_path();
+		const auto logf_body = logf_parent / logf.stem();
 		// create parent dir
-		if(!bfs::exists(logf.parent_path())) {
+		if(!logf_parent.empty() && !bfs::exists(logf_parent)) {
 			boost::system::error_code er;
-			bfs::create_directories(logf.parent_path(), er);
+			bfs::create_directories(logf_parent, er);
 			if(er) {
-				std::cerr << "[E] Failed to create log file " << desired_fname
+				std::cerr << "[E] Failed to create parent path for log file " << desired_fname
 					<< ": " << er.message() << std::endl;
 				return null_sink;
 			}
@@ -107,6 +107,8 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 			catch(...) {}
 		}
 	}
+	// print err if couldn't create log file
+	if(!res) std::cerr << "[E] Failed to create log file " << desired_fname << std::endl;
 
 	// configure sink
 	if(res && !logger_name.empty()) {
@@ -116,7 +118,6 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 		));
 	}
 
-	// can't create log file - return null sink
 	return res ? res : null_sink;
 }
 
