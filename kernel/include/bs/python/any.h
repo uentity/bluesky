@@ -1,7 +1,7 @@
 /// @file
 /// @author uentity
 /// @date 26.09.2017
-/// @brief Cast of boost::any
+/// @brief Python binding for std::any
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -10,9 +10,9 @@
 #pragma once
 
 #include <pybind11/pybind11.h>
-#include <boost/any.hpp>
+#include <any>
 #include <bs/fwd.h>
-#define bs_any boost::any
+#define bs_any std::any
 
 NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)
 /*-----------------------------------------------------------------------------
@@ -43,7 +43,7 @@ template<> struct type_caster<bs_any> {
 	template <typename PyType, typename U, typename... Us>
 	static handle cast_alternative(bs_any& src, type_list<PyType, U, Us...>) {
 		if(src.type() == typeid(U))
-			return PyType(boost::any_cast<U>(src)).release();
+			return PyType(std::any_cast<U>(src)).release();
 		return cast_alternative(src, type_list<PyType, Us...>());
 	}
 	template <typename PyType>
@@ -62,7 +62,7 @@ template<> struct type_caster<bs_any> {
 		if(!simple.is(none()))
 			return simple;
 		else if(src_t == typeid(bool))
-			return bool_(boost::any_cast<bool>(src));
+			return bool_(std::any_cast<bool>(src));
 		else if(!(simple = cast_alternative(src, type_list<py::float_, float, double>())).is(none()) ||
 			!(simple = cast_alternative(src, type_list<py::str, std::string, const char*, char*>())).is(none())
 		)
@@ -70,7 +70,7 @@ template<> struct type_caster<bs_any> {
 		else if(src_t == typeid(sp_obj)) {
 			auto bs_caster = make_caster<sp_obj>();
 			return bs_caster.cast(
-				boost::any_cast<sp_obj>(src),
+				std::any_cast<sp_obj>(src),
 				pol, parent
 			);
 		}
