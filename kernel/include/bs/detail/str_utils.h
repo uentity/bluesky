@@ -30,22 +30,20 @@ ignoreLine(std::basic_istream <charT, traits>& strm)
 
 // trim from start
 static inline std::string ltrim(const std::string& S) {
+	using isspace_t = int (*)(int);
 	std::string s = S;
-	s.erase(s.begin(), std::find_if(
-		s.begin(), s.end(),
-		std::not1(std::ptr_fun<int, int>(std::isspace))
-	));
+	s.erase(
+		s.begin(), std::find_if( s.begin(), s.end(), std::not_fn(isspace_t(std::isspace)) )
+	);
 	return s;
 }
 
 // trim from end
 static inline std::string rtrim(const std::string& S) {
+	using isspace_t = int (*)(int);
 	std::string s = S;
 	s.erase(
-		std::find_if(
-			s.rbegin(), s.rend(),
-			std::not1(std::ptr_fun<int, int>(std::isspace))
-		).base(),
+		std::find_if(s.rbegin(), s.rend(), std::not_fn(isspace_t(std::isspace))).base(),
 		s.end()
 	);
 	return s;

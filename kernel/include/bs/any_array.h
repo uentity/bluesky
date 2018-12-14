@@ -1,7 +1,7 @@
 /// @file
 /// @author uentity
 /// @date 03.04.2017
-/// @brief any_array is an array of values of arbitrary type, based on boost::any
+/// @brief any_array is an array of values of arbitrary type, based on std::any
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -10,15 +10,15 @@
 #pragma once
 
 #include "common.h"
-#include <boost/any.hpp>
+#include <any>
 #include <map>
 
 NAMESPACE_BEGIN(blue_sky)
 
 template< template< class > class cont_traits >
-class any_array : public cont_traits< boost::any > {
+class any_array : public cont_traits< std::any > {
 public:
-	using container_t = cont_traits< boost::any >;
+	using container_t = cont_traits< std::any >;
 
 private:
 	// SFINAE check if container T has mapped_type defined
@@ -61,7 +61,7 @@ public:
 			return k < C.size();
 		}
 
-		static bool insert(Cont& C, const key_type& k, boost::any value) {
+		static bool insert(Cont& C, const key_type& k, std::any value) {
 			if(k <= C.size()) {
 				C.insert(std::next(C.begin(), k), std::move(value));
 				return true;
@@ -95,7 +95,7 @@ public:
 			return C.find(k) != C.end();
 		}
 
-		static bool insert(Cont& C, const key_type& k, boost::any value) {
+		static bool insert(Cont& C, const key_type& k, std::any value) {
 			return C.insert(value_type(k, std::move(value))).second;
 		}
 	};
@@ -104,7 +104,7 @@ public:
 
 	// helper class to auto-convert return type to destination const reference type
 	struct value_cast {
-		explicit value_cast(const boost::any& val) : val_(val) {}
+		explicit value_cast(const std::any& val) : val_(val) {}
 
 		// only move semantics allowed
 		value_cast(const value_cast&) = delete;
@@ -114,11 +114,11 @@ public:
 		// allow only implicit conversions to const reference
 		template< typename T >
 		operator T() const && {
-			return boost::any_cast< const T& >(val_);
+			return std::any_cast< const T& >(val_);
 		}
 
 	private:
-		const boost::any& val_;
+		const std::any& val_;
 	};
 
 	using key_type = typename trait::key_type;
@@ -150,13 +150,13 @@ public:
 	// value type is specified explicitly
 	template< typename value_type >
 	value_type& ss(const key_type& key) {
-		return boost::any_cast< value_type& >(
+		return std::any_cast< value_type& >(
 			trait::iter2val(trait::find(*this, key))
 		);
 	}
 	template< typename value_type >
 	const value_type& ss(const key_type& key) const {
-		return boost::any_cast< const value_type& >(
+		return std::any_cast< const value_type& >(
 			trait::iter2val(trait::find(*this, key))
 		);
 	}
@@ -178,10 +178,10 @@ public:
 		if(pval == end()) return false;
 		try {
 			// copy value from source to target
-			target = boost::any_cast< const value_type& >(trait::iter2val(pval));
+			target = std::any_cast< const value_type& >(trait::iter2val(pval));
 			return true;
 		}
-		catch(const boost::bad_any_cast&) {
+		catch(const std::bad_any_cast&) {
 			return false;
 		}
 	}
@@ -225,7 +225,7 @@ public:
 		for(auto pv = begin(); pv != end(); ++pv) {
 			auto& val = trait::iter2val(pv);
 			if(val.type() == typeid(T))
-				res.emplace_back(boost::any_cast< T >(val));
+				res.emplace_back(std::any_cast< T >(val));
 		}
 		return res;
 	}
@@ -237,7 +237,7 @@ public:
 		for(auto pv = begin(); pv != end(); ++pv) {
 			auto& val = trait::iter2val(pv);
 			if(val.type() == typeid(T))
-				res[trait::iter2key(*this, pv)] = boost::any_cast< T >(val);
+				res[trait::iter2key(*this, pv)] = std::any_cast< T >(val);
 		}
 		return res;
 	}

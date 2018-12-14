@@ -19,10 +19,10 @@ NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)
 template<> struct type_caster<blue_sky::type_tuple> {
 	// carry resuling value
 	using Type = blue_sky::type_tuple;
-	bs_optional<Type> value;
+	std::optional<Type> value;
 	// if constructed from str name, we need to hold temp objects
-	bs_optional<blue_sky::plugin_descriptor> pd_;
-	bs_optional<blue_sky::type_descriptor> td_;
+	std::optional<blue_sky::plugin_descriptor> pd_;
+	std::optional<blue_sky::type_descriptor> td_;
 
 	// caster-related interface
 	static constexpr auto name = _("BS type tuple");
@@ -34,7 +34,7 @@ template<> struct type_caster<blue_sky::type_tuple> {
 	// helper to extract ref to given type from string or type instance
 	// last parameter is holder for temp object initialized when string is passed
 	template<typename T>
-	static const T* load_str_or_T(handle src, bool convert, bs_optional<T>& tmp) {
+	static const T* load_str_or_T(handle src, bool convert, std::optional<T>& tmp) {
 		if(pybind11::isinstance<pybind11::str>(src)) {
 			auto caster = make_caster<std::string>();
 			if(caster.load(src, convert)) {

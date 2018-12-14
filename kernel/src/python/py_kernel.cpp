@@ -37,6 +37,7 @@ template< template<class> class array_traits >
 void bind_any_array(py::module& m, const char* type_name) {
 	using any_array_t = any_array<array_traits>;
 	using key_type = typename any_array_t::key_type;
+	using container_t = typename any_array_t::container_t;
 
 	py::class_<any_array_t>(m, type_name)
 		.def(py::init<>())
@@ -44,8 +45,8 @@ void bind_any_array(py::module& m, const char* type_name) {
 			[](const any_array_t& A) -> bool { return !A.empty(); },
 			"Check whether the array is nonempty"
 		)
-		.def("__len__", (std::size_t (any_array_t::*)() const) &any_array_t::size)
-		.def_property_readonly("size", (std::size_t (any_array_t::*)() const) &any_array_t::size)
+		.def("__len__", &container_t::size)
+		.def_property_readonly("size", &container_t::size)
 		.def("__contains__", [](const any_array_t& A, const key_type& k) { return A.has_key(k); })
 		.def("__getitem__", [](const any_array_t& A, const key_type& k) {
 			using array_trait = typename any_array_t::trait;
@@ -59,7 +60,7 @@ void bind_any_array(py::module& m, const char* type_name) {
 			if(py::isinstance<py::bool_>(value))
 				set_any_array_value(A, k, py::cast<bool>(value));
 			else if(py::isinstance<py::int_>(value))
-				set_any_array_value(A, k, py::cast<long>(value));
+				set_any_array_value(A, k, py::cast<std::intmax_t>(value));
 			else if(py::isinstance<py::float_>(value))
 				set_any_array_value(A, k, py::cast<double>(value));
 			else if(py::isinstance<py::str>(value))

@@ -32,24 +32,6 @@
 	#endif
 #endif
 
-// detect C++17 support
-#if !defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-#  if __cplusplus >= 201402L
-#    define BS_CPP14
-#    if __cplusplus > 201402L /* Temporary: should be updated to >= the final C++17 value once known */
-#      define BS_CPP17
-#    endif
-#  endif
-#elif defined(_MSC_VER)
-// MSVC sets _MSVC_LANG rather than __cplusplus (supposedly until the standard is fully implemented)
-#  if _MSVC_LANG >= 201402L
-#    define BS_CPP14
-#    if _MSVC_LANG > 201402L && _MSC_VER >= 1910
-#      define BS_CPP17
-#    endif
-#  endif
-#endif
-
 // local BS includes
 // API macro definitions
 #include "setup_common_api.h"
@@ -63,13 +45,7 @@
 #include <string>
 #include <iosfwd>
 #include <algorithm>
-#ifdef BS_CPP17
-	#include <optional>
-	#define bs_optional std::optional
-#else
-	#include <boost/optional.hpp>
-	#define bs_optional boost::optional
-#endif
+#include <optional>
 
 #include "fwd.h"
 #include "type_info.h"
