@@ -10,11 +10,7 @@
 #pragma once
 
 #include "common.h"
-#ifndef BS_CPP17
-#include "detail/apply.h"
-#else
 #include "detail/tuple_utils.h"
-#endif
 #include <spdlog/logger.h>
 
 namespace blue_sky { namespace log {
