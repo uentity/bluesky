@@ -349,9 +349,7 @@ inline bool operator !=(const type_descriptor& td, const BS_TYPE_INFO& ti) {
 
 // upcastable_eq(td1, td2) will return true if td1 != td2
 // but td1 can be casted up to td2 (i.e. td1 is inherited from td1)
-struct BS_API upcastable_eq : public std::binary_function<
-	type_descriptor, type_descriptor, bool
-> {
+struct BS_API upcastable_eq {
 	bool operator()(const type_descriptor& td1, const type_descriptor& td2) const;
 };
 
