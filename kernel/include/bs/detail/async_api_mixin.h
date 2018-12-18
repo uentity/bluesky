@@ -16,6 +16,7 @@ namespace blue_sky { namespace detail {
 template<class Derived>
 class async_api_mixin {
 public:
+	using message_priority = caf::message_priority;
 	explicit async_api_mixin() : sender_(BS_KERNEL.actor_system(), true) {}
 
 	// link sender with target actor, so they die together
@@ -24,9 +25,9 @@ public:
 	}
 
 	// pass any message to target actor
-	template<typename... Args>
+	template<message_priority P = message_priority::normal, typename... Args>
 	auto send(Args&&... args) const {
-		return sender_->send(derived().actor(), std::forward<Args>(args)...);
+		return sender_->send<P>(derived().actor(), std::forward<Args>(args)...);
 	}
 
 	auto sender() const -> const caf::scoped_actor& {

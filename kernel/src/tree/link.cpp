@@ -184,12 +184,20 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const 
 	return pimpl_->rs_reset_if_neq(request, self, new_rs);
 }
 
-auto link::data(process_data_cb f, bool wait_if_busy) const -> void {
-	pimpl_->send(lnk_data_atom(), this->shared_from_this(), std::move(f), wait_if_busy);
+auto link::data(process_data_cb f, bool high_priority) const -> void {
+	high_priority ?
+		pimpl_->send<caf::message_priority::high>(
+			lnk_data_atom(), shared_from_this(), std::move(f), true
+		) :
+		pimpl_->send(lnk_data_atom(), shared_from_this(), std::move(f), true);
 }
 
-auto link::data_node(process_data_cb f, bool wait_if_busy) const -> void {
-	pimpl_->send(lnk_dnode_atom(), this->shared_from_this(), std::move(f), wait_if_busy);
+auto link::data_node(process_data_cb f, bool high_priority) const -> void {
+	high_priority ?
+		pimpl_->send<caf::message_priority::high>(
+			lnk_dnode_atom(), shared_from_this(), std::move(f), true
+		) :
+		pimpl_->send(lnk_dnode_atom(), shared_from_this(), std::move(f), true);
 }
 
 /*-----------------------------------------------------------------------------

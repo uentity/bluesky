@@ -128,9 +128,9 @@ public:
 
 	/// obtain data in async manner passing it to callback
 	using process_data_cb = std::function<void(result_or_err<sp_obj>, sp_clink)>;
-	auto data(process_data_cb f, bool wait_if_busy = true) const -> void;
+	auto data(process_data_cb f, bool high_priority = false) const -> void;
 	/// ... and data node
-	auto data_node(process_data_cb f, bool wait_if_busy = true) const -> void;
+	auto data_node(process_data_cb f, bool high_priority = false) const -> void;
 
 protected:
 	// serialization support

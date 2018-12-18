@@ -222,12 +222,12 @@ void py_bind_tree(py::module& m) {
 		.def("data_ex", &link::data_ex, "wait_if_busy"_a = true)
 		.def("data", py::overload_cast<>(&link::data, py::const_))
 		.def("data", py::overload_cast<link::process_data_cb, bool>(&link::data, py::const_),
-			"f"_a, "wait_if_busy"_a = true
+			"f"_a, "high_priority"_a = false
 		)
 		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = true)
 		.def("data_node", py::overload_cast<>(&link::data_node, py::const_))
 		.def("data_node", py::overload_cast<link::process_data_cb, bool>(&link::data_node, py::const_),
-			"f"_a, "wait_if_busy"_a = true
+			"f"_a, "high_priority"_a = false
 		)
 		.def("type_id", &link::type_id)
 		.def("oid", &link::oid)
