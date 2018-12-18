@@ -46,17 +46,6 @@ BS_API void walk(
 	bool topdown = true, bool follow_symlinks = true
 );
 
-///////////////////////////////////////////////////////////////////////////////
-//  Tree save/load to JSON or binary archive
-//
-enum class TreeArchive { Text, Binary };
-BS_API auto
-	save_tree(const sp_link& root, const std::string& filename, TreeArchive ar = TreeArchive::Text)
--> error;
-BS_API auto
-	load_tree(const std::string& filename, TreeArchive ar = TreeArchive::Text)
--> result_or_err<sp_link>;
-
 /*-----------------------------------------------------------------------------
  *  Async API
  *-----------------------------------------------------------------------------*/
@@ -65,7 +54,8 @@ using deref_process_f = std::function<void(const sp_link&)>;
 // accept std::function callback
 BS_API auto deref_path(
 	deref_process_f f,
-	std::string path, sp_link start, node::Key path_unit = node::Key::ID
+	std::string path, sp_link start, node::Key path_unit = node::Key::ID,
+	bool high_priority = false
 ) -> void;
 // [TODO] can't be compiled for some reason, enable after problem is solved
 // same as above but accept function pointer
@@ -102,6 +92,17 @@ BS_API auto make_root_link(
 	const std::string& link_type, std::string name = "/",
 	sp_node root_node = nullptr
 ) -> sp_link;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Tree save/load to JSON or binary archive
+//
+enum class TreeArchive { Text, Binary };
+BS_API auto
+	save_tree(const sp_link& root, const std::string& filename, TreeArchive ar = TreeArchive::Text)
+-> error;
+BS_API auto
+	load_tree(const std::string& filename, TreeArchive ar = TreeArchive::Text)
+-> result_or_err<sp_link>;
 
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
 

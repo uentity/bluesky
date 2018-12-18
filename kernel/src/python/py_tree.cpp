@@ -511,12 +511,12 @@ void py_bind_tree(py::module& m) {
 	);
 	m.def("deref_path", py::overload_cast<const std::string&, const sp_link&, node::Key>(&deref_path),
 		"path"_a, "start"_a, "path_unit"_a = node::Key::ID,
-		"Quick link search by given abs path (ID-based!)"
+		"Quick link search by given path relative to `start`"
 	);
 	// async deref_path
-	m.def("deref_path", py::overload_cast<deref_process_f, std::string, sp_link, node::Key>(&deref_path),
-		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = node::Key::ID,
-		"Quick link search by given abs path (ID-based!)"
+	m.def("deref_path", py::overload_cast<deref_process_f, std::string, sp_link, node::Key, bool>(&deref_path),
+		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = node::Key::ID, "high_priority"_a = false,
+		"Async quick link search by given path relative to `start`"
 	);
 
 	// bind list of links as opaque type 

@@ -72,7 +72,7 @@ NAMESPACE_END()
 
 template<typename DerefProcessF>
 auto deref_path_async(
-	std::string path, sp_link lnk, walk_down_ft&& lp, DerefProcessF&& dp
+	std::string path, sp_link lnk, walk_down_ft&& lp, DerefProcessF&& dp, bool high_priority
 ) -> void {
 	// initialize actor only once
 	static deref_actor<walk_down_ft> actor;
@@ -80,7 +80,11 @@ auto deref_path_async(
 	// sanity
 	if(!lnk) dp(nullptr);
 	// send message
-	actor.send(std::move(path), std::move(lnk), std::move(lp), std::move(dp));
+	high_priority ?
+		actor.send<caf::message_priority::high>(
+			std::move(path), std::move(lnk), std::move(lp), std::move(dp)
+		) :
+		actor.send(std::move(path), std::move(lnk), std::move(lp), std::move(dp));
 }
 
 NAMESPACE_END(detail)
@@ -89,10 +93,13 @@ NAMESPACE_END(detail)
  *  async tree fucntions
  *-----------------------------------------------------------------------------*/
 // same as above but accept std::function
-auto deref_path(deref_process_f f, std::string path, sp_link start, node::Key path_unit) -> void {
+auto deref_path(
+	deref_process_f f, std::string path, sp_link start, node::Key path_unit, bool high_priority
+) -> void {
 	detail::deref_path_async<deref_process_f>(
 		std::move(path), std::move(start),
-		detail::gen_walk_down_tree(path_unit), std::move(f)
+		detail::gen_walk_down_tree(path_unit), std::move(f),
+		high_priority
 	);
 }
 // accept function
