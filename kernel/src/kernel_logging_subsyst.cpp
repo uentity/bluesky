@@ -18,8 +18,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
-#include <boost/filesystem.hpp>
-
+#include <filesystem>
 #include <unordered_map>
 #include <atomic>
 
@@ -34,7 +33,7 @@ constexpr auto DEF_FLUSH_LEVEL = spdlog::level::err;
 
 using namespace blue_sky::detail;
 using namespace blue_sky;
-namespace bfs = boost::filesystem;
+namespace fs = std::filesystem;
 
 NAMESPACE_BEGIN()
 ///////////////////////////////////////////////////////////////////////////////
@@ -73,14 +72,14 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 	}
 	else {
 		// if not -- create it
-		const bfs::path logf(desired_fname);
+		const auto logf = fs::path(desired_fname);
 		const auto logf_ext = logf.extension();
 		const auto logf_parent = logf.parent_path();
 		const auto logf_body = logf_parent / logf.stem();
 		// create parent dir
-		if(!logf_parent.empty() && !bfs::exists(logf_parent)) {
-			boost::system::error_code er;
-			bfs::create_directories(logf_parent, er);
+		if(!logf_parent.empty() && !fs::exists(logf_parent)) {
+			std::error_code er;
+			fs::create_directories(logf_parent, er);
 			if(er) {
 				std::cerr << "[E] Failed to create parent path for log file " << desired_fname
 					<< ": " << er.message() << std::endl;
@@ -96,11 +95,12 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 
 			try {
 				res = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-					cur_logf.string(), ROTATING_FSIZE_DEFAULT, 1
+					cur_logf, ROTATING_FSIZE_DEFAULT, 1
 				);
 				if(res) {
 					res->set_pattern(FILE_LOG_PATTERN);
 					sinks_.insert( {desired_fname, res} );
+					std::cout << "[I] Using log file " << cur_logf.native() << std::endl;
 					break;
 				}
 			}

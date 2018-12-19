@@ -7,7 +7,7 @@ lib_name = 'blue_sky';
 tar_name = 'kernel';
 
 # list of Boost libs used by kernel
-kboost_libs = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'locale', 'serialization'];
+kboost_libs = ['filesystem', 'regex', 'thread', 'signals', 'serialization', 'locale'];
 
 # init stage
 if build_kind == "init" :
@@ -81,7 +81,7 @@ base_env = custom_env.Clone();
 base_env.AppendUnique(
 	CPPDEFINES = ['BS_EXPORTING'],
 	CPPPATH = ['#kernel/src'],
-	LIBS = ['loki']
+	LIBS = ['loki', 'stdc++fs']
 );
 if base_env['platform'].startswith('lin') :
 	base_env.Append(LIBS = ['dl']);
