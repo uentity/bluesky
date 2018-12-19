@@ -12,8 +12,8 @@
 #include <bs/detail/str_utils.h>
 #include "kernel_plugins_subsyst.h"
 
+#include <filesystem>
 #include <boost/regex.hpp>
-#include <boost/filesystem.hpp>
 
 #ifdef UNIX
 #	define SPL ":"
@@ -23,6 +23,8 @@
 
 #define BS_PLUG_PATH "BLUE_SKY_PLUGINS_PATH"
 #define STRCAT(a,b) (std::string(a) + b)
+
+namespace fs = std::filesystem;
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(detail)
 using namespace boost;
@@ -74,13 +76,6 @@ vstr_t split_path_list(const std::string& str) {
 	return paths;
 }
 
-static std::string getenv_def(const char* var_name, const std::string& def_val = ".") {
-	std::string val = ::getenv(var_name);
-	if(val.size())
-		return val;
-	else return def_val;
-}
-
 template< typename dest_t, typename value_t >
 void push_unique(dest_t& dest, value_t&& value, bool push_front = false) {
 	// skip repeating values
@@ -94,22 +89,18 @@ void push_unique(dest_t& dest, value_t&& value, bool push_front = false) {
 }
 
 // [NOTE] grows res inplace
-void search_files(const char* mask, const std::string& dir, fname_set& res) {
-	using namespace boost::filesystem;
-
+void search_files(const char* mask, const fs::path& dir, fname_set& res) {
 	try {
-		path pdir(dir);
-
 		// first file of directory as iterator
-		for(directory_entry& node : directory_iterator(pdir)) {
-			if(is_directory(node)) continue;
-			auto node_path = node.path().string();
+		for(const fs::directory_entry& node : fs::directory_iterator(dir)) {
+			if(fs::is_directory(node)) continue;
+			auto node_path = node.path().native();
 			if(regex_search(node_path, regex(std::string("^(.*)") + mask + '$'))) {
 				res.emplace(std::move(node_path));
 			}
 		}
 	}
-	catch(const filesystem::filesystem_error&) {
+	catch(const fs::filesystem_error&) {
 		// [NOTE] don't spam logs with non-found paths, etc
 		//BSERROR << log::W(e.what()) << bs_end;
 	}
@@ -123,7 +114,8 @@ NAMESPACE_END() // eof hidden namespace
 // return set of discovered plugins
 auto kernel_plugins_subsyst::discover_plugins() -> fname_set {
 	// resulting paths container
-	vstr_t plugins_paths;
+	std::deque<fs::path> plugins_paths;
+
 	// 1. Extract list of plugin paths from configs
 	auto conf_paths = caf::get_or<string_list>(BS_KERNEL.config(), "path.plugins", {});
 	for(auto& P : conf_paths)
@@ -137,23 +129,23 @@ auto kernel_plugins_subsyst::discover_plugins() -> fname_set {
 			push_unique(plugins_paths, std::move(P));
 	}
 
-	// 3. Add some predefined paths as a fallback - lowest priority
+	// 3. Add some predefined paths
 #ifdef UNIX
-	push_unique(plugins_paths, getenv_def("HOME") + "/.blue-sky/plugins");
+	push_unique(plugins_paths, fs::path(::getenv("HOME")) / ".blue-sky/plugins");
 	push_unique(plugins_paths, "/usr/share/blue-sky/plugins");
 #else // WINDOWS
-	push_unique(plugins_paths, getenv_def("ALLUSERSPROFILE") + "\\Application Data\\blue-sky\\plugins");
-	push_unique(plugins_paths, getenv_def("APPDATA") + "\\blue-sky\\plugins");
+	push_unique(plugins_paths, fs::path(::getenv("ALLUSERSPROFILE")) / "Application Data/blue-sky/plugins");
+	push_unique(plugins_paths, fs::path(::getenv("APPDATA")) / "blue-sky/plugins");
 #endif // UNIX
 	// [TODO] discover path to kernel library as fallback
-	// if no paths were set in config files, add current dir as highest priority search path
+	// if no paths were set in config files, add current dir as lowest priority search path
 	if(plugins_paths.empty()) push_unique(plugins_paths, ".");
 
 	// print some info
 	BSOUT << "--------" << bs_end;
 	BSOUT << "Search for plugins in following discovered paths:" << bs_end;
 	for(const auto& path : plugins_paths) {
-		BSOUT << path << bs_end;
+		BSOUT << path.native() << bs_end;
 	}
 
 	// search for plugins inside discovered directories

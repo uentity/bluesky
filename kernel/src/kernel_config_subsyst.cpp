@@ -155,7 +155,7 @@ kernel_config_subsyst::kernel_config_subsyst() {
 	conf_path_.push_back("blue-sky.ini");
 }
 
-void kernel_config_subsyst::configure(string_list args, std::string ini_fname, bool force) {
+auto kernel_config_subsyst::configure(string_list args, std::string ini_fname, bool force) -> void {
 	// build list of config files to parse
 	std::vector<fs::path> ini2parse;
 	// first read predefined configs
@@ -236,6 +236,11 @@ void kernel_config_subsyst::configure(string_list args, std::string ini_fname, b
 		actor_cfg_.load<caf::io::middleman>();
 
 	kernel_configured = true;
+}
+
+auto kernel_config_subsyst::clear_confdata() -> void {
+	confdata_.clear();
+	kernel_configured = false;
 }
 
 NAMESPACE_END(detail) NAMESPACE_END(blue_sky)

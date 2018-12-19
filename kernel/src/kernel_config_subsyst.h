@@ -23,9 +23,9 @@ struct BS_HIDDEN_API kernel_config_subsyst {
 	/// impl is taken from CAF sources
 	/// parse config options from arguments and ini file content
 	/// if `force` is true, force config files reparse
-	void configure(string_list args = {}, std::string ini_fname = "", bool force = false);
+	auto configure(string_list args = {}, std::string ini_fname = "", bool force = false) -> void;
 
-	void clear_config();
+	auto clear_confdata() -> void;
 
 	// kernel's actor system & config
 	caf::actor_system_config actor_cfg_;
