@@ -22,6 +22,7 @@
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(detail)
 using namespace caf;
+namespace fs = std::filesystem;
 using string_list = kernel_config_subsyst::string_list;
 
 // hidden helper functions
@@ -144,35 +145,25 @@ kernel_config_subsyst::kernel_config_subsyst() {
 	*-----------------------------------------------------------------------------*/
 	std::string home_path;
 #ifdef UNIX
-	conf_path_.push_back("/etc/blue-sky/blue-sky.ini");
-	home_path = ::getenv("HOME");
-	if(!home_path.empty())
-		conf_path_.push_back(home_path + "/.blue-sky/blue-sky.ini");
+	conf_path_.emplace_back("/etc/blue-sky/blue-sky.ini");
+	conf_path_.push_back( fs::path(::getenv("HOME")) / ".blue-sky/blue-sky.ini" );
 #else // WINDOWS
-	home_path = ::getenv("ALLUSERSPROFILE");
-	if(!home_path.empty())
-		conf_path_.push_back(home_path + "\\blue-sky\\blue-sky.ini");
-	home_path = ::getenv("USERPROFILE");
-	if(!home_path.empty())
-		conf_path_.push_back(home_path + "\\blue-sky\\blue-sky.ini");
+	conf_path_.push_back( fs::path(::getenv("ALLUSERSPROFILE")) / "blue-sky/blue-sky.ini" );
+	conf_path_.push_back( fs::path(::getenv("USERPROFILE")) / "blue-sky/blue-sky.ini" );
 #endif // UNIX
-	// as fallback add possibility to read conf_path_ from current path
+	// as fallback add possibility to read config from current path
 	conf_path_.push_back("blue-sky.ini");
-
-	// [TODO] implement actor system config parsing
-	// load middleman module
-	actor_cfg_.load<caf::io::middleman>();
 }
 
 void kernel_config_subsyst::configure(string_list args, std::string ini_fname, bool force) {
 	// build list of config files to parse
-	string_list ini2parse;
+	std::vector<fs::path> ini2parse;
 	// first read predefined configs
 	if(!kernel_configured || force)
 		std::copy(conf_path_.begin(), conf_path_.end(), std::back_inserter(ini2parse));
-	// then custom configs passed from CLI and ``ini_fname`` - overrides predefined
+	// then custom configs passed from CLI and `ini_fname` - overrides predefined
 	for(auto& p : std::array<std::string, 2>{
-			extract_config_file_path(args), std::move(ini_fname)
+		extract_config_file_path(args), std::move(ini_fname)
 	}) {
 		if( !p.empty() && std::find(conf_path_.begin(), conf_path_.end(), p) == conf_path_.end() )
 			ini2parse.emplace_back(std::move(p));
@@ -195,11 +186,17 @@ void kernel_config_subsyst::configure(string_list args, std::string ini_fname, b
 				caf::detail::parser::read_ini(res, consumer);
 				if (res.i != res.e) {
 					status = false;
-					bserr() << log::W("*** error in config file [line {} col {}]: {}")
-						<< res.line << res.column << to_string(res.code) << log::end;
+					bserr() << log::W("*** error in {} [line {} col {}]: {}")
+						<< ini_path.native() << res.line << res.column << to_string(res.code) << log::end;
 				}
 			}
-			bsout() << "{} - {}" << ini_path << (status ? "OK" : "Fail") << log::end;
+			bsout() << "{} - {}" << ini_path.native() << (status ? "OK" : "Fail") << log::end;
+			// try to read CAF config from the same dir as BS config
+			const auto caf_ini_path = ini_path.parent_path() / "caf.ini";
+			if(( ini = std::ifstream(caf_ini_path) )) {
+				actor_cfg_.parse({}, ini);
+				bsout() << "{} - {}" << caf_ini_path.native() << "CAF" << log::end;
+			}
 		}
 	}
 
@@ -233,6 +230,10 @@ void kernel_config_subsyst::configure(string_list args, std::string ini_fname, b
 		bsout() << confdump.str() << log::end;
 		put(confdata_, "global.dump-config", false);
 	}
+
+	// load middleman module only once
+	if(!kernel_configured)
+		actor_cfg_.load<caf::io::middleman>();
 
 	kernel_configured = true;
 }

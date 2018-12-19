@@ -11,9 +11,7 @@
 #include <bs/common.h>
 #include <caf/actor_system_config.hpp>
 
-#include <deque>
-#include <set>
-#include <map>
+#include <filesystem>
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(detail)
 
@@ -36,12 +34,11 @@ struct BS_HIDDEN_API kernel_config_subsyst {
 
 private:
 	// paths of possible config file location
-	string_list conf_path_;
+	std::vector<std::filesystem::path> conf_path_;
 	// predefined config options that can be parsed from CLI or config file
 	caf::config_option_set confopt_;
 	// flag indicating if kernel was configured at least once
 	bool kernel_configured = false;
-	bool cli_helptext_printed = false;
 };
 
 NAMESPACE_END(detail) NAMESPACE_END(blue_sky)
