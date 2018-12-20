@@ -29,16 +29,16 @@ struct BS_HIDDEN_API kernel_config_subsyst {
 
 	static auto is_configured() -> bool;
 
-	// kernel's actor system & config
-	caf::actor_system_config actor_cfg_;
+	// predefined config options that can be parsed from CLI or config file
+	caf::config_option_set confopt_;
 	// config values storage: map from string key -> any parsed value
 	caf::config_value_map confdata_;
+	// kernel's actor system & config
+	caf::actor_system_config actor_cfg_;
 
 private:
 	// paths of possible config file location
 	std::vector<std::filesystem::path> conf_path_;
-	// predefined config options that can be parsed from CLI or config file
-	caf::config_option_set confopt_;
 	// flag indicating if kernel was configured at least once
 	static bool kernel_configured;
 };

@@ -65,6 +65,10 @@ auto kernel::config() const -> const caf::config_value_map& {
 	return pimpl_->confdata_;
 }
 
+auto kernel::config_section(std::string_view name) -> caf::config_option_adder {
+	return caf::config_option_adder(pimpl_->confopt_, name);
+}
+
 int kernel::load_plugin(const std::string& fname, bool init_py_subsyst) {
 	return pimpl_->load_plugin(fname, init_py_subsyst);
 }

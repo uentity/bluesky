@@ -17,6 +17,7 @@
 
 #include <caf/fwd.hpp>
 #include <caf/config_value.hpp>
+#include <caf/config_option_adder.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
 
@@ -174,16 +175,17 @@ public:
 	);
 	/// access to kernel's config variables
 	const caf::config_value_map& config() const;
+	/// allows to add custom options to specified config section
+	caf::config_option_adder config_section(std::string_view name);
+	/// access global CAF actor_system_config
+	caf::actor_system_config& actor_config() const;
+	/// ... and to actors system
+	caf::actor_system& actor_system() const;
 
 	/// unite bindings maps for polymorphic serialization code among all loaded plugins
 	/// such that they can utilize serialization from each other
 	/// function can be called multiple times, for ex. when new plugin is registered
 	void unify_serialization() const;
-
-	/// access global CAF actor_system_config
-	caf::actor_system_config& actor_config() const;
-	/// ... and to actors system
-	caf::actor_system& actor_system() const;
 
 	/// kernel initialization routine
 	/// call this AFTER initialization of statics is done (adter `DllMain()` exit on Windows)
