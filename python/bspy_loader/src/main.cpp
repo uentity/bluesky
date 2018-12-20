@@ -43,8 +43,8 @@ PYBIND11_MODULE(TARGET_NAME, m) {
 	kernel_pd->py_namespace = S_TARGET_NAME;
 	m.doc() = kernel_pd->description;
 
-	// configure kernel
-	BS_KERNEL.configure();
+	// initialize kernel
+	BS_KERNEL.init();
 
 	//load plugins with Python subsystem
 	BS_KERNEL.load_plugins(&m);
