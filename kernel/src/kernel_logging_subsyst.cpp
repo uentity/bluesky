@@ -12,6 +12,7 @@
 #include <bs/kernel_errors.h>
 #include <bs/log.h>
 #include "kernel_logging_subsyst.h"
+#include "kernel_config_subsyst.h"
 
 #include <spdlog/async.h>
 #include <spdlog/sinks/null_sink.h>
@@ -25,8 +26,7 @@
 #define BSCONFIG BS_KERNEL.config()
 #define FILE_LOG_PATTERN "[%Y-%m-%d %T.%e] [%L] %v"
 #define CONSOLE_LOG_PATTERN "[%L] %v"
-#define OUT_FNAME_DEFAULT "blue_sky.log"
-#define ERR_FNAME_DEFAULT "blue_sky_err.log"
+#define LOG_FNAME_PREFIX "bs_"
 constexpr auto ROTATING_FSIZE_DEFAULT = 1024*1024*10;
 constexpr auto DEF_FLUSH_INTERVAL = 5;
 constexpr auto DEF_FLUSH_LEVEL = spdlog::level::err;
@@ -136,7 +136,7 @@ auto create_console_sink(const std::string& logger_name = "") -> spdlog::sink_pt
 
 	if(!logger_name.empty()) {
 		sink_->set_pattern(caf::get_or(
-			BSCONFIG, std::string("logger.console-") + logger_name + "-format",
+			BSCONFIG, std::string("logger.") + logger_name + "-console-format",
 			CONSOLE_LOG_PATTERN
 		));
 	}
@@ -149,7 +149,7 @@ auto create_console_sink(const std::string& logger_name = "") -> spdlog::sink_pt
 //
 template< typename... Sinks >
 auto create_logger(const char* log_name, Sinks... sinks) -> std::shared_ptr<spdlog::logger> {
-	spdlog::sink_ptr S[] = { sinks... };
+	spdlog::sink_ptr S[] = { std::move(sinks)... };
 	try {
 		auto L = std::make_shared<spdlog::logger>( log_name, std::begin(S), std::end(S) );
 		spdlog::register_logger(L);
@@ -165,7 +165,7 @@ auto create_async_logger(const char* log_name, Sinks... sinks) -> std::shared_pt
 	// create null logger and ensure thread pool is initialized
 	static const auto null_mt_logger = spdlog::create_async_nb<spdlog::sinks::null_sink_mt>("null");
 
-	spdlog::sink_ptr S[] = { sinks... };
+	spdlog::sink_ptr S[] = { std::move(sinks)... };
 	try {
 		auto L = std::make_shared<spdlog::async_logger>(
 			log_name, std::begin(S), std::end(S), spdlog::thread_pool()
@@ -187,49 +187,35 @@ auto bs_out_instance = std::make_unique<log::bs_log>("out"),
 
 NAMESPACE_END() // hidden namespace
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(log)
-
+NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(log)
 /*-----------------------------------------------------------------------------
  *  get/create spdlog::logger backend for bs_log
  *-----------------------------------------------------------------------------*/
 auto get_logger(const char* log_name) -> spdlog::logger& {
-	using f = std::shared_ptr<spdlog::logger> (*)();
-
-	// setup static map of known single-thread loggers generators
-	static const std::unordered_map<std::string, f> st_log_gen {
-		{"out", [] { return create_logger("out",
-			create_console_sink<spdlog::sinks::stdout_sink_mt>()
-			//create_file_sink(caf::get_or(BSCONFIG, "logger.out-file-name", OUT_FNAME_DEFAULT))
-		); }},
-		{"err", [] { return create_logger("err",
-			create_console_sink<spdlog::sinks::stderr_sink_mt>()
-			//create_file_sink(caf::get_or(BSCONFIG, "logger.err-file-name", ERR_FNAME_DEFAULT))
-		); }}
-	};
-	// and multithreaded ones
-	static const std::unordered_map<std::string, f> mt_log_gen {
-		{"out", [] {
-			return create_async_logger("out",
-				create_console_sink<spdlog::sinks::stdout_sink_mt>("out"),
-				create_file_sink(caf::get_or(BSCONFIG, "logger.out-file-name", OUT_FNAME_DEFAULT), "out")
-			);
-		}},
-		{"err", [] {
-			return create_async_logger("err",
-				create_console_sink<spdlog::sinks::stderr_sink_mt>("err"),
-				create_file_sink(caf::get_or(BSCONFIG, "logger.err-file-name", ERR_FNAME_DEFAULT), "err")
-			);
-		}}
+	// switch create on async/not async
+	auto create = [log_name](auto&&... sinks) {
+		return are_logs_mt ?
+			create_async_logger(log_name, std::forward<decltype(sinks)>(sinks)...) :
+			create_logger(log_name, std::forward<decltype(sinks)>(sinks)...);
 	};
 
 	// if log already registered -- return it
 	if(auto L = spdlog::get(log_name))
 		return *L;
 	// otherwise create it
-	// switch to one of these maps depending on `use_mt_logs` flag
-	const auto& log_gen = are_logs_mt ? mt_log_gen : st_log_gen;
-	auto pgen = log_gen.find(log_name);
-	return pgen == log_gen.end() ? *null_st_logger : *pgen->second();
+	const bool is_error = std::string_view(log_name) == "err";
+	return *create(
+		is_error ?
+			create_console_sink<spdlog::sinks::stderr_sink_mt>() :
+			create_console_sink<spdlog::sinks::stdout_sink_mt>(),
+		blue_sky::detail::kernel_config_subsyst::is_configured() ?
+			create_file_sink(caf::get_or(BSCONFIG,
+				std::string("logger.") + log_name + "-file-name",
+				std::string(LOG_FNAME_PREFIX) + log_name + ".log"), log_name
+			) :
+			null_sink
+	);
 }
 
 NAMESPACE_END(log)

@@ -27,6 +27,8 @@ struct BS_HIDDEN_API kernel_config_subsyst {
 
 	auto clear_confdata() -> void;
 
+	static auto is_configured() -> bool;
+
 	// kernel's actor system & config
 	caf::actor_system_config actor_cfg_;
 	// config values storage: map from string key -> any parsed value
@@ -38,7 +40,7 @@ private:
 	// predefined config options that can be parsed from CLI or config file
 	caf::config_option_set confopt_;
 	// flag indicating if kernel was configured at least once
-	bool kernel_configured = false;
+	static bool kernel_configured;
 };
 
 NAMESPACE_END(detail) NAMESPACE_END(blue_sky)

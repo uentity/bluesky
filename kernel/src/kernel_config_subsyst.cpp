@@ -126,11 +126,11 @@ kernel_config_subsyst::kernel_config_subsyst() {
 		.add<std::string>("err-file-name", "Path to stderr log")
 		.add<std::string>("out-file-format", "Format of stdout log messages")
 		.add<std::string>("err-file-format", "Format of stderr log messages")
-		.add<std::string>("console-out-format", "Format of stdout log messages in console")
-		.add<std::string>("console-err-format", "Format of stdout log messages in console")
-		.add<std::uint32_t>("flush-interval", "Multithreaded logs background flush interval")
+		.add<std::string>("out-console-format", "Format of stdout log messages in console")
+		.add<std::string>("err-console-format", "Format of stdout log messages in console")
 		.add<std::uint8_t>("out-flush-level", "Minimum message level that triggers out log flush")
 		.add<std::uint8_t>("err-flush-level", "Minimum message level that triggers err log flush")
+		.add<std::uint32_t>("flush-interval", "Multithreaded logs background flush interval")
 	;
 
 	/*-----------------------------------------------------------------------------
@@ -243,6 +243,12 @@ auto kernel_config_subsyst::clear_confdata() -> void {
 	confdata_.clear();
 	kernel_configured = false;
 }
+
+auto kernel_config_subsyst::is_configured() -> bool {
+	return kernel_configured;
+}
+
+bool kernel_config_subsyst::kernel_configured = false;
 
 NAMESPACE_END(detail) NAMESPACE_END(blue_sky)
 
