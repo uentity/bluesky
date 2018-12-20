@@ -95,12 +95,12 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 
 			try {
 				res = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-					cur_logf, ROTATING_FSIZE_DEFAULT, 1
+					cur_logf.string(), ROTATING_FSIZE_DEFAULT, 1
 				);
 				if(res) {
 					res->set_pattern(FILE_LOG_PATTERN);
 					sinks_.insert( {desired_fname, res} );
-					std::cout << "[I] Using log file " << cur_logf.native() << std::endl;
+					std::cout << "[I] Using log file " << cur_logf.string() << std::endl;
 					break;
 				}
 			}

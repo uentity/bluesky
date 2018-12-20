@@ -94,7 +94,7 @@ void search_files(const char* mask, const fs::path& dir, fname_set& res) {
 		// first file of directory as iterator
 		for(const fs::directory_entry& node : fs::directory_iterator(dir)) {
 			if(fs::is_directory(node)) continue;
-			auto node_path = node.path().native();
+			auto node_path = node.path().string();
 			if(regex_search(node_path, regex(std::string("^(.*)") + mask + '$'))) {
 				res.emplace(std::move(node_path));
 			}
@@ -145,7 +145,7 @@ auto kernel_plugins_subsyst::discover_plugins() -> fname_set {
 	BSOUT << "--------" << bs_end;
 	BSOUT << "Search for plugins in following discovered paths:" << bs_end;
 	for(const auto& path : plugins_paths) {
-		BSOUT << path.native() << bs_end;
+		BSOUT << path.string() << bs_end;
 	}
 
 	// search for plugins inside discovered directories

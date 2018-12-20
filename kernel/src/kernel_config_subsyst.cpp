@@ -15,6 +15,7 @@
 #include <caf/detail/parser/read_ini.hpp>
 #include <caf/detail/parser/read_string.hpp>
 #include <caf/io/middleman.hpp>
+#include <spdlog/fmt/ostr.h>
 
 #include <sstream>
 #include <fstream>
@@ -187,15 +188,15 @@ auto kernel_config_subsyst::configure(string_list args, std::string ini_fname, b
 				if (res.i != res.e) {
 					status = false;
 					bserr() << log::W("*** error in {} [line {} col {}]: {}")
-						<< ini_path.native() << res.line << res.column << to_string(res.code) << log::end;
+						<< ini_path.string() << res.line << res.column << to_string(res.code) << log::end;
 				}
 			}
-			bsout() << "{} - {}" << ini_path.native() << (status ? "OK" : "Fail") << log::end;
+			bsout() << "{} - {}" << ini_path.string() << (status ? "OK" : "Fail") << log::end;
 			// try to read CAF config from the same dir as BS config
 			const auto caf_ini_path = ini_path.parent_path() / "caf.ini";
 			if(( ini = std::ifstream(caf_ini_path) )) {
 				actor_cfg_.parse({}, ini);
-				bsout() << "{} - {}" << caf_ini_path.native() << "CAF" << log::end;
+				bsout() << "{} - {}" << caf_ini_path.string() << "CAF" << log::end;
 			}
 		}
 	}
