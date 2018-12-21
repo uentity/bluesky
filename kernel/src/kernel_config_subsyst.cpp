@@ -144,16 +144,15 @@ kernel_config_subsyst::kernel_config_subsyst() {
 	*  	%APPDATA%\blue-sky\blue-sky.conf (C:\Users\%USER%\AppData\Roaming\...)
 	*  4. blue-sky.conf from . dir is the last one
 	*-----------------------------------------------------------------------------*/
-	std::string home_path;
+	// as fallback add possibility to read config from current path
+	conf_path_.push_back("blue-sky.ini");
 #ifdef UNIX
 	conf_path_.emplace_back("/etc/blue-sky/blue-sky.ini");
 	conf_path_.push_back( fs::path(::getenv("HOME")) / ".blue-sky/blue-sky.ini" );
 #else // WINDOWS
-	conf_path_.push_back( fs::path(::getenv("ALLUSERSPROFILE")) / "blue-sky/blue-sky.ini" );
-	conf_path_.push_back( fs::path(::getenv("USERPROFILE")) / "blue-sky/blue-sky.ini" );
+	conf_path_.push_back( fs::path(::getenv("ALLUSERSPROFILE")) / "blue-sky" / "blue-sky.ini" );
+	conf_path_.push_back( fs::path(::getenv("USERPROFILE")) / "blue-sky" / "blue-sky.ini" );
 #endif // UNIX
-	// as fallback add possibility to read config from current path
-	conf_path_.push_back("blue-sky.ini");
 }
 
 auto kernel_config_subsyst::configure(string_list args, std::string ini_fname, bool force) -> void {

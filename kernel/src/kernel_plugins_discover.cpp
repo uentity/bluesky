@@ -134,8 +134,8 @@ auto kernel_plugins_subsyst::discover_plugins() -> fname_set {
 	push_unique(plugins_paths, fs::path(::getenv("HOME")) / ".blue-sky/plugins");
 	push_unique(plugins_paths, "/usr/share/blue-sky/plugins");
 #else // WINDOWS
-	push_unique(plugins_paths, fs::path(::getenv("ALLUSERSPROFILE")) / "Application Data/blue-sky/plugins");
-	push_unique(plugins_paths, fs::path(::getenv("APPDATA")) / "blue-sky/plugins");
+	push_unique(plugins_paths, fs::path(::getenv("ALLUSERSPROFILE")) / "Application Data" / "blue-sky" / "plugins");
+	push_unique(plugins_paths, fs::path(::getenv("APPDATA")) / "blue-sky" / "plugins");
 #endif // UNIX
 	// [TODO] discover path to kernel library as fallback
 	// if no paths were set in config files, add current dir as lowest priority search path
