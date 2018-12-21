@@ -120,6 +120,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\actor-framework\libcaf_core;$(SolutionDir)third_party\actor-framework\libcaf_io;$(SolutionDir)third_party\cereal\include;$(SolutionDir)third_party\eigen;$(SolutionDir)third_party\spdlog\include;$(SolutionDir)third_party\expected;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
@@ -149,6 +150,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\actor-framework\libcaf_core;$(SolutionDir)third_party\actor-framework\libcaf_io;$(SolutionDir)third_party\cereal\include;$(SolutionDir)third_party\eigen;$(SolutionDir)third_party\spdlog\include;$(SolutionDir)third_party\expected;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -166,6 +168,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\actor-framework\libcaf_core;$(SolutionDir)third_party\actor-framework\libcaf_io;$(SolutionDir)third_party\cereal\include;$(SolutionDir)third_party\eigen;$(SolutionDir)third_party\spdlog\include;$(SolutionDir)third_party\expected;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
