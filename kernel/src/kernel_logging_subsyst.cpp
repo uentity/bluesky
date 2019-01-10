@@ -39,18 +39,17 @@ NAMESPACE_BEGIN()
 ///////////////////////////////////////////////////////////////////////////////
 //  log-related globals
 //
-// fallback to null sink
-const auto null_sink = std::make_shared<spdlog::sinks::null_sink_mt>();
-// fallback null st logger
-// + init default flush level
-const auto null_st_logger = [] {
-	// set global minimum flush level
-	spdlog::flush_on(DEF_FLUSH_LEVEL);
-	return spdlog::create<spdlog::sinks::null_sink_mt>("null");
-}();
+// fallback null sink
+const auto& null_sink() {
+	static const auto nowhere = std::make_shared<spdlog::sinks::null_sink_mt>();
+	return nowhere;
+}
 
 // flag that indicates whether we have switched to mt logs
-std::atomic<bool> are_logs_mt(false);
+auto& are_logs_mt() {
+	static std::atomic<bool> mt_state{false};
+	return mt_state;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //  create sinks
@@ -83,7 +82,7 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 			if(er) {
 				std::cerr << "[E] Failed to create parent path for log file " << desired_fname
 					<< ": " << er.message() << std::endl;
-				return null_sink;
+				return null_sink();
 			}
 		}
 
@@ -118,14 +117,14 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 		));
 	}
 
-	return res ? res : null_sink;
+	return res ? res : null_sink();
 }
 
 // if `logger_name` is set -- tune sink with configured values
 template<typename Sink>
 auto create_console_sink(const std::string& logger_name = "") -> spdlog::sink_ptr {
 	static const auto sink_ = []() -> spdlog::sink_ptr {
-		spdlog::sink_ptr S = null_sink;
+		spdlog::sink_ptr S = null_sink();
 		try {
 			if((S = std::make_shared<Sink>()))
 				S->set_pattern(CONSOLE_LOG_PATTERN);
@@ -149,6 +148,8 @@ auto create_console_sink(const std::string& logger_name = "") -> spdlog::sink_pt
 //
 template< typename... Sinks >
 auto create_logger(const char* log_name, Sinks... sinks) -> std::shared_ptr<spdlog::logger> {
+	static const auto null_st_logger = spdlog::create<spdlog::sinks::null_sink_mt>("null");
+
 	spdlog::sink_ptr S[] = { std::move(sinks)... };
 	try {
 		auto L = std::make_shared<spdlog::logger>( log_name, std::begin(S), std::end(S) );
@@ -182,8 +183,19 @@ auto create_async_logger(const char* log_name, Sinks... sinks) -> std::shared_pt
 }
 
 // global bs_log loggers for "out" and "err"
-auto bs_out_instance = std::make_unique<log::bs_log>("out"),
-	 bs_err_instance = std::make_unique<log::bs_log>("err");
+auto& predefined_logs() {
+	static auto loggers = []{
+		// do some default initialization
+		// set global minimum flush level
+		spdlog::flush_on(DEF_FLUSH_LEVEL);
+		// ... and create `bs_log` instances
+		return std::tuple{
+			std::make_unique<log::bs_log>("out"),
+			std::make_unique<log::bs_log>("err")
+		};
+	}();
+	return loggers;
+}
 
 NAMESPACE_END() // hidden namespace
 
@@ -195,7 +207,7 @@ NAMESPACE_BEGIN(log)
 auto get_logger(const char* log_name) -> spdlog::logger& {
 	// switch create on async/not async
 	auto create = [log_name](auto&&... sinks) {
-		return are_logs_mt ?
+		return are_logs_mt() ?
 			create_async_logger(log_name, std::forward<decltype(sinks)>(sinks)...) :
 			create_logger(log_name, std::forward<decltype(sinks)>(sinks)...);
 	};
@@ -214,7 +226,7 @@ auto get_logger(const char* log_name) -> spdlog::logger& {
 				std::string("logger.") + log_name + "-file-name",
 				std::string(LOG_FNAME_PREFIX) + log_name + ".log"), log_name
 			) :
-			null_sink
+			null_sink()
 	);
 }
 
@@ -222,12 +234,14 @@ NAMESPACE_END(log)
 
 // switch between mt- and st- logs
 auto kernel_logging_subsyst::toggle_mt_logs(bool turn_on) -> void {
-	if(are_logs_mt.exchange(turn_on) != turn_on) {
+	if(are_logs_mt().exchange(turn_on) != turn_on) {
 		// drop all previousely created logs
 		spdlog::drop_all();
 		// and create new ones
-		bs_out_instance = std::make_unique<log::bs_log>("out");
-		bs_err_instance = std::make_unique<log::bs_log>("err");
+		predefined_logs() = {
+			std::make_unique<log::bs_log>("out"),
+			std::make_unique<log::bs_log>("err")
+		};
 		// setup periodic flush
 		spdlog::flush_every(std::chrono::seconds(caf::get_or(
 			BSCONFIG, "logger.flush-interval", DEF_FLUSH_INTERVAL
@@ -239,11 +253,11 @@ auto kernel_logging_subsyst::toggle_mt_logs(bool turn_on) -> void {
  * access to main log channels
  *----------------------------------------------------------------*/
 log::bs_log& bsout() {
-	return *bs_out_instance;
+	return *std::get<0>(predefined_logs());
 }
 
 log::bs_log& bserr() {
-	return *bs_err_instance;
+	return *std::get<1>(predefined_logs());
 }
 
 NAMESPACE_END(blue_sky)
