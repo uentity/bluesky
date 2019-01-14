@@ -9,7 +9,7 @@
 
 #include "node_impl.h"
 #include <bs/tree/tree.h>
-#include <bs/kernel.h>
+#include <bs/kernel/types_factory.h>
 
 #include <boost/uuid/string_generator.hpp>
 

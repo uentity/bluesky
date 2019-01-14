@@ -11,9 +11,9 @@
 #include <bs/python/common.h>
 #endif
 
-#include "kernel_plugins_subsyst.h"
 #include <bs/error.h>
 #include <bs/log.h>
+#include "plugins_subsyst.h"
 
 #define BS_KERNEL_VERSION "0.1" //!< version of blue-sky kernel
 
@@ -21,12 +21,13 @@
  *  BS kernel plugin descriptor
  *-----------------------------------------------------------------------------*/
 BS_C_API const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {
-	return &blue_sky::detail::kernel_plugins_subsyst::kernel_pd();
+	return &blue_sky::kernel::detail::plugins_subsyst::kernel_pd();
 }
 
-NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(blue_sky::kernel::detail)
+
 // hide implementation
-namespace {
+NAMESPACE_BEGIN()
 
 // tags for kernel & runtime types plugin_descriptors
 struct BS_HIDDEN_API __kernel_types_pd_tag__ {};
@@ -51,12 +52,10 @@ std::string extract_root_name(const std::string& full_name) {
 	return pyl_name;
 }
 
-} // eof hidden namespace
-
-NAMESPACE_BEGIN(detail)
+NAMESPACE_END() // eof hidden namespace
 
 // init kernel plugin descriptors
-const plugin_descriptor& kernel_plugins_subsyst::kernel_pd() {
+auto plugins_subsyst::kernel_pd() -> const plugin_descriptor& {
 	static const plugin_descriptor kernel_pd(
 		BS_GET_TI(__kernel_types_pd_tag__), "kernel", BS_KERNEL_VERSION,
 		"BlueSky virtual kernel plugin", "bs",
@@ -66,7 +65,7 @@ const plugin_descriptor& kernel_plugins_subsyst::kernel_pd() {
 	return kernel_pd;
 }
 
-const plugin_descriptor& kernel_plugins_subsyst::runtime_pd() {
+auto plugins_subsyst::runtime_pd() -> const plugin_descriptor& {
 	static const plugin_descriptor runtime_pd(
 		BS_GET_TI(__runtime_types_pd_tag__), "runtime", BS_KERNEL_VERSION,
 		"BlueSky virtual plugin for runtime types", "bs"
@@ -74,23 +73,23 @@ const plugin_descriptor& kernel_plugins_subsyst::runtime_pd() {
 	return runtime_pd;
 }
 
-kernel_plugins_subsyst::kernel_plugins_subsyst() {
+plugins_subsyst::plugins_subsyst() {
 	// register kernel virtual plugins
 	register_plugin(&kernel_pd(), lib_descriptor());
 	register_plugin(&runtime_pd(), lib_descriptor());
 }
 
-kernel_plugins_subsyst::~kernel_plugins_subsyst() {}
+plugins_subsyst::~plugins_subsyst() {}
 
 #ifdef BSPY_EXPORTING
-struct kernel_plugins_subsyst::bspy_module {
+struct plugins_subsyst::bspy_module {
 	bspy_module(pybind11::module& root_mod) : root_module_(root_mod) {}
 
 	bool init_kernel_subsyst() {
 		namespace py = pybind11;
 		// find kernel's Python initialization function
 		bs_init_py_fn init_py;
-		detail::lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
+		lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
 		if(init_py) {
 			init_py(&root_module_);
 
@@ -115,7 +114,7 @@ struct kernel_plugins_subsyst::bspy_module {
 };
 #endif
 
-void* kernel_plugins_subsyst::self_pymod() const {
+void* plugins_subsyst::self_pymod() const {
 #ifdef BSPY_EXPORTING
 	return pymod_ ? (void*)&pymod_->root_module_ : nullptr;
 #else
@@ -124,7 +123,7 @@ void* kernel_plugins_subsyst::self_pymod() const {
 }
 
 std::pair< const plugin_descriptor*, bool >
-kernel_plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) {
+plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) {
 	// deny registering nil plugin descriptors
 	if(!pd) return {&plugin_descriptor::nil(), false};
 
@@ -169,7 +168,7 @@ kernel_plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_d
 	return {pplug, res.second};
 }
 
-void kernel_plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
+void plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
 	// we cannot clear kernel internal types
 	if(pd == kernel_pd()) return;
 
@@ -177,7 +176,7 @@ void kernel_plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
 }
 
 // unloas given plugin
-void kernel_plugins_subsyst::unload_plugin(const plugin_descriptor& pd) {
+void plugins_subsyst::unload_plugin(const plugin_descriptor& pd) {
 	// check if given plugin was registered
 	auto plug = loaded_plugins_.find(&pd);
 	if(plug == loaded_plugins_.end()) return;
@@ -189,13 +188,13 @@ void kernel_plugins_subsyst::unload_plugin(const plugin_descriptor& pd) {
 }
 
 // unloads all plugins
-void kernel_plugins_subsyst::unload_plugins() {
+void plugins_subsyst::unload_plugins() {
 	for(auto p : loaded_plugins_) {
 		unload_plugin(*p.first);
 	}
 }
 
-int kernel_plugins_subsyst::load_plugin(
+int plugins_subsyst::load_plugin(
 	const std::string& fname, bool init_py_subsyst
 ) {
 	using namespace std;
@@ -341,7 +340,7 @@ int kernel_plugins_subsyst::load_plugin(
 	return retval;
 }
 
-int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
+int plugins_subsyst::load_plugins(void* py_root_module) {
 	// discover plugins
 	auto plugins = discover_plugins();
 	BSOUT << "--------" << bs_end;
@@ -384,7 +383,7 @@ int kernel_plugins_subsyst::load_plugins(void* py_root_module) {
 namespace {
 // helper to unify input or output bindings
 template<typename bindings_t>
-auto unify_bindings(const kernel_plugins_subsyst& K, void *const plugin_descriptor::*binding_var) {
+auto unify_bindings(const plugins_subsyst& K, void *const plugin_descriptor::*binding_var) {
 	using Serializers_map = typename bindings_t::Serializers_map;
 	using Archives_map = typename bindings_t::Archives_map;
 	Archives_map united;
@@ -432,7 +431,7 @@ auto unify_bindings(const kernel_plugins_subsyst& K, void *const plugin_descript
 
 } // eof hidden namespace
 
-void kernel_plugins_subsyst::unify_serialization() const {
+void plugins_subsyst::unify_serialization() const {
 	unify_bindings<cereal::detail::InputBindingMap>(
 		*this, &plugin_descriptor::serial_input_bindings
 	);
@@ -441,6 +440,4 @@ void kernel_plugins_subsyst::unify_serialization() const {
 	);
 }
 
-NAMESPACE_END(detail)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::kernel::detail)

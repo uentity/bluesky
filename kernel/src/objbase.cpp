@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/objbase.h>
-#include <bs/kernel.h>
+#include <bs/kernel/types_factory.h>
 #include <bs/tree/errors.h>
 #include <bs/tree/inode.h>
 
@@ -58,11 +58,11 @@ const type_descriptor& objbase::bs_type() {
 }
 
 int objbase::bs_register_this() const {
-	return BS_KERNEL.register_instance(shared_from_this());
+	return kernel::tfactory::register_instance(shared_from_this());
 }
 
 int objbase::bs_free_this() const {
-	return BS_KERNEL.free_instance(shared_from_this());
+	return kernel::tfactory::free_instance(shared_from_this());
 }
 
 std::string objbase::type_id() const {

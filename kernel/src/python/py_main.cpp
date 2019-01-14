@@ -24,9 +24,9 @@ void py_bind_log(py::module& m);
 
 BS_INIT_PY(bs) {
 	// initialize kernel first
-	BS_KERNEL.init();
+	kernel::init();
 	// register cleanup function
-	Py_AtExit([] { BS_KERNEL.shutdown(); });
+	Py_AtExit([] { kernel::shutdown(); });
 	// bind
 	py_bind_common(m);
 	py_bind_log(m);

@@ -12,7 +12,9 @@
 #include "common.h"
 #include "error.h"
 #include "type_descriptor.h"
-#include "objbase_macro.h"
+
+// shortcut for quick declaration of shared ptr to BS object
+#define BS_SP(T) std::shared_ptr< T >
 
 NAMESPACE_BEGIN(blue_sky)
 
@@ -22,7 +24,6 @@ NAMESPACE_BEGIN(blue_sky)
 	\brief This is a base class for all objects.
 */
 class BS_API objbase : public std::enable_shared_from_this< objbase > {
-	friend class kernel;
 	friend class tree::link;
 	friend class tree::node;
 	friend class atomizer;

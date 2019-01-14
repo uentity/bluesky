@@ -16,9 +16,10 @@
 // operator overloading support
 #include <pybind11/operators.h>
 
-#include <bs/objbase.h>
 #include <bs/error.h>
+#include <bs/objbase.h>
 #include <bs/type_macro.h>
+#include <bs/kernel/misc.h>
 #include <bs/python/kernel.h>
 
 typedef void (*bs_init_py_fn)(void*);
@@ -69,7 +70,7 @@ BSPY_EXPORT_DEF_((T<T_spec_tup>))
 
 // register new error construcctor that takes user-defined error values enum
 #define BSPY_REGISTER_ERROR_ENUM(E) [](){                                             \
-    if(auto kmod = (pybind11::module*)BS_KERNEL.self_pymod()) {                       \
+    if(auto kmod = (pybind11::module*)blue_sky::kernel::k_pymod()) {                  \
         auto err_ctor = pybind11::init<E>();                                          \
         auto err_class = (pybind11::class_<std::error_code>)kmod->attr("error_code"); \
         err_ctor.execute(err_class);                                                  \
@@ -77,8 +78,7 @@ BSPY_EXPORT_DEF_((T<T_spec_tup>))
     }                                                                                 \
 }();                                                                                  \
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(python)
+NAMESPACE_BEGIN(blue_sky::python)
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -124,6 +124,4 @@ public:
 	}
 };
 
-NAMESPACE_END(python)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::python)

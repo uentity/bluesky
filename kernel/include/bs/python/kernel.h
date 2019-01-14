@@ -6,19 +6,18 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include <pybind11/pybind11.h>
-#include <bs/kernel.h>
+#include <bs/kernel/type_tuple.h>
 
-NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)
+NAMESPACE_BEGIN(pybind11::detail)
 /*-----------------------------------------------------------------------------
  *  cast blue_sky::type_tuple <-> Python tuple
  *-----------------------------------------------------------------------------*/
-template<> struct type_caster<blue_sky::type_tuple> {
+template<> struct type_caster<blue_sky::kernel::tfactory::type_tuple> {
 	// carry resuling value
-	using Type = blue_sky::type_tuple;
+	using Type = blue_sky::kernel::tfactory::type_tuple;
 	std::optional<Type> value;
 	// if constructed from str name, we need to hold temp objects
 	std::optional<blue_sky::plugin_descriptor> pd_;
@@ -99,5 +98,4 @@ template<> struct type_caster<blue_sky::type_tuple> {
 	}
 };
 
-NAMESPACE_END(detail) NAMESPACE_END(pybind11)
-
+NAMESPACE_END(pybind11::detail)

@@ -7,10 +7,10 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/kernel.h>
 #include <bs/log.h>
 #include <bs/detail/str_utils.h>
-#include "kernel_plugins_subsyst.h"
+#include <bs/kernel/config.h>
+#include "plugins_subsyst.h"
 
 #include <filesystem>
 #include <boost/regex.hpp>
@@ -26,10 +26,11 @@
 
 namespace fs = std::filesystem;
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(detail)
+NAMESPACE_BEGIN(blue_sky::kernel::detail)
+
 using namespace boost;
 using vstr_t = std::deque< std::string >;
-using fname_set = kernel_plugins_subsyst::fname_set;
+using fname_set = plugins_subsyst::fname_set;
 using string_list = std::vector<std::string>;
 
 /*-----------------------------------------------------------------------------
@@ -112,12 +113,12 @@ NAMESPACE_END() // eof hidden namespace
  * `discover_plugins()` impl
  *-----------------------------------------------------------------------------*/
 // return set of discovered plugins
-auto kernel_plugins_subsyst::discover_plugins() -> fname_set {
+auto plugins_subsyst::discover_plugins() -> fname_set {
 	// resulting paths container
 	std::deque<fs::path> plugins_paths;
 
 	// 1. Extract list of plugin paths from configs
-	auto conf_paths = caf::get_or<string_list>(BS_KERNEL.config(), "path.plugins", {});
+	auto conf_paths = caf::get_or<string_list>(config::config(), "path.plugins", {});
 	for(auto& P : conf_paths)
 		push_unique(plugins_paths, std::move(P));
 
@@ -160,5 +161,4 @@ auto kernel_plugins_subsyst::discover_plugins() -> fname_set {
 	return plugins;
 }
 
-NAMESPACE_END(detail) NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::kernel::detail)

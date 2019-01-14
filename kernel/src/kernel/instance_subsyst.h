@@ -9,16 +9,14 @@
 
 #pragma once
 
-#include <bs/kernel.h>
+#include <bs/common.h>
 #include <set>
 #include <mutex>
-//#include <boost/pool/pool_alloc.hpp>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(detail)
+NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
-struct BS_HIDDEN_API kernel_instance_subsyst {
-	using instances_enum = kernel::instances_enum;
+struct BS_HIDDEN_API instance_subsyst {
+	using instances_enum = std::vector<sp_cobj>;
 
 	using instances_storage_t = std::set<
 		sp_cobj
@@ -32,13 +30,11 @@ struct BS_HIDDEN_API kernel_instance_subsyst {
 	std::mutex solo_;
 
 	//register instance of any BlueSky type
-	int register_instance(sp_cobj&& obj);
+	auto register_instance(sp_cobj&& obj) -> int;
 
-	int free_instance(sp_cobj&& obj);
+	auto free_instance(sp_cobj&& obj) -> int;
 
-	instances_enum instances(const BS_TYPE_INFO& ti) const;
+	auto instances(const BS_TYPE_INFO& ti) const -> instances_enum;
 };
 
-NAMESPACE_END(detail)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::kernel::detail)

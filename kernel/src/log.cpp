@@ -8,7 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/log.h>
-#include <bs/kernel.h>
 
 namespace blue_sky { namespace log {
 using namespace spdlog;

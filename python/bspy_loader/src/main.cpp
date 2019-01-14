@@ -9,7 +9,9 @@
 
 
 #include <bs/common.h>
-#include <bs/kernel.h>
+#include <bs/error.h>
+#include <bs/kernel/misc.h>
+#include <bs/kernel/plugins.h>
 #include <bs/detail/lib_descriptor.h>
 #include <bs/log.h>
 
@@ -17,8 +19,6 @@
 
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/stringize.hpp>
-
-#include <string>
 
 /// TARGET_NAME must match built library name
 #ifndef TARGET_NAME
@@ -44,9 +44,9 @@ PYBIND11_MODULE(TARGET_NAME, m) {
 	m.doc() = kernel_pd->description;
 
 	// initialize kernel
-	BS_KERNEL.init();
+	kernel::init();
 
 	//load plugins with Python subsystem
-	BS_KERNEL.load_plugins(&m);
+	kernel::plugins::load_plugins(&m);
 }
 

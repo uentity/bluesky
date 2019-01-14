@@ -11,7 +11,7 @@
 #include <bs/tree/errors.h>
 #include <bs/misc.h>
 #include <bs/log.h>
-#include <bs/kernel_tools.h>
+#include <bs/kernel/tools.h>
 
 #include <cstring>
 #include <iostream>
@@ -87,7 +87,7 @@ const char* error::domain() const noexcept {
 std::string error::to_string() const {
 	std::string s = fmt::format("[{}] [{}] {}", domain(), code.value(), what());
 #if defined(_DEBUG) && !defined(_MSC_VER)
-	if(!ok()) s += kernel_tools::get_backtrace(20, 4);
+	if(!ok()) s += kernel::tools::get_backtrace(20, 4);
 #endif
 	return s;
 }

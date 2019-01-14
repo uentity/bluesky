@@ -9,19 +9,22 @@
 
 #pragma once
 
-#include <bs/kernel.h>
+#include <bs/common.h>
+#include <bs/kernel/plugins.h>
+#include <bs/kernel/types_factory.h>
 #include <bs/detail/lib_descriptor.h>
-#include <boost/pool/pool_alloc.hpp>
+
 #include <map>
 #include <set>
 
+#include <boost/pool/pool_alloc.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 //#include <boost/multi_index/member.hpp>
 //#include <boost/multi_index/identity.hpp>
 
-namespace blue_sky { namespace detail {
+NAMESPACE_BEGIN(blue_sky::kernel::detail)
 namespace mi = boost::multi_index;
 
 // plugin descriptors order by name
@@ -40,7 +43,9 @@ struct BS_HIDDEN_API pd_comp_name {
 /*-----------------------------------------------------------------
  * Kernel plugins loading subsystem definition
  *----------------------------------------------------------------*/
-struct BS_HIDDEN_API kernel_plugins_subsyst {
+struct BS_HIDDEN_API plugins_subsyst {
+	using lib_descriptor = blue_sky::detail::lib_descriptor;
+	using type_tuple = tfactory::type_tuple;
 
 	static const plugin_descriptor& kernel_pd();
 	static const plugin_descriptor& runtime_pd();
@@ -92,8 +97,8 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 #endif
 
 	// ctor
-	kernel_plugins_subsyst();
-	~kernel_plugins_subsyst();
+	plugins_subsyst();
+	~plugins_subsyst();
 
 	// allow obtain kernel's plugin descriptor
 	friend const plugin_descriptor* bs_get_plugin_descriptor();
@@ -154,5 +159,4 @@ struct BS_HIDDEN_API kernel_plugins_subsyst {
 	void unify_serialization() const;
 };
 
-}} // eof blue_sky::detail namespace
-
+NAMESPACE_END(blue_sky::kernel::detail)

@@ -8,6 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/log.h>
+#include <bs/kernel/config.h>
+#include <bs/kernel/types_factory.h>
 //#include <bs/tree/fusion.h>
 //#include <bs/tree/node.h>
 
@@ -31,7 +33,7 @@ fusion_link::fusion_link(
 	pimpl_(std::make_unique<impl>(std::move(bridge), std::move(data)))
 {
 	// run actor
-	pimpl_->actor_ = BS_KERNEL.actor_system().spawn(impl::async_api);
+	pimpl_->actor_ = kernel::config::actor_system().spawn(impl::async_api);
 	// connect actor with sender
 	pimpl_->init_sender();
 }
@@ -39,7 +41,10 @@ fusion_link::fusion_link(
 fusion_link::fusion_link(
 	std::string name, const char* obj_type, std::string oid, sp_fusion bridge, Flags f
 ) :
-	fusion_link(std::move(name), BS_KERNEL.create_object(obj_type, std::move(oid)), std::move(bridge), f)
+	fusion_link(
+		std::move(name),
+		kernel::tfactory::create_object(obj_type, std::move(oid)), std::move(bridge), f
+	)
 {
 	if(!pimpl_->data_)
 		bserr() << log::E("fusion_link: cannot create object of type '{}'! Empty link!") <<
@@ -51,7 +56,7 @@ fusion_link::~fusion_link() {}
 auto fusion_link::clone(bool deep) const -> sp_link {
 	auto res = std::make_shared<fusion_link>(
 		name(),
-		deep ? BS_KERNEL.clone_object(pimpl_->data_) : pimpl_->data_,
+		deep ? kernel::tfactory::clone_object(pimpl_->data_) : pimpl_->data_,
 		pimpl_->bridge_, flags()
 	);
 	return res;

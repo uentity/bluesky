@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/log.h>
-#include "kernel_config_subsyst.h"
+#include "config_subsyst.h"
 
 #include <caf/config_option_adder.hpp>
 #include <caf/detail/ini_consumer.hpp>
@@ -21,10 +21,10 @@
 #include <fstream>
 #include <stdlib.h>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(detail)
+NAMESPACE_BEGIN(blue_sky::kernel::detail)
 using namespace caf;
 namespace fs = std::filesystem;
-using string_list = kernel_config_subsyst::string_list;
+using string_list = config_subsyst::string_list;
 
 // hidden helper functions
 NAMESPACE_BEGIN()
@@ -107,7 +107,7 @@ NAMESPACE_END() // eof hidden ns
 /*-----------------------------------------------------------------------------
  *  kernel_config_subsyst impl
  *-----------------------------------------------------------------------------*/
-kernel_config_subsyst::kernel_config_subsyst() {
+config_subsyst::config_subsyst() {
 	///////////////////////////////////////////////////////////////////////////////
 	//  add config options
 	//
@@ -155,7 +155,7 @@ kernel_config_subsyst::kernel_config_subsyst() {
 #endif // UNIX
 }
 
-auto kernel_config_subsyst::configure(string_list args, std::string ini_fname, bool force) -> void {
+auto config_subsyst::configure(string_list args, std::string ini_fname, bool force) -> void {
 	// build list of config files to parse
 	std::vector<fs::path> ini2parse;
 	// first read predefined configs
@@ -238,16 +238,16 @@ auto kernel_config_subsyst::configure(string_list args, std::string ini_fname, b
 	kernel_configured = true;
 }
 
-auto kernel_config_subsyst::clear_confdata() -> void {
+auto config_subsyst::clear_confdata() -> void {
 	confdata_.clear();
 	kernel_configured = false;
 }
 
-auto kernel_config_subsyst::is_configured() -> bool {
+auto config_subsyst::is_configured() -> bool {
 	return kernel_configured;
 }
 
-bool kernel_config_subsyst::kernel_configured = false;
+bool config_subsyst::kernel_configured = false;
 
-NAMESPACE_END(detail) NAMESPACE_END(blue_sky)
+NAMESPACE_END(blue_sky::kernel::detail)
 
