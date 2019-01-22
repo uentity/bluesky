@@ -111,7 +111,7 @@ void py_bind_error(py::module& m) {
 		// export code memeber
 		.def_readonly("code", &error::code, "Access code of this error")
 		// error message
-		.def_property_readonly("what", &error::what, "Get error message")
+		.def_property_readonly("what", [](const error& e){ return e.what(); }, "Get error message")
 		.def_property_readonly("ok", &error::ok, "Test if no error happened (successfull op)")
 	;
 	py::implicitly_convertible<Error, error>();
