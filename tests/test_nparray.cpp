@@ -61,13 +61,13 @@ sp_dvector gen_vec() {
 template< class inp_array_t, class ret_array_t >
 std::shared_ptr< ret_array_t > test_nparray(std::shared_ptr< inp_array_t > a, std::shared_ptr< inp_array_t > b) {
 	// a little test on nparray resize
-	sp_dvector tmp = BS_KERNEL.create_object(dvector::bs_type());
+	sp_dvector tmp = kernel::tfactory::create_object(dvector::bs_type());
 	std::cout << "tmp created = " << tmp->size() << std::endl;
 	tmp->resize(10);
 	std::cout << "tmp resized = " << tmp->size() << std::endl;
 
 	ulong sz = (ulong) std::min(a->size(), b->size());
-	std::shared_ptr< ret_array_t > res = BS_KERNEL.create_object(ret_array_t::bs_type());
+	std::shared_ptr< ret_array_t > res = kernel::tfactory::create_object(ret_array_t::bs_type());
 	*res = *a;
 	res->assign(*a);
 	res->assign(a->begin(), a->end());

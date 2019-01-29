@@ -8,9 +8,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #define BOOST_TEST_DYN_LINK
-#include <bs/kernel.h>
 #include <bs/error.h>
 #include <bs/objbase.h>
+#include <bs/any_array.h>
+#include <bs/kernel/types_factory.h>
+#include <bs/kernel/misc.h>
 
 #include <boost/test/unit_test.hpp>
 #include <iostream>
@@ -105,14 +107,14 @@ BOOST_AUTO_TEST_CASE(test_any_array) {
 	BOOST_CHECK(t3 == 42);
 
 	// check kernel tables
-	auto& kfoo_tbl = BS_KERNEL.pert_idx_any_array("test_any_foo");
+	auto& kfoo_tbl = kernel::pert_idx_any_array("test_any_foo");
 	kfoo_tbl.resize(4);
 	kfoo_tbl[0] = "1";
 	kfoo_tbl[1] = 2;
 	kfoo_tbl[2] = "Hello World!";
 	kfoo_tbl[3] = std::string("This is string");
 
-	auto& kfoo_tbl1 = BS_KERNEL.pert_idx_any_array(foo::bs_type());
+	auto& kfoo_tbl1 = kernel::pert_idx_any_array(foo::bs_type());
 	BOOST_CHECK(&kfoo_tbl == &kfoo_tbl1);
 
 	BOOST_CHECK(kfoo_tbl1.values< int >().size() == 1u);

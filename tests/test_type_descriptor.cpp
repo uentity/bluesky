@@ -10,7 +10,7 @@
 #define BOOST_TEST_DYN_LINK
 #include "test_objects.h"
 #include <bs/type_macro.h>
-#include <bs/kernel.h>
+#include <bs/kernel/types_factory.h>
 #include <bs/log.h>
 
 #include <boost/test/unit_test.hpp>
@@ -97,58 +97,58 @@ BOOST_AUTO_TEST_CASE(test_type_descriptor) {
 	// register type first
 	//BS_KERNEL.register_type(bs_person::bs_type());
 
-	sp_person p = BS_KERNEL.create_object("bs_person");
+	sp_person p = kernel::tfactory::create_object("bs_person");
 	BOOST_TEST(p);
 	if(p)
 		std::cout << *p << std::endl;
 	// fill name
-	p = BS_KERNEL.create_object("bs_person", "John");
+	p = kernel::tfactory::create_object("bs_person", "John");
 	BOOST_TEST(p);
 	if(p)
 		std::cout << *p << std::endl;
 	// fill age with int - should fail
-	p = BS_KERNEL.create_object("bs_person", 28);
+	p = kernel::tfactory::create_object("bs_person", 28);
 	BOOST_TEST((p == nullptr));
 	// fill age with double - should work
-	p = BS_KERNEL.create_object("bs_person", 28.);
+	p = kernel::tfactory::create_object("bs_person", 28.);
 	BOOST_TEST(p);
 	if(p)
 		std::cout << *p << std::endl;
 	// fill both age and name
-	p = BS_KERNEL.create_object("bs_person", std::string("Sarah"), 33.);
+	p = kernel::tfactory::create_object("bs_person", std::string("Sarah"), 33.);
 	BOOST_TEST(p);
 	if(p)
 		std::cout << *p << std::endl;
 	// make copy
-	sp_person p1 = BS_KERNEL.clone_object(p);
+	sp_person p1 = kernel::tfactory::clone_object(p);
 	BOOST_TEST(p1);
 	if(p1)
 		std::cout << "Copy is: " << *p1 << std::endl;
 
 	// create strategy
-	sp_strat< int > si = BS_KERNEL.create_object(my_strategy< int >::bs_type(), "integer strategy");
+	sp_strat< int > si = kernel::tfactory::create_object(my_strategy< int >::bs_type(), "integer strategy");
 	BOOST_TEST(si);
 	if(si) {
 		std::cout << *si << std::endl;
 	}
-	sp_strat< double > sd = BS_KERNEL.create_object("my_strategy double", "double strategy");
+	sp_strat< double > sd = kernel::tfactory::create_object("my_strategy double", "double strategy");
 	BOOST_TEST(sd);
 	if(sd) std::cout << *sd << std::endl;
 
 	// create uber_type
-	sp_uber< int > ui = BS_KERNEL.create_object(uber_type< int, my_strategy< int > >::bs_type());
+	sp_uber< int > ui = kernel::tfactory::create_object(uber_type< int, my_strategy< int > >::bs_type());
 	BOOST_TEST(ui);
 	if(ui) std::cout << *ui << std::endl;
 
-	sp_uber< double > ud = BS_KERNEL.create_object("uber_type double my_strategy< double >", "I'm double");
+	sp_uber< double > ud = kernel::tfactory::create_object("uber_type double my_strategy< double >", "I'm double");
 	ud->add_value(42.);
 	BOOST_TEST(ud);
 	if(ud) std::cout << *ud << std::endl;
 
 	// test using free function
-	ud = BS_KERNEL.create_object("uber_type double my_strategy< double >", 27.5);
+	ud = kernel::tfactory::create_object("uber_type double my_strategy< double >", 27.5);
 	BOOST_TEST(ud);
-	ud = BS_KERNEL.create_object("uber_type double my_strategy< double >", 42.);
+	ud = kernel::tfactory::create_object("uber_type double my_strategy< double >", 42.);
 	BOOST_TEST(ud);
 	if(ud) std::cout << *ud << std::endl;
 }
