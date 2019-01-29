@@ -14,6 +14,7 @@
 #include <bs/kernel/errors.h>
 
 #ifdef _WIN32
+#include <windows.h>
 #include <Psapi.h>
 #elif defined(UNIX)
 #include <dlfcn.h>
@@ -31,7 +32,7 @@ bool lib_descriptor::load(const char* fname) {
 #ifdef UNIX
 	handle_ = dlopen(fname, RTLD_GLOBAL | RTLD_NOW);
 #else
-	handle_ = LoadLibrary(fname);
+	handle_ = static_cast<void*>(LoadLibrary(fname));
 #endif
 	if (!handle_) {
 		throw error(
@@ -50,7 +51,7 @@ void lib_descriptor::unload() {
 #ifdef UNIX
 		res = dlclose(handle_) == 0;
 #elif defined(_WIN32)
-		res = FreeLibrary(handle_);
+		res = FreeLibrary(static_cast<HMODULE>(handle_));
 #endif
 		if(!res) {
 			throw error(
@@ -67,7 +68,7 @@ void* lib_descriptor::load_sym_name(const char* sym_name) const {
 #ifdef UNIX
 		return (void*)dlsym(handle_, sym_name);
 #else
-		return (void*)GetProcAddress(handle_, LPCSTR(sym_name));
+		return (void*)GetProcAddress(static_cast<HMODULE>(handle_), LPCSTR(sym_name));
 #endif
 	}
 	return nullptr;
