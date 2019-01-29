@@ -26,8 +26,8 @@ BS_API auto register_type(const type_descriptor& td, const plugin_descriptor* pd
 // types will bind to real plugin descriptor when it will be loaded
 BS_API auto register_type(const type_descriptor& td, const std::string& plug_name) -> bool;
 // no way to register rvalue (temp) type_descriptor
-BS_API auto register_type(type_descriptor&&, const plugin_descriptor* = nullptr) -> bool = delete;
-BS_API auto register_type(type_descriptor&&, const std::string&) -> bool = delete;
+auto register_type(type_descriptor&&, const plugin_descriptor* = nullptr) -> bool = delete;
+auto register_type(type_descriptor&&, const std::string&) -> bool = delete;
 // Find type by type name
 BS_API auto find_type(const std::string& type_name) -> type_tuple;
 
