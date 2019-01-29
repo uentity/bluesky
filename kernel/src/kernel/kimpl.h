@@ -6,6 +6,7 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
+#pragma once
 
 #include <bs/any_array.h>
 #include "logging_subsyst.h"
@@ -13,7 +14,7 @@
 #include "instance_subsyst.h"
 #include "config_subsyst.h"
 
-#include <caf/actor_system.hpp>
+#include <caf/fwd.hpp>
 
 NAMESPACE_BEGIN(blue_sky::kernel)
 /*-----------------------------------------------------------------------------
@@ -42,6 +43,7 @@ public:
 	std::atomic<InitState> init_state_;
 
 	kimpl();
+	~kimpl();
 
 	using type_tuple = tfactory::type_tuple;
 	auto find_type(const std::string& key) const -> type_tuple;

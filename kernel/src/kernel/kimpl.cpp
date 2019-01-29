@@ -11,6 +11,7 @@
 #include <bs/kernel/misc.h>
 #include "kimpl.h"
 
+#include <caf/actor_system.hpp>
 #include <spdlog/fmt/fmt.h>
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(kernel)
@@ -26,6 +27,8 @@ kimpl::kimpl()
 	// Solution: delay construction of actor_system until first usage, don't use CAf in kernel
 	// ctor.
 }
+
+kimpl::~kimpl() = default;
 
 auto kimpl::find_type(const std::string& key) const -> type_tuple {
 	using search_key = plugins_subsyst::type_name_key;
