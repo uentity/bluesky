@@ -7,13 +7,14 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include "kernel_instance_subsyst.h"
+#include <bs/objbase.h>
+#include <bs/kernel/types_factory.h>
+#include "instance_subsyst.h"
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(detail)
+NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
 // register instance of any BlueSky type
-int kernel_instance_subsyst::register_instance(sp_cobj&& obj) {
+auto instance_subsyst::register_instance(sp_cobj&& obj) -> int {
 	if(!obj) return 0;
 	const type_descriptor* td = &obj->bs_resolve_type();
 	// go through chain of type_descriptors up to objbase
@@ -25,7 +26,7 @@ int kernel_instance_subsyst::register_instance(sp_cobj&& obj) {
 	return arity;
 }
 
-int kernel_instance_subsyst::free_instance(sp_cobj&& obj) {
+auto instance_subsyst::free_instance(sp_cobj&& obj) -> int {
 	if(!obj) return 0;
 
 	// go through chain of type_descriptors up to objbase
@@ -38,7 +39,7 @@ int kernel_instance_subsyst::free_instance(sp_cobj&& obj) {
 	return arity;
 }
 
-kernel::instances_enum kernel_instance_subsyst::instances(const BS_TYPE_INFO& ti) const {
+auto instance_subsyst::instances(const BS_TYPE_INFO& ti) const -> instances_enum {
 	auto Is = instances_.find(ti);
 	if(Is == instances_.end())
 		return {};
@@ -49,6 +50,4 @@ kernel::instances_enum kernel_instance_subsyst::instances(const BS_TYPE_INFO& ti
 	return res;
 }
 
-NAMESPACE_END(detail)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::kernel::detail)

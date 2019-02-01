@@ -13,12 +13,12 @@
 
 #include <filesystem>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(detail)
+NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
-struct BS_HIDDEN_API kernel_config_subsyst {
+struct BS_HIDDEN_API config_subsyst {
 	using string_list = std::vector<std::string>;
 
-	kernel_config_subsyst();
+	config_subsyst();
 
 	/// impl is taken from CAF sources
 	/// parse config options from arguments and ini file content
@@ -43,5 +43,4 @@ private:
 	static bool kernel_configured;
 };
 
-NAMESPACE_END(detail) NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::kernel::detail)

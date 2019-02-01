@@ -10,8 +10,8 @@
 #define BOOST_TEST_DYN_LINK
 
 #include "test_objects.h"
-#include <bs/kernel.h>
-#include <bs/kernel_tools.h>
+#include <bs/kernel/kernel.h>
+#include <bs/kernel/tools.h>
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 
@@ -22,8 +22,6 @@
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 #include <caf/scoped_actor.hpp>
-
-#define K BS_KERNEL
 
 using namespace blue_sky;
 using namespace blue_sky::log;
@@ -75,7 +73,7 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	std::cout << "*********************************************************************" << std::endl;
 
 	// person
-	sp_obj P = BS_KERNEL.create_object(bs_person::bs_type(), std::string("Tyler"), double(33));
+	sp_obj P = kernel::tfactory::create_object(bs_person::bs_type(), std::string("Tyler"), double(33));
 	// person link
 	auto L = std::make_shared<hard_link>("person link", std::move(P));
 	BOOST_TEST(L);
@@ -83,12 +81,12 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	BOOST_TEST(L->name() == L1->name());
 
 	// create root link and node
-	sp_node N = K.create_object("node");
+	sp_node N = kernel::tfactory::create_object("node");
 	// create several persons and insert 'em into node
 	for(int i = 0; i < 10; ++i) {
 		std::string p_name = "Citizen_" + std::to_string(i);
 		N->insert(std::make_shared<hard_link>(
-			p_name, K.create_object("bs_person", p_name, double(i + 20))
+			p_name, kernel::tfactory::create_object("bs_person", p_name, double(i + 20))
 		));
 	}
 	// create hard link referencing first object
@@ -105,12 +103,12 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	));
 	// print resulting tree content
 	auto hN = link::make_root<hard_link>("r", N);
-	kernel_tools::print_link(hN);
+	kernel::tools::print_link(hN);
 
 	// serializze node
 	auto N1 = test_json(N);
 	// print loaded tree content
-	kernel_tools::print_link(std::make_shared<hard_link>("r", N1));
+	kernel::tools::print_link(std::make_shared<hard_link>("r", N1));
 	BOOST_TEST(N1);
 	BOOST_TEST(N1->size() == N->size());
 

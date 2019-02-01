@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/tree/tree.h>
-#include <bs/kernel.h>
+#include <bs/kernel/config.h>
 #include <bs/detail/async_api_mixin.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
@@ -43,7 +43,7 @@ struct deref_actor : detail::async_api_mixin<deref_actor<level_process_f>> {
 	auto actor() const -> const deref_actor_t& { return actor_; }
 
 	deref_actor()
-		: actor_(BS_KERNEL.actor_system().spawn(behaviour))
+		: actor_(blue_sky::kernel::config::actor_system().spawn(behaviour))
 	{
 		base_t::init_sender();
 	}

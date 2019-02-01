@@ -9,7 +9,7 @@
 
 #define BOOST_TEST_DYN_LINK
 #include "test_objects.h"
-#include <bs/kernel.h>
+#include <bs/kernel/kernel.h>
 #include <bs/log.h>
 
 #include <bs/serialize/base_types.h>
@@ -104,25 +104,25 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 	std::cout << "\n\n*** testing serialization..." << std::endl;
 
 	// explicitly init serialization subsystem
-	BS_KERNEL.unify_serialization();
+	kernel::unify_serialization();
 
 	sp_obj obj = std::make_shared<objbase>();
 	test_json(obj);
 
 	// person
-	sp_person P = BS_KERNEL.create_object(bs_person::bs_type(), std::string("Monkey"), double(22));
+	sp_person P = kernel::tfactory::create_object(bs_person::bs_type(), std::string("Monkey"), double(22));
 	BOOST_TEST(P);
 	auto P1 = test_json(P);
 	BOOST_TEST(P->name_ == P1->name_);
 
 	// test NaN
-	P = BS_KERNEL.create_object(
+	P = kernel::tfactory::create_object(
 		bs_person::bs_type(), std::string("NaN"), std::numeric_limits<double>::quiet_NaN()
 	);
 	BOOST_TEST(P);
 	P1 = test_json(P);
 	BOOST_TEST(P1->age_ != P->age_);
-	P = BS_KERNEL.create_object(
+	P = kernel::tfactory::create_object(
 		bs_person::bs_type(), std::string("SNaN"), std::numeric_limits<double>::signaling_NaN()
 	);
 	BOOST_TEST(P);
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 
 	// array
 	using int_array = bs_array<int>;
-	std::shared_ptr<int_array> arr = BS_KERNEL.create_object(int_array::bs_type(), 20);
+	std::shared_ptr<int_array> arr = kernel::tfactory::create_object(int_array::bs_type(), 20);
 	BOOST_TEST(arr);
 	std::cout << "array size = " << arr->size() << std::endl;
 	for(ulong i = 0; i < arr->size(); ++i)
@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 
 	// shared array
 	using sd_array = bs_array<double, bs_vector_shared>;
-	std::shared_ptr<sd_array> sarr = BS_KERNEL.create_object(sd_array::bs_type(), 20);
+	std::shared_ptr<sd_array> sarr = kernel::tfactory::create_object(sd_array::bs_type(), 20);
 	BOOST_TEST(arr);
 	std::cout << "array size = " << arr->size() << std::endl;
 	for(ulong i = 0; i < arr->size(); ++i)

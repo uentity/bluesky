@@ -7,12 +7,11 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/kernel_errors.h>
-//#include <bs/detail/lib_descriptor.h>
+#include <bs/kernel/errors.h>
 
-NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(blue_sky::kernel)
 
-BS_API std::error_code make_error_code(KernelError e) {
+BS_API std::error_code make_error_code(Error e) {
 	// error_category for kernel errors
 	static const struct : std::error_category {
 		const char* name() const noexcept override {
@@ -20,14 +19,14 @@ BS_API std::error_code make_error_code(KernelError e) {
 		}
 
 		std::string message(int ec) const override {
-			switch(static_cast<KernelError>(ec)) {
-			case KernelError::CantLoadDLL:
+			switch(static_cast<Error>(ec)) {
+			case Error::CantLoadDLL:
 				return std::string("Can't load DLL");
 
-			case KernelError::CantUnloadDLL:
+			case Error::CantUnloadDLL:
 				return std::string("Can't unload DLL");
 
-			case KernelError::CantRegisterType:
+			case Error::CantRegisterType:
 				return "Type cannot be registered";
 
 			default:
@@ -39,5 +38,5 @@ BS_API std::error_code make_error_code(KernelError e) {
 	return { static_cast<int>(e), kernel_category };
 }
 
-NAMESPACE_END(blue_sky)
+NAMESPACE_END(blue_sky::kernel)
 

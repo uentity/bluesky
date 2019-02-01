@@ -201,7 +201,7 @@ bool bs_messaging::fire_signal(int signal_code, const sp_obj& params, const sp_c
 bool bs_messaging::add_signal(int signal_code) {
 	if(signals_.find(signal_code) != signals_.end()) return false;
 
-	sp_signal sig =  BS_KERNEL.create_object(bs_signal::bs_type(), signal_code);
+	sp_signal sig =  kernel::tfactory::create_object(bs_signal::bs_type(), signal_code);
 	if(sig) {
 		signals_[signal_code] = sig;
 		return true;

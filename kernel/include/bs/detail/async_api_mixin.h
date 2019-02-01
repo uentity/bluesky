@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "../kernel.h"
+#include "../kernel/config.h"
 #include <caf/scoped_actor.hpp>
 
 namespace blue_sky { namespace detail {
@@ -17,7 +17,7 @@ template<class Derived>
 class async_api_mixin {
 public:
 	using message_priority = caf::message_priority;
-	explicit async_api_mixin() : sender_(BS_KERNEL.actor_system(), true) {}
+	explicit async_api_mixin() : sender_(kernel::config::actor_system(), true) {}
 
 	// link sender with target actor, so they die together
 	auto init_sender() const -> void {

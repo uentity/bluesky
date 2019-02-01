@@ -38,9 +38,6 @@ typedef std::shared_ptr< bs_signal > sp_signal;
 typedef std::shared_ptr< bs_slot > sp_slot;
 typedef std::shared_ptr< const bs_imessaging > sp_mobj;
 
-// kernel
-class kernel;
-
 // log
 namespace log {
 	class bs_log;

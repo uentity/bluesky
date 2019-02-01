@@ -42,8 +42,6 @@ NAMESPACE_END(detail)
 */
 class BS_API type_descriptor {
 private:
-	friend class kernel;
-
 	const BS_TYPE_INFO bs_ti_;
 	const BS_GET_TD_FUN parent_td_fun_;
 	mutable BS_TYPE_COPY_FUN copy_fun_;
@@ -109,6 +107,26 @@ private:
 		}
 	};
 
+	// should we add default ctor?
+	template< typename T, bool Enable >
+	void add_def_constructor(std::enable_if_t< !Enable >* = nullptr) {}
+	template< typename T, bool Enable >
+	void add_def_constructor(std::enable_if_t< Enable >* = nullptr) {
+		add_constructor< T >();
+	}
+
+	// should we add default copy?
+	template< typename T, bool Enable >
+	void add_def_copy_constructor(std::enable_if_t< !Enable >* = nullptr) {}
+	template< typename T, bool Enable >
+	void add_def_copy_constructor(std::enable_if_t< Enable >* = nullptr) {
+		add_copy_constructor< T >();
+	}
+
+public:
+	const std::string name; //!< string type name
+	const std::string description; //!< arbitrary type description
+
 	// std::shared_ptr support casting only using explicit call to std::static_pointer_cast
 	// this helper allows to avoid lengthy typing and auto-cast pointer from objbase
 	// to target type
@@ -129,26 +147,6 @@ private:
 
 		bs_type_ctor_result ptr_;
 	};
-
-	// should we add default ctor?
-	template< typename T, bool Enable >
-	void add_def_constructor(std::enable_if_t< !Enable >* = nullptr) {}
-	template< typename T, bool Enable >
-	void add_def_constructor(std::enable_if_t< Enable >* = nullptr) {
-		add_constructor< T >();
-	}
-
-	// should we add default copy?
-	template< typename T, bool Enable >
-	void add_def_copy_constructor(std::enable_if_t< !Enable >* = nullptr) {}
-	template< typename T, bool Enable >
-	void add_def_copy_constructor(std::enable_if_t< Enable >* = nullptr) {
-		add_copy_constructor< T >();
-	}
-
-public:
-	const std::string name; //!< string type name
-	const std::string description; //!< arbitrary type description
 
 	// default constructor - type_descriptor points to nil
 	type_descriptor() :

@@ -7,23 +7,23 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/kernel.h>
 #include <bs/error.h>
-#include <bs/kernel_errors.h>
 #include <bs/log.h>
-#include "kernel_logging_subsyst.h"
-#include "kernel_config_subsyst.h"
+#include <bs/kernel/errors.h>
+#include <bs/kernel/config.h>
+#include "logging_subsyst.h"
 
 #include <spdlog/async.h>
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
+#include <iostream>
 #include <filesystem>
 #include <unordered_map>
 #include <atomic>
 
-#define BSCONFIG BS_KERNEL.config()
+#define BSCONFIG ::blue_sky::kernel::config::config()
 #define FILE_LOG_PATTERN "[%Y-%m-%d %T.%e] [%L] %v"
 #define CONSOLE_LOG_PATTERN "[%L] %v"
 #define LOG_FNAME_PREFIX "bs_"
@@ -221,7 +221,7 @@ auto get_logger(const char* log_name) -> spdlog::logger& {
 		is_error ?
 			create_console_sink<spdlog::sinks::stderr_sink_mt>() :
 			create_console_sink<spdlog::sinks::stdout_sink_mt>(),
-		blue_sky::detail::kernel_config_subsyst::is_configured() ?
+		kernel::config::is_configured() ?
 			create_file_sink(caf::get_or(BSCONFIG,
 				std::string("logger.") + log_name + "-file-name",
 				std::string(LOG_FNAME_PREFIX) + log_name + ".log"), log_name
@@ -232,8 +232,22 @@ auto get_logger(const char* log_name) -> spdlog::logger& {
 
 NAMESPACE_END(log)
 
+/*-----------------------------------------------------------------------------
+ *  kernel logging subsyst impl
+ *-----------------------------------------------------------------------------*/
+NAMESPACE_BEGIN(kernel::detail)
+
+logging_subsyst::logging_subsyst() {
+	// ensure that log globals are created before kernel
+	// that means log will be alive as long as kernel alive
+	const spdlog::logger* const init_logs[] = {
+		&log::get_logger("out"), &log::get_logger("err")
+	};
+	(void)init_logs;
+}
+
 // switch between mt- and st- logs
-auto kernel_logging_subsyst::toggle_mt_logs(bool turn_on) -> void {
+auto logging_subsyst::toggle_mt_logs(bool turn_on) -> void {
 	if(are_logs_mt().exchange(turn_on) != turn_on) {
 		// drop all previousely created logs
 		spdlog::drop_all();
@@ -248,6 +262,8 @@ auto kernel_logging_subsyst::toggle_mt_logs(bool turn_on) -> void {
 		)));
 	}
 }
+
+NAMESPACE_END(kernel::detail)
 
 /*-----------------------------------------------------------------
  * access to main log channels

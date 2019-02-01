@@ -10,10 +10,9 @@
 #include <bs/tree/link.h>
 #include <bs/tree/node.h>
 #include <bs/tree/errors.h>
-#include <bs/kernel.h>
+#include <bs/kernel/types_factory.h>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
 
 /*-----------------------------------------------------------------------------
  *  hard_link
@@ -31,7 +30,7 @@ hard_link::hard_link(std::string name, sp_obj data, Flags f) :
 link::sp_link hard_link::clone(bool deep) const {
 	return std::make_shared<hard_link>(
 		name(),
-		deep ? BS_KERNEL.clone_object(data_) : data_,
+		deep ? kernel::tfactory::clone_object(data_) : data_,
 		flags()
 	);
 }
@@ -80,6 +79,4 @@ result_or_err<sp_obj> weak_link::data_impl() const {
 	//return tl::make_unexpected(error::quiet("Empty data"));
 }
 
-NAMESPACE_END(tree)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::tree)

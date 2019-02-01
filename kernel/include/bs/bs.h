@@ -10,14 +10,13 @@
 #pragma once
 
 #include "log.h"
-// kernel already contains a lot
-#include "kernel.h"
-#include "kernel_tools.h"
 // errors handling
 #include "error.h"
 #include "throw_exception.h"
-#include "kernel_errors.h"
 #include "tree/errors.h"
+// kernel API
+#include "any_array.h"
+#include "kernel/kernel.h"
 // other things
 #include "misc.h"
 

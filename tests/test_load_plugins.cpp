@@ -9,16 +9,16 @@
 
 #define BOOST_TEST_DYN_LINK
 #include <bs/error.h>
-#include <bs/kernel.h>
-#include <bs/kernel_tools.h>
+#include <bs/kernel/plugins.h>
+#include <bs/kernel/tools.h>
 
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 
 BOOST_AUTO_TEST_CASE(test_load_plugins) {
-	using namespace blue_sky::kernel_tools;
+	using namespace blue_sky::kernel::tools;
 
-	BS_KERNEL.load_plugins();
+	blue_sky::kernel::plugins::load_plugins();
 	std::cout << "\n\n*** testing load plugins..." << std::endl;
 	std::cout << print_loaded_types() << std::endl;
 }

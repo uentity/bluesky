@@ -68,7 +68,6 @@ private:
 
 // TODO: later move to common.h
 struct BS_API plugin_initializer {
-	kernel* k; //!< Reference to blue-sky kernel.
 	plugin_descriptor const* pd; //!< Pointer to descriptor of plugin being loaded
 };
 

@@ -7,10 +7,10 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/kernel/config.h>
 #include "link_impl.h"
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
-
+NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  misc
  *-----------------------------------------------------------------------------*/
@@ -18,7 +18,7 @@ link::link(std::string name, Flags f)
 	: pimpl_(std::make_unique<impl>(std::move(name), f))
 {
 	// run actor
-	pimpl_->actor_ = BS_KERNEL.actor_system().spawn(impl::async_api);
+	pimpl_->actor_ = kernel::config::actor_system().spawn(impl::async_api);
 	// connect actor with sender
 	pimpl_->init_sender();
 }
@@ -211,5 +211,4 @@ auto ilink::get_inode() const -> result_or_err<inodeptr> {
 	return inode_;
 }
 
-NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::tree)

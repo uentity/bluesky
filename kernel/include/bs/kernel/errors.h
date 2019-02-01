@@ -6,12 +6,13 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
+#pragma once
 
-#include "error.h"
+#include "../error.h"
 
-NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(blue_sky::kernel)
 
-enum class KernelError {
+enum class Error {
 	OK = 0,
 
 	CantLoadDLL,
@@ -23,9 +24,9 @@ enum class KernelError {
 	CantCreateLogger
 };
 
-BS_API std::error_code make_error_code(KernelError);
+BS_API std::error_code make_error_code(Error);
 
-NAMESPACE_END(blue_sky)
+NAMESPACE_END(blue_sky::kernel)
 
-BS_REGISTER_ERROR_ENUM(blue_sky::KernelError)
+BS_REGISTER_ERROR_ENUM(blue_sky::kernel::Error)
 

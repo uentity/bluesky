@@ -7,10 +7,14 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/bs.h>
+#include <bs/python/common.h>
+#include <bs/error.h>
+#include <bs/kernel/errors.h>
+#include <bs/tree/errors.h>
+#include <bs/log.h>
+#include <spdlog/fmt/fmt.h>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(python)
+NAMESPACE_BEGIN(blue_sky::python)
 
 void py_bind_error(py::module& m) {
 	/*-----------------------------------------------------------------------------
@@ -19,16 +23,6 @@ void py_bind_error(py::module& m) {
 	py::enum_<Error>(m, "Error")
 		.value("OK", Error::OK)
 		.value("Happened", Error::Happened)
-	;
-
-	py::enum_<KernelError>(m, "KernelError")
-		.value("OK", KernelError::OK)
-		.value("CantLoadDLL", KernelError::CantLoadDLL)
-		.value("CantUnloadDLL", KernelError::CantUnloadDLL)
-		.value("CantRegisterType", KernelError::CantRegisterType)
-		.value("TypeIsNil", KernelError::TypeIsNil)
-		.value("TypeAlreadyRegistered", KernelError::TypeAlreadyRegistered)
-		.value("CantCreateLogger", KernelError::CantCreateLogger)
 	;
 
 	py::enum_<tree::Error>(m, "TreeError")
@@ -52,7 +46,6 @@ void py_bind_error(py::module& m) {
 		.def(py::init([]() { return std::error_code(Error::Happened); }))
 		// construct from known error enums -- plugins can add ctors like this
 		.def(py::init<Error>())
-		.def(py::init<KernelError>())
 		.def(py::init<tree::Error>())
 
 		.def_property_readonly("value", &std::error_code::value, "Get numeric error code")
@@ -75,7 +68,6 @@ void py_bind_error(py::module& m) {
 	;
 	// implcitly construct error_code from corresponding enum value
 	py::implicitly_convertible<Error, std::error_code>();
-	py::implicitly_convertible<KernelError, std::error_code>();
 	py::implicitly_convertible<tree::Error, std::error_code>();
 
 	// bind blue_sky::error
@@ -119,6 +111,4 @@ void py_bind_error(py::module& m) {
 	m.def("test_code", [](int c) { bsout() << c << log::end; });
 }
 
-NAMESPACE_END(python)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::python)

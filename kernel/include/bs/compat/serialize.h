@@ -9,8 +9,6 @@
 
 #pragma once
 
-#include "../kernel.h"
-
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/split_free.hpp>

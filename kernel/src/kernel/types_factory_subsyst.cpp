@@ -9,17 +9,15 @@
 
 #include <bs/log.h>
 #include <bs/error.h>
-#include <bs/kernel_errors.h>
-#include "kernel_plugins_subsyst.h"
+#include <bs/kernel/errors.h>
+#include "plugins_subsyst.h"
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(detail)
-
+NAMESPACE_BEGIN(blue_sky::kernel::detail)
 using namespace std;
 
-bool kernel_plugins_subsyst::register_type(
+auto plugins_subsyst::register_type(
 	const type_descriptor& td, const plugin_descriptor* pd, type_tuple* tt_ref
-) {
+) -> bool {
 	if(td.is_nil()) return false;
 
 	// if no plugin descriptor provided - register as runtime type
@@ -49,9 +47,9 @@ bool kernel_plugins_subsyst::register_type(
 	return res.second;
 }
 
-bool kernel_plugins_subsyst::register_type(
+auto plugins_subsyst::register_type(
 	const type_descriptor& td, const std::string& plug_name, type_tuple* tt_ref
-) {
+) -> bool {
 	if(!plug_name.size()) return false;
 
 	// check if plugin with given name already registered
@@ -66,7 +64,7 @@ bool kernel_plugins_subsyst::register_type(
 	return register_type(td, &*ttplug.first, tt_ref);
 }
 
-type_tuple kernel_plugins_subsyst::demand_type(const type_tuple& obj_t) {
+auto plugins_subsyst::demand_type(const type_tuple& obj_t) -> type_tuple {
 	//type_tuple tt_ref(obj_t);
 	type_tuple tt_ref;
 	if(obj_t.td().is_nil()) {
@@ -91,13 +89,11 @@ type_tuple kernel_plugins_subsyst::demand_type(const type_tuple& obj_t) {
 		if(tt_ref.is_nil()) {
 			throw error(
 				fmt::format("Type ({}) is nil or cannot be registered!", obj_t.td().name),
-				KernelError::CantRegisterType
+				kernel::Error::CantRegisterType
 			);
 		}
 	}
 	return tt_ref;
 }
 
-NAMESPACE_END(detail)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::kernel::detail)
