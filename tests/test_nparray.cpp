@@ -19,11 +19,10 @@ namespace py = pybind11;
 
 using dvector = blue_sky::bs_numpy_array< double >;
 using sp_dvector = std::shared_ptr< dvector >;
-
-template< class T >
-struct test { T m_; };
-
-using tint = test< int >;
+using ivector = blue_sky::bs_numpy_array< long >;
+using sp_ivector = std::shared_ptr< ivector >;
+using uivector = blue_sky::bs_numpy_array< unsigned long >;
+using sp_uivector = std::shared_ptr< uivector >;
 
 template< class Ostream, class T, template< class > class traits >
 Ostream& operator <<(Ostream& os, const bs_array< T, traits >& A) {
@@ -33,11 +32,12 @@ Ostream& operator <<(Ostream& os, const bs_array< T, traits >& A) {
 	return os;
 }
 
-void double_vec(const sp_dvector& X) {
-	dvector& x = *X;
+template<typename T>
+void double_vec(const std::shared_ptr<blue_sky::bs_numpy_array<T>>& X) {
+	auto& x = *X;
 	std::cout << "Source: " << x << std::endl;
 	try {
-		x.resize(x.size() + 2, 42.);
+		x.resize(x.size() + 2, T(42));
 	}
 	catch(const std::exception& e) {
 		std::cout << e.what() << std::endl;
@@ -49,11 +49,12 @@ void double_vec(const sp_dvector& X) {
 	std::cout << "Result: " << x << std::endl;
 }
 
-sp_dvector gen_vec() {
-	//sp_dvector res = std::make_shared< dvector >(10);
-	sp_dvector res = std::make_shared< dvector >();
+template<typename T>
+auto gen_vec() -> std::shared_ptr< blue_sky::bs_numpy_array<T> > {
+	using vec_t = blue_sky::bs_numpy_array<T>;
+	auto res = std::make_shared< vec_t >();
 	res->resize(10);
-	std::fill(res->begin(), res->end(), 42.);
+	std::fill(res->begin(), res->end(), T(42));
 	return res;
 }
 
@@ -79,17 +80,15 @@ std::shared_ptr< ret_array_t > test_nparray(std::shared_ptr< inp_array_t > a, st
 	return res;
 }
 
-PYBIND11_PLUGIN(test_nparray) {
-	// bind all functions to test_pymod
-	py::module m("test_nparray");
-	//auto subm = m.def_submodule("test_nparray");
-	//std::cout << m.ptr() << ' ' << subm.ptr() << std::endl;
+PYBIND11_MODULE(test_nparray, m) {
+	m.def("double_vec", &double_vec<double>, "A function that doubles vector values");
+	m.def("gen_vec", &gen_vec<double>);
 
-	m.def("double_vec", &double_vec, "A function that doubles vector values");
-	m.def("gen_vec", &gen_vec);
+	m.def("double_ivec", &double_vec<long>, "A function that doubles vector values");
+	m.def("gen_ivec", &gen_vec<long>);
+
+	m.def("double_uivec", &double_vec<unsigned long>, "A function that doubles vector values");
+	m.def("gen_uivec", &gen_vec<unsigned long>);
 
 	m.def("test_nparray_d", &test_nparray< dvector, dvector >);
-
-	return m.ptr();
-
 }
