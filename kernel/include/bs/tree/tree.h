@@ -14,6 +14,8 @@
 #include "node.h"
 #include "errors.h"
 
+#include <list>
+
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
 /*-----------------------------------------------------------------------------
@@ -34,13 +36,13 @@ BS_API std::string convert_path(
 BS_API sp_link deref_path(const std::string& path, const sp_link& start, node::Key path_unit = node::Key::ID);
 
 /// walk the tree just like the Python's `os.walk` is implemented
-using step_process_fp = void (*)(const sp_link&, std::vector<sp_link>&, std::vector<sp_link>&);
+using step_process_fp = void (*)(const sp_link&, std::list<sp_link>&, std::vector<sp_link>&);
 BS_API void walk(
 	const sp_link& root, step_process_fp step_f,
 	bool topdown = true, bool follow_symlinks = true
 );
 // overload for std::function instead of function pointer
-using step_process_f = std::function<void(const sp_link&, std::vector<sp_link>&, std::vector<sp_link>&)>;
+using step_process_f = std::function<void(const sp_link&, std::list<sp_link>&, std::vector<sp_link>&)>;
 BS_API void walk(
 	const sp_link& root, const step_process_f& step_f,
 	bool topdown = true, bool follow_symlinks = true

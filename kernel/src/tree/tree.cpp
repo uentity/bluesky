@@ -30,12 +30,12 @@ namespace {
 
 template<class Callback>
 void walk_impl(
-	const std::vector<sp_link>& nodes, const Callback& step_f,
+	const std::list<sp_link>& nodes, const Callback& step_f,
 	const bool topdown, const bool follow_symlinks,
 	std::set<Key_type<Key::ID>> active_symlinks = {}
 ) {
 	sp_node cur_node;
-	std::vector<sp_link> next_nodes;
+	std::list<sp_link> next_nodes;
 	std::vector<sp_link> next_leafs;
 	// for each node
 	for(const auto& N : nodes) {

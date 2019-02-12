@@ -12,17 +12,17 @@
 #include <bs/python/common.h>
 #include <bs/python/tree.h>
 #include <bs/python/expected.h>
+#include <bs/python/list.h>
 
 #include <boost/uuid/uuid_io.hpp>
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 
-// make it possible to exchange vector of links without copying
-// (and modify it in-place in Python for `walk()`)
+// make it possible to bind opaque std::list & std::vector (w/o content copying)
 PYBIND11_MAKE_OPAQUE(std::vector<blue_sky::tree::sp_link>);
+PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_link>);
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(python)
+NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
 using Key = node::Key;
 using InsertPolicy = node::InsertPolicy;
@@ -124,51 +124,6 @@ void erase_idx(node& N, const long idx) {
 template<Key K>
 int rename(node& N, const std::string& key, std::string new_name, bool all = false) {
 	return N.rename(key, std::move(new_name), K, all);
-}
-
-// ------- add some mmethods to opaque list-like class
-template<typename Vector, typename List>
-auto make_rich_pylist(List& cl) -> List& {
-	using size_type = typename Vector::size_type;
-	using T = typename Vector::value_type;
-
-	cl.def(py::init<size_type>());
-
-	cl.def("resize",
-		 (void (Vector::*) (size_type count)) & Vector::resize,
-		 "changes the number of elements stored");
-
-	cl.def("erase",
-		[](Vector &v, size_type i) {
-		if (i >= v.size())
-			throw py::index_error();
-		v.erase(v.begin() + i);
-	}, "erases element at index ``i``");
-
-	cl.def("empty",         &Vector::empty,         "checks whether the container is empty");
-	cl.def("size",          &Vector::size,          "returns the number of elements");
-	cl.def("push_back", (void (Vector::*)(const T&)) &Vector::push_back, "adds an element to the end");
-	cl.def("pop_back",                               &Vector::pop_back, "removes the last element");
-
-	//cl.def("max_size",      &Vector::max_size,      "returns the maximum possible number of elements");
-	//cl.def("reserve",       &Vector::reserve,       "reserves storage");
-	//cl.def("capacity",      &Vector::capacity,      "returns the number of elements that can be held in currently allocated storage");
-	//cl.def("shrink_to_fit", &Vector::shrink_to_fit, "reduces memory usage by freeing unused memory");
-
-	cl.def("clear", &Vector::clear, "clears the contents");
-	cl.def("swap",   &Vector::swap, "swaps the contents");
-
-	cl.def("front", [](Vector &v) {
-		if (v.size()) return v.front();
-		else throw py::index_error();
-	}, "access the first element");
-
-	cl.def("back", [](Vector &v) {
-		if (v.size()) return v.back();
-		else throw py::index_error();
-	}, "access the last element ");
-
-	return cl;
 }
 
 NAMESPACE_END() // hidden ns
@@ -521,17 +476,19 @@ void py_bind_tree(py::module& m) {
 
 	// bind list of links as opaque type 
 	using v_links = std::vector<sp_link>;
-	auto clV = py::bind_vector<v_links>(m, "links_list", py::module_local(false));
-	make_rich_pylist<v_links>(clV);
+	using l_links = std::list<sp_link>;
+	auto clV = py::bind_vector<v_links>(m, "links_vector", py::module_local(false));
+	detail::make_rich_pylist<v_links>(clV);
+	bind_list<l_links>(m, "links_list", py::module_local(false));
 
 	// walk
 	// [NOTE] use proxy functor to allow nodes list modification in Python callback
 	// [HINT] pass vectors to be modified as pointers - in this case pybind11 applies reference policy
-	using py_walk_cb = std::function<void(const sp_link&, v_links*, v_links*)>;
+	using py_walk_cb = std::function<void(const sp_link&, l_links*, v_links*)>;
 	m.def("walk",
 		[](const sp_link& root, py_walk_cb pyf, bool topdown = true, bool follow_symlinks = true) {
 			walk(root, [pyf = std::move(pyf)] (
-					const sp_link& cur_root, v_links& nodes, v_links& leafs
+					const sp_link& cur_root, l_links& nodes, v_links& leafs
 				) {
 					// convert references to pointers
 					pyf(cur_root, &nodes, &leafs);
@@ -558,6 +515,4 @@ void py_bind_tree(py::module& m) {
 	m.def("load_tree", &load_tree, "filename"_a, "ar"_a = TreeArchive::Text);
 }
 
-NAMESPACE_END(python)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::python)
