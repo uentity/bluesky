@@ -59,12 +59,16 @@ public:
 	auto populate(const std::string& child_type_id, bool wait_if_busy = true) const
 		-> result_or_err<sp_node>;
 	// async populate
-	auto populate(process_data_cb f, std::string child_type_id, bool wait_if_busy = true) const
+	auto populate(process_data_cb f, std::string child_type_id) const
 		-> void;
 
 	// access to link's fusion bridge
 	auto bridge() const -> sp_fusion;
 	auto reset_bridge(sp_fusion new_bridge = nullptr) -> void;
+
+	// access to internal object cache
+	// this method never involves time-consuming operations and directly returns cached object
+	auto cache() const -> sp_node;
 
 private:
 	struct impl;
