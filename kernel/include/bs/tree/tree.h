@@ -27,25 +27,29 @@ BS_API std::string abspath(sp_clink l, node::Key path_unit = node::Key::ID);
 /// convert path one path representaion to another
 BS_API std::string convert_path(
 	std::string src_path, const sp_clink& start,
-	node::Key src_path_unit = node::Key::ID, node::Key dst_path_unit = node::Key::Name
+	node::Key src_path_unit = node::Key::ID, node::Key dst_path_unit = node::Key::Name,
+	bool follow_lazy_links = false
 );
 
 /// quick link search by given absolute or relative path
 /// may be faster that full `node::deep_search()`
 /// also can lookup starting from any tree node given absolute path
-BS_API sp_link deref_path(const std::string& path, const sp_link& start, node::Key path_unit = node::Key::ID);
+BS_API sp_link deref_path(
+	const std::string& path, const sp_link& start, node::Key path_unit = node::Key::ID,
+	bool follow_lazy_links = true
+);
 
 /// walk the tree just like the Python's `os.walk` is implemented
 using step_process_fp = void (*)(const sp_link&, std::list<sp_link>&, std::vector<sp_link>&);
 BS_API void walk(
 	const sp_link& root, step_process_fp step_f,
-	bool topdown = true, bool follow_symlinks = true
+	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
 );
 // overload for std::function instead of function pointer
 using step_process_f = std::function<void(const sp_link&, std::list<sp_link>&, std::vector<sp_link>&)>;
 BS_API void walk(
 	const sp_link& root, const step_process_f& step_f,
-	bool topdown = true, bool follow_symlinks = true
+	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
 );
 
 /*-----------------------------------------------------------------------------
@@ -57,7 +61,7 @@ using deref_process_f = std::function<void(const sp_link&)>;
 BS_API auto deref_path(
 	deref_process_f f,
 	std::string path, sp_link start, node::Key path_unit = node::Key::ID,
-	bool high_priority = false
+	bool follow_lazy_links = true, bool high_priority = false
 ) -> void;
 // [TODO] can't be compiled for some reason, enable after problem is solved
 // same as above but accept function pointer

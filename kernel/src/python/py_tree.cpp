@@ -283,7 +283,6 @@ void py_bind_tree(py::module& m) {
 	//py::implicitly_convertible<int, node::InsertPolicy>();
 	//py::implicitly_convertible<long, node::InsertPolicy>();
 
-	// `node` binding
 	node_pyface
 		BSPY_EXPORT_DEF(node)
 		.def(py::init<>())
@@ -458,19 +457,25 @@ void py_bind_tree(py::module& m) {
 		)
 	;
 
-	// misc tree-related functions
+	///////////////////////////////////////////////////////////////////////////////
+	//  misc tree-related functions
+	//
 	m.def("abspath", &abspath, "lnk"_a, "path_unit"_a = node::Key::ID, "Get link's absolute path");
 	m.def("convert_path", &convert_path,
 		"src_path"_a, "start"_a, "src_path_unit"_a = node::Key::ID, "dst_path_unit"_a = node::Key::Name,
+		"follow_lazy_links"_a = false,
 		"Convert path string from one representation to another (for ex. link IDs -> link names)"
 	);
-	m.def("deref_path", py::overload_cast<const std::string&, const sp_link&, node::Key>(&deref_path),
-		"path"_a, "start"_a, "path_unit"_a = node::Key::ID,
+	m.def("deref_path",
+		py::overload_cast<const std::string&, const sp_link&, node::Key, bool>(&deref_path),
+		"path"_a, "start"_a, "path_unit"_a = node::Key::ID, "follow_lazy_links"_a = true,
 		"Quick link search by given path relative to `start`"
 	);
 	// async deref_path
-	m.def("deref_path", py::overload_cast<deref_process_f, std::string, sp_link, node::Key, bool>(&deref_path),
-		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = node::Key::ID, "high_priority"_a = false,
+	m.def("deref_path",
+		py::overload_cast<deref_process_f, std::string, sp_link, node::Key, bool, bool>(&deref_path),
+		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = node::Key::ID,
+		"follow_lazy_links"_a = true, "high_priority"_a = false,
 		"Async quick link search by given path relative to `start`"
 	);
 
@@ -486,7 +491,10 @@ void py_bind_tree(py::module& m) {
 	// [HINT] pass vectors to be modified as pointers - in this case pybind11 applies reference policy
 	using py_walk_cb = std::function<void(const sp_link&, l_links*, v_links*)>;
 	m.def("walk",
-		[](const sp_link& root, py_walk_cb pyf, bool topdown = true, bool follow_symlinks = true) {
+		[](
+			const sp_link& root, py_walk_cb pyf, bool topdown = true, bool follow_symlinks = true,
+			bool follow_lazy_links = false
+		) {
 			walk(root, [pyf = std::move(pyf)] (
 					const sp_link& cur_root, l_links& nodes, v_links& leafs
 				) {
@@ -496,7 +504,7 @@ void py_bind_tree(py::module& m) {
 				topdown, follow_symlinks
 			);
 		},
-		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true,
+		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true, "follow_lazy_links"_a = false,
 		"Walk the tree similar to Python `os.walk()`"
 	);
 

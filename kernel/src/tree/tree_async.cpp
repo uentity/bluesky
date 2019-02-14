@@ -35,8 +35,7 @@ template<typename level_process_f>
 struct deref_actor : detail::async_api_mixin<deref_actor<level_process_f>> {
 	using base_t = detail::async_api_mixin<deref_actor<level_process_f>>;
 	using deref_actor_t = caf::typed_actor<
-		caf::reacts_to<std::string, sp_link, level_process_f, deref_process_f>
-		//caf::reacts_to<std::string, sp_link, level_process_f, deref_process_fp>
+		caf::reacts_to<std::string, sp_link, level_process_f, deref_process_f, bool>
 	>;
 
 	deref_actor_t actor_;
@@ -53,16 +52,11 @@ private:
 		return {
 			[](
 				const std::string& path, const sp_link& lnk,
-				const level_process_f& lp, const deref_process_f& f
+				const level_process_f& lp, const deref_process_f& f,
+				bool follow_lazy_links
 			) {
-				f(deref_path(path, *lnk, lp));
+				f(deref_path(path, *lnk, lp, follow_lazy_links));
 			}
-			//[](
-			//	const std::string& path, const sp_link& lnk,
-			//	const level_process_f& lp, deref_process_fp fp
-			//) {
-			//	fp(deref_path(path, *lnk, lp));
-			//}
 		};
 	}
 
@@ -72,7 +66,8 @@ NAMESPACE_END()
 
 template<typename DerefProcessF>
 auto deref_path_async(
-	std::string path, sp_link lnk, walk_down_ft&& lp, DerefProcessF&& dp, bool high_priority
+	std::string path, sp_link lnk, walk_down_ft&& lp, DerefProcessF&& dp,
+	bool follow_lazy_links, bool high_priority
 ) -> void {
 	// initialize actor only once
 	static deref_actor<walk_down_ft> actor;
@@ -82,9 +77,13 @@ auto deref_path_async(
 	// send message
 	high_priority ?
 		actor.send<caf::message_priority::high>(
-			std::move(path), std::move(lnk), std::move(lp), std::move(dp)
+			std::move(path), std::move(lnk), std::move(lp), std::move(dp),
+			follow_lazy_links
 		) :
-		actor.send(std::move(path), std::move(lnk), std::move(lp), std::move(dp));
+		actor.send(
+			std::move(path), std::move(lnk), std::move(lp), std::move(dp),
+			follow_lazy_links
+		);
 }
 
 NAMESPACE_END(detail)
@@ -94,12 +93,13 @@ NAMESPACE_END(detail)
  *-----------------------------------------------------------------------------*/
 // same as above but accept std::function
 auto deref_path(
-	deref_process_f f, std::string path, sp_link start, node::Key path_unit, bool high_priority
+	deref_process_f f, std::string path, sp_link start, node::Key path_unit,
+	bool follow_lazy_links, bool high_priority
 ) -> void {
 	detail::deref_path_async<deref_process_f>(
 		std::move(path), std::move(start),
 		detail::gen_walk_down_tree(path_unit), std::move(f),
-		high_priority
+		follow_lazy_links, high_priority
 	);
 }
 // accept function

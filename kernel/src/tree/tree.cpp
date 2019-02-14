@@ -14,9 +14,6 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
 
-#define CAN_CALL_DNODE(L) \
-( !(L->flags() & link::LazyLoad) || L->req_status(link::Req::DataNode) == link::ReqStatus::OK )
-
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
 using Key = node::Key;
@@ -31,9 +28,10 @@ namespace {
 template<class Callback>
 void walk_impl(
 	const std::list<sp_link>& nodes, const Callback& step_f,
-	const bool topdown, const bool follow_symlinks,
+	bool topdown, bool follow_symlinks, bool follow_lazy_links,
 	std::set<Key_type<Key::ID>> active_symlinks = {}
 ) {
+	using detail::can_call_dnode;
 	sp_node cur_node;
 	std::list<sp_link> next_nodes;
 	std::vector<sp_link> next_leafs;
@@ -49,7 +47,7 @@ void walk_impl(
 		}
 
 		// obtain node from link honoring LazyLoad flag
-		cur_node = CAN_CALL_DNODE(N) ? N->data_node() : nullptr;
+		cur_node = (follow_lazy_links || can_call_dnode(*N)) ? N->data_node() : nullptr;
 
 		next_nodes.clear();
 		next_leafs.clear();
@@ -58,7 +56,7 @@ void walk_impl(
 			// for each link in node
 			for(const auto& l : *cur_node) {
 				// collect nodes
-				if(CAN_CALL_DNODE(l) && l->data_node()) {
+				if((follow_lazy_links || can_call_dnode(*l)) && l->data_node()) {
 					next_nodes.push_back(l);
 				}
 				else
@@ -71,7 +69,7 @@ void walk_impl(
 			step_f(N, next_nodes, next_leafs);
 		// process list of next nodes
 		if(!next_nodes.empty())
-			walk_impl(next_nodes, step_f, topdown, follow_symlinks, active_symlinks);
+			walk_impl(next_nodes, step_f, topdown, follow_symlinks, follow_lazy_links, active_symlinks);
 		// if walking from most deep subdir, process current node after all subtree
 		if(!topdown)
 			step_f(N, next_nodes, next_leafs);
@@ -144,7 +142,8 @@ std::string abspath(sp_clink l, Key path_unit) {
 
 std::string convert_path(
 	std::string src_path, const sp_clink& start,
-	Key src_path_unit, Key dst_path_unit
+	Key src_path_unit, Key dst_path_unit,
+	bool follow_lazy_links
 ) {
 	std::string res_path;
 	// convert from ID-based path to human-readable
@@ -165,24 +164,32 @@ std::string convert_path(
 
 	// do conversion
 	boost::trim(src_path);
-	detail::deref_path(src_path, *start, converter);
+	detail::deref_path(src_path, *start, converter, follow_lazy_links);
 	// if abs path given, return abs path
 	if(src_path[0] == '/')
 		res_path.insert(res_path.begin(), '/');
 	return res_path;
 }
 
-sp_link deref_path(const std::string& path, const sp_link& start, node::Key path_unit) {
+sp_link deref_path(
+	const std::string& path, const sp_link& start, node::Key path_unit, bool follow_lazy_links
+) {
 	if(!start) return nullptr;
-	return detail::deref_path(path, *start, detail::gen_walk_down_tree(path_unit));
+	return detail::deref_path(path, *start, detail::gen_walk_down_tree(path_unit), follow_lazy_links);
 }
 
-void walk(const sp_link& root, step_process_fp step_f, bool topdown, bool follow_symlinks) {
-	walk_impl({root}, step_f, topdown, follow_symlinks);
+auto walk(
+	const sp_link& root, step_process_fp step_f,
+	bool topdown, bool follow_symlinks, bool follow_lazy_links
+) -> void {
+	walk_impl({root}, step_f, topdown, follow_symlinks, follow_lazy_links);
 }
 
-void walk(const sp_link& root, const step_process_f& step_f,bool topdown, bool follow_symlinks) {
-	walk_impl({root}, step_f, topdown, follow_symlinks);
+auto walk(
+	const sp_link& root, const step_process_f& step_f,
+	bool topdown, bool follow_symlinks, bool follow_lazy_links
+) -> void {
+	walk_impl({root}, step_f, topdown, follow_symlinks, follow_lazy_links);
 }
 
 

@@ -12,7 +12,10 @@
 #include <bs/tree/tree.h>
 #include <boost/algorithm/string.hpp>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree) NAMESPACE_BEGIN(detail)
+#define CAN_CALL_DNODE(L) \
+( !((L).flags() & link::LazyLoad) || (L).req_status(link::Req::DataNode) == link::ReqStatus::OK )
+
+NAMESPACE_BEGIN(blue_sky::tree::detail)
 
 sp_link walk_down_tree(
 	const std::string& cur_lid, const sp_node& level, node::Key path_unit = node::Key::ID
@@ -26,22 +29,24 @@ auto gen_walk_down_tree(node::Key path_unit = node::Key::ID) {
 	};
 }
 
-//inline auto can_call_dnode(const link& L) -> bool {
-//	return ( !(L.flags() & link::LazyLoad) || L.req_status(link::Req::DataNode) == link::ReqStatus::OK );
-//}
-
 NAMESPACE_END()
+
+// find out if we can call `data_node()` honoring LazyLoad flag
+inline auto can_call_dnode(const link& L) -> bool {
+	return !(L.flags() & link::LazyLoad) || L.req_status(link::Req::DataNode) == link::ReqStatus::OK;
+}
 
 template< typename level_process_f = decltype(gen_walk_down_tree()) >
 sp_link deref_path(
-	const std::string& path, const link& l, level_process_f&& proc_f = gen_walk_down_tree()
+	const std::string& path, const link& l, level_process_f&& proc_f = gen_walk_down_tree(),
+	bool follow_lazy_links = true
 ) {
 	// split 
 	std::vector<std::string> path_parts;
 	boost::split(path_parts, path, boost::is_any_of("/"));
 	// setup search root
 	sp_node root = l.owner();
-	if(!root) {
+	if( !root && (follow_lazy_links || can_call_dnode(l)) ) {
 		// given link points to tree root?
 		root = l.data_node();
 	}
@@ -68,7 +73,7 @@ sp_link deref_path(
 			// go up one level
 			root = res->owner();
 		}
-		else if(res) {
+		else if( res && (follow_lazy_links || can_call_dnode(*res)) ) {
 			root = res->data_node();
 		}
 		else root.reset();
@@ -76,5 +81,4 @@ sp_link deref_path(
 	return res;
 }
 
-NAMESPACE_END(detail) NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::tree::detail)
