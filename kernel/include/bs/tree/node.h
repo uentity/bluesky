@@ -183,7 +183,8 @@ public:
 		DenyDupNames = 1,
 		RenameDup = 2,
 		DenyDupOID = 4,
-		Merge = 8
+		ReplaceDupOID = 8,
+		Merge = 16
 	};
 	/// leafs insertion
 	insert_status<Key::ID> insert(sp_link l, InsertPolicy pol = InsertPolicy::AllowDupNames);
@@ -238,7 +239,9 @@ public:
 	bool rename(const id_type& lid, std::string new_name);
 	/// rename link adresses by given key
 	/// if `all == true`, rename all links matced by key, otherwise first found link is renamed
-	int rename(const std::string& key, std::string new_name, Key key_meaning = Key::ID, bool all = false);
+	std::size_t rename(
+		const std::string& key, std::string new_name, Key key_meaning = Key::ID, bool all = false
+	);
 
 	/// project any given iterator into custom order
 	iterator<Key::AnyOrder> project(iterator<Key::ID>) const;

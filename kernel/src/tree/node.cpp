@@ -304,7 +304,7 @@ bool node::rename(const id_type& lid, std::string new_name) {
 	return pimpl_->rename<Key::ID>(lid, std::move(new_name)) > 0;
 }
 
-int node::rename(const std::string& key, std::string new_name, Key key_meaning, bool all) {
+std::size_t node::rename(const std::string& key, std::string new_name, Key key_meaning, bool all) {
 	switch(key_meaning) {
 	default:
 	case Key::ID:

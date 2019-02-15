@@ -121,26 +121,29 @@ public:
 		return this->deep_search_impl<K>(*this, key);
 	}
 
-	insert_status<Key::ID> insert(sp_link l, const InsertPolicy pol) {
+	insert_status<Key::ID> insert(sp_link L, const InsertPolicy pol) {
 		// can't move persistent node from it's owner
-		if(!l || !accepts(l) || (l->flags() & Flags::Persistent && l->owner()))
+		if(!L || !accepts(L) || (L->flags() & Flags::Persistent && L->owner()))
 			return {end<Key::ID>(), false};
+
+		// make insertion in one single transaction
+		links_locker_t my_turn(links_guard_);
 		// check if we have duplication name
 		iterator<Key::ID> dup;
 		if(enumval(pol & 3) > 0) {
-			dup = find<Key::Name, Key::ID>(l->name());
-			if(dup != end<Key::ID>() && (*dup)->id() != l->id()) {
+			dup = find<Key::Name, Key::ID>(L->name());
+			if(dup != end<Key::ID>() && (*dup)->id() != L->id()) {
 				bool unique_found = false;
 				// first check if dup names are prohibited
 				if(enumval(pol & InsertPolicy::DenyDupNames)) return {dup, false};
-				else if(enumval(pol & InsertPolicy::RenameDup) && !(l->flags() & Flags::Persistent)) {
+				else if(enumval(pol & InsertPolicy::RenameDup) && !(L->flags() & Flags::Persistent)) {
 					// try to auto-rename link
 					std::string new_name;
 					for(int i = 0; i < 10000; ++i) {
-						new_name = l->name() + '_' + std::to_string(i);
+						new_name = L->name() + '_' + std::to_string(i);
 						if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
 							// we've found a unique name
-							l->rename_silent(std::move(new_name));
+							L->rename_silent(std::move(new_name));
 							unique_found = true;
 							break;
 						}
@@ -150,14 +153,20 @@ public:
 				if(!unique_found) return {dup, false};
 			}
 		}
+
 		// check for duplicating OID
-		if(enumval(pol & InsertPolicy::DenyDupOID)) {
-			dup = find<Key::OID, Key::ID>(l->oid());
-			if(dup != end<Key::ID>()) return {dup, false};
+		auto& I = links_.get<Key_tag<Key::ID>>();
+		if( enumval(pol & (InsertPolicy::DenyDupOID | InsertPolicy::ReplaceDupOID)) ) {
+			dup = find<Key::OID, Key::ID>(L->oid());
+			if(dup != end<Key::ID>()) {
+				bool is_inserted = false;
+				if(enumval(pol & InsertPolicy::ReplaceDupOID))
+					is_inserted = I.replace(dup, std::move(L));
+				return {dup, is_inserted};
+			}
 		}
 		// try to insert given link
-		links_locker_t my_turn(links_guard_);
-		return links_.get<Key_tag<Key::ID>>().insert(std::move(l));
+		return I.insert(std::move(L));
 	}
 
 	template<Key K>
@@ -172,6 +181,7 @@ public:
 	template<Key K>
 	bool rename(iterator<K>&& pos, std::string&& new_name) {
 		links_locker_t my_turn(links_guard_);
+
 		if(pos == end<K>()) return false;
 		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
 			l->rename_silent(std::move(name));
@@ -179,7 +189,9 @@ public:
 	}
 
 	template<Key K>
-	int rename(const Key_type<K>& key, const std::string& new_name, bool all = false) {
+	std::size_t rename(const Key_type<K>& key, const std::string& new_name, bool all = false) {
+		links_locker_t my_turn(links_guard_);
+
 		range<K> matched_items = equal_range<K>(key);
 		auto& storage = links_.get<Key_tag<K>>();
 		auto renamer = [&new_name](sp_link& l) {
@@ -195,6 +207,8 @@ public:
 	}
 
 	void on_rename(const Key_type<Key::ID>& key) {
+		links_locker_t my_turn(links_guard_);
+
 		// find target link by it's ID
 		auto& I = links_.get<Key_tag<Key::ID>>();
 		auto pos = I.find(key);
