@@ -164,11 +164,13 @@ std::string convert_path(
 
 	// do conversion
 	boost::trim(src_path);
-	detail::deref_path(src_path, *start, converter, follow_lazy_links);
-	// if abs path given, return abs path
-	if(src_path[0] == '/')
-		res_path.insert(res_path.begin(), '/');
-	return res_path;
+	if(detail::deref_path(src_path, *start, converter, follow_lazy_links)) {
+		// if abs path given, return abs path
+		if(src_path[0] == '/')
+			res_path.insert(res_path.begin(), '/');
+		return res_path;
+	}
+	return "";
 }
 
 sp_link deref_path(
