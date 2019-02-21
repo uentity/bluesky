@@ -103,9 +103,6 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 
 	std::cout << "\n\n*** testing serialization..." << std::endl;
 
-	// explicitly init serialization subsystem
-	kernel::unify_serialization();
-
 	sp_obj obj = std::make_shared<objbase>();
 	test_json(obj);
 

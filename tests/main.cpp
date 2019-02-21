@@ -11,15 +11,42 @@
 #define BOOST_TEST_MODULE blue_sky unit test
 //#define BOOST_TEST_ALTERNATIVE_INIT_API
 
+#include <bs/log.h>
 #include <bs/kernel/misc.h>
 #include <bs/kernel/plugins.h>
 #include <bs/plugin_descriptor.h>
 #include <boost/test/unit_test.hpp>
 
+#include "test_objects.h"
+
 BS_PLUGIN_DESCRIPTOR("unit_test", "1.0", "Unit-test plugin");
 
-BOOST_AUTO_TEST_CASE(test_main) {
-	blue_sky::kernel::init();
-	BOOST_CHECK(blue_sky::kernel::plugins::register_plugin(bs_get_plugin_descriptor()));
+// forward declare fixture types registering function
+namespace blue_sky { void register_test_objects(); }
+
+BS_REGISTER_PLUGIN {
+	using namespace blue_sky;
+	BSOUT << "*** BS tests global initialization" << bs_end;
+
+	// init kernel & register test plugins
+	kernel::init();
+	BOOST_CHECK(kernel::plugins::register_plugin(bs_get_plugin_descriptor()));
+
+	// explicitly init serialization subsystem
+	// [UPDATE] not needed, because auto-invoked by `register_plugin()`
+	//kernel::unify_serialization();
+
+	// register fixture objects constructors, etc
+	register_test_objects();
+
+	return true;
 }
+
+struct bs_global_fixture {
+	void setup() { bs_register_plugin( {bs_get_plugin_descriptor()} ); }
+
+	void teardown() {}
+};
+
+BOOST_TEST_GLOBAL_FIXTURE(bs_global_fixture);
 

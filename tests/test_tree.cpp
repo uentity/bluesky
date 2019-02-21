@@ -101,14 +101,20 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	N->insert(std::make_shared<sym_link>(
 		"sym_Citizen_2", abspath(*N->find(2))
 	));
+	N->insert(std::make_shared<sym_link>(
+		"sym_Citizen_3", abspath(*N->find(3))
+	));
+	N->insert(std::make_shared<sym_link>(
+		"sym_dot", "."
+	));
 	// print resulting tree content
 	auto hN = link::make_root<hard_link>("r", N);
-	kernel::tools::print_link(hN);
+	kernel::tools::print_link(hN, false);
 
 	// serializze node
 	auto N1 = test_json(N);
 	// print loaded tree content
-	kernel::tools::print_link(std::make_shared<hard_link>("r", N1));
+	kernel::tools::print_link(std::make_shared<hard_link>("r", N1), false);
 	BOOST_TEST(N1);
 	BOOST_TEST(N1->size() == N->size());
 
@@ -119,11 +125,11 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	}, "hard_Citizen_0", hN, node::Key::Name);
 
 	// fusion link
-	{
-		auto fl = std::make_shared<fusion_link>(
-			"fuse1", nullptr, std::make_shared<fusion_client>()
-		);
-		//fl->test();
-	}
+	//{
+	//	auto fl = std::make_shared<fusion_link>(
+	//		"fuse1", nullptr, std::make_shared<fusion_client>()
+	//	);
+	//	//fl->test();
+	//}
 }
 
