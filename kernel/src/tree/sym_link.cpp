@@ -12,14 +12,14 @@
 #include <bs/tree/errors.h>
 #include "tree_impl.h"
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
 
 /// ctor -- pointee is specified by string path
 sym_link::sym_link(std::string name, std::string path, Flags f)
 	: link(std::move(name), f), path_(std::move(path))
 {}
 /// ctor -- pointee is specified directly - absolute path will be stored
-sym_link::sym_link(std::string name, const sp_clink& src, Flags f)
+sym_link::sym_link(std::string name, const sp_link& src, Flags f)
 	: sym_link(std::move(name), abspath(src), f)
 {}
 
@@ -36,29 +36,32 @@ std::string sym_link::type_id() const {
 void sym_link::reset_owner(const sp_node& new_owner) {
 	link::reset_owner(new_owner);
 	// update link's status
-	data_impl().map([this](const sp_obj& obj) {
+	if(is_alive()) {
 		rs_reset(Req::Data, ReqStatus::OK);
-		if(obj->is_node())
-			rs_reset(Req::DataNode, ReqStatus::OK);
-	});
+		rs_reset(Req::DataNode, ReqStatus::OK);
+	}
 }
 
 result_or_err<sp_obj> sym_link::data_impl() const {
 	// cannot dereference dangling sym link
-	if(!owner()) return tl::make_unexpected(error::quiet(Error::UnboundSymLink));
-	const auto src_link = detail::deref_path(path_, *this);
+	const auto parent = owner();
+	if(!parent) return tl::make_unexpected(error::quiet(Error::UnboundSymLink));
+	const auto src_link = deref_path(path_, parent);
 	return src_link ?
 		result_or_err<sp_obj>(src_link->data_ex()) :
 		tl::make_unexpected(error::quiet(Error::LinkExpired));
 }
 
 bool sym_link::is_alive() const {
-	return bool(detail::deref_path(path_, *this));
+	return bool(deref_path(path_, owner()));
 }
 
 /// return stored pointee path
 std::string sym_link::src_path(bool human_readable) const {
-	return human_readable ? convert_path(path_, bs_shared_this<sym_link>()) : path_;
+	if(!human_readable) return path_;
+	else if(const auto parent = owner())
+		return convert_path(path_, parent->handle());
+	return {};
 }
 
 result_or_err<sp_node> sym_link::propagate_handle() {
@@ -66,5 +69,5 @@ result_or_err<sp_node> sym_link::propagate_handle() {
 	return data_node_ex();
 }
 
-NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
+NAMESPACE_END(blue_sky::tree)
 

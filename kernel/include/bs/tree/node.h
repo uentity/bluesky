@@ -22,8 +22,8 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
+
 // global alias to shorten typing
 namespace mi = boost::multi_index;
 
@@ -303,9 +303,11 @@ private:
 
 	BS_TYPE_DECL
 };
+// handy aliases
+using sp_node = std::shared_ptr<node>;
+using sp_cnode = std::shared_ptr<const node>;
 
-NAMESPACE_END(tree)
-NAMESPACE_END(blue_sky)
+NAMESPACE_END(blue_sky::tree)
 
 // allow bitwise operations for InsertPoiicy enum class
 BS_ALLOW_ENUMOPS(blue_sky::tree::node::InsertPolicy)

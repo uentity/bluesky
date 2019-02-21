@@ -22,8 +22,7 @@ template<Key K> using Key_type = typename node::Key_type<K>;
 /*-----------------------------------------------------------------------------
  *  impl details
  *-----------------------------------------------------------------------------*/
-// hidden
-namespace {
+NAMESPACE_BEGIN()
 
 template<class Callback>
 void walk_impl(
@@ -80,29 +79,24 @@ void walk_impl(
 	}
 }
 
-inline std::string link2path_unit(const sp_clink& l, Key path_unit) {
+inline std::string link2path_unit(const link& l, Key path_unit) {
 	switch(path_unit) {
 	default:
-	case Key::ID : return boost::uuids::to_string(l->id());
-	case Key::OID : return l->oid();
-	case Key::Name : return l->name();
-	case Key::Type : return l->type_id();
+	case Key::ID : return boost::uuids::to_string(l.id());
+	case Key::OID : return l.oid();
+	case Key::Name : return l.name();
+	case Key::Type : return l.type_id();
 	}
 }
 
-} // hidden ns
+NAMESPACE_END()
 
-// public
 NAMESPACE_BEGIN(detail)
 
 sp_link walk_down_tree(const std::string& cur_lid, const sp_node& level, node::Key path_unit) {
-	if(cur_lid != "..") {
-		const auto next = level->find(cur_lid, path_unit);
-		if(next != level->end()) {
-			return *next;
-		}
-	}
-	return nullptr;
+	if(!level) return nullptr;
+	const auto next = level->find(cur_lid, path_unit);
+	return next != level->end() ? *next : nullptr;
 }
 
 NAMESPACE_END(detail)
@@ -110,76 +104,141 @@ NAMESPACE_END(detail)
 /*-----------------------------------------------------------------------------
  *  public API
  *-----------------------------------------------------------------------------*/
-std::string abspath(sp_clink l, Key path_unit) {
-	std::deque<std::string> res;
-	while(l) {
-		res.push_front(link2path_unit(l, path_unit));
-		if(const auto parent = l->owner()) {
-			l = parent->handle();
+///////////////////////////////////////////////////////////////////////////////
+//  abspath
+//
+auto abspath(const link& L, Key path_unit) -> std::string {
+	std::deque<std::string> res{link2path_unit(L, path_unit)};
+	auto parent = L.owner();
+	while(parent) {
+		if(const auto parent_h = parent->handle()) {
+			res.push_front(link2path_unit(*parent_h, path_unit));
+			parent = parent_h->owner();
 		}
-		else return boost::join(res, "/");
+		else {
+			res.emplace_front("");
+			break;
+		}
 	}
-	// leadind slash is appended only if we have 'real' root node without self link
-	return std::string("/") + boost::join(res, "/");
-
-	// another possible implementation without multiple returns
-	// just leave it here -)
-	//sp_node parent;
-	//do {
-	//	if(l)
-	//		res.push_front(human_readable ? l->name() : boost::uuids::to_string(l->id()));
-	//	else {
-	//		// for root node
-	//		res.emplace_front("");
-	//		break;
-	//	}
-	//	if((parent = l->owner())) {
-	//		l = parent->handle();
-	//	}
-	//} while(parent);
-	//return boost::join(res, "/");
+	// [NOTE] root ID is irrelevant => abs path always starts with '/'
+	res[0].clear();
+	return boost::join(res, "/");
 }
 
+auto abspath(const sp_clink& L, Key path_unit) -> std::string {
+	return L ? abspath(*L) : "";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  find_root & find_root_handle
+//
+auto find_root(link& L) -> sp_node {
+	if(auto root = L.owner()) {
+		while(const auto root_h = root->handle()) {
+			if(auto parent = root_h->owner())
+				root = std::move(parent);
+			else return root;
+		}
+	}
+	// root handle is passed
+	return L.data_node();
+}
+
+auto find_root(const sp_link& L) -> sp_node {
+	return L ? find_root(*L) : nullptr;
+}
+
+// [NOTE] avoid `data_node()` call
+auto find_root(sp_node N) -> sp_node {
+	if(N) {
+		while(const auto root_h = N->handle()) {
+			if(auto parent = root_h->owner())
+				N = std::move(parent);
+			else break;
+		}
+	}
+	return N;
+}
+
+NAMESPACE_BEGIN()
+
+const auto find_root_handle_impl = [](auto L) {
+	if(L) {
+		while(const auto root = L->owner()) {
+			if(auto root_h = root->handle())
+				L = std::move(root_h);
+			else break;
+		}
+	}
+	return L;
+};
+
+NAMESPACE_END()
+
+auto find_root_handle(sp_link L) -> sp_link {
+	return find_root_handle_impl(std::move(L));
+}
+auto find_root_handle(sp_clink L) -> sp_clink {
+	return find_root_handle_impl(std::move(L));
+}
+auto find_root_handle(const sp_node& N) -> sp_link {
+	return find_root_handle_impl(N->handle());
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  convert_path
+//
 std::string convert_path(
-	std::string src_path, const sp_clink& start,
+	std::string src_path, sp_link start,
 	Key src_path_unit, Key dst_path_unit,
 	bool follow_lazy_links
 ) {
-	std::string res_path;
-	// convert from ID-based path to human-readable
-	const auto converter = [&res_path, src_path_unit, dst_path_unit](std::string part, const sp_node& level) {
+	std::vector<std::string> res_path;
+	const auto converter = [&res_path, src_path_unit, dst_path_unit](
+		std::string next_level, const sp_node& cur_level
+	) {
 		sp_link res;
-		if(part != "..") {
-			const auto next = level->find(part, src_path_unit);
-			if(next != level->end()) {
+		if(next_level.empty() || next_level == "." || next_level == "..")
+			res_path.emplace_back(std::move(next_level));
+		else {
+			const auto next = cur_level->find(next_level, src_path_unit);
+			if(next != cur_level->end()) {
 				res = *next;
-				part = link2path_unit(res, dst_path_unit);
+				res_path.emplace_back(link2path_unit(*res, dst_path_unit));
 			}
 		}
-		// append link ID to link's path
-		if(res_path.size()) res_path += '/';
-		res_path += std::move(part);
 		return res;
 	};
 
 	// do conversion
 	boost::trim(src_path);
-	if(detail::deref_path(src_path, *start, converter, follow_lazy_links)) {
-		// if abs path given, return abs path
-		if(src_path[0] == '/')
-			res_path.insert(res_path.begin(), '/');
-		return res_path;
+	if(detail::deref_path_impl<true>(src_path, std::move(start), nullptr, follow_lazy_links, converter)) {
+		return boost::join(res_path, "/");
 	}
 	return "";
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//  deref_path
+//
 sp_link deref_path(
-	const std::string& path, const sp_link& start, node::Key path_unit, bool follow_lazy_links
+	const std::string& path, sp_link start, node::Key path_unit, bool follow_lazy_links
 ) {
-	if(!start) return nullptr;
-	return detail::deref_path(path, *start, detail::gen_walk_down_tree(path_unit), follow_lazy_links);
+	return detail::deref_path_impl(
+		path, std::move(start), nullptr, follow_lazy_links, detail::gen_walk_down_tree(path_unit)
+	);
+}
+sp_link deref_path(
+	const std::string& path, sp_node start, node::Key path_unit, bool follow_lazy_links
+) {
+	return detail::deref_path_impl(
+		path, nullptr, std::move(start), follow_lazy_links, detail::gen_walk_down_tree(path_unit)
+	);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//  walk
+//
 auto walk(
 	const sp_link& root, step_process_fp step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links

@@ -461,20 +461,32 @@ void py_bind_tree(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  misc tree-related functions
 	//
-	m.def("abspath", &abspath, "lnk"_a, "path_unit"_a = node::Key::ID, "Get link's absolute path");
+	m.def("abspath", py::overload_cast<const sp_clink&, Key>(&abspath),
+		"lnk"_a, "path_unit"_a = node::Key::ID, "Get link's absolute path");
+	m.def("find_root", py::overload_cast<const sp_link&>(&find_root),
+		"L"_a, "Return root node of a tree that given link belongs to");
+	m.def("find_root", py::overload_cast<sp_node>(&find_root),
+		"N"_a, "Return root node of a tree that given node belongs to");
+	m.def("find_root_handle", py::overload_cast<sp_clink>(&find_root_handle),
+		"L"_a, "Return handle (link) of a tree root that given link belongs to");
+	m.def("find_root_handle", py::overload_cast<const sp_node&>(&find_root_handle),
+		"L"_a, "Return handle (link) of a tree root that given node belongs to");
 	m.def("convert_path", &convert_path,
 		"src_path"_a, "start"_a, "src_path_unit"_a = node::Key::ID, "dst_path_unit"_a = node::Key::Name,
 		"follow_lazy_links"_a = false,
 		"Convert path string from one representation to another (for ex. link IDs -> link names)"
 	);
-	m.def("deref_path",
-		py::overload_cast<const std::string&, const sp_link&, node::Key, bool>(&deref_path),
+	m.def("deref_path",py::overload_cast<const std::string&, sp_link, Key, bool>(&deref_path),
+		"path"_a, "start"_a, "path_unit"_a = node::Key::ID, "follow_lazy_links"_a = true,
+		"Quick link search by given path relative to `start`"
+	);
+	m.def("deref_path",py::overload_cast<const std::string&, sp_node, Key, bool>(&deref_path),
 		"path"_a, "start"_a, "path_unit"_a = node::Key::ID, "follow_lazy_links"_a = true,
 		"Quick link search by given path relative to `start`"
 	);
 	// async deref_path
 	m.def("deref_path",
-		py::overload_cast<deref_process_f, std::string, sp_link, node::Key, bool, bool>(&deref_path),
+		py::overload_cast<deref_process_f, std::string, sp_link, Key, bool, bool>(&deref_path),
 		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = node::Key::ID,
 		"follow_lazy_links"_a = true, "high_priority"_a = false,
 		"Async quick link search by given path relative to `start`"

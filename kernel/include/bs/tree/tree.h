@@ -22,20 +22,38 @@ NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
  *  Sync API
  *-----------------------------------------------------------------------------*/
 /// returns absolute link's path consisting from `path_unit` separated by '/'
-BS_API std::string abspath(sp_clink l, node::Key path_unit = node::Key::ID);
+/// root ID isn't included, so absolute path always starts with '/'
+BS_API auto abspath(const link& L, node::Key path_unit = node::Key::ID) -> std::string;
+BS_API auto abspath(const sp_clink& L, node::Key path_unit = node::Key::ID) -> std::string;
+
+/// find root node from given link (can call `data_node()` if and only if root handle is passed)
+BS_API auto find_root(link& L) -> sp_node;
+BS_API auto find_root(const sp_link& L) -> sp_node;
+/// ... and from given node (avoids call to `data_node()` at all)
+BS_API auto find_root(sp_node N) -> sp_node;
+
+/// same, but returns link to root node -- root's handle
+BS_API auto find_root_handle(sp_link L) -> sp_link;
+BS_API auto find_root_handle(sp_clink L) -> sp_clink;
+BS_API auto find_root_handle(const sp_node& N) -> sp_link;
 
 /// convert path one path representaion to another
-BS_API std::string convert_path(
-	std::string src_path, const sp_clink& start,
+BS_API auto convert_path(
+	std::string src_path, sp_link start,
 	node::Key src_path_unit = node::Key::ID, node::Key dst_path_unit = node::Key::Name,
 	bool follow_lazy_links = false
-);
+) -> std::string;
 
 /// quick link search by given absolute or relative path
 /// may be faster that full `node::deep_search()`
 /// also can lookup starting from any tree node given absolute path
 BS_API sp_link deref_path(
-	const std::string& path, const sp_link& start, node::Key path_unit = node::Key::ID,
+	const std::string& path, sp_link start, node::Key path_unit = node::Key::ID,
+	bool follow_lazy_links = true
+);
+/// sometimes it may be more convinient
+BS_API sp_link deref_path(
+	const std::string& path, sp_node start, node::Key path_unit = node::Key::ID,
 	bool follow_lazy_links = true
 );
 
