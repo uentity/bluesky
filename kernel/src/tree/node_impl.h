@@ -261,18 +261,17 @@ public:
 		// sanity
 		if(!lnk) return nullptr;
 
-		// if we're inserting a node, relink it to ensure a single hard link exists
-		auto lnk_node = lnk->propagate_handle();
-
-		// remove link from prev owner
-		if(auto prev_owner = lnk->owner()) {
-			// check if link is already linked to given parent node
-			if(prev_owner == n) return lnk_node.value_or(nullptr);
-			prev_owner->erase(lnk->id());
+		// change link's owner
+		// [NOTE] for sym links it's important to set new owner early
+		// otherwise, `data()` will return null and statuses will become Error
+		auto prev_owner = lnk->owner();
+		if(prev_owner != n) {
+			if(prev_owner) prev_owner->erase(lnk->id());
+			lnk->reset_owner(n);
 		}
-		// set new owner
-		lnk->reset_owner(n);
-		return lnk_node.value_or(nullptr);
+
+		// if we're inserting a node, relink it to ensure a single hard link exists
+		return lnk->propagate_handle().value_or(nullptr);
 	}
 
 	node_impl() = default;
