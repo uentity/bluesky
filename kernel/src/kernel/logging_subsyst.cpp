@@ -24,10 +24,10 @@
 #include <atomic>
 
 #define BSCONFIG ::blue_sky::kernel::config::config()
-#define FILE_LOG_PATTERN "[%Y-%m-%d %T.%e] [%L] %v"
-#define CONSOLE_LOG_PATTERN "[%L] %v"
-#define LOG_FNAME_PREFIX "bs_"
-constexpr auto ROTATING_FSIZE_DEFAULT = 1024*1024*10;
+constexpr auto FILE_LOG_PATTERN = "[%Y-%m-%d %T.%e] [%L] %v";
+constexpr auto CONSOLE_LOG_PATTERN = "[%L] %v";
+constexpr auto LOG_FNAME_PREFIX = "bs_";
+constexpr auto ROTATING_FSIZE_DEFAULT = 1024*1024*5;
 constexpr auto DEF_FLUSH_INTERVAL = 5;
 constexpr auto DEF_FLUSH_LEVEL = spdlog::level::err;
 
@@ -86,6 +86,8 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 			}
 		}
 
+		const auto fsize = logger_name.empty() ? ROTATING_FSIZE_DEFAULT :
+			caf::get_or(BSCONFIG, std::string("logger.") + logger_name + "-file-size", ROTATING_FSIZE_DEFAULT);
 		for(int i = 0; i < 100; i++) {
 			auto cur_logf = logf_body;
 			if(i)
@@ -94,7 +96,7 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 
 			try {
 				res = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-					cur_logf.string(), ROTATING_FSIZE_DEFAULT, 1
+					cur_logf.string(), fsize, 1
 				);
 				if(res) {
 					res->set_pattern(FILE_LOG_PATTERN);
