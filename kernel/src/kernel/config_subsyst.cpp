@@ -122,8 +122,10 @@ config_subsyst::config_subsyst() {
 		.add<string_list>("plugins", "Paths list to blue-sky plugins")
 	;
 	opt_group{confopt_, "logger"}
-		.add<std::string>("out-file-name", "Path to stdout log")
-		.add<std::string>("err-file-name", "Path to stderr log")
+		.add<std::string>("out-file-name", "Path to stdout log file")
+		.add<std::string>("err-file-name", "Path to stderr log file")
+		.add<std::uint64_t>("out-file-size", "Size of rotating stdout log file")
+		.add<std::uint64_t>("err-file-size", "Size of rotating stderr log file")
 		.add<std::string>("out-file-format", "Format of stdout log messages")
 		.add<std::string>("err-file-format", "Format of stderr log messages")
 		.add<std::string>("out-console-format", "Format of stdout log messages in console")
