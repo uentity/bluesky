@@ -16,6 +16,7 @@
 #include <bs/kernel/plugins.h>
 #include <bs/plugin_descriptor.h>
 #include <boost/test/unit_test.hpp>
+#include <clocale>
 
 #include "test_objects.h"
 
