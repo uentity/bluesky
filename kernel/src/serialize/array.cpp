@@ -9,7 +9,7 @@
 
 #include <bs/error.h>
 #include <bs/log.h>
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 
 #include <bs/serialize/array.h>
 #include <bs/serialize/base_types.h>

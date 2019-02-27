@@ -12,7 +12,7 @@
 #include <bs/kernel/errors.h>
 #include <bs/tree/errors.h>
 #include <bs/log.h>
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
 

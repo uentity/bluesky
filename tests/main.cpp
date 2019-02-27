@@ -28,6 +28,8 @@ BS_REGISTER_PLUGIN {
 	using namespace blue_sky;
 	BSOUT << "*** BS tests global initialization" << bs_end;
 
+	std::setlocale(LC_ALL, "ru_RU.UTF-8");
+
 	// init kernel & register test plugins
 	kernel::init();
 	BOOST_CHECK(kernel::plugins::register_plugin(bs_get_plugin_descriptor()));
