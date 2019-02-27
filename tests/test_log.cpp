@@ -11,7 +11,9 @@
 #include <bs/error.h>
 #include <bs/log.h>
 
-#include <spdlog/fmt/ostr.h>
+#include <fmt/format.h>
+#include <fmt/locale.h>
+#include <fmt/ostream.h>
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 
@@ -44,6 +46,13 @@ BOOST_AUTO_TEST_CASE(test_bs_log) {
 	using namespace blue_sky::log;
 
 	std::cout << "\n\n*** testing log..." << std::endl;
+	bsout() << "*** Locale: {}" << std::locale("").name() << bs_end;
+	bsout() << "BS log: {} | classic locale: {} | cur locale: {}" << 3.14
+		<< fmt::format(std::locale::classic(), "{}", 3.14)
+		<< fmt::format(std::locale(""), "{}", 3.14)
+		<< bs_end;
+	bsout() << "INSERT OR REPLACE INTO wells (name, x, y, KB, src) VALUES('{}', {}, {}, {}, {})" <<
+		154405 << 154405 << 68.71 << 0 << "1G" << bs_end;
 
 	// test logger ability to print arbitrary type
 	auto e = log_example();

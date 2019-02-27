@@ -15,7 +15,7 @@
 #include <caf/detail/parser/read_ini.hpp>
 #include <caf/detail/parser/read_string.hpp>
 #include <caf/io/middleman.hpp>
-#include <spdlog/fmt/ostr.h>
+#include <fmt/ostream.h>
 
 #include <sstream>
 #include <fstream>

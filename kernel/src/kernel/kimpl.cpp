@@ -12,7 +12,7 @@
 #include "kimpl.h"
 
 #include <caf/actor_system.hpp>
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(kernel)
 

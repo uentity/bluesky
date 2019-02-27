@@ -15,7 +15,7 @@
 #include <bs/serialize/python.h>
 #endif
 
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 #include <sstream>
 
 using namespace cereal;

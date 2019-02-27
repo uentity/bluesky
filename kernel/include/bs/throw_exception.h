@@ -11,7 +11,7 @@
 
 #include "error.h"
 #include <boost/current_function.hpp>
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 #include <string>
 
 namespace blue_sky {

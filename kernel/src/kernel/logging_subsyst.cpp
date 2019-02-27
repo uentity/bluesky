@@ -13,6 +13,7 @@
 #include <bs/kernel/config.h>
 #include "logging_subsyst.h"
 
+#include <spdlog/spdlog.h>
 #include <spdlog/async.h>
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>

@@ -15,11 +15,14 @@
 #include <bs/kernel/plugins.h>
 #include <bs/plugin_descriptor.h>
 #include <boost/test/unit_test.hpp>
+#include <clocale>
 
 BS_PLUGIN_DESCRIPTOR("unit_test", "1.0", "Unit-test plugin");
 
 BOOST_AUTO_TEST_CASE(test_main) {
 	blue_sky::kernel::init();
 	BOOST_CHECK(blue_sky::kernel::plugins::register_plugin(bs_get_plugin_descriptor()));
+	std::setlocale(LC_ALL, "ru_RU.UTF-8");
+
 }
 

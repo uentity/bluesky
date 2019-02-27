@@ -210,6 +210,7 @@ if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :
 custom_env.AppendUnique(
 	CPPPATH = [
 		osp.join("#kernel", "include"),
+		osp.join("#third_party", "fmt", "include"),
 		osp.join("#third_party", "spdlog", "include"),
 		osp.join("#third_party", "actor-framework", "libcaf_core"),
 		osp.join("#third_party", "actor-framework", "libcaf_io"),
@@ -219,7 +220,8 @@ custom_env.AppendUnique(
 	],
 	LIBPATH = [osp.join("#third_party", "actor-framework", "build", "lib")],
 	RPATH = [Dir(osp.join("#third_party", "actor-framework", "build", "lib")).get_abspath()],
-	LIBS = ["caf_core", "caf_io"]
+	LIBS = ["caf_core", "caf_io"],
+	CPPDEFINES = ["SPDLOG_FMT_EXTERNAL", "FMT_HEADER_ONLY"]
 );
 if custom_env["py"] == '1' :
 	custom_env.AppendUnique(
