@@ -233,8 +233,9 @@ public:
 		return keys(Key_const<K>());
 	}
 
-	/// rename given link
+	/// rename link at given position
 	bool rename(iterator<Key::AnyOrder> pos, std::string new_name);
+	bool rename(const std::size_t idx, std::string new_name);
 	/// rename link with given ID
 	bool rename(const id_type& lid, std::string new_name);
 	/// rename link adresses by given key

@@ -299,6 +299,10 @@ bool node::rename(iterator<Key::AnyOrder> pos, std::string new_name) {
 	return pimpl_->rename<Key::AnyOrder>(std::move(pos), std::move(new_name));
 }
 
+bool node::rename(const std::size_t idx, std::string new_name) {
+	return rename(find(idx), std::move(new_name));
+}
+
 bool node::rename(const id_type& lid, std::string new_name) {
 	return pimpl_->rename<Key::ID>(lid, std::move(new_name)) > 0;
 }

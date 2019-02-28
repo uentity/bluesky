@@ -120,12 +120,6 @@ void erase_idx(node& N, const long idx) {
 	N.erase(idx < 0 ? N.size() + idx : idx);
 }
 
-// ------- rename
-template<Key K>
-int rename(node& N, const std::string& key, std::string new_name, bool all = false) {
-	return N.rename(key, std::move(new_name), K, all);
-}
-
 NAMESPACE_END() // hidden ns
 
 /*-----------------------------------------------------------------------------
@@ -419,10 +413,10 @@ void py_bind_tree(py::module& m) {
 		}, "key_type"_a = node::Key::ID)
 
 		// link rename
-		// by ID
-		.def("rename", [](node& N, const std::string& lid, std::string new_name) {
-			return N.rename(lid, std::move(new_name), Key::ID);
-		}, "lid"_a, "new_name"_a, "Rename link with given ID")
+		// by ID or OID or name
+		.def("rename", py::overload_cast<const std::string&, std::string, Key, bool>(&node::rename),
+			"key"_a, "new_name"_a, "key_meaning"_a = Key::ID, "all"_a = false,
+			"Rename link with given key (ID, OID or link name)")
 		// by link instance (extracts ID)
 		.def("rename", [](node& N, const sp_link& l, std::string new_name) {
 			return N.rename(l->id(), std::move(new_name));
@@ -435,11 +429,6 @@ void py_bind_tree(py::module& m) {
 		.def("rename", [](node& N, const sp_obj& obj, std::string new_name, bool all = false) {
 			return N.rename(obj->id(), std::move(new_name), Key::OID, all);
 		}, "obj"_a, "new_name"_a, "all"_a = false, "Rename link(s) to given object")
-		// by object ID
-		.def("rename_oid", &rename<Key::OID>, "oid"_a, "new_name"_a, "all"_a = false,
-			"Rename link(s) to object with given ID")
-		.def("rename_name", &rename<Key::Name>, "old_name"_a, "new_name"_a, "all"_a = false,
-			"Rename link(s) with given old_name")
 
 		// misc API
 		.def("accepts", &node::accepts, "Check if node accepts given link")
