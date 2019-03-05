@@ -102,5 +102,9 @@ std::string str2str(
 		return boost::locale::conv::between(text, out_loc_name, ls_.native_loc);
 }
 
+std::locale get_locale(const std::string& loc_name) {
+	return ls_(loc_name);
+}
+
 }	//end of namespace blue_sky
 
