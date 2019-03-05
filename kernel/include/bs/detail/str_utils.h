@@ -72,5 +72,8 @@ BS_API std::string str2str(
 	const std::string& in_loc_name = ""
 );
 
+// obtain std::locale for given locale string name
+BS_API std::locale get_locale(const std::string& loc_name = "");
+
 }	//end of blue_sky namespace
 
