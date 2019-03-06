@@ -10,6 +10,7 @@
 #pragma once
 
 #include "log.h"
+#include "assert.h"
 // errors handling
 #include "error.h"
 #include "throw_exception.h"
