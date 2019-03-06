@@ -67,11 +67,12 @@ auto free_instance(T* obj) {
 }
 
 using instances_enum = std::vector< sp_cobj >;
-BS_API auto instances(const BS_TYPE_INFO& obj_t) -> instances_enum;
+BS_API auto instances(const type_descriptor& obj_t) -> instances_enum;
+BS_API auto instances(std::string_view type_id) -> instances_enum;
 
 template< typename T >
 auto instances() {
-	return instances(BS_GET_TI(T));
+	return instances(T::bs_type());
 }
 
 NAMESPACE_END(blue_sky::kernel::tfactory)

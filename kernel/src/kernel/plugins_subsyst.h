@@ -16,12 +16,9 @@
 #include <map>
 #include <set>
 
-#include <boost/pool/pool_alloc.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
-//#include <boost/multi_index/member.hpp>
-//#include <boost/multi_index/identity.hpp>
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 namespace mi = boost::multi_index;
@@ -54,26 +51,14 @@ struct BS_HIDDEN_API plugins_subsyst {
 	// to store multiple nil plugins with different names
 	// and later rebind to valid descriptor
 	using plugins_enum_t = std::map<
-		const plugin_descriptor*, lib_descriptor, pdp_comp_name,
-		boost::fast_pool_allocator<
-			typename std::map<const plugin_descriptor*, lib_descriptor>::value_type,
-			//std::pair< const plugin_descriptor*, lib_descriptor >,
-			boost::default_user_allocator_new_delete,
-			boost::details::pool::null_mutex
-		>
+		const plugin_descriptor*, lib_descriptor, pdp_comp_name
 	>;
 	plugins_enum_t loaded_plugins_;
 
 	// storage for temp plugin descriptors created when only plugin name specified
 	std::set< plugin_descriptor, pd_comp_name > temp_plugins_;
 
-	// type_tuple allocator
-	using types_alloc_t = boost::fast_pool_allocator<
-		type_tuple, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
-	>;
 	// tags for type_tuples storage keys
-	using type_key = mi::const_mem_fun< type_tuple, const type_descriptor&, &type_tuple::td >;
-	using plug_key = mi::const_mem_fun< type_tuple, const plugin_descriptor&, &type_tuple::pd >;
 	using type_name_key = mi::const_mem_fun< type_tuple, const std::string&, &type_tuple::type_name >;
 	using plug_name_key = mi::const_mem_fun< type_tuple, const std::string&, &type_tuple::plug_name >;
 
@@ -81,12 +66,9 @@ struct BS_HIDDEN_API plugins_subsyst {
 	using types_container_t = mi::multi_index_container<
 		type_tuple,
 		mi::indexed_by<
-			mi::ordered_unique< mi::tag< type_key >, type_key >,
 			mi::ordered_unique< mi::tag< type_name_key >, type_name_key >,
-			mi::ordered_non_unique< mi::tag< plug_key >, plug_key >,
 			mi::ordered_non_unique< mi::tag< plug_name_key >, plug_name_key >
-		>,
-		types_alloc_t
+		>
 	>;
 	types_container_t types_;
 

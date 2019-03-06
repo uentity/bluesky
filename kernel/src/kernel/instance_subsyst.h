@@ -10,6 +10,7 @@
 
 #include <bs/common.h>
 #include <set>
+#include <map>
 #include <mutex>
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
@@ -23,7 +24,9 @@ struct BS_HIDDEN_API instance_subsyst {
 		//	sp_obj, boost::default_user_allocator_new_delete, boost::details::pool::null_mutex
 		//>
 	>;
-	using instances_map_t = std::unordered_map< BS_TYPE_INFO, instances_storage_t >;
+	using instances_map_t = std::map<
+		std::string, instances_storage_t, std::less<>
+	>;
 	instances_map_t instances_;
 	// sync access to instances
 	std::mutex solo_;
@@ -33,7 +36,7 @@ struct BS_HIDDEN_API instance_subsyst {
 
 	auto free_instance(sp_cobj&& obj) -> int;
 
-	auto instances(const BS_TYPE_INFO& ti) const -> instances_enum;
+	auto instances(std::string_view type_id) const -> instances_enum;
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)

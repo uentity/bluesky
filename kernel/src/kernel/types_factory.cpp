@@ -46,8 +46,12 @@ auto free_instance(sp_cobj obj) -> int {
 	return KIMPL.free_instance(std::move(obj));
 }
 
-auto instances(const BS_TYPE_INFO& ti) -> instances_enum {
-	return KIMPL.instances(ti);
+auto instances(const type_descriptor& ti) -> instances_enum {
+	return KIMPL.instances(ti.name);
+}
+
+auto instances(std::string_view type_id) -> instances_enum {
+	return KIMPL.instances(type_id);
 }
 
 NAMESPACE_END(blue_sky::kernel::tfactory)

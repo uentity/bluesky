@@ -24,7 +24,6 @@ if build_kind == "init" :
 kernel_cpp_list = [
 	"src/assert.cpp",
 	"src/type_info.cpp",
-	"src/common.cpp",
 	"src/plugin_descriptor.cpp",
 	"src/objbase.cpp",
 	"src/misc.cpp",
