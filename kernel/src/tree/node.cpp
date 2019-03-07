@@ -8,7 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "node_impl.h"
-#include <bs/tree/tree.h>
 #include <bs/kernel/types_factory.h>
 
 #include <boost/uuid/string_generator.hpp>
@@ -300,11 +299,15 @@ bool node::rename(iterator<Key::AnyOrder> pos, std::string new_name) {
 	return pimpl_->rename<Key::AnyOrder>(std::move(pos), std::move(new_name));
 }
 
+bool node::rename(const std::size_t idx, std::string new_name) {
+	return rename(find(idx), std::move(new_name));
+}
+
 bool node::rename(const id_type& lid, std::string new_name) {
 	return pimpl_->rename<Key::ID>(lid, std::move(new_name)) > 0;
 }
 
-int node::rename(const std::string& key, std::string new_name, Key key_meaning, bool all) {
+std::size_t node::rename(const std::string& key, std::string new_name, Key key_meaning, bool all) {
 	switch(key_meaning) {
 	default:
 	case Key::ID:

@@ -12,69 +12,77 @@
 #include <bs/tree/tree.h>
 #include <boost/algorithm/string.hpp>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree) NAMESPACE_BEGIN(detail)
+#define CAN_CALL_DNODE(L) \
+( !((L).flags() & link::LazyLoad) || (L).req_status(link::Req::DataNode) == link::ReqStatus::OK )
+
+NAMESPACE_BEGIN(blue_sky::tree::detail)
 
 sp_link walk_down_tree(
-	const std::string& cur_lid, const sp_node& level, node::Key path_unit = node::Key::ID
+	const std::string& next_lid, const sp_node& cur_level, node::Key path_unit = node::Key::ID
 );
 
 NAMESPACE_BEGIN()
 // put into hidden namespace to prevent equal multiple instantiations
 auto gen_walk_down_tree(node::Key path_unit = node::Key::ID) {
-	return [path_unit](const std::string& cur_lid, const sp_node& level) {
-		return walk_down_tree(cur_lid, level, path_unit);
+	return [path_unit](const std::string& next_lid, const sp_node& cur_level) {
+		return walk_down_tree(next_lid, cur_level, path_unit);
 	};
 }
 
-//inline auto can_call_dnode(const link& L) -> bool {
-//	return ( !(L.flags() & link::LazyLoad) || L.req_status(link::Req::DataNode) == link::ReqStatus::OK );
-//}
-
 NAMESPACE_END()
 
-template< typename level_process_f = decltype(gen_walk_down_tree()) >
-sp_link deref_path(
-	const std::string& path, const link& l, level_process_f&& proc_f = gen_walk_down_tree()
-) {
-	// split 
-	std::vector<std::string> path_parts;
-	boost::split(path_parts, path, boost::is_any_of("/"));
-	// setup search root
-	sp_node root = l.owner();
-	if(!root) {
-		// given link points to tree root?
-		root = l.data_node();
-	}
-	else if(!path_parts[0].size()) {
-		// link is inside the tree and we have absolute path
-		// walk up the tree to find root node
-		sp_link h_root;
-		while(root && (h_root = root->handle())) {
-			root = h_root->owner();
-		}
-	}
-
-	// follow the root and find target link
-	sp_link res;
-	for(const auto& part : path_parts) {
-		if(!root) return nullptr;
-		if(!part.size() || part == ".") continue;
-
-		// invoke level processing function that should return link to next level
-		res = proc_f(part, (const sp_node&)root);
-
-		// calc new root from next level link
-		if(part == ".." && (res = root->handle())) {
-			// go up one level
-			root = res->owner();
-		}
-		else if(res) {
-			root = res->data_node();
-		}
-		else root.reset();
-	}
-	return res;
+// find out if we can call `data_node()` honoring LazyLoad flag
+inline auto can_call_dnode(const link& L) -> bool {
+	return !(L.flags() & link::LazyLoad) || L.req_status(link::Req::DataNode) == link::ReqStatus::OK;
 }
 
-NAMESPACE_END(detail) NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
+// If `DerefControlElements` == true, processing function will be invoked for all path parts
+// including ".", ".." and empty part (root handle)
+template<
+	bool DerefControlElements = false,
+	typename level_deref_f = decltype(gen_walk_down_tree())
+>
+auto deref_path_impl(
+	const std::string& path, sp_link L, sp_node root = nullptr, bool follow_lazy_links = true,
+	level_deref_f deref_f = gen_walk_down_tree()
+) -> sp_link {
+	// split path into elements
+	if(path.empty()) return nullptr;
+	std::vector<std::string> path_parts;
+	boost::split(path_parts, path, boost::is_any_of("/"));
 
+	// setup search root
+	if(path_parts[0].empty()) {
+		// absolute path case
+		root = root ? find_root(root) : find_root(L);
+	}
+	if(root) L = root->handle();
+
+	// deref each element
+	for(const auto& part : path_parts) {
+		bool is_control_elem = false;
+		if(part.empty() || part == ".")
+			is_control_elem = true;
+		else if(part == "..") {
+			root = L ? L->owner() : nullptr;
+			is_control_elem = true;
+		}
+		else if(!root)
+			root = L && (follow_lazy_links || can_call_dnode(*L)) ?
+				L->data_node() : nullptr;
+
+		if constexpr(DerefControlElements) {
+			// intentional ignore of deref return value
+			if(is_control_elem) deref_f(part, root);
+		}
+		if(!is_control_elem) {
+			L = root ? deref_f(part, root) : nullptr;
+			if(!L) break;
+			// force root recalc on next spin
+			root.reset();
+		}
+	}
+	return L;
+}
+
+NAMESPACE_END(blue_sky::tree::detail)

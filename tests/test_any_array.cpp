@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(test_any_array) {
 	// map of string key -> any value
 	auto a = str_any_array();
 	a["1"] = 42;
-	a["2"] = error("OMG!");
+	a["2"] = error::quiet("OMG!");
 	a["3"] = 84.7;
 	a["4"] = "test";
 	a["5"] = std::string("hello");

@@ -94,11 +94,11 @@ auto fusion_link::populate(const std::string& child_type_id, bool wait_if_busy) 
 	);
 }
 
-auto fusion_link::populate(link::process_data_cb f, std::string child_type_id, bool wait_if_busy) const
+auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) const
 -> void {
 	pimpl_->send(
 		flnk_populate_atom(), this->bs_shared_this<link>(), std::move(f),
-		std::move(child_type_id), wait_if_busy
+		std::move(child_type_id), true
 	);
 }
 
@@ -134,6 +134,10 @@ auto fusion_link::obj_type_id() const -> std::string {
 auto fusion_link::oid() const -> std::string {
 	return pimpl_->data_ ?
 		pimpl_->data_->id() : boost::uuids::to_string(boost::uuids::nil_uuid());
+}
+
+auto fusion_link::cache() const -> sp_node {
+	return pimpl_->data_;
 }
 
 NAMESPACE_END(blue_sky) NAMESPACE_END(tree)

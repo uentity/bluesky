@@ -12,17 +12,17 @@
 #include <bs/python/common.h>
 #include <bs/python/tree.h>
 #include <bs/python/expected.h>
+#include <bs/python/list.h>
 
 #include <boost/uuid/uuid_io.hpp>
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 
-// make it possible to exchange vector of links without copying
-// (and modify it in-place in Python for `walk()`)
+// make it possible to bind opaque std::list & std::vector (w/o content copying)
 PYBIND11_MAKE_OPAQUE(std::vector<blue_sky::tree::sp_link>);
+PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_link>);
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(python)
+NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
 using Key = node::Key;
 using InsertPolicy = node::InsertPolicy;
@@ -118,57 +118,6 @@ void erase_idx(node& N, const long idx) {
 	if(std::size_t(std::abs(idx)) > N.size())
 		throw py::key_error("Index out of bounds");
 	N.erase(idx < 0 ? N.size() + idx : idx);
-}
-
-// ------- rename
-template<Key K>
-int rename(node& N, const std::string& key, std::string new_name, bool all = false) {
-	return N.rename(key, std::move(new_name), K, all);
-}
-
-// ------- add some mmethods to opaque list-like class
-template<typename Vector, typename List>
-auto make_rich_pylist(List& cl) -> List& {
-	using size_type = typename Vector::size_type;
-	using T = typename Vector::value_type;
-
-	cl.def(py::init<size_type>());
-
-	cl.def("resize",
-		 (void (Vector::*) (size_type count)) & Vector::resize,
-		 "changes the number of elements stored");
-
-	cl.def("erase",
-		[](Vector &v, size_type i) {
-		if (i >= v.size())
-			throw py::index_error();
-		v.erase(v.begin() + i);
-	}, "erases element at index ``i``");
-
-	cl.def("empty",         &Vector::empty,         "checks whether the container is empty");
-	cl.def("size",          &Vector::size,          "returns the number of elements");
-	cl.def("push_back", (void (Vector::*)(const T&)) &Vector::push_back, "adds an element to the end");
-	cl.def("pop_back",                               &Vector::pop_back, "removes the last element");
-
-	//cl.def("max_size",      &Vector::max_size,      "returns the maximum possible number of elements");
-	//cl.def("reserve",       &Vector::reserve,       "reserves storage");
-	//cl.def("capacity",      &Vector::capacity,      "returns the number of elements that can be held in currently allocated storage");
-	//cl.def("shrink_to_fit", &Vector::shrink_to_fit, "reduces memory usage by freeing unused memory");
-
-	cl.def("clear", &Vector::clear, "clears the contents");
-	cl.def("swap",   &Vector::swap, "swaps the contents");
-
-	cl.def("front", [](Vector &v) {
-		if (v.size()) return v.front();
-		else throw py::index_error();
-	}, "access the first element");
-
-	cl.def("back", [](Vector &v) {
-		if (v.size()) return v.back();
-		else throw py::index_error();
-	}, "access the last element ");
-
-	return cl;
 }
 
 NAMESPACE_END() // hidden ns
@@ -288,12 +237,13 @@ void py_bind_tree(py::module& m) {
 		.def(py::init<std::string, const char*, std::string, sp_fusion, link::Flags>(),
 			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = link::Flags::Plain)
 		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge)
-		.def("populate", py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),
+		.def("populate",
+			py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),
 			"child_type_id"_a, "wait_if_busy"_a = true
 		)
-		.def("populate", py::overload_cast<link::process_data_cb, std::string, bool>(
-			&fusion_link::populate, py::const_),
-			"f"_a, "obj_type_id"_a, "wait_if_busy"_a = true
+		.def("populate",
+			py::overload_cast<link::process_data_cb, std::string>(&fusion_link::populate, py::const_),
+			"f"_a, "obj_type_id"_a
 		)
 	;
 
@@ -328,7 +278,6 @@ void py_bind_tree(py::module& m) {
 	//py::implicitly_convertible<int, node::InsertPolicy>();
 	//py::implicitly_convertible<long, node::InsertPolicy>();
 
-	// `node` binding
 	node_pyface
 		BSPY_EXPORT_DEF(node)
 		.def(py::init<>())
@@ -464,10 +413,10 @@ void py_bind_tree(py::module& m) {
 		}, "key_type"_a = node::Key::ID)
 
 		// link rename
-		// by ID
-		.def("rename", [](node& N, const std::string& lid, std::string new_name) {
-			return N.rename(lid, std::move(new_name), Key::ID);
-		}, "lid"_a, "new_name"_a, "Rename link with given ID")
+		// by ID or OID or name
+		.def("rename", py::overload_cast<const std::string&, std::string, Key, bool>(&node::rename),
+			"key"_a, "new_name"_a, "key_meaning"_a = Key::ID, "all"_a = false,
+			"Rename link with given key (ID, OID or link name)")
 		// by link instance (extracts ID)
 		.def("rename", [](node& N, const sp_link& l, std::string new_name) {
 			return N.rename(l->id(), std::move(new_name));
@@ -480,11 +429,6 @@ void py_bind_tree(py::module& m) {
 		.def("rename", [](node& N, const sp_obj& obj, std::string new_name, bool all = false) {
 			return N.rename(obj->id(), std::move(new_name), Key::OID, all);
 		}, "obj"_a, "new_name"_a, "all"_a = false, "Rename link(s) to given object")
-		// by object ID
-		.def("rename_oid", &rename<Key::OID>, "oid"_a, "new_name"_a, "all"_a = false,
-			"Rename link(s) to object with given ID")
-		.def("rename_name", &rename<Key::Name>, "old_name"_a, "new_name"_a, "all"_a = false,
-			"Rename link(s) with given old_name")
 
 		// misc API
 		.def("accepts", &node::accepts, "Check if node accepts given link")
@@ -503,35 +447,58 @@ void py_bind_tree(py::module& m) {
 		)
 	;
 
-	// misc tree-related functions
-	m.def("abspath", &abspath, "lnk"_a, "path_unit"_a = node::Key::ID, "Get link's absolute path");
+	///////////////////////////////////////////////////////////////////////////////
+	//  misc tree-related functions
+	//
+	m.def("abspath", py::overload_cast<const sp_clink&, Key>(&abspath),
+		"lnk"_a, "path_unit"_a = node::Key::ID, "Get link's absolute path");
+	m.def("find_root", py::overload_cast<const sp_link&>(&find_root),
+		"L"_a, "Return root node of a tree that given link belongs to");
+	m.def("find_root", py::overload_cast<sp_node>(&find_root),
+		"N"_a, "Return root node of a tree that given node belongs to");
+	m.def("find_root_handle", py::overload_cast<sp_clink>(&find_root_handle),
+		"L"_a, "Return handle (link) of a tree root that given link belongs to");
+	m.def("find_root_handle", py::overload_cast<const sp_node&>(&find_root_handle),
+		"L"_a, "Return handle (link) of a tree root that given node belongs to");
 	m.def("convert_path", &convert_path,
 		"src_path"_a, "start"_a, "src_path_unit"_a = node::Key::ID, "dst_path_unit"_a = node::Key::Name,
+		"follow_lazy_links"_a = false,
 		"Convert path string from one representation to another (for ex. link IDs -> link names)"
 	);
-	m.def("deref_path", py::overload_cast<const std::string&, const sp_link&, node::Key>(&deref_path),
-		"path"_a, "start"_a, "path_unit"_a = node::Key::ID,
+	m.def("deref_path",py::overload_cast<const std::string&, sp_link, Key, bool>(&deref_path),
+		"path"_a, "start"_a, "path_unit"_a = node::Key::ID, "follow_lazy_links"_a = true,
+		"Quick link search by given path relative to `start`"
+	);
+	m.def("deref_path",py::overload_cast<const std::string&, sp_node, Key, bool>(&deref_path),
+		"path"_a, "start"_a, "path_unit"_a = node::Key::ID, "follow_lazy_links"_a = true,
 		"Quick link search by given path relative to `start`"
 	);
 	// async deref_path
-	m.def("deref_path", py::overload_cast<deref_process_f, std::string, sp_link, node::Key, bool>(&deref_path),
-		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = node::Key::ID, "high_priority"_a = false,
+	m.def("deref_path",
+		py::overload_cast<deref_process_f, std::string, sp_link, Key, bool, bool>(&deref_path),
+		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = node::Key::ID,
+		"follow_lazy_links"_a = true, "high_priority"_a = false,
 		"Async quick link search by given path relative to `start`"
 	);
 
 	// bind list of links as opaque type 
 	using v_links = std::vector<sp_link>;
-	auto clV = py::bind_vector<v_links>(m, "links_list", py::module_local(false));
-	make_rich_pylist<v_links>(clV);
+	using l_links = std::list<sp_link>;
+	auto clV = py::bind_vector<v_links>(m, "links_vector", py::module_local(false));
+	detail::make_rich_pylist<v_links>(clV);
+	bind_list<l_links>(m, "links_list", py::module_local(false));
 
 	// walk
 	// [NOTE] use proxy functor to allow nodes list modification in Python callback
 	// [HINT] pass vectors to be modified as pointers - in this case pybind11 applies reference policy
-	using py_walk_cb = std::function<void(const sp_link&, v_links*, v_links*)>;
+	using py_walk_cb = std::function<void(const sp_link&, l_links*, v_links*)>;
 	m.def("walk",
-		[](const sp_link& root, py_walk_cb pyf, bool topdown = true, bool follow_symlinks = true) {
+		[](
+			const sp_link& root, py_walk_cb pyf, bool topdown = true, bool follow_symlinks = true,
+			bool follow_lazy_links = false
+		) {
 			walk(root, [pyf = std::move(pyf)] (
-					const sp_link& cur_root, v_links& nodes, v_links& leafs
+					const sp_link& cur_root, l_links& nodes, v_links& leafs
 				) {
 					// convert references to pointers
 					pyf(cur_root, &nodes, &leafs);
@@ -539,7 +506,7 @@ void py_bind_tree(py::module& m) {
 				topdown, follow_symlinks
 			);
 		},
-		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true,
+		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true, "follow_lazy_links"_a = false,
 		"Walk the tree similar to Python `os.walk()`"
 	);
 
@@ -558,6 +525,4 @@ void py_bind_tree(py::module& m) {
 	m.def("load_tree", &load_tree, "filename"_a, "ar"_a = TreeArchive::Text);
 }
 
-NAMESPACE_END(python)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::python)

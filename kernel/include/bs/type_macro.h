@@ -175,12 +175,11 @@ BS_RESOLVE_TYPE_IMPL_((template< >), (T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), 0)
 // pass constructor arguments types as tuple
 // ctor_has_args flag is needed, because empty tuple is considered to have size = 1
 // so we need to additionally indicate that constructor have > 0 agruments
-#define BS_TYPE_ADD_CONSTRUCTOR_(T_tup, ctor_args_tup, ctor_has_args, f_tup)           \
-namespace {                                                                            \
-static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){                             \
-    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_constructor<                             \
-    BOOST_PP_TUPLE_ENUM(T_tup) BOOST_PP_COMMA_IF(ctor_has_args)                        \
-    BOOST_PP_TUPLE_ENUM(ctor_args_tup) >(BOOST_PP_TUPLE_ENUM(f_tup)); return 0; }(); }
+#define BS_TYPE_ADD_CONSTRUCTOR_(T_tup, ctor_args_tup, ctor_has_args, f_tup)         \
+[[maybe_unused]] static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){          \
+    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_constructor<                           \
+    BOOST_PP_TUPLE_ENUM(T_tup) BOOST_PP_COMMA_IF(ctor_has_args)                      \
+    BOOST_PP_TUPLE_ENUM(ctor_args_tup) >(BOOST_PP_TUPLE_ENUM(f_tup)); return 0; }();
 
 // for simple types (<= 1 template params) ctors with non-zero arguments
 #define BS_TYPE_ADD_CONSTRUCTOR(T, ctor_args_tup) \
@@ -197,11 +196,10 @@ BS_TYPE_ADD_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), ctor_args_tup, 
 BS_TYPE_ADD_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), (), 0)
 
 // add constructor as free function
-#define BS_TYPE_ADD_CONSTRUCTOR_F_(T_tup, f_tup)           \
-namespace {                                                \
-static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){ \
-    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_constructor( \
-    BOOST_PP_TUPLE_ENUM(f_tup)); return 0; }(); }
+#define BS_TYPE_ADD_CONSTRUCTOR_F_(T_tup, f_tup)                            \
+[[maybe_unused]] static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){ \
+    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_constructor(                  \
+    BOOST_PP_TUPLE_ENUM(f_tup)); return 0; }();
 
 // for simple types and factory functions (<= 1 template params)
 #define BS_TYPE_ADD_CONSTRUCTOR_F(T, f) \
@@ -214,11 +212,10 @@ BS_TYPE_ADD_CONSTRUCTOR_F_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), (f< BOOST_PP_
 /*-----------------------------------------------------------------
  * auto-register type copy constructors
  *----------------------------------------------------------------*/
-#define BS_TYPE_ADD_COPY_CONSTRUCTOR_(T_tup)                     \
-namespace {                                                      \
-static int BOOST_PP_CAT(_bs_reg_copy_, BOOST_PP_COUNTER) = [](){ \
-    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_copy_constructor<  \
-    BOOST_PP_TUPLE_ENUM(T_tup) >(); return 0; }(); }
+#define BS_TYPE_ADD_COPY_CONSTRUCTOR_(T_tup)                                      \
+[[maybe_unused]] static int BOOST_PP_CAT(_bs_reg_copy_, BOOST_PP_COUNTER) = [](){ \
+    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_copy_constructor<                   \
+    BOOST_PP_TUPLE_ENUM(T_tup) >(); return 0; }();
 
 // for simple types (<= 1 template params)
 // T is not a tuple
@@ -230,10 +227,9 @@ BS_TYPE_ADD_COPY_CONSTRUCTOR_((T))
 BS_TYPE_ADD_COPY_CONSTRUCTOR_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >))
 
 // add copy constructor as free function
-#define BS_TYPE_ADD_COPY_CONSTRUCTOR_F_(T_tup, f)                                   \
-namespace {                                                                         \
-static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){                          \
-    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_copy_constructor(f); return 0; }(); }
+#define BS_TYPE_ADD_COPY_CONSTRUCTOR_F_(T_tup, f)                                 \
+[[maybe_unused]] static int BOOST_PP_CAT(_bs_reg_create_, __LINE__) = [](){       \
+    BOOST_PP_TUPLE_ENUM(T_tup)::bs_type().add_copy_constructor(f); return 0; }();
 
 // for simple types and factory functions (<= 1 template params)
 #define BS_TYPE_ADD_COPY_CONSTRUCTOR_F(T, f) \
@@ -246,11 +242,10 @@ BS_TYPE_ADD_COPY_CONSTRUCTOR_F_((T< BOOST_PP_TUPLE_ENUM(T_spec_tup) >), f)
  * auto-register type in BS kernel
  *----------------------------------------------------------------*/
 // type passed as tuple
-#define BS_REGISTER_TYPE_(plugin, T_tup)                        \
-namespace { static bool BOOST_PP_CAT(_bs_reg_type_, __LINE__) = \
-    ::blue_sky::kernel::tfactory::register_type(          \
-    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), plugin);              \
-}
+#define BS_REGISTER_TYPE_(plugin, T_tup)                             \
+[[maybe_unused]] static bool BOOST_PP_CAT(_bs_reg_type_, __LINE__) = \
+    ::blue_sky::kernel::tfactory::register_type(                     \
+    BS_FMT_TYPE_SPEC(T_tup, 0) bs_type(), plugin);                   \
 
 // non-templated types and types with 1 template parameter
 #define BS_REGISTER_TYPE(plugin, T) \

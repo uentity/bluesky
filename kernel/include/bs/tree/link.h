@@ -268,7 +268,7 @@ public:
 	/// ctor -- pointee is specified by string path
 	sym_link(std::string name, std::string path, Flags f = Plain);
 	/// ctor -- pointee is specified directly - absolute path will be stored
-	sym_link(std::string name, const sp_clink& src, Flags f = Plain);
+	sym_link(std::string name, const sp_link& src, Flags f = Plain);
 
 	/// implement link's API
 	auto clone(bool deep = false) const -> sp_link override;

@@ -22,8 +22,8 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
+
 // global alias to shorten typing
 namespace mi = boost::multi_index;
 
@@ -183,7 +183,8 @@ public:
 		DenyDupNames = 1,
 		RenameDup = 2,
 		DenyDupOID = 4,
-		Merge = 8
+		ReplaceDupOID = 8,
+		Merge = 16
 	};
 	/// leafs insertion
 	insert_status<Key::ID> insert(sp_link l, InsertPolicy pol = InsertPolicy::AllowDupNames);
@@ -232,13 +233,16 @@ public:
 		return keys(Key_const<K>());
 	}
 
-	/// rename given link
+	/// rename link at given position
 	bool rename(iterator<Key::AnyOrder> pos, std::string new_name);
+	bool rename(const std::size_t idx, std::string new_name);
 	/// rename link with given ID
 	bool rename(const id_type& lid, std::string new_name);
 	/// rename link adresses by given key
 	/// if `all == true`, rename all links matced by key, otherwise first found link is renamed
-	int rename(const std::string& key, std::string new_name, Key key_meaning = Key::ID, bool all = false);
+	std::size_t rename(
+		const std::string& key, std::string new_name, Key key_meaning = Key::ID, bool all = false
+	);
 
 	/// project any given iterator into custom order
 	iterator<Key::AnyOrder> project(iterator<Key::ID>) const;
@@ -300,9 +304,11 @@ private:
 
 	BS_TYPE_DECL
 };
+// handy aliases
+using sp_node = std::shared_ptr<node>;
+using sp_cnode = std::shared_ptr<const node>;
 
-NAMESPACE_END(tree)
-NAMESPACE_END(blue_sky)
+NAMESPACE_END(blue_sky::tree)
 
 // allow bitwise operations for InsertPoiicy enum class
 BS_ALLOW_ENUMOPS(blue_sky::tree::node::InsertPolicy)
