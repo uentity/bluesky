@@ -108,25 +108,31 @@ NAMESPACE_END(detail)
 //  abspath
 //
 auto abspath(const link& L, Key path_unit) -> std::string {
-	std::deque<std::string> res{link2path_unit(L, path_unit)};
+	// [NOTE] root ID is irrelevant => abs path always starts with '/'
+	auto pL = &L;
 	auto parent = L.owner();
-	while(parent) {
-		if(const auto parent_h = parent->handle()) {
-			res.push_front(link2path_unit(*parent_h, path_unit));
-			parent = parent_h->owner();
-		}
+	sp_clink parent_h;
+	std::deque<std::string> res;
+	while(true) {
+		if(parent)
+			res.push_front(link2path_unit(*pL, path_unit));
 		else {
 			res.emplace_front("");
 			break;
 		}
+
+		if(( parent_h = parent->handle() )) {
+			parent = parent_h->owner();
+			pL = parent_h.get();
+		}
+		else parent.reset();
 	}
-	// [NOTE] root ID is irrelevant => abs path always starts with '/'
-	res[0].clear();
+	if(res.size() == 1) res.emplace_front("");
 	return boost::join(res, "/");
 }
 
 auto abspath(const sp_clink& L, Key path_unit) -> std::string {
-	return L ? abspath(*L) : "";
+	return L ? abspath(*L, path_unit) : "";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
