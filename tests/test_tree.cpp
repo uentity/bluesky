@@ -102,13 +102,18 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 		"sym_Citizen_2", abspath(*N->find(2))
 	));
 	N->insert(std::make_shared<sym_link>(
-		"sym_Citizen_3", abspath(*N->find(3))
+		"sym_Citizen_3", abspath( deref_path(abspath(*N->find(3), node::Key::Name), N, node::Key::Name) )
 	));
 	N->insert(std::make_shared<sym_link>(
 		"sym_dot", "."
 	));
 	// print resulting tree content
 	auto hN = link::make_root<hard_link>("r", N);
+	bsout() << "root node abspath: {}" << abspath(hN) << bs_end;
+	bsout() << "root node abspath: {}" << convert_path(abspath(hN), hN, node::Key::ID, node::Key::Name) << bs_end;
+	bsout() << "sym_Citizen_2 abspath: {}" << convert_path(
+		abspath(*N->find("sym_Citizen_2", node::Key::Name)), hN, node::Key::ID, node::Key::Name
+	) << bs_end;
 	kernel::tools::print_link(hN, false);
 
 	// serializze node
