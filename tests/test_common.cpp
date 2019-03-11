@@ -9,6 +9,7 @@
 
 #define BOOST_TEST_DYN_LINK
 #include <bs/error.h>
+#include <bs/detail/args.h>
 
 #include <boost/test/unit_test.hpp>
 #include <iostream>
