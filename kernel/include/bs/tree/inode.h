@@ -11,16 +11,9 @@
 #include "../error.h"
 #include "../objbase.h"
 #include "../detail/enumops.h"
+#include "../timetypes.h"
 
-#include <caf/timestamp.hpp>
-
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(tree)
-
-// time point type for all timestamps
-using timestamp = caf::timestamp;
-using timespan = caf::timespan;
-
+NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  s inode that stores access rights, timestampts, etc
  *-----------------------------------------------------------------------------*/
@@ -55,6 +48,4 @@ struct BS_API inode {
 
 using inodeptr = std::shared_ptr<inode>;
 
-NAMESPACE_END(tree)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::tree)
