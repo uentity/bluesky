@@ -100,6 +100,7 @@ public:
 		}
 	};
 
+	static constexpr auto is_map = has_mapped_t<container_t>::value;
 	using trait = trait_impl< container_t >;
 
 	// helper class to auto-convert return type to destination const reference type
