@@ -11,12 +11,18 @@
 #include "test_objects.h"
 #include <bs/kernel/kernel.h>
 #include <bs/log.h>
+#include <bs/property.h>
+#include <bs/propdict.h>
 
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/array.h>
 #include <cereal/types/vector.hpp>
+#include <cereal/types/variant.hpp>
+#include <cereal/types/map.hpp>
+#include <cereal/types/chrono.hpp>
 
 #include <boost/test/unit_test.hpp>
+#include <boost/interprocess/streams/vectorstream.hpp>
 #include <iostream>
 
 /*-----------------------------------------------------------------------------
@@ -69,29 +75,62 @@ BSS_REGISTER_DYNAMIC_INIT(test_objects)
  *-----------------------------------------------------------------------------*/
 namespace {
 
-template<typename T>
-auto test_json(const T& obj) {
+template<bool Binary>
+struct select_archives {
+	using InputArchive = cereal::JSONInputArchive;
+	using OutputArchive = cereal::JSONOutputArchive;
+	using Stream = std::stringstream;
+};
+template<>
+struct select_archives<true> {
+	using InputArchive = cereal::PortableBinaryInputArchive;
+	using OutputArchive = cereal::PortableBinaryOutputArchive;
+	using Stream = boost::interprocess::basic_vectorstream< std::vector<char> >;
+};
+
+template<bool Binary = false, typename T = sp_obj>
+auto test_saveload(const T& obj, bool dump_serialized = true) {
 	using namespace blue_sky;
 	using namespace blue_sky::log;
 
+	using InputArchive = typename select_archives<Binary>::InputArchive;
+	using OutputArchive = typename select_archives<Binary>::OutputArchive;
+	using Stream = typename select_archives<Binary>::Stream;
+
 	std::string dump;
+	Stream S;
 	// dump object into string
-	std::stringstream ss;
 	{
-		cereal::JSONOutputArchive ja(ss);
+		OutputArchive ja(S);
 		ja(obj);
-		dump = ss.str();
-		bsout() << I("JSON dump\n: {}", dump) << end;
+		if constexpr(!Binary) {
+			if(dump_serialized) {
+				dump = S.str();
+				bsout() << I("-- Serialized dump:\n{}", dump) << end;
+			}
+		}
+		else { (void)dump_serialized; }
 	}
 	// load object from dump
 	T obj1;
 	{
-		//std::istringstream is(dump);
-		cereal::JSONInputArchive ja(ss);
+		InputArchive ja(S);
 		ja(obj1);
 	}
-	BOOST_TEST(obj->id() == obj1->id());
+
+	if constexpr(std::is_convertible_v<T, sp_cobj>)
+		BOOST_TEST(obj->id() == obj1->id());
 	return obj1;
+}
+
+template<typename T>
+auto test_json(const T& obj, bool dump_serialized = true) {
+	return test_saveload(obj, dump_serialized);
+}
+
+template<typename T>
+auto test_binary(const T& obj) {
+	return test_saveload<true>(obj);
 }
 
 } // eof hidden namespace
@@ -158,5 +197,13 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 	auto sarr1 = test_json(sarr);
 	BOOST_TEST(sarr->size() == sarr1->size());
 	BOOST_TEST(std::equal(sarr->begin(), sarr->end(), sarr1->begin()));
+
+	// test properties serialization
+	using namespace blue_sky::prop;
+	propdict D = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", std::vector{2L, 3L, 4L}}};
+	D.ss<integer>("E") = 142;
+	D.ss<timestamp>("now") = make_timestamp();
+	test_json(D["E"]);
+	test_json(D);
 }
 
