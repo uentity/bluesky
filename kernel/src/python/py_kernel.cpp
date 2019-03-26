@@ -17,6 +17,9 @@
 #include <pybind11/chrono.h>
 #include <fmt/format.h>
 
+PYBIND11_MAKE_OPAQUE(blue_sky::str_any_array)
+PYBIND11_MAKE_OPAQUE(blue_sky::idx_any_array)
+
 NAMESPACE_BEGIN(blue_sky::python)
 
 using type_tuple = kernel::tfactory::type_tuple;

@@ -8,6 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/bs.h>
+#include <bs/propdict.h>
+#include <bs/python/property.h>
 
 #include <ostream>
 #include <iostream>
@@ -134,6 +136,8 @@ void py_bind_common(py::module& m) {
 	;
 	// enable implicit conversion from string -> type_descriptor
 	py::implicitly_convertible<std::string, type_descriptor>();
+
+	py::bind_map<prop::propdict>(m, "propdict", py::module_local(false));
 }
 
 NAMESPACE_END(python)

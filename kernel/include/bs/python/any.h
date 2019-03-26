@@ -11,8 +11,8 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/chrono.h>
-#include <bs/fwd.h>
-#include <bs/timetypes.h>
+#include "../fwd.h"
+#include "../timetypes.h"
 
 #include <any>
 
