@@ -16,6 +16,10 @@ NAMESPACE_BEGIN(blue_sky)
 namespace C = std::chrono;
 using namespace std::chrono_literals;
 
+timestamp make_timestamp() {
+	return caf::make_timestamp();
+}
+
 std::string to_string(timespan t) {
 	std::string res;
 	auto fmt_and_cut = [&res, &t](auto part) {

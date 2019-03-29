@@ -18,7 +18,7 @@ namespace blue_sky {
 using timespan = caf::timespan;
 using timestamp = caf::timestamp;
 
-using caf::make_timestamp;
+BS_API timestamp make_timestamp();
 
 /// formatting support
 // [NOTE] accept by value, because objects are small
