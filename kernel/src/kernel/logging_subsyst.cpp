@@ -77,11 +77,12 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 		const auto logf_parent = logf.parent_path();
 		const auto logf_body = logf_parent / logf.stem();
 		// create parent dir
-		if(!logf_parent.empty() && !fs::exists(logf_parent)) {
+		if(!logf_parent.empty()) {
 			std::error_code er;
-			fs::create_directories(logf_parent, er);
+			if(!fs::exists(logf_parent, er) && !er)
+				fs::create_directories(logf_parent, er);
 			if(er) {
-				std::cerr << "[E] Failed to create parent path for log file " << desired_fname
+				std::cerr << "[E] Failed to create/access dirs for log file " << desired_fname
 					<< ": " << er.message() << std::endl;
 				return null_sink();
 			}
