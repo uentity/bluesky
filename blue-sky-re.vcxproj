@@ -47,6 +47,7 @@
     <ClInclude Include="kernel\include\bs\detail\args.h" />
     <ClInclude Include="kernel\include\bs\detail\async_api_mixin.h" />
     <ClInclude Include="kernel\include\bs\detail\enumops.h" />
+    <ClInclude Include="kernel\include\bs\detail\function_view.h" />
     <ClInclude Include="kernel\include\bs\detail\is_container.h" />
     <ClInclude Include="kernel\include\bs\detail\lib_descriptor.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
@@ -69,12 +70,16 @@
     <ClInclude Include="kernel\include\bs\misc.h" />
     <ClInclude Include="kernel\include\bs\objbase.h" />
     <ClInclude Include="kernel\include\bs\plugin_descriptor.h" />
+    <ClInclude Include="kernel\include\bs\propdict.h" />
+    <ClInclude Include="kernel\include\bs\property.h" />
     <ClInclude Include="kernel\include\bs\python\any.h" />
     <ClInclude Include="kernel\include\bs\python\common.h" />
     <ClInclude Include="kernel\include\bs\python\expected.h" />
     <ClInclude Include="kernel\include\bs\python\kernel.h" />
+    <ClInclude Include="kernel\include\bs\python\list.h" />
     <ClInclude Include="kernel\include\bs\python\nparray.h" />
     <ClInclude Include="kernel\include\bs\python\nparray_serialize.h" />
+    <ClInclude Include="kernel\include\bs\python\property.h" />
     <ClInclude Include="kernel\include\bs\python\tree.h" />
     <ClInclude Include="kernel\include\bs\serialize\array.h" />
     <ClInclude Include="kernel\include\bs\serialize\atomizer.h" />
@@ -92,6 +97,7 @@
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
+    <ClInclude Include="kernel\include\bs\timetypes.h" />
     <ClInclude Include="kernel\include\bs\tree\errors.h" />
     <ClInclude Include="kernel\include\bs\tree\fusion.h" />
     <ClInclude Include="kernel\include\bs\tree\inode.h" />
@@ -116,7 +122,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp" />
-    <ClCompile Include="kernel\src\common.cpp" />
     <ClCompile Include="kernel\src\compat\array.cpp" />
     <ClCompile Include="kernel\src\compat\array_serialize.cpp" />
     <ClCompile Include="kernel\src\compat\messaging.cpp" />
@@ -140,6 +145,8 @@
     <ClCompile Include="kernel\src\misc.cpp" />
     <ClCompile Include="kernel\src\objbase.cpp" />
     <ClCompile Include="kernel\src\plugin_descriptor.cpp" />
+    <ClCompile Include="kernel\src\propdict.cpp" />
+    <ClCompile Include="kernel\src\property.cpp" />
     <ClCompile Include="kernel\src\python\py_array.cpp" />
     <ClCompile Include="kernel\src\python\py_common.cpp" />
     <ClCompile Include="kernel\src\python\py_error.cpp" />
@@ -156,6 +163,7 @@
     <ClCompile Include="kernel\src\serialize\python.cpp" />
     <ClCompile Include="kernel\src\serialize\tree.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
+    <ClCompile Include="kernel\src\timetypes.cpp" />
     <ClCompile Include="kernel\src\tree\errors.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
     <ClCompile Include="kernel\src\tree\hard_link.cpp" />

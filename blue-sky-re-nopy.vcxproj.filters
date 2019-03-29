@@ -195,12 +195,6 @@
     <ClInclude Include="kernel\src\tree\tree_impl.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\src\backtrace_tools_unix.h">
-      <Filter>Файлы исходного кода</Filter>
-    </ClInclude>
-    <ClInclude Include="kernel\src\backtrace_tools_win.h">
-      <Filter>Файлы исходного кода</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\include\bs\tree\fusion.h">
       <Filter>Заголовочные файлы\bs\tree</Filter>
     </ClInclude>
@@ -295,6 +289,18 @@
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
     <ClInclude Include="kernel\include\bs\detail\typestring.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\propdict.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\property.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\timetypes.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\function_view.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
   </ItemGroup>
@@ -415,6 +421,15 @@
     </ClCompile>
     <ClCompile Include="kernel\src\kernel\types_factory_subsyst.cpp">
       <Filter>Файлы исходного кода\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\propdict.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\property.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\timetypes.cpp">
+      <Filter>Файлы исходного кода</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

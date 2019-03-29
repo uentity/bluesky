@@ -46,6 +46,7 @@
     <ClInclude Include="kernel\include\bs\detail\args.h" />
     <ClInclude Include="kernel\include\bs\detail\async_api_mixin.h" />
     <ClInclude Include="kernel\include\bs\detail\enumops.h" />
+    <ClInclude Include="kernel\include\bs\detail\function_view.h" />
     <ClInclude Include="kernel\include\bs\detail\is_container.h" />
     <ClInclude Include="kernel\include\bs\detail\lib_descriptor.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
@@ -69,6 +70,8 @@
     <ClInclude Include="kernel\include\bs\objbase.h" />
     <ClInclude Include="kernel\include\bs\objbase_macro.h" />
     <ClInclude Include="kernel\include\bs\plugin_descriptor.h" />
+    <ClInclude Include="kernel\include\bs\propdict.h" />
+    <ClInclude Include="kernel\include\bs\property.h" />
     <ClInclude Include="kernel\include\bs\serialize\array.h" />
     <ClInclude Include="kernel\include\bs\serialize\atomizer.h" />
     <ClInclude Include="kernel\include\bs\serialize\base_types.h" />
@@ -82,6 +85,7 @@
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
+    <ClInclude Include="kernel\include\bs\timetypes.h" />
     <ClInclude Include="kernel\include\bs\tree\fusion.h" />
     <ClInclude Include="kernel\include\bs\tree\link.h" />
     <ClInclude Include="kernel\include\bs\tree\node.h" />
@@ -89,8 +93,6 @@
     <ClInclude Include="kernel\include\bs\type_descriptor.h" />
     <ClInclude Include="kernel\include\bs\type_info.h" />
     <ClInclude Include="kernel\include\bs\type_macro.h" />
-    <ClInclude Include="kernel\src\backtrace_tools_unix.h" />
-    <ClInclude Include="kernel\src\backtrace_tools_win.h" />
     <ClInclude Include="kernel\src\kernel\backtrace_tools_unix.h" />
     <ClInclude Include="kernel\src\kernel\backtrace_tools_win.h" />
     <ClInclude Include="kernel\src\kernel\config_subsyst.h" />
@@ -130,11 +132,14 @@
     <ClCompile Include="kernel\src\misc.cpp" />
     <ClCompile Include="kernel\src\objbase.cpp" />
     <ClCompile Include="kernel\src\plugin_descriptor.cpp" />
+    <ClCompile Include="kernel\src\propdict.cpp" />
+    <ClCompile Include="kernel\src\property.cpp" />
     <ClCompile Include="kernel\src\serialize\array.cpp" />
     <ClCompile Include="kernel\src\serialize\base_types.cpp" />
     <ClCompile Include="kernel\src\serialize\link.cpp" />
     <ClCompile Include="kernel\src\serialize\tree.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
+    <ClCompile Include="kernel\src\timetypes.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
     <ClCompile Include="kernel\src\tree\hard_link.cpp" />
     <ClCompile Include="kernel\src\tree\link.cpp" />
