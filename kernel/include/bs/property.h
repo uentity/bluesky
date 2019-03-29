@@ -142,6 +142,23 @@ constexpr bool extract(const property& source, To& target) {
 	}
 }
 
+/// custom analog of `std::visit` to fix compile issues with VS
+template<
+	typename F, typename P,
+	typename = std::enable_if_t<std::is_same_v<std::decay_t<P>, property>>
+>
+constexpr decltype(auto) visit(F&& f, P&& p) {
+	// calculate proper std::variant underlying type for forwarding
+	// 1. extract pure underlying type
+	using V1 = typename std::remove_reference_t<P>::underlying_type;
+	// 2. add constness if P is const type
+	using V2 = std::conditional_t<std::is_const_v<std::remove_reference_t<P>>, std::add_const_t<V1>, V1>;
+	// 3. finally add lvalue ref if P is lvalue ref
+	using V = std::conditional_t<std::is_lvalue_reference_v<P>, std::add_lvalue_reference_t<V2>, V2>;
+	// forward to std::visit
+	return std::visit(std::forward<F>(f), static_cast<V&&>(p));
+}
+
 ///  formatting support
 BS_API std::string to_string(const property& p);
 BS_API std::ostream& operator <<(std::ostream& os, const property& x);
