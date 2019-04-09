@@ -25,11 +25,12 @@ using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
 NAMESPACE_BEGIN(detail)
 
 /// Convert lambda::operator() to bs type construct function pointer
-template <typename L> struct lam2bsctor {};
+template <typename L> struct mfn2bsctor {};
 template <typename C, typename R, typename... A>
-struct lam2bsctor<R (C::*)(A...)> { typedef bs_type_ctor_result type(A...); };
+struct mfn2bsctor<R (C::*)(A...)> { typedef bs_type_ctor_result type(A...); };
 template <typename C, typename R, typename... A>
-struct lam2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...); };
+struct mfn2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...); };
+template<typename... T> using mfn2bsctor_t = typename mfn2bsctor<T...>::type;
 /// correct leafs owner in cloned node object
 BS_API void adjust_cloned_node(const sp_obj&);
 
@@ -201,7 +202,7 @@ public:
 	// add stateless lambda as type constructor
 	template< typename Lambda >
 	void add_constructor(Lambda&& f) const {
-		using func_t = typename detail::lam2bsctor<decltype(&std::remove_reference<Lambda>::type::operator())>::type;
+		using func_t = detail::mfn2bsctor_t< decltype(&std::remove_reference_t<Lambda>::operator()) >;
 		add_constructor((func_t*)f);
 	}
 
@@ -279,30 +280,36 @@ public:
 		return name.c_str();
 	}
 
-	//! by default type_descriptors are comparable by bs_type_info
+	/// type_descriptors are comparable by string type name
 	bool operator <(const type_descriptor& td) const;
 
-	//! retrieve type_descriptor of parent class
+	/// retrieve type_descriptor of parent class
 	const type_descriptor& parent_td() const {
 		return parent_td_fun_ ? (*parent_td_fun_)() : nil();
 	}
 };
 
-// comparison with type string
-inline bool operator <(const type_descriptor& td, const std::string& type_string) {
-	return (td.name < type_string);
+/// comparison with string type ID
+inline bool operator ==(const type_descriptor& td, std::string_view type_id) {
+	return (td.name == type_id);
+}
+inline bool operator ==(std::string_view type_id, const type_descriptor& td) {
+	return (td.name == type_id);
 }
 
-inline bool operator ==(const type_descriptor& td, const std::string& type_string) {
-	return (td.name == type_string);
+inline bool operator !=(const type_descriptor& td, std::string_view type_id) {
+	return td.name != type_id;
+}
+inline bool operator !=(std::string_view type_id, const type_descriptor& td) {
+	return td.name != type_id;
 }
 
-inline bool operator !=(const type_descriptor& td, const std::string& type_string) {
-	return td.name != type_string;
+inline bool operator <(const type_descriptor& td, std::string_view type_id) {
+	return td.name < type_id;
 }
 
-// upcastable_eq(td1, td2) will return true if td1 != td2
-// but td1 can be casted up to td2 (i.e. td1 is inherited from td1)
+// upcastable_eq(td1, td2) will return true if td1 == td2
+// or td1 can be casted up to td2 (i.e. td2 is inherited from td1)
 struct BS_API upcastable_eq {
 	bool operator()(const type_descriptor& td1, const type_descriptor& td2) const;
 };
