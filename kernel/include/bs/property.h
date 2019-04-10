@@ -10,6 +10,7 @@
 
 #include "objbase.h"
 #include "timetypes.h"
+#include "meta.h"
 
 #include <iosfwd>
 #include <variant>
@@ -95,10 +96,6 @@ public:
 
 	using underlying_type::underlying_type;
 	using underlying_type::operator=;
-
-	property(const property&) = default;
-	property(property&&) = default;
-	~property() = default;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -106,20 +103,20 @@ public:
 //
 template<typename T, typename U>
 constexpr decltype(auto) get(U&& p) {
-	if constexpr(detail::is_prop<U>() && detail::can_carry_type<T>())
+	if constexpr(detail::is_prop_v<U> && detail::can_carry_type_v<T>)
 		return std::get<T>(std::forward<U>(p));
 }
 
 template<typename T, typename U>
 constexpr auto get_if(U* p) {
-	if constexpr(detail::is_prop<U>() && detail::can_carry_type<T>())
+	if constexpr(detail::is_prop_v<U> && detail::can_carry_type_v<T>)
 		return std::get_if<T>(p);
 }
 
 /// Intended to appear on right side, that's why const refs
 template<typename T>
 constexpr auto get_or(const property* p, const T& def_value) -> const T& {
-	if constexpr(detail::can_carry_type<T>()) {
+	if constexpr(detail::can_carry_type_v<T>) {
 		auto pv = std::get_if<T>(p);
 		return pv ? *pv : def_value;
 	}
@@ -133,7 +130,7 @@ constexpr auto get_or(const property* p, const T& def_value) -> const T& {
 template<typename From = void, typename To = void>
 constexpr bool extract(const property& source, To& target) {
 	using carryT = std::conditional_t< std::is_same_v<From, void>, To, From >;
-	if constexpr(detail::can_carry_type<carryT>()) {
+	if constexpr(detail::can_carry_type_v<carryT>) {
 		if(std::holds_alternative<carryT>(source)) {
 			target = std::get<carryT>(source);
 			return true;
@@ -148,15 +145,9 @@ template<
 	typename = std::enable_if_t<std::is_same_v<std::decay_t<P>, property>>
 >
 constexpr decltype(auto) visit(F&& f, P&& p) {
-	// calculate proper std::variant underlying type for forwarding
-	// 1. extract pure underlying type
-	using V1 = typename std::remove_reference_t<P>::underlying_type;
-	// 2. add constness if P is const type
-	using V2 = std::conditional_t<std::is_const_v<std::remove_reference_t<P>>, std::add_const_t<V1>, V1>;
-	// 3. finally add lvalue ref if P is lvalue ref
-	using V = std::conditional_t<std::is_lvalue_reference_v<P>, std::add_lvalue_reference_t<V2>, V2>;
-	// forward to std::visit
-	return std::visit(std::forward<F>(f), static_cast<V&&>(p));
+	// forward underlying type to std::visit
+	using UT = typename std::remove_reference_t<P>::underlying_type;
+	return std::visit(std::forward<F>(f), meta::forward_as<P, UT>(p));
 }
 
 ///  formatting support
