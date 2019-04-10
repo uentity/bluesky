@@ -67,6 +67,7 @@
     <ClInclude Include="kernel\include\bs\kernel\types_factory.h" />
     <ClInclude Include="kernel\include\bs\kernel\type_tuple.h" />
     <ClInclude Include="kernel\include\bs\log.h" />
+    <ClInclude Include="kernel\include\bs\meta.h" />
     <ClInclude Include="kernel\include\bs\misc.h" />
     <ClInclude Include="kernel\include\bs\objbase.h" />
     <ClInclude Include="kernel\include\bs\plugin_descriptor.h" />

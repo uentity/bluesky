@@ -354,6 +354,9 @@
     <ClInclude Include="kernel\include\bs\timetypes.h">
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
