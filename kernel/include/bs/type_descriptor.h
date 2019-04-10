@@ -25,11 +25,12 @@ using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
 NAMESPACE_BEGIN(detail)
 
 /// Convert lambda::operator() to bs type construct function pointer
-template <typename L> struct lam2bsctor {};
+template <typename L> struct mfn2bsctor {};
 template <typename C, typename R, typename... A>
-struct lam2bsctor<R (C::*)(A...)> { typedef bs_type_ctor_result type(A...); };
+struct mfn2bsctor<R (C::*)(A...)> { typedef bs_type_ctor_result type(A...); };
 template <typename C, typename R, typename... A>
-struct lam2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...); };
+struct mfn2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...); };
+template<typename... T> using mfn2bsctor_t = typename mfn2bsctor<T...>::type;
 /// correct leafs owner in cloned node object
 BS_API void adjust_cloned_node(const sp_obj&);
 
@@ -42,7 +43,6 @@ NAMESPACE_END(detail)
 */
 class BS_API type_descriptor {
 private:
-	const BS_TYPE_INFO bs_ti_;
 	const BS_GET_TD_FUN parent_td_fun_;
 	mutable BS_TYPE_COPY_FUN copy_fun_;
 
@@ -148,32 +148,14 @@ public:
 		bs_type_ctor_result ptr_;
 	};
 
-	// default constructor - type_descriptor points to nil
-	type_descriptor() :
-		bs_ti_(nil_type_info()), parent_td_fun_(nullptr), copy_fun_(nullptr),
-		name(nil().name)
-	{}
-
 	// constructor from string type name for temporary tasks (searching etc)
-	type_descriptor(const char* type_name) :
-		bs_ti_(nil_type_info()), parent_td_fun_(nullptr), copy_fun_(nullptr),
-		name(type_name)
-	{}
-
-	// constructor from BS_TYPE_INFO
-	type_descriptor(const BS_TYPE_INFO& ti) :
-		bs_ti_(ti), parent_td_fun_(nullptr), copy_fun_(nullptr),
-		name(nil().name)
-	{}
+	type_descriptor(std::string_view type_name = "");
 
 	// standard constructor
 	type_descriptor(
-		const BS_TYPE_INFO& ti, const char* type_name, const BS_TYPE_COPY_FUN& cp_fn,
-		const BS_GET_TD_FUN& parent_td_fn, const char* description = ""
-	) :
-		bs_ti_(ti), parent_td_fun_(parent_td_fn), copy_fun_(cp_fn),
-		name(type_name), description(description)
-	{}
+		std::string type_name, const BS_TYPE_COPY_FUN& cp_fn,
+		const BS_GET_TD_FUN& parent_td_fn, std::string description = ""
+	);
 
 	// templated ctor for BlueSky types
 	// if add_def_construct is set -- add default (empty) type's constructor
@@ -188,7 +170,7 @@ public:
 		std::integral_constant< bool, add_def_ctor > = std::false_type(),
 		std::integral_constant< bool, add_def_copy > = std::false_type()
 	) :
-		bs_ti_(BS_GET_TI(T)), parent_td_fun_(extract_tdfun< base >::go()), copy_fun_(nullptr),
+		parent_td_fun_(extract_tdfun< base >::go()), copy_fun_(nullptr),
 		name(extract_typename< T >::go(type_name)), description(description)
 	{
 		add_def_constructor< T, add_def_ctor >();
@@ -197,6 +179,7 @@ public:
 
 	// obtain Nil type_descriptor
 	static const type_descriptor& nil();
+	bool is_nil() const;
 
 	/*-----------------------------------------------------------------
 	 * create new instance
@@ -219,7 +202,7 @@ public:
 	// add stateless lambda as type constructor
 	template< typename Lambda >
 	void add_constructor(Lambda&& f) const {
-		using func_t = typename detail::lam2bsctor<decltype(&std::remove_reference<Lambda>::type::operator())>::type;
+		using func_t = detail::mfn2bsctor_t< decltype(&std::remove_reference_t<Lambda>::operator()) >;
 		add_constructor((func_t*)f);
 	}
 
@@ -284,15 +267,7 @@ public:
 		return {};
 	}
 
-	/// read access to base fields
-	BS_TYPE_INFO type() const {
-		return bs_ti_;
-	};
-
 	/// tests
-	bool is_nil() const {
-		return ::blue_sky::is_nil(bs_ti_);
-	}
 	bool is_copyable() const {
 		return (copy_fun_ != nullptr);
 	}
@@ -305,48 +280,36 @@ public:
 		return name.c_str();
 	}
 
-	//! by default type_descriptors are comparable by bs_type_info
-	bool operator <(const type_descriptor& td) const {
-		return bs_ti_ < td.bs_ti_;
-	}
+	/// type_descriptors are comparable by string type name
+	bool operator <(const type_descriptor& td) const;
 
-	//! retrieve type_descriptor of parent class
+	/// retrieve type_descriptor of parent class
 	const type_descriptor& parent_td() const {
-		if(parent_td_fun_)
-			return (*parent_td_fun_)();
-		else
-			return nil();
+		return parent_td_fun_ ? (*parent_td_fun_)() : nil();
 	}
 };
 
-// comparison with type string
-inline bool operator <(const type_descriptor& td, const std::string& type_string) {
-	return (td.name < type_string);
+/// comparison with string type ID
+inline bool operator ==(const type_descriptor& td, std::string_view type_id) {
+	return (td.name == type_id);
+}
+inline bool operator ==(std::string_view type_id, const type_descriptor& td) {
+	return (td.name == type_id);
 }
 
-inline bool operator ==(const type_descriptor& td, const std::string& type_string) {
-	return (td.name == type_string);
+inline bool operator !=(const type_descriptor& td, std::string_view type_id) {
+	return td.name != type_id;
+}
+inline bool operator !=(std::string_view type_id, const type_descriptor& td) {
+	return td.name != type_id;
 }
 
-inline bool operator !=(const type_descriptor& td, const std::string& type_string) {
-	return td.name != type_string;
+inline bool operator <(const type_descriptor& td, std::string_view type_id) {
+	return td.name < type_id;
 }
 
-// comparison with bs_type_info
-inline bool operator <(const type_descriptor& td, const BS_TYPE_INFO& ti) {
-	return (td.type() < ti);
-}
-
-inline bool operator ==(const type_descriptor& td, const BS_TYPE_INFO& ti) {
-	return (td.type() == ti);
-}
-
-inline bool operator !=(const type_descriptor& td, const BS_TYPE_INFO& ti) {
-	return !(td.type() == ti);
-}
-
-// upcastable_eq(td1, td2) will return true if td1 != td2
-// but td1 can be casted up to td2 (i.e. td1 is inherited from td1)
+// upcastable_eq(td1, td2) will return true if td1 == td2
+// or td1 can be casted up to td2 (i.e. td2 is inherited from td1)
 struct BS_API upcastable_eq {
 	bool operator()(const type_descriptor& td1, const type_descriptor& td2) const;
 };

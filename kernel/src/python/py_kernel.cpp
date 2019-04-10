@@ -11,7 +11,14 @@
 #include <bs/tree/node.h>
 #include <bs/python/kernel.h>
 #include <bs/python/any.h>
-#include <boost/lexical_cast.hpp>
+
+#include <iterator>
+
+#include <pybind11/chrono.h>
+#include <fmt/format.h>
+
+PYBIND11_MAKE_OPAQUE(blue_sky::str_any_array)
+PYBIND11_MAKE_OPAQUE(blue_sky::idx_any_array)
 
 NAMESPACE_BEGIN(blue_sky::python)
 
@@ -40,37 +47,70 @@ void bind_any_array(py::module& m, const char* type_name) {
 	using key_type = typename any_array_t::key_type;
 	using container_t = typename any_array_t::container_t;
 
-	py::class_<any_array_t>(m, type_name)
+	static auto get_size = [](const any_array_t& A){ return A.size(); };
+
+	static auto make_array_key_iterator = [](any_array_t& A) {
+		if constexpr(any_array_t::is_map)
+			return py::make_key_iterator(A.begin(), A.end());
+		else
+			return py::make_iterator(A.begin(), A.end());
+	};
+
+	auto any_bind = py::class_<any_array_t>(m, type_name)
 		.def(py::init<>())
 		.def("__bool__",
 			[](const any_array_t& A) -> bool { return !A.empty(); },
 			"Check whether the array is nonempty"
 		)
-		.def("__len__", &container_t::size)
-		.def_property_readonly("size", &container_t::size)
-		.def("__contains__", [](const any_array_t& A, const key_type& k) { return A.has_key(k); })
-		.def("__getitem__", [](const any_array_t& A, const key_type& k) {
+		.def("__len__", get_size)
+		.def_property_readonly("size", get_size)
+
+		.def("__contains__", [](const any_array_t& A, py::handle k) {
+			auto key_caster = py::detail::make_caster<key_type>();
+			return key_caster.load(k, true) ?
+				A.has_key(py::detail::cast_op<key_type>(key_caster)) :
+				false;
+		})
+
+		.def("__getitem__", [](any_array_t& A, const key_type& k) {
 			using array_trait = typename any_array_t::trait;
 			auto pval = array_trait::find(A, k);
 			if(pval == A.end())
-				throw py::key_error("There's no element with key = " + boost::lexical_cast<std::string>(k));
-
+				throw py::key_error("There's no element with key = " + fmt::format("{}", k));
 			return array_trait::iter2val(pval);
+		}, py::return_value_policy::reference_internal)
+		.def("__getitem__", [](any_array_t& A, std::size_t k) {
+			if(k >= A.size())
+				throw py::key_error("Index past array size");
+			using array_trait = typename any_array_t::trait;
+			return array_trait::iter2val(std::next(std::begin(A), k));
+		}, py::return_value_policy::reference_internal)
+
+		.def("__setitem__", [](any_array_t& A, const key_type& k, std::any value) {
+			if(!any_array_t::trait::insert(A, k, std::move(value)))
+				throw py::key_error("Cannot insert element with key = " + fmt::format("{}", k));
 		})
-		.def("__setitem__", [](any_array_t& A, const key_type& k, py::object value) {
-			if(py::isinstance<py::bool_>(value))
-				set_any_array_value(A, k, py::cast<bool>(value));
-			else if(py::isinstance<py::int_>(value))
-				set_any_array_value(A, k, py::cast<std::intmax_t>(value));
-			else if(py::isinstance<py::float_>(value))
-				set_any_array_value(A, k, py::cast<double>(value));
-			else if(py::isinstance<py::str>(value))
-				set_any_array_value(A, k, py::cast<std::string>(value));
-			else {
-				auto bsobj = py::cast<sp_obj>(value);
-				if(bsobj) set_any_array_value(A, k, std::move(bsobj));
-				else throw py::value_error("Only primitive types and BS objects can be stored in any_array");
-			}
+
+		.def("__delitem__", [](any_array_t& m, const key_type& k) {
+			auto it = any_array_t::trait::find(m, k);
+			if (it == m.end()) throw py::key_error();
+			m.erase(it);
+		})
+
+		.def("__iter__", make_array_key_iterator,
+			py::keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */
+		)
+		.def("items",
+			[](any_array_t &m) { return py::make_iterator(m.begin(), m.end()); },
+			py::keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */
+		)
+
+		.def("keys", [](const any_array_t& A){ return A.keys(); })
+		.def("values", [](const any_array_t& A) {
+			std::vector<std::any> res;
+			for(auto a = std::begin(A), end = std::end(A); a != end; ++a)
+				res.push_back(any_array_t::trait::iter2val(a));
+			return res;
 		})
 	;
 }
@@ -162,7 +202,10 @@ auto bind_tfactory_api(py::module& m) -> void {
 	m.def("find_type", &kernel::tfactory::find_type, "type_name"_a);
 	m.def("register_instance", (int (*)(sp_cobj)) &kernel::tfactory::register_instance);
 	m.def("free_instance", (int (*)(sp_cobj)) &kernel::tfactory::free_instance);
-	m.def("instances", (kernel::tfactory::instances_enum (*)(const BS_TYPE_INFO&)) &kernel::tfactory::instances);
+	m.def("instances",
+		(auto (*)(const type_descriptor&) -> kernel::tfactory::instances_enum) &kernel::tfactory::instances);
+	m.def("instances",
+		(auto (*)(std::string_view) -> kernel::tfactory::instances_enum) &kernel::tfactory::instances);
 	m.def("clone_object", [](bs_type_copy_param src) -> sp_obj {
 		return kernel::tfactory::clone_object(src);
 	}, "src"_a, "Make object copy");

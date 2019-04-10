@@ -43,14 +43,10 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <iosfwd>
-#include <algorithm>
-#include <optional>
+#include <string_view>
 
 #include "fwd.h"
 #include "type_info.h"
-#include "assert.h"
-#include "detail/args.h"
 #include "detail/scope_guard.h"
 
 NAMESPACE_BEGIN(blue_sky)

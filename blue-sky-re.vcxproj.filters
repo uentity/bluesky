@@ -336,12 +336,30 @@
     <ClInclude Include="kernel\src\kernel\plugins_subsyst.h">
       <Filter>Файлы исходного кода\kernel</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\function_view.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\python\list.h">
+      <Filter>Заголовочные файлы\bs\python</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\python\property.h">
+      <Filter>Заголовочные файлы\bs\python</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\propdict.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\property.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\timetypes.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
-      <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\common.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\lib_descriptor.cpp">
@@ -490,6 +508,15 @@
     </ClCompile>
     <ClCompile Include="kernel\src\kernel\types_factory_subsyst.cpp">
       <Filter>Файлы исходного кода\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\propdict.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\property.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\timetypes.cpp">
+      <Filter>Файлы исходного кода</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

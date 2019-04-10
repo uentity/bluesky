@@ -65,20 +65,12 @@ auto plugins_subsyst::register_type(
 }
 
 auto plugins_subsyst::demand_type(const type_tuple& obj_t) -> type_tuple {
-	//type_tuple tt_ref(obj_t);
 	type_tuple tt_ref;
-	if(obj_t.td().is_nil()) {
-		// if type is nil try to find it by name
-		auto tt = types_.get< type_name_key >().find(obj_t.td());
-		if(tt != types_.get< type_name_key >().end())
-			tt_ref = *tt;
-	}
-	else {
-		// otherwise try to find requested type using fast search in factory
-		auto tt = types_.get< type_key >().find(obj_t.td());
-		if(tt != types_.get< type_key >().end())
-			tt_ref = *tt;
-	}
+	auto& I = types_.get< type_name_key >();
+	auto tt = I.find(obj_t.td().name);
+	if(tt != I.end())
+		tt_ref = *tt;
+
 	if(tt_ref.td().is_nil()) {
 		// type wasn't found - try to register it first
 		if(obj_t.pd().is_nil())

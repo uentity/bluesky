@@ -9,8 +9,13 @@
 
 #define BOOST_TEST_DYN_LINK
 #include <bs/error.h>
+#include <bs/detail/args.h>
+#include <bs/timetypes.h>
+#include <bs/log.h>
 
 #include <boost/test/unit_test.hpp>
+#include <fmt/ostream.h>
+#include <fmt/format.h>
 #include <iostream>
 
 using namespace blue_sky;
@@ -91,7 +96,7 @@ void parse_args(Args... args) {
 	BOOST_TEST(r5 == -888.f);
 }
 
-BOOST_AUTO_TEST_CASE(test_bs_args) {
+BOOST_AUTO_TEST_CASE(test_common) {
 	std::cout << "\n\n*** testing bs_args..." << std::endl;
 
 	int my_ints[] = {0, 1, 2};
@@ -104,5 +109,11 @@ BOOST_AUTO_TEST_CASE(test_bs_args) {
 		static_cast< const int& >(my_ints[2]), my_str, my_modstr, 42,
 		my_stdstr, std::string("!")
 	);
+
+	// test time types
+	auto ts = make_timestamp();
+	BOOST_TEST(to_string(ts - ts) == "0ns");
+	std::cout << "Direct print timestamp: " << to_string(ts) << std::endl;
+	bsout() << "Print timestamp using fmt: {}" << ts << bs_end;
 }
 

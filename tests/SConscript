@@ -13,7 +13,10 @@ if build_kind == "init" :
 	Return();
 
 exe_name = "bs_tests";
-test_units = files(["."], excludes=["test_pymod.cpp", "test_nparray.cpp", "test_example.cpp"]).sources;
+py_lib_name = "py_bs_tests";
+
+py_units = ["py_test_nparray.cpp", "py_test_inheritance.cpp", "py_main.cpp"];
+test_units = files(["."], excludes=py_units).sources;
 
 # setup default build environment
 tests_env = custom_env.Clone();
@@ -27,24 +30,12 @@ bs_tests = tests_env.Program(
 	target = osp.join(tar_exe_dir, exe_name), source = test_units
 );
 
-# library for testing Python module
+# library for running Python tests
 py_env = tests_env.Clone();
 py_env['SHLIBPREFIX'] = '';
-test_pymod = py_env.SharedLibrary(
-	target = osp.join(tar_exe_dir, 'test_pymod'),
-	source = 'test_pymod.cpp'
-);
-
-# library for testing Python numpy arrays
-test_nparray = py_env.SharedLibrary(
-	target = osp.join(tar_exe_dir, 'test_nparray'),
-	source = 'test_nparray.cpp'
-);
-
-# library for testing different Python-bindings related things
-test_example = py_env.SharedLibrary(
-	target = osp.join(tar_exe_dir, 'example'),
-	source = 'test_example.cpp'
+py_bs_tests = py_env.SharedLibrary(
+	target = osp.join(tar_plugin_dir, py_lib_name),
+	source = py_units
 );
 
 # run test cases
@@ -60,11 +51,9 @@ run_tests = tests_env.Command(
 Depends(run_tests, bs_tests);
 AlwaysBuild(run_tests);
 
-Alias('bs_tests', bs_tests);
-Alias('test_pymod', test_pymod);
-Alias('test_nparray', test_nparray);
-Alias('test_example', test_example);
+Alias('tests', bs_tests);
+Alias('py_tests', py_bs_tests);
 Alias('run_tests', run_tests);
-Alias('tests', [bs_tests, test_pymod, run_tests]);
-Export('bs_tests');
+Alias('all_tests', [bs_tests, py_bs_tests, run_tests]);
+#Export('bs_tests');
 

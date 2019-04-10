@@ -246,19 +246,11 @@ sp_link deref_path(
 //  walk
 //
 auto walk(
-	const sp_link& root, step_process_fp step_f,
+	const sp_link& root, step_process_fv step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links
 ) -> void {
 	walk_impl({root}, step_f, topdown, follow_symlinks, follow_lazy_links);
 }
-
-auto walk(
-	const sp_link& root, const step_process_f& step_f,
-	bool topdown, bool follow_symlinks, bool follow_lazy_links
-) -> void {
-	walk_impl({root}, step_f, topdown, follow_symlinks, follow_lazy_links);
-}
-
 
 auto make_root_link(
 	const std::string& link_type, std::string name, sp_node root_node

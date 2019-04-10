@@ -18,9 +18,10 @@ auto instance_subsyst::register_instance(sp_cobj&& obj) -> int {
 	if(!obj) return 0;
 	const type_descriptor* td = &obj->bs_resolve_type();
 	// go through chain of type_descriptors up to objbase
+	auto play_solo = std::lock_guard(solo_);
 	int arity = 0;
 	while(!td->is_nil()) {
-		arity += instances_[td->type()].insert(std::move(obj)).second;
+		arity += instances_[td->name].insert(std::move(obj)).second;
 		td = &td->parent_td();
 	}
 	return arity;
@@ -28,19 +29,19 @@ auto instance_subsyst::register_instance(sp_cobj&& obj) -> int {
 
 auto instance_subsyst::free_instance(sp_cobj&& obj) -> int {
 	if(!obj) return 0;
-
-	// go through chain of type_descriptors up to objbase
 	const type_descriptor* td = &obj->bs_resolve_type();
+	// go through chain of type_descriptors up to objbase
+	auto play_solo = std::lock_guard(solo_);
 	int arity = 0;
 	while(!td->is_nil()) {
-		arity += (int)instances_[td->type()].erase(std::move(obj));
+		arity += (int)instances_[td->name].erase(std::move(obj));
 		td = &td->parent_td();
 	}
 	return arity;
 }
 
-auto instance_subsyst::instances(const BS_TYPE_INFO& ti) const -> instances_enum {
-	auto Is = instances_.find(ti);
+auto instance_subsyst::instances(std::string_view type_id) const -> instances_enum {
+	auto Is = instances_.find(type_id);
 	if(Is == instances_.end())
 		return {};
 

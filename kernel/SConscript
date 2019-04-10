@@ -24,12 +24,17 @@ if build_kind == "init" :
 kernel_cpp_list = [
 	"src/assert.cpp",
 	"src/type_info.cpp",
-	"src/common.cpp",
 	"src/plugin_descriptor.cpp",
 	"src/objbase.cpp",
 	"src/misc.cpp",
 	"src/str_utils.cpp",
 	"src/error.cpp",
+	"src/lib_descriptor.cpp",
+	"src/log.cpp",
+	"src/main.cpp",
+	"src/timetypes.cpp",
+	"src/property.cpp",
+	"src/propdict.cpp",
 
 	"src/kernel/config_subsyst.cpp",
 	"src/kernel/instance_subsyst.cpp",
@@ -45,10 +50,6 @@ kernel_cpp_list = [
 	"src/kernel/misc.cpp",
 	"src/kernel/plugins.cpp",
 	"src/kernel/types_factory.cpp",
-
-	"src/lib_descriptor.cpp",
-	"src/log.cpp",
-	"src/main.cpp",
 
 	"src/compat/messaging.cpp",
 	"src/compat/array.cpp",

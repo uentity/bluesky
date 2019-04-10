@@ -57,8 +57,8 @@ inline void clean_type_id(std::string &name) {
 typedef std::type_index bs_type_info;
 
 // empty class denotes "Nil" type - associated with nothing
-class BS_API nil;
-BS_API std::type_index nil_type_info();
+BS_API const std::type_index& nil_type_info();
+BS_API const std::string& nil_type_name();
 
 // check if type is nil
 BS_API bool is_nil(const std::type_index&);

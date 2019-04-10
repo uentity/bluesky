@@ -76,13 +76,13 @@ struct log_tape {
 
 	// perfect forwarding ctor for underlying tuple
 	template<typename... Ts>
-	log_tape(Ts&&... args) :
+	constexpr log_tape(Ts&&... args) :
 		tape_(std::forward<Ts>(args)...)
 	{}
 
 	// generate tapes of this Level inferring tape elements from passed tuple
 	template<typename... Ts>
-	static auto create(std::tuple<Ts...>&& t) {
+	constexpr static auto create(std::tuple<Ts...>&& t) {
 		return log_tape<Level, Ts...>(std::move(t));
 	}
 
@@ -138,29 +138,26 @@ struct log_tape {
 	}
 
 	// overload for manipulators
-	bs_log& operator <<(manip_t op) const {
+	constexpr bs_log& operator <<(manip_t op) const {
 		// flush data and call manipulator
 		return (*op)(flush());
 	}
 
 	// flush self to backend spdlog::logger
-	auto flush() const -> bs_log& {
-		return apply(
-			write<Args...>,
-			tape_
-		);
+	constexpr auto flush() const -> bs_log& {
+		return apply(write<Args...>, tape_);
 	}
 
 	// write (forward) raw arguments to spdlog::logger backend
 	// [NOTE] taking tape elemants by const lvalue refs for printing
 	template< typename BsLog, typename... Ts >
-	static auto write(BsLog& L, const Ts&... args) -> BsLog& {
+	constexpr static auto write(BsLog& L, const Ts&... args) -> BsLog& {
 		L.logger().log(Level, args...);
 		return L;
 	}
 
 	// tuple that collects data to log
-	tape_tuple_t tape_;
+	const tape_tuple_t tape_;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -223,7 +220,8 @@ public:
 	}
 
 	/// overload << for manipulators
-	friend bs_log& operator<<(bs_log& lhs, manip_t op) {
+	constexpr friend auto
+	operator<<(bs_log& lhs, manip_t op) -> bs_log& {
 		return (*op)(lhs);
 	}
 

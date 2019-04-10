@@ -33,33 +33,17 @@ kimpl::~kimpl() = default;
 auto kimpl::find_type(const std::string& key) const -> type_tuple {
 	using search_key = plugins_subsyst::type_name_key;
 
-	auto tp = types_.get< search_key >().find(key);
-	return tp != types_.get< search_key >().end() ? *tp : type_tuple();
+	auto& I = types_.get<search_key>();
+	auto tp = I.find(key);
+	return tp != I.end() ? *tp : type_tuple();
 }
 
-// returns valid (non-nill) type info
-auto kimpl::find_type_info(const type_descriptor& master) const -> BS_TYPE_INFO {
-	using type_name_key = plugins_subsyst::type_name_key;
-
-	BS_TYPE_INFO info = master.type();
-	if(is_nil(info)) {
-		// try to find type info by type name
-		info = find_type(master.name).td().type();
-	}
-	// sanity
-	if(is_nil(info))
-		throw error(
-			fmt::format("Cannot find type info for type {}, seems like not registered", master.name)
-		);
-	return info;
+auto kimpl::pert_str_any_array(const std::string& key) -> str_any_array& {
+	return str_any_map_[key];
 }
 
-auto kimpl::pert_str_any_array(const type_descriptor& master) -> str_any_array& {
-	return str_any_map_[find_type_info(master)];
-}
-
-auto kimpl::pert_idx_any_array(const type_descriptor& master) -> idx_any_array& {
-	return idx_any_map_[find_type_info(master)];
+auto kimpl::pert_idx_any_array(const std::string& key) -> idx_any_array& {
+	return idx_any_map_[key];
 }
 
 auto kimpl::actor_system() -> caf::actor_system& {

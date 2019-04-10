@@ -97,15 +97,12 @@ public:
 };
 
 // custom type cast
-NAMESPACE_BEGIN(pybind11)
-NAMESPACE_BEGIN(detail)
+NAMESPACE_BEGIN(pybind11::detail)
 
 template<> struct type_caster<std::shared_ptr<mytype_simple>> {
 	std::shared_ptr<mytype_simple> value;
 
-	static PYBIND11_DESCR name() {
-		return type_descr(_("mytype_simple"));
-	}
+	static constexpr auto name = _("mytype_simple");
 
 	bool load(handle src, bool) {
 		/* Extract PyObject from handle */
@@ -129,8 +126,7 @@ template<> struct type_caster<std::shared_ptr<mytype_simple>> {
 	template< typename > using cast_op_type = std::shared_ptr<mytype_simple>;
 };
 
-NAMESPACE_END(detail)
-NAMESPACE_END(pybind11)
+NAMESPACE_END(pybind11::detail)
 
 /*-----------------------------------------------------------------------------
  *  functors
@@ -162,9 +158,7 @@ public:
 	}
 };
 
-PYBIND11_PLUGIN(example) {
-	py::module m("example");
-
+void test_inheritance(py::module& m) {
 	// bind objbase
 	py::class_<objbase, py_objbase<>, std::shared_ptr<objbase>>(m, "objbase")
 		.def(py::init_alias<>())
@@ -201,14 +195,18 @@ PYBIND11_PLUGIN(example) {
 	//	.def("name", &mytype_simple::name)
 	//;
 	m.def("test_objbase_pass", [](std::shared_ptr<objbase> obj) {
-		std::cout << "Am I mytype_simple instance? " << std::boolalpha
-			<< bool(std::dynamic_pointer_cast<mytype_simple>(obj)) << std::endl;
+		auto res = bool(std::dynamic_pointer_cast<objbase>(obj));
+		std::cout << "Am I objbase instance? " << std::boolalpha
+			<< res << std::endl;
+		return res;
 	});
 	m.def("test_mytype_pass", [](std::shared_ptr<mytype_simple> obj) {
+		auto res = bool(std::dynamic_pointer_cast<objbase>(obj));
 		std::cout << "Am I objbase instance? " << std::boolalpha
-			<< bool(std::dynamic_pointer_cast<objbase>(obj)) << std::endl;
+			<< res << std::endl;
+		return res;
 	});
-	//py::implicitly_convertible< std::shared_ptr<mytype_simple>, objbase >();
+	py::implicitly_convertible< mytype_simple, objbase >();
 
 	// bind slot
 	py::class_<myslot1, py_myslot<myslot1>, std::shared_ptr<myslot1>>(m, "myslot1")
@@ -219,7 +217,5 @@ PYBIND11_PLUGIN(example) {
 		.def(py::init_alias<>())
 		.def("act", &myslot2::act)
 	;
-
-	return m.ptr();
 }
 

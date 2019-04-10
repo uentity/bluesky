@@ -67,12 +67,12 @@ auto last_error() -> std::string {
 	return last_system_message();
 }
 
-auto pert_str_any_array(const type_descriptor& master) -> str_any_array& {
-	return KIMPL.pert_str_any_array(master);
+auto pert_str_any_array(const std::string& key) -> str_any_array& {
+	return KIMPL.pert_str_any_array(key);
 }
 
-auto pert_idx_any_array(const type_descriptor& master) -> idx_any_array& {
-	return KIMPL.pert_idx_any_array(master);
+auto pert_idx_any_array(const std::string& key) -> idx_any_array& {
+	return KIMPL.pert_idx_any_array(key);
 }
 
 NAMESPACE_END(blue_sky::kernel)

@@ -13,6 +13,7 @@
 #include "fusion.h"
 #include "node.h"
 #include "errors.h"
+#include "../detail/function_view.h"
 
 #include <list>
 
@@ -58,15 +59,9 @@ BS_API sp_link deref_path(
 );
 
 /// walk the tree just like the Python's `os.walk` is implemented
-using step_process_fp = void (*)(const sp_link&, std::list<sp_link>&, std::vector<sp_link>&);
+using step_process_fv = function_view<void (const sp_link&, std::list<sp_link>&, std::vector<sp_link>&)>;
 BS_API void walk(
-	const sp_link& root, step_process_fp step_f,
-	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
-);
-// overload for std::function instead of function pointer
-using step_process_f = std::function<void(const sp_link&, std::list<sp_link>&, std::vector<sp_link>&)>;
-BS_API void walk(
-	const sp_link& root, const step_process_f& step_f,
+	const sp_link& root, step_process_fv step_f,
 	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
 );
 
@@ -75,19 +70,12 @@ BS_API void walk(
  *-----------------------------------------------------------------------------*/
 /// deferred `deref_path` that accepts callback
 using deref_process_f = std::function<void(const sp_link&)>;
-// accept std::function callback
+
 BS_API auto deref_path(
 	deref_process_f f,
 	std::string path, sp_link start, node::Key path_unit = node::Key::ID,
 	bool follow_lazy_links = true, bool high_priority = false
 ) -> void;
-// [TODO] can't be compiled for some reason, enable after problem is solved
-// same as above but accept function pointer
-//using deref_process_fp = void (*)(const sp_link&);
-//BS_API auto deref_path(
-//	deref_process_fp f,
-//	std::string path, sp_link start, node::Key path_unit = node::Key::ID
-//) -> void;
 
 /*-----------------------------------------------------------------------------
  *  Misc utility functions

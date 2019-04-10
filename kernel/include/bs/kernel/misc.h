@@ -35,7 +35,7 @@ BS_API auto k_pymod() -> void*;
 BS_API auto last_error() -> std::string;
 
 // access per-type storage that can contain arbitrary types
-BS_API auto pert_str_any_array(const type_descriptor& master) -> str_any_array&;
-BS_API auto pert_idx_any_array(const type_descriptor& master) -> idx_any_array&;
+BS_API auto pert_str_any_array(const std::string& key) -> str_any_array&;
+BS_API auto pert_idx_any_array(const std::string& key) -> idx_any_array&;
 
 NAMESPACE_END(blue_sky::kernel)

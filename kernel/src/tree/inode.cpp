@@ -14,8 +14,7 @@ NAMESPACE_BEGIN(tree)
 
 // ctor
 inode::inode(Flags f, std::uint8_t u_, std::uint8_t g_, std::uint8_t o_)
-	: flags(f), u(u_), g(g_), o(o_),
-	mod_time(caf::make_timestamp())
+	: flags(f), u(u_), g(g_), o(o_), mod_time(make_timestamp())
 {}
 
 NAMESPACE_END(tree)

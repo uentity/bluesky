@@ -75,8 +75,7 @@ struct is_tuple_impl<std::tuple<Ts...>> : std::true_type {};
 } // eof namespace detail
 
 template<typename T>
-constexpr auto is_tuple() -> bool
-{ return blue_sky::detail::is_tuple_impl<std::decay_t<T>>::value; }
+inline constexpr bool is_tuple = blue_sky::detail::is_tuple_impl<std::decay_t<T>>::value;
 
 /*-----------------------------------------------------------------------------
  *  grow tuple from beginning or end
@@ -87,7 +86,7 @@ constexpr auto is_tuple() -> bool
 template<typename T, typename U>
 constexpr decltype(auto) grow_tuple(
 	T&& t, U&& u,
-	std::enable_if_t< !is_tuple<T>() && is_tuple<U>() >* = nullptr
+	std::enable_if_t< !is_tuple<T> && is_tuple<U> >* = nullptr
 ) {
 	return std::tuple_cat(
 		std::tuple<T>(std::forward<T>(t)), std::forward<U>(u)
@@ -99,7 +98,7 @@ constexpr decltype(auto) grow_tuple(
 template<typename T, typename U>
 constexpr decltype(auto) grow_tuple(
 	T&& t, U&& u,
-	std::enable_if_t< is_tuple<T>() && !is_tuple<U>(), short >* = nullptr
+	std::enable_if_t< is_tuple<T> && !is_tuple<U>, short >* = nullptr
 ) {
 	return std::tuple_cat(
 		std::forward<T>(t), std::tuple<U>(std::forward<U>(u))
@@ -111,7 +110,7 @@ constexpr decltype(auto) grow_tuple(
 template<typename T, typename U>
 constexpr decltype(auto) grow_tuple(
 	T&& t, U&& u,
-	std::enable_if_t< is_tuple<T>() && is_tuple<U>(), int >* = nullptr
+	std::enable_if_t< is_tuple<T> && is_tuple<U>, int >* = nullptr
 ) {
 	return std::tuple_cat(
 		std::forward<T>(t), std::forward<U>(u)
