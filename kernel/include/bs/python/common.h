@@ -29,7 +29,6 @@ typedef void (*bs_init_py_fn)(void*);
  *-----------------------------------------------------------------------------*/
 // init Python subsystem in BS plugin
 #define BS_INIT_PY(mod_name)                                                              \
-BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor();            \
 static void bs_init_py_subsystem_##mod_name(pybind11::module&);                           \
 BS_C_API_PLUGIN void bs_init_py_subsystem(void* py_plugin_module) {                       \
     if(!py_plugin_module) return;                                                         \
