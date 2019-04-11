@@ -63,7 +63,7 @@ BSS_FCN_INL_BEGIN_T(save, blue_sky::bs_nparray_traits, 1)
 	// save array shape
 	ar(make_nvp("shape", make_carray_view(t.shape(), t.ndim())));
 	// save array data
-	ar(make_nvp("values", make_carray_view(t.data(), t.size())));
+	ar(make_nvp("data", make_carray_view(t.data(), t.size())));
 BSS_FCN_INL_END_T(serialize, blue_sky::bs_nparray_traits, 1)
 
 BSS_FCN_INL_BEGIN_T(load, blue_sky::bs_nparray_traits, 1)
@@ -73,7 +73,7 @@ BSS_FCN_INL_BEGIN_T(load, blue_sky::bs_nparray_traits, 1)
 	// create numpy array with given shape
 	type(shape[0], nullptr).swap(t);
 	// load array data
-	ar(make_nvp("values", make_carray_view(t.data(), t.size())));
+	ar(make_nvp("data", make_carray_view(t.data(), t.size())));
 BSS_FCN_INL_END_T(serialize, blue_sky::bs_nparray_traits, 1)
 #endif
 

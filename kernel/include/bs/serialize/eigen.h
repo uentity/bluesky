@@ -11,6 +11,8 @@
 #include "carray.h"
 #include <Eigen/Dense>
 
+#include <cereal/types/array.hpp>
+
 namespace cereal {
 
 /*-----------------------------------------------------------------------------
@@ -18,27 +20,42 @@ namespace cereal {
  *-----------------------------------------------------------------------------*/
 template <typename Archive, typename Derived>
 auto save(Archive& ar, Eigen::PlainObjectBase<Derived> const& t) -> void {
-	using ArrT = Eigen::PlainObjectBase<Derived>;
-	if(ArrT::RowsAtCompileTime == Eigen::Dynamic) ar(make_nvp("rows", t.rows()));
-	if(ArrT::ColsAtCompileTime == Eigen::Dynamic) ar(make_nvp("cols", t.cols()));
+	//using ArrT = Eigen::PlainObjectBase<Derived>;
+	// write shape
+	const auto shape = std::array{ t.rows(), t.cols() };
+	if constexpr(cereal::traits::is_text_archive<Archive>::value)
+		ar( make_nvp("shape", make_carray_view(shape.data(), shape.size())) );
+	else
+		ar( make_nvp("shape", shape) );
+	// write data
 	ar( make_nvp("data", make_carray_view(t.data(), t.size())) );
 }
 
 template <typename Archive, typename Derived>
 auto load(Archive& ar, Eigen::PlainObjectBase<Derived>& t) -> void {
-	using ArrT = Eigen::PlainObjectBase<Derived>;
-	Eigen::Index rows = ArrT::RowsAtCompileTime, cols = ArrT::ColsAtCompileTime;
-	if(rows == Eigen::Dynamic) ar(make_nvp("rows", rows));
-	if(cols == Eigen::Dynamic) ar(make_nvp("cols", cols));
-	t.resize(rows, cols);
+	//using ArrT = Eigen::PlainObjectBase<Derived>;
+	// read shape
+	std::array<Eigen::Index, 2> shape;
+	if constexpr(cereal::traits::is_text_archive<Archive>::value)
+		ar( make_nvp("shape", make_carray_view(shape.data(), shape.size())) );
+	else
+		ar( make_nvp("shape", shape) );
+	// read data
+	t.resize(shape[0], shape[1]);
 	ar( make_nvp("data", make_carray_view(t.data(), t.size())) );
 }
 
 /*-----------------------------------------------------------------------------
- *  `Map` or `Block`
+ *  `Map`, `Ref`, `Block`, etc
  *-----------------------------------------------------------------------------*/
 template <typename Archive, typename Derived, Eigen::AccessorLevels A>
 auto save(Archive& ar, Eigen::MapBase<Derived, A> const& t) -> void {
+	// write shape
+	const auto shape = std::array{ t.rows(), t.cols() };
+	if constexpr(cereal::traits::is_text_archive<Archive>::value)
+		ar( make_nvp("shape", make_carray_view(shape.data(), shape.size())) );
+	else
+		ar( make_nvp("shape", shape) );
 	// size
 	ar( make_size_tag(t.size()) );
 	// because of strides we can only save content element by element
@@ -48,10 +65,16 @@ auto save(Archive& ar, Eigen::MapBase<Derived, A> const& t) -> void {
 
 template <class Archive, class Derived>
 auto load(Archive& ar, Eigen::MapBase<Derived, Eigen::AccessorLevels::WriteAccessors>& t) -> void {
+	// read shape
+	std::array<Eigen::Index, 2> shape;
+	if constexpr(cereal::traits::is_text_archive<Archive>::value)
+		ar( make_nvp("shape", make_carray_view(shape.data(), shape.size())) );
+	else
+		ar( make_nvp("shape", shape) );
 	// read size
 	Eigen::Index sz;
 	ar( make_size_tag(sz) );
-	if(sz < t.size()) throw blue_sky::error("Size of target Eigen::Map is less that required");
+	if(t.size() < sz) throw blue_sky::error("Size of Eigen::Map target is less than required");
 	// read data
 	for(Eigen::Index i = 0; i < sz; ++i)
 		ar(t.coeff(i));

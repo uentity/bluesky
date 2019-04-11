@@ -24,11 +24,11 @@ auto save(Archive& ar, TensorT const& t)
 -> std::enable_if_t<TensorMeta<TensorT>::is_handle || TensorMeta<TensorT>::is_tensor> {
 	// for text archives carray gives better output
 	// but for binary it saves arary size which isn't needed for std::array
-	const auto dims = t.dimensions();
+	const auto shape = t.dimensions();
 	if constexpr(cereal::traits::is_text_archive<Archive>::value)
-		ar( make_nvp("dims", make_carray_view(dims.data(), dims.size())) );
+		ar( make_nvp("shape", make_carray_view(shape.data(), shape.size())) );
 	else
-		ar( make_nvp("dims", dims) );
+		ar( make_nvp("shape", shape) );
 	// save data
 	ar( make_nvp("data", make_carray_view(t.data(), t.size())) );
 }
@@ -39,13 +39,13 @@ auto save(Archive& ar, TensorT const& t)
 // for plain tensors that can be resized
 template <typename Archive, typename T>
 auto load(Archive& ar, T& t) -> std::enable_if_t<TensorMeta<T>::is_mutable_tensor> {
-	typename T::Dimensions dims;
+	typename T::Dimensions shape;
 	if constexpr(cereal::traits::is_text_archive<Archive>::value)
-		ar( make_nvp("dims", make_carray_view(dims.data(), dims.size())) );
+		ar( make_nvp("shape", make_carray_view(shape.data(), shape.size())) );
 	else
-		ar( make_nvp("dims", dims) );
+		ar( make_nvp("shape", shape) );
 	// load data
-	t.resize(dims);
+	t.resize(shape);
 	ar( make_nvp("data", make_carray_view(t.data(), t.size())) );
 }
 
@@ -53,14 +53,14 @@ auto load(Archive& ar, T& t) -> std::enable_if_t<TensorMeta<T>::is_mutable_tenso
 template <class Archive, class T>
 auto load(Archive& ar, T& t) -> std::enable_if_t<TensorMeta<T>::is_mutable_handle> {
 	// read size
-	typename T::Dimensions dims;
+	typename T::Dimensions shape;
 	if constexpr(cereal::traits::is_text_archive<Archive>::value)
-		ar( make_nvp("dims", make_carray_view(dims.data(), dims.size())) );
+		ar( make_nvp("shape", make_carray_view(shape.data(), shape.size())) );
 	else
-		ar( make_nvp("dims", dims) );
+		ar( make_nvp("shape", shape) );
 	// maybe just check size (remove that strict shape check)?
-	if(!std::equal(dims.begin(), dims.end(), t.dimensions()))
-		throw blue_sky::error("Shape of TensorMap or TensorRef target don't match required");
+	//if(!std::equal(shape.begin(), shape.end(), t.dimensions()))
+	//	throw blue_sky::error("Shape of TensorMap or TensorRef target don't match required");
 	// read data with size check
 	ar(make_nvp("data",
 		make_carray_view(t.data(), t.size(), [&t](std::size_t read_sz) {
