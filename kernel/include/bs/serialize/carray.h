@@ -19,12 +19,8 @@
 namespace cereal {
 namespace detail {
 
-namespace {
-
 // dummy size callback for deserialization
-auto noop_size_callback(std::size_t) -> void {}
-
-} // eof hidden namespace
+constexpr auto noop_size_callback(std::size_t) -> void {}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Serialization for C arrays if BinaryData is supported and we are arithmetic
