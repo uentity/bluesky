@@ -107,7 +107,9 @@ struct type_caster<Type, enable_if_t<TensorMeta<Type>::is_tensor>> {
 		if (dims < 1) return false;
 
 		// Allocate the new type, then build a numpy reference into it
-		value = Type(DimsIndex(buf.shape(), buf.shape() + Ndims));
+		auto value_shape = DimsIndex{};
+		std::copy_n(buf.shape(), buf.ndim(), value_shape.begin());
+		value = Type(std::move(value_shape));
 		auto ref = reinterpret_steal<array>(tensor_ref_array(value));
 		if (dims == 1) ref = ref.squeeze();
 		else if (ref.ndim() == 1) buf = buf.squeeze();
@@ -234,7 +236,7 @@ template <typename Type> struct type_caster<Type, enable_if_t<TensorMeta<Type>::
 // Loader for Ref<...> arguments.  See the documentation for info on how to make this work without
 // copying (it requires some extra effort in many cases).
 template <typename PlainObjectType>
-struct type_caster<Eigen::TensorRef<PlainObjectType>> : public tensor_map_caster<Eigen::Ref<PlainObjectType>> {
+struct type_caster<Eigen::TensorRef<PlainObjectType>> : public tensor_map_caster<Eigen::TensorRef<PlainObjectType>> {
 private:
 	using Type = Eigen::TensorRef<PlainObjectType>;
 	using MapType = Eigen::TensorMap<PlainObjectType>;
@@ -289,10 +291,9 @@ public:
 		}
 
 		ref.reset();
-		map.reset(new MapType(
-			data(copy_or_ref),
-			DimsIndex(copy_or_ref.shape(), copy_or_ref.shape() + copy_or_ref.ndim())
-		));
+		DimsIndex map_shape;
+		std::copy_n(copy_or_ref.shape(), copy_or_ref.ndim(), map_shape.begin());
+		map.reset(new MapType(data(copy_or_ref), map_shape));
 		ref.reset(new Type(*map));
 
 		return true;
