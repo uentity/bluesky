@@ -36,8 +36,14 @@ public:
 	// [NOTE] transparent map
 	using underlying_type = std::map< std::string, property, std::less<> >;
 
+	// import base ctors
 	using underlying_type::underlying_type;
 	using underlying_type::operator=;
+
+	// add some specific in order to be able to init from unerlying_type
+	propdict() = default;
+	propdict(const underlying_type& rhs) : underlying_type(rhs) {}
+	propdict(underlying_type&& rhs) : underlying_type(std::move(rhs)) {}
 
 	auto has_key(std::string_view k) const {
 		return find(k) != end();
@@ -169,5 +175,10 @@ auto extract(const propdict& pdict, std::string_view key, To& target) {
 		return extract<From>(pval->second, target);
 	return false;
 }
+
+/// propbook = map of props with given key type
+template<typename Key> using propbook = std::map<Key, propdict, std::less<>>;
+using propbook_s = propbook<std::string>;
+using propbook_i = propbook<std::ptrdiff_t>;
 
 NAMESPACE_END(blue_sky::prop)
