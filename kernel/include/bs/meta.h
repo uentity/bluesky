@@ -15,7 +15,7 @@ namespace blue_sky::meta {
 /// same as `std::forward`, but forward value AS if it has type `AsT`
 /// with all type type props copied from `T`
 template<typename T, typename AsT>
-constexpr decltype(auto) forward_as(T&& value) {
+constexpr decltype(auto) forward_as(typename std::remove_reference_t<T>& value) {
 	// copy type props from T to AsT: U = type_props(T) -> AsT
 	// 1. add const & volatile if T has corresponding qualifiers
 	using U1 = std::conditional_t<std::is_const_v<std::remove_reference_t<T>>, std::add_const_t<AsT>, AsT>;
