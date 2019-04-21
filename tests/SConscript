@@ -15,7 +15,7 @@ if build_kind == "init" :
 exe_name = "bs_tests";
 py_lib_name = "py_bs_tests";
 
-py_units = ["py_test_nparray.cpp", "py_test_inheritance.cpp", "py_main.cpp"];
+py_units = ["py_test_nparray.cpp", "py_test_inheritance.cpp", "py_test_eigen.cpp", "py_main.cpp"];
 test_units = files(["."], excludes=py_units).sources;
 
 # setup default build environment

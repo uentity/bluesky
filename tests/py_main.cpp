@@ -16,10 +16,12 @@ namespace py = pybind11;
 // forward declare tests
 void test_nparray(py::module&);
 void test_inheritance(py::module&);
+void test_eigen(py::module&);
 
 PYBIND11_MODULE(py_bs_tests, m) {
 	blue_sky::kernel::init();
 	test_nparray(m);
 	test_inheritance(m);
+	test_eigen(m);
 }
 
