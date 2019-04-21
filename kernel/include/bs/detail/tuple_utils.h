@@ -117,5 +117,12 @@ constexpr decltype(auto) grow_tuple(
 	);
 }
 
+template<typename F, typename T>
+constexpr auto visit_tuple(F&& f, T&& tup) -> std::enable_if_t<is_tuple<T>> {
+	std::apply([f = std::forward<F>(f)](auto&&... tup_elem) {
+		(f(tup_elem), ...);
+	}, std::forward<T>(tup));
+}
+
 } /* namespace blue_sky */
 
