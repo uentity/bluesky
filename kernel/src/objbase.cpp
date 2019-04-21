@@ -48,6 +48,10 @@ void objbase::swap(objbase& rhs) {
 
 objbase::~objbase() {}
 
+objbase& objbase::operator=(const objbase& rhs) {
+	objbase(rhs).swap(*this);
+	return *this;
+}
 
 const type_descriptor& objbase::bs_type() {
 	static type_descriptor td(

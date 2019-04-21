@@ -6,7 +6,6 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include "common.h"
@@ -41,6 +40,11 @@ public:
 
 	/// swap function needed to provide assignment ability
 	void swap(objbase& rhs);
+
+	/// default move assignment is fine
+	objbase& operator=(objbase&&) = default;
+	/// copy-assignment - will make a copy with different ID
+	objbase& operator=(const objbase& rhs);
 
 	//! type_descriptor of objbase class
 	static const type_descriptor& bs_type();
@@ -99,4 +103,3 @@ using sp_obj = std::shared_ptr< objbase >;
 using sp_cobj = std::shared_ptr< const objbase >;
 
 NAMESPACE_END(blue_sky)
-
