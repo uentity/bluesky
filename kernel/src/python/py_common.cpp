@@ -9,6 +9,7 @@
 
 #include <bs/bs.h>
 #include <bs/propdict.h>
+#define BSPY_OPAQUE_PROPBOOK
 #include <bs/python/property.h>
 
 #include <ostream>
@@ -137,7 +138,15 @@ void py_bind_common(py::module& m) {
 	// enable implicit conversion from string -> type_descriptor
 	py::implicitly_convertible<std::string, type_descriptor>();
 
-	py::bind_map<prop::propdict>(m, "propdict", py::module_local(false));
+	// propdict binding
+	py::bind_map<prop::propdict>(m, "propdict", py::module_local(false))
+		.def(py::init<prop::propdict::underlying_type>())
+	;
+	// allow passing compatible Python dict in place of `propdict` (and init propdict from that Py dict)
+	py::implicitly_convertible<prop::propdict::underlying_type, prop::propdict>();
+	// opaque bindings of propbooks
+	py::bind_map<prop::propbook_s>(m, "propbook_s", py::module_local(false));
+	py::bind_map<prop::propbook_i>(m, "propbook_i", py::module_local(false));
 }
 
 NAMESPACE_END(python)
