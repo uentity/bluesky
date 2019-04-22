@@ -9,7 +9,7 @@
 #pragma once
 
 #include <pybind11/pybind11.h>
-#include "../common.h"
+#include "../detail/object_ptr.h"
 
 NAMESPACE_BEGIN(pybind11::detail)
 

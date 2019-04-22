@@ -48,7 +48,7 @@
 #include "fwd.h"
 #include "type_info.h"
 #include "detail/scope_guard.h"
-#include <object_ptr.hpp>
+#include "detail/object_ptr.h"
 
 NAMESPACE_BEGIN(blue_sky)
 
@@ -61,9 +61,6 @@ public:
 
 // identity utility template to pass params to templated constructors
 template< class T > struct identity { using type = T; };
-
-// object_ptr to be used as functions param
-template<typename T> using object_ptr = jss::object_ptr<T>;
 
 NAMESPACE_END(blue_sky)
 
