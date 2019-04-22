@@ -50,9 +50,11 @@
     <ClInclude Include="kernel\include\bs\detail\function_view.h" />
     <ClInclude Include="kernel\include\bs\detail\is_container.h" />
     <ClInclude Include="kernel\include\bs\detail\lib_descriptor.h" />
+    <ClInclude Include="kernel\include\bs\detail\object_ptr.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
     <ClInclude Include="kernel\include\bs\detail\scope_guard.h" />
     <ClInclude Include="kernel\include\bs\detail\str_utils.h" />
+    <ClInclude Include="kernel\include\bs\detail\tensor_meta.h" />
     <ClInclude Include="kernel\include\bs\detail\tuple_utils.h" />
     <ClInclude Include="kernel\include\bs\detail\typestring.h" />
     <ClInclude Include="kernel\include\bs\error.h" />
@@ -80,7 +82,9 @@
     <ClInclude Include="kernel\include\bs\python\list.h" />
     <ClInclude Include="kernel\include\bs\python\nparray.h" />
     <ClInclude Include="kernel\include\bs\python\nparray_serialize.h" />
+    <ClInclude Include="kernel\include\bs\python\object_ptr.h" />
     <ClInclude Include="kernel\include\bs\python\property.h" />
+    <ClInclude Include="kernel\include\bs\python\tensor.h" />
     <ClInclude Include="kernel\include\bs\python\tree.h" />
     <ClInclude Include="kernel\include\bs\serialize\array.h" />
     <ClInclude Include="kernel\include\bs\serialize\atomizer.h" />
@@ -93,6 +97,7 @@
     <ClInclude Include="kernel\include\bs\serialize\macro.h" />
     <ClInclude Include="kernel\include\bs\serialize\python.h" />
     <ClInclude Include="kernel\include\bs\serialize\serialize.h" />
+    <ClInclude Include="kernel\include\bs\serialize\tensor.h" />
     <ClInclude Include="kernel\include\bs\serialize\tree.h" />
     <ClInclude Include="kernel\include\bs\setup_common_api.h" />
     <ClInclude Include="kernel\include\bs\setup_plugin_api.h" />
@@ -152,10 +157,12 @@
     <ClCompile Include="kernel\src\python\py_common.cpp" />
     <ClCompile Include="kernel\src\python\py_error.cpp" />
     <ClCompile Include="kernel\src\python\py_kernel.cpp" />
+    <ClCompile Include="kernel\src\python\py_link.cpp" />
     <ClCompile Include="kernel\src\python\py_log.cpp" />
     <ClCompile Include="kernel\src\python\py_main.cpp" />
     <ClCompile Include="kernel\src\python\py_messaging.cpp" />
     <ClCompile Include="kernel\src\python\py_misc.cpp" />
+    <ClCompile Include="kernel\src\python\py_node.cpp" />
     <ClCompile Include="kernel\src\python\py_objbase.cpp" />
     <ClCompile Include="kernel\src\python\py_tree.cpp" />
     <ClCompile Include="kernel\src\serialize\array.cpp" />

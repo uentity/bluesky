@@ -303,6 +303,9 @@
     <ClInclude Include="kernel\include\bs\detail\function_view.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta.h">
+      <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
