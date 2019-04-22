@@ -22,6 +22,9 @@
 #include <bs/kernel/misc.h>
 #include <bs/python/kernel.h>
 
+#include <bs/python/expected.h>
+#include <bs/python/object_ptr.h>
+
 typedef void (*bs_init_py_fn)(void*);
 
 /*-----------------------------------------------------------------------------

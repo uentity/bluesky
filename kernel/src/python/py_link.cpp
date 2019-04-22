@@ -9,7 +9,6 @@
 
 #include <bs/python/common.h>
 #include <bs/python/tree.h>
-#include <bs/python/expected.h>
 #include <bs/tree/link.h>
 #include <bs/tree/node.h>
 

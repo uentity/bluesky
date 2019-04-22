@@ -107,8 +107,6 @@ void py_bind_error(py::module& m) {
 		.def_property_readonly("ok", &error::ok, "Test if no error happened (successfull op)")
 	;
 	py::implicitly_convertible<Error, error>();
-
-	m.def("test_code", [](int c) { bsout() << c << log::end; });
 }
 
 NAMESPACE_END(blue_sky::python)

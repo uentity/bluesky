@@ -8,7 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/python/common.h>
-#include <bs/python/expected.h>
 #include <bs/python/list.h>
 #include <bs/tree/tree.h>
 

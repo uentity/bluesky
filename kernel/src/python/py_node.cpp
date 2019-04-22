@@ -8,7 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/python/common.h>
-#include <bs/python/expected.h>
 #include <bs/tree/node.h>
 
 #include <boost/uuid/uuid_io.hpp>
