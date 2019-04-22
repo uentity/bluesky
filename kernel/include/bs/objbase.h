@@ -99,7 +99,10 @@ private:
 };
 
 // alias
-using sp_obj = std::shared_ptr< objbase >;
-using sp_cobj = std::shared_ptr< const objbase >;
+using sp_obj  = std::shared_ptr<objbase>;
+using sp_cobj = std::shared_ptr<const objbase>;
+
+using obj_ptr  = object_ptr<objbase>;
+using cobj_ptr = object_ptr<const objbase>;
 
 NAMESPACE_END(blue_sky)
