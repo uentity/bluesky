@@ -74,16 +74,18 @@ kernel_cpp_list = [
 #print kernel_cpp_list;
 
 py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in [
-	"py_array.cpp",
 	"py_common.cpp",
+	"py_error.cpp",
 	"py_log.cpp",
+	"py_array.cpp",
 	"py_main.cpp",
+	"py_misc.cpp",
 	"py_messaging.cpp",
 	"py_objbase.cpp",
-	"py_misc.cpp",
 	"py_kernel.cpp",
-	"py_tree.cpp",
-	"py_error.cpp"
+	"py_link.cpp",
+	"py_node.cpp",
+	"py_tree.cpp"
 ]];
 
 # setup default build environment
