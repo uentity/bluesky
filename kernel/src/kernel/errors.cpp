@@ -29,6 +29,21 @@ BS_API std::error_code make_error_code(Error e) {
 			case Error::CantRegisterType:
 				return "Type cannot be registered";
 
+			case Error::CantCreateLogger:
+				return "Cannot create logger";
+
+			case Error::BadBSplugin:
+				return "Not a BlueSky plugin";
+
+			case Error::BadPluginDescriptor:
+				return "Incorrect plugin descriptor";
+
+			case Error::PluginAlreadyRegistered:
+				return "Plugin is already registered";
+
+			case Error::PluginRegisterFail:
+				return "Error during plugin registering";
+
 			case Error::PythonDisabled:
 				return "No Python support found in this module";
 

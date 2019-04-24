@@ -22,8 +22,12 @@ enum class Error {
 	TypeIsNil,
 	TypeAlreadyRegistered,
 	CantCreateLogger,
+	BadBSplugin,
+	BadPluginDescriptor,
+	PluginAlreadyRegistered,
+	PluginRegisterFail,
 	PythonDisabled,
-	BadPymod
+	BadPymod,
 };
 
 BS_API std::error_code make_error_code(Error);
