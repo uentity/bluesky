@@ -261,9 +261,13 @@ auto logging_subsyst::toggle_mt_logs(bool turn_on) -> void {
 			std::make_unique<log::bs_log>("err")
 		};
 		// setup periodic flush
-		spdlog::flush_every(std::chrono::seconds(caf::get_or(
-			BSCONFIG, "logger.flush-interval", DEF_FLUSH_INTERVAL
-		)));
+		if(turn_on)
+			spdlog::flush_every(std::chrono::seconds(caf::get_or(
+				BSCONFIG, "logger.flush-interval", DEF_FLUSH_INTERVAL
+			)));
+		else
+			// disable periodic flush for non-mt loggers
+			spdlog::flush_every(std::chrono::seconds::zero());
 	}
 }
 
