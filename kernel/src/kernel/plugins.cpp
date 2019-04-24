@@ -17,11 +17,11 @@ auto register_plugin(const plugin_descriptor* pd) -> bool {
 	return KIMPL.register_plugin(pd, blue_sky::detail::lib_descriptor()).second;
 }
 
-auto load_plugin(const std::string& fname) -> int {
+auto load_plugin(const std::string& fname) -> error {
 	return KIMPL.load_plugin(fname);
 }
 
-auto load_plugins() -> int {
+auto load_plugins() -> error {
 	return KIMPL.load_plugins();
 }
 

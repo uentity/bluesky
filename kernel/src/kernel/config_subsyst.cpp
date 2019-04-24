@@ -176,7 +176,7 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 
 	// read each INI file
 	if(!ini2parse.empty()) {
-		bsout() << "--------" << bs_end;
+		bsout() << "--------> [configure]" << bs_end;
 		bsout() << "Try to load following config files:" << bs_end;
 		for(const auto& ini_path : ini2parse) {
 			auto ini = std::ifstream(ini_path);

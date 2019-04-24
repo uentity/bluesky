@@ -12,6 +12,7 @@
 #endif
 
 #include <bs/error.h>
+#include <bs/kernel/errors.h>
 #include <bs/log.h>
 #include <bs/detail/scope_guard.h>
 
@@ -73,7 +74,7 @@ plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descript
 	if(!pd) return {&plugin_descriptor::nil(), false};
 
 	// find or insert passed plugin_descriptor
-	auto res = loaded_plugins_.insert(std::make_pair(pd, ld));
+	auto res = loaded_plugins_.emplace(pd, ld);
 	auto pplug = res.first->first;
 
 	// if plugin with same name was already registered
@@ -81,7 +82,7 @@ plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descript
 		if(pplug->is_nil() && !pd->is_nil()) {
 			// replace temp nil plugin with same name
 			loaded_plugins_.erase(res.first);
-			res = loaded_plugins_.insert(std::make_pair(pd, ld));
+			res = loaded_plugins_.emplace(pd, ld);
 			pplug = res.first->first;
 		}
 		else if(!res.first->second.handle_ && ld.handle_) {
@@ -134,69 +135,49 @@ void plugins_subsyst::unload_plugin(const plugin_descriptor& pd) {
 
 // unloads all plugins
 void plugins_subsyst::unload_plugins() {
-	for(auto p : loaded_plugins_) {
+	for(const auto& p : loaded_plugins_) {
 		unload_plugin(*p.first);
 	}
 }
 
-int plugins_subsyst::load_plugin(const std::string& fname) {
+auto plugins_subsyst::load_plugin(const std::string& fname) -> error {
 	using namespace std;
 
 	// DLL handle
 	lib_descriptor lib;
-	auto delay_unload = [&lib]{ lib.unload(); };
-
-	// pointer to returned plugin descriptor
-	plugin_descriptor* p_descr = nullptr;
-	auto delay_unplug = [p_descr, this]{ if(p_descr) unload_plugin(*p_descr); };
+	auto unload_on_error = scope_guard{ [&lib]{ lib.unload(); } };
 
 	static auto who = "load_plugins";
 	plugin_initializer plugin_init;
 	BS_GET_PLUGIN_DESCRIPTOR bs_plugin_descriptor;
 	bs_register_plugin_fn bs_register_plugin;
+	plugin_descriptor* p_descr = nullptr;
 
-	int retval = -1;
 	try {
 		// load library
 		lib.load(fname.c_str());
 
 		// check for plugin descriptor presence
 		lib.load_sym("bs_get_plugin_descriptor", bs_plugin_descriptor);
-		if(!bs_plugin_descriptor) {
-			auto killer = scope_guard{ delay_unload };
-			bsout() << "{}: {} is not a BlueSky plugin (bs_get_plugin_descriptor wasn't found)"
-				<< who << lib.fname_ << log::end;
-			return retval;
-		}
+		if(!bs_plugin_descriptor)
+			return {lib.fname_, kernel::Error::BadBSplugin};
+
 		// retrieve descriptor from plugin
-		if(!(p_descr = dynamic_cast< plugin_descriptor* >(bs_plugin_descriptor()))) {
-			auto killer = scope_guard{ delay_unload };
-			bsout() << log::W("{}: No plugin descriptor found in module {}") << who << lib.fname_ << log::end;
-			return retval;
-		}
+		if(!(p_descr = dynamic_cast< plugin_descriptor* >(bs_plugin_descriptor())))
+			return {lib.fname_, kernel::Error::BadPluginDescriptor};
+
 		// check if loaded lib is really a blue-sky kernel
 		if(*p_descr == kernel_pd())
-			return retval;
-			// TODO: do something with err code
-			//return blue_sky::no_library;
+			return error::quiet("load_plugin: cannot load kernel (already loaded)");
 
 		// check if bs_register_plugin function present in library
 		lib.load_sym("bs_register_plugin", bs_register_plugin);
-		if(!bs_register_plugin) {
-			auto killer = scope_guard{ delay_unload };
-			bsout() << "{}: {} is not a BlueSky plugin (bs_register_plugin wasn't found)"
-				<< who << lib.fname_ << log::end;
-			return retval;
-		}
+		if(!bs_register_plugin)
+			return {lib.fname_ + ": missing bs_register_plugin)", kernel::Error::BadBSplugin};
 
 		// check if plugin was already registered earlier
-		if(!register_plugin(p_descr, lib).second) {
-			auto killer = scope_guard{ delay_unload };
-			bsout() << log::W("{}: {} plugin is already registred, skipping...")
-				<< who << lib.fname_ << log::end;
-			// TODO: do something with err code
-			return retval;
-		}
+		if(!register_plugin(p_descr, lib).second)
+			return {lib.fname_, kernel::Error::PluginAlreadyRegistered};
 
 		// TODO: enable versions checking
 		// check version
@@ -209,10 +190,8 @@ int plugins_subsyst::load_plugin(const std::string& fname) {
 		// invoke bs_register_plugin
 		plugin_init.pd = p_descr;
 		if(!bs_register_plugin(plugin_init)) {
-			auto killer = scope_guard{ delay_unplug };
-			bsout() << log::E("{}: {} plugin was unable to register itself and will be unloaded")
-				<< who << lib.fname_ << log::end;
-			return retval;
+			unload_plugin(*p_descr);
+			return {lib.fname_, kernel::Error::PluginRegisterFail};
 		}
 
 		// init Python subsystem
@@ -229,45 +208,39 @@ int plugins_subsyst::load_plugin(const std::string& fname) {
 			log_msg << log::end;
 	}
 	catch(const error& ex) {
-		retval = ex.code.value();
+		return ex;
 	}
 	catch(const std::exception& ex) {
-		BSERROR << log::E("[Std Exception] {}: {}") << who << ex.what() << bs_end;
+		return error(ex.what());
 	}
 	catch(...) {
-		//something really serious happened
 		BSERROR << log::E("[Unknown Exception] {}: Unknown error happened during plugins loading")
 			<< who << bs_end;
 		throw;
 	}
 
-	return retval;
+	// don't unload sucessfully loaded plugin
+	unload_on_error.disable();
+	return success();
 }
 
-int plugins_subsyst::load_plugins() {
+auto plugins_subsyst::load_plugins() -> error {
 	// discover plugins
 	auto plugins = discover_plugins();
-	BSOUT << "--------" << bs_end;
-	if(!plugins.size())
-		BSOUT << "No plugins were found!" << bs_end;
-	else {
-		BSOUT << "Found plugins:" << bs_end;
-		for(const auto& plugin : plugins)
-			BSOUT << "{}" << plugin << bs_end;
-		BSOUT << "--------" << bs_end;
-	}
+	BSOUT << "--------> [load plugins]" << bs_end;
 
-	// load plugins
-	std::size_t plugin_cnt = 0;
-	for(const auto& plugin_fname : plugins) {
-		load_plugin(plugin_fname);
-		++plugin_cnt;
-	}
+	// collect error messages
+	std::string err_messages;
+	for(const auto& plugin_fname : plugins)
+		if(auto er = load_plugin(plugin_fname)) {
+			if(!err_messages.empty()) err_messages += '\n';
+			err_messages += er.what();
+		}
 
 	// register closure ctor for error from any int value
 	PYSS.py_add_error_closure();
 
-	return 0;
+	return err_messages.empty() ? success() : error::quiet(err_messages);
 }
 
 namespace {

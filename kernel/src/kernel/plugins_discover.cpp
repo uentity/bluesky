@@ -143,7 +143,7 @@ auto plugins_subsyst::discover_plugins() -> fname_set {
 	if(plugins_paths.empty()) push_unique(plugins_paths, ".");
 
 	// print some info
-	BSOUT << "--------" << bs_end;
+	BSOUT << "--------> [discover plugins]" << bs_end;
 	BSOUT << "Search for plugins in following discovered paths:" << bs_end;
 	for(const auto& path : plugins_paths) {
 		BSOUT << path.string() << bs_end;
@@ -158,6 +158,15 @@ auto plugins_subsyst::discover_plugins() -> fname_set {
 		search_files(".so", plug_path, plugins);
 #endif
 	}
+
+	if(!plugins.size())
+		BSOUT << "No plugins were found!" << bs_end;
+	else {
+		BSOUT << "[Found plugins]" << bs_end;
+		for(const auto& plugin : plugins)
+			BSOUT << "{}" << plugin << bs_end;
+	}
+
 	return plugins;
 }
 

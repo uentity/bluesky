@@ -85,18 +85,18 @@ struct BS_HIDDEN_API plugins_subsyst {
 	using fname_set = std::set< std::string >;
 	auto discover_plugins() -> fname_set;
 
-	void clean_plugin_types(const plugin_descriptor& pd);
+	auto clean_plugin_types(const plugin_descriptor& pd) -> void;
 
-	void unload_plugin(const plugin_descriptor& pd);
+	auto unload_plugin(const plugin_descriptor& pd) -> void;
 
-	void unload_plugins();
+	auto unload_plugins() -> void;
 
-	std::pair< const plugin_descriptor*, bool >
-	register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld);
+	auto register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) ->
+		std::pair< const plugin_descriptor*, bool >;
 
-	int load_plugin(const std::string& fname);
+	auto load_plugin(const std::string& fname) -> error;
 
-	int load_plugins();
+	auto load_plugins() -> error;
 
 	/*-----------------------------------------------------------------
 	 * types management
