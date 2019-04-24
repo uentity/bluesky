@@ -86,7 +86,7 @@ py_kernel_cpp_list = [os.path.join('src', 'python', x) for x in [
 	"py_link.cpp",
 	"py_node.cpp",
 	"py_tree.cpp"
-]];
+]] + ["src/kernel/python_subsyst.cpp"];
 
 # setup default build environment
 base_env = custom_env.Clone();

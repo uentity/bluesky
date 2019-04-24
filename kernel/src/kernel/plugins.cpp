@@ -17,12 +17,12 @@ auto register_plugin(const plugin_descriptor* pd) -> bool {
 	return KIMPL.register_plugin(pd, blue_sky::detail::lib_descriptor()).second;
 }
 
-auto load_plugin(const std::string& fname, bool init_py_subsyst) -> int {
-	return KIMPL.load_plugin(fname, init_py_subsyst);
+auto load_plugin(const std::string& fname) -> int {
+	return KIMPL.load_plugin(fname);
 }
 
-auto load_plugins(void* py_root_module) -> int {
-	return KIMPL.load_plugins(py_root_module);
+auto load_plugins() -> int {
+	return KIMPL.load_plugins();
 }
 
 auto unload_plugin(const plugin_descriptor& pd) -> void {

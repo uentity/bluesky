@@ -8,14 +8,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 
-#include <bs/common.h>
-#include <bs/error.h>
-#include <bs/kernel/misc.h>
+#include <bs/python/common.h>
+#include <bs/log.h>
+#include <bs/kernel/errors.h>
 #include <bs/kernel/plugins.h>
 #include <bs/detail/lib_descriptor.h>
-#include <bs/log.h>
-
-#include <pybind11/pybind11.h>
 
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/stringize.hpp>
@@ -34,19 +31,16 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(TARGET_NAME, m) {
 	// search for BlueSky's kernel plugin descriptor
-	BS_GET_PLUGIN_DESCRIPTOR get_pd_fn;
-	if(detail::lib_descriptor::load_sym_glob("bs_get_plugin_descriptor", get_pd_fn) != 0 || !get_pd_fn) {
-		throw error("BlueSky kernel descriptor wasn't found or invalid!");
-	}
-	plugin_descriptor* kernel_pd = get_pd_fn();
-	// Python namespace must match TARGET_NAME (otherwise Python throws an error)
-	kernel_pd->py_namespace = S_TARGET_NAME;
-	m.doc() = kernel_pd->description;
+	bs_init_py_fn py_init_kernel;
+	if(detail::lib_descriptor::load_sym_glob("bs_init_py_subsystem", py_init_kernel) != 0 || !py_init_kernel)
+		throw error{"BS kernel", kernel::Error::PythonDisabled};
 
-	// initialize kernel
-	kernel::init();
+	// init BS Python subsystem
+	py_init_kernel(&m);
+	BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace: {}"
+		<< S_TARGET_NAME << bs_end;
 
-	//load plugins with Python subsystem
-	kernel::plugins::load_plugins(&m);
+	// auto-load plugins
+	kernel::plugins::load_plugins();
 }
 

@@ -13,14 +13,19 @@
 
 #include <bs/error.h>
 #include <bs/log.h>
+#include <bs/detail/scope_guard.h>
+
 #include "plugins_subsyst.h"
+#include "python_subsyst.h"
 
 #define BS_KERNEL_VERSION "0.1" //!< version of blue-sky kernel
+
+#define PYSS singleton<python_subsyst>::Instance()
 
 /*-----------------------------------------------------------------------------
  *  BS kernel plugin descriptor
  *-----------------------------------------------------------------------------*/
-BS_C_API const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {
+BS_C_API blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {
 	return &blue_sky::kernel::detail::plugins_subsyst::kernel_pd();
 }
 
@@ -30,33 +35,14 @@ NAMESPACE_BEGIN(blue_sky::kernel::detail)
 NAMESPACE_BEGIN()
 
 // tags for kernel & runtime types plugin_descriptors
-struct BS_HIDDEN_API __kernel_types_pd_tag__ {};
-struct BS_HIDDEN_API __runtime_types_pd_tag__ {};
-
-std::string extract_root_name(const std::string& full_name) {
-	using namespace std;
-
-	//extract user-friendly lib name from full name
-	string pyl_name = full_name;
-	//cut path
-	string::size_type pos = pyl_name.rfind('/');
-	if(pos != string::npos) pyl_name = pyl_name.substr(pos + 1, string::npos);
-	pos = pyl_name.rfind('\\');
-	if(pos != string::npos) pyl_name = pyl_name.substr(pos + 1, string::npos);
-	//cut extension
-	pyl_name = pyl_name.substr(0, pyl_name.find('.'));
-	//cut "lib" prefix if exists
-	if(pyl_name.compare(0, 3, string("lib")) == 0)
-		pyl_name = pyl_name.substr(3, string::npos);
-
-	return pyl_name;
-}
+struct __kernel_types_pd_tag__ {};
+struct __runtime_types_pd_tag__ {};
 
 NAMESPACE_END() // eof hidden namespace
 
 // init kernel plugin descriptors
-auto plugins_subsyst::kernel_pd() -> const plugin_descriptor& {
-	static const plugin_descriptor kernel_pd(
+auto plugins_subsyst::kernel_pd() -> plugin_descriptor& {
+	static plugin_descriptor kernel_pd(
 		BS_GET_TI(__kernel_types_pd_tag__), "kernel", BS_KERNEL_VERSION,
 		"BlueSky virtual kernel plugin", "bs",
 		(void*)&cereal::detail::StaticObject<cereal::detail::InputBindingMap>::getInstance(),
@@ -65,8 +51,8 @@ auto plugins_subsyst::kernel_pd() -> const plugin_descriptor& {
 	return kernel_pd;
 }
 
-auto plugins_subsyst::runtime_pd() -> const plugin_descriptor& {
-	static const plugin_descriptor runtime_pd(
+auto plugins_subsyst::runtime_pd() -> plugin_descriptor& {
+	static plugin_descriptor runtime_pd(
 		BS_GET_TI(__runtime_types_pd_tag__), "runtime", BS_KERNEL_VERSION,
 		"BlueSky virtual plugin for runtime types", "bs"
 	);
@@ -80,47 +66,6 @@ plugins_subsyst::plugins_subsyst() {
 }
 
 plugins_subsyst::~plugins_subsyst() {}
-
-#ifdef BSPY_EXPORTING
-struct plugins_subsyst::bspy_module {
-	bspy_module(pybind11::module& root_mod) : root_module_(root_mod) {}
-
-	bool init_kernel_subsyst() {
-		namespace py = pybind11;
-		// find kernel's Python initialization function
-		bs_init_py_fn init_py;
-		lib_descriptor::load_sym_glob("bs_init_py_subsystem", init_py);
-		if(init_py) {
-			init_py(&root_module_);
-
-			BSOUT << "BlueSky kernel Python subsystem initialized successfully under namespace: {}"
-				<< PyModule_GetName(root_module_.ptr()) << bs_end;
-			return true;
-		}
-		else {
-			BSERROR << "Python subsystem wasn't found in BlueSky kernel" << bs_end;
-		   return false;
-		}
-	}
-
-	void init_plugin_subsyst(const char* plugin_namespace, const char* doc, bs_init_py_fn f) {
-		// create submodule
-		auto plugin_mod = root_module_.def_submodule(plugin_namespace, doc);
-		// invoke init function
-		f(&plugin_mod);
-	}
-
-	pybind11::module& root_module_;
-};
-#endif
-
-void* plugins_subsyst::self_pymod() const {
-#ifdef BSPY_EXPORTING
-	return pymod_ ? (void*)&pymod_->root_module_ : nullptr;
-#else
-	return nullptr;
-#endif
-}
 
 std::pair< const plugin_descriptor*, bool >
 plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) {
@@ -194,34 +139,23 @@ void plugins_subsyst::unload_plugins() {
 	}
 }
 
-int plugins_subsyst::load_plugin(
-	const std::string& fname, bool init_py_subsyst
-) {
+int plugins_subsyst::load_plugin(const std::string& fname) {
 	using namespace std;
 
-	lib_descriptor lib; // temp DLL-pointer
-	// RAII object for plugin lib unload
-	auto LU = [](lib_descriptor* plib) { plib->unload(); };
-	using delay_unload = std::unique_ptr< lib_descriptor, decltype(LU) >;
-	// RAII for plugin cleanup (including registered types, etc..)
-	auto PU = [=](plugin_descriptor* pd) { this->unload_plugin(*pd); };
-	using delay_unplug = std::unique_ptr< plugin_descriptor, decltype(PU) >;
+	// DLL handle
+	lib_descriptor lib;
+	auto delay_unload = [&lib]{ lib.unload(); };
 
-	bs_register_plugin_fn bs_register_plugin; // pointer to fun_register (from temp DLL)
-	BS_GET_PLUGIN_DESCRIPTOR bs_plugin_descriptor;
-
-	// error message formatter
-	static const char* who = "load_plugins";
-	string msg;
-
-	// plugin initializer
-	plugin_initializer plugin_init;
 	// pointer to returned plugin descriptor
 	plugin_descriptor* p_descr = nullptr;
-	// fully qualified python namespace
-	string py_scope = "";
-	int retval = -1;
+	auto delay_unplug = [p_descr, this]{ if(p_descr) unload_plugin(*p_descr); };
 
+	static auto who = "load_plugins";
+	plugin_initializer plugin_init;
+	BS_GET_PLUGIN_DESCRIPTOR bs_plugin_descriptor;
+	bs_register_plugin_fn bs_register_plugin;
+
+	int retval = -1;
 	try {
 		// load library
 		lib.load(fname.c_str());
@@ -229,14 +163,14 @@ int plugins_subsyst::load_plugin(
 		// check for plugin descriptor presence
 		lib.load_sym("bs_get_plugin_descriptor", bs_plugin_descriptor);
 		if(!bs_plugin_descriptor) {
-			delay_unload killer(&lib, LU);
+			auto killer = scope_guard{ delay_unload };
 			bsout() << "{}: {} is not a BlueSky plugin (bs_get_plugin_descriptor wasn't found)"
 				<< who << lib.fname_ << log::end;
 			return retval;
 		}
 		// retrieve descriptor from plugin
 		if(!(p_descr = dynamic_cast< plugin_descriptor* >(bs_plugin_descriptor()))) {
-			delay_unload killer(&lib, LU);
+			auto killer = scope_guard{ delay_unload };
 			bsout() << log::W("{}: No plugin descriptor found in module {}") << who << lib.fname_ << log::end;
 			return retval;
 		}
@@ -249,26 +183,22 @@ int plugins_subsyst::load_plugin(
 		// check if bs_register_plugin function present in library
 		lib.load_sym("bs_register_plugin", bs_register_plugin);
 		if(!bs_register_plugin) {
-			delay_unload killer(&lib, LU);
+			auto killer = scope_guard{ delay_unload };
 			bsout() << "{}: {} is not a BlueSky plugin (bs_register_plugin wasn't found)"
 				<< who << lib.fname_ << log::end;
 			return retval;
 		}
 
-		// enumerate plugin
+		// check if plugin was already registered earlier
 		if(!register_plugin(p_descr, lib).second) {
-			// plugin was already registered earlier
-			delay_unload killer(&lib, LU);
+			auto killer = scope_guard{ delay_unload };
 			bsout() << log::W("{}: {} plugin is already registred, skipping...")
 				<< who << lib.fname_ << log::end;
 			// TODO: do something with err code
 			return retval;
 		}
 
-		// pass plugin descriptor to registering function
-		plugin_init.pd = p_descr;
-
-		// TODO: enable versions
+		// TODO: enable versions checking
 		// check version
 		//if(version.size() && version_comparator(p_descr->version.c_str(), version.c_str()) < 0) {
 		//	delay_unload killer(&lib, LU);
@@ -276,46 +206,20 @@ int plugins_subsyst::load_plugin(
 		//	return retval;
 		//}
 
-		//invoke bs_register_plugin
+		// invoke bs_register_plugin
+		plugin_init.pd = p_descr;
 		if(!bs_register_plugin(plugin_init)) {
-			delay_unplug killer(p_descr, PU);
+			auto killer = scope_guard{ delay_unplug };
 			bsout() << log::E("{}: {} plugin was unable to register itself and will be unloaded")
 				<< who << lib.fname_ << log::end;
 			return retval;
 		}
 
-#ifdef BSPY_EXPORTING
-		//init Python subsystem if asked for
-		if(init_py_subsyst) {
-			bs_init_py_fn init_py_fn;
-			lib.load_sym("bs_init_py_subsystem", init_py_fn);
-			if(!init_py_fn)
-				bserr() << log::E("{}: Python subsystem wasn't found in plugin {}")
-					<< who << lib.fname_ << log::end;
-			else {
-				//DEBUG
-				//cout << "Python subsystem of plugin " << lib.fname_ << " is to be initiaized" << endl;
-				if(p_descr->py_namespace == "") {
-					p_descr->py_namespace = extract_root_name(lib.fname_);
-					// update reference information
-					loaded_plugins_.erase(p_descr);
-					register_plugin(p_descr, lib);
-				}
+		// init Python subsystem
+		auto py_scope = PYSS.py_init_plugin(lib, *p_descr).value_or("");
 
-				// init python subsystem
-				pymod_->init_plugin_subsyst(
-					p_descr->py_namespace.c_str(), p_descr->description.c_str(), init_py_fn
-				);
-				py_scope = kernel_pd().py_namespace + '.' + p_descr->py_namespace;
-			}
-		}
-#else
-		// supress warning
-		(void)init_py_subsyst;
-#endif
-
-		// finally everything is OK now
-		msg = "BlueSky plugin {} loaded";
+		// print status
+		std::string msg = "BlueSky plugin {} loaded";
 		if(py_scope.size())
 			msg += ", Python subsystem initialized, namespace: {}";
 		auto log_msg = bsout() << log::I(msg.c_str()) << lib.fname_;
@@ -340,7 +244,7 @@ int plugins_subsyst::load_plugin(
 	return retval;
 }
 
-int plugins_subsyst::load_plugins(void* py_root_module) {
+int plugins_subsyst::load_plugins() {
 	// discover plugins
 	auto plugins = discover_plugins();
 	BSOUT << "--------" << bs_end;
@@ -353,29 +257,15 @@ int plugins_subsyst::load_plugins(void* py_root_module) {
 		BSOUT << "--------" << bs_end;
 	}
 
-	// init kernel Python subsystem
-#ifdef BSPY_EXPORTING
-	if(py_root_module) {
-		pymod_.reset(new bspy_module(*static_cast< pybind11::module* >(py_root_module)));
-		pymod_->init_kernel_subsyst();
-	}
-#endif
-
+	// load plugins
 	std::size_t plugin_cnt = 0;
 	for(const auto& plugin_fname : plugins) {
-		load_plugin(plugin_fname, bool(py_root_module));
+		load_plugin(plugin_fname);
 		++plugin_cnt;
 	}
 
-#ifdef BSPY_EXPORTING
-	// register constructor of std::error_code from arbitrary int value
-	if(py_root_module) {
-		auto err_class = (pybind11::class_<std::error_code>)pymod_->root_module_.attr("error_code");
-		pybind11::init([](int ec) {
-			return std::error_code(static_cast<Error>(ec));
-		}).execute(err_class);
-	}
-#endif
+	// register closure ctor for error from any int value
+	PYSS.py_add_error_closure();
 
 	return 0;
 }

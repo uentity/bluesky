@@ -177,10 +177,8 @@ auto bind_cafdict(py::handle scope, const std::string &name, Args&&... args) {
 //  bind kernel subsystems API
 //
 auto bind_plugins_api(py::module& m) -> void {
-	m.def("load_plugin", &kernel::plugins::load_plugin,
-		"fname"_a, "init_py_subsyst"_a);
-	m.def("load_plugins", &kernel::plugins::load_plugins,
-		"py_root_module"_a = nullptr);
+	m.def("load_plugin", &kernel::plugins::load_plugin, "fname"_a);
+	m.def("load_plugins", &kernel::plugins::load_plugins);
 	m.def("unload_plugin", &kernel::plugins::unload_plugin,
 		"plugin_descriptor"_a);
 	m.def("unload_plugins", &kernel::plugins::unload_plugins);

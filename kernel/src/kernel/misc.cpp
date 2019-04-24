@@ -60,7 +60,7 @@ auto k_descriptor() -> const plugin_descriptor& {
 }
 
 auto k_pymod() -> void* {
-	return KIMPL.self_pymod();
+	return KIMPL.pysupport_->py_kmod();
 }
 
 auto last_error() -> std::string {

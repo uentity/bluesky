@@ -9,6 +9,7 @@
 
 #include <bs/bs.h>
 #include <bs/python/nparray.h>
+#include "../kernel/python_subsyst.h"
 
 namespace blue_sky { namespace python {
 namespace py = pybind11;
@@ -23,11 +24,14 @@ void py_bind_error(py::module& m);
 void py_bind_log(py::module& m);
 
 BS_INIT_PY(bs) {
-	// initialize kernel first
+	// save pointer to kernel's Py module
+	singleton<kernel::detail::python_subsyst>::Instance().setup_py_kmod(&m);
+	// initialize kernel
 	kernel::init();
-	// register cleanup function
+	// shutdown kernel when Py interpreter exists
 	Py_AtExit([] { kernel::shutdown(); });
-	// bind
+
+	// invoke bindings
 	py_bind_common(m);
 	py_bind_log(m);
 	py_bind_error(m);

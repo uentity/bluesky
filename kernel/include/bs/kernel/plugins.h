@@ -20,9 +20,9 @@ using types_enum = std::vector<tfactory::type_tuple>;
 /// Direct register plugin if shared lib is already loaded
 BS_API auto register_plugin(const plugin_descriptor* pd) -> bool;
 /// Dynamically loads particular plugin
-BS_API auto load_plugin(const std::string& fname, bool init_py_subsyst) -> int;
+BS_API auto load_plugin(const std::string& fname) -> int;
 /// Load blue-sky plugins method
-BS_API auto load_plugins(void* py_root_module = nullptr) -> int;
+BS_API auto load_plugins() -> int;
 /// Unloads plugin
 BS_API auto unload_plugin(const plugin_descriptor& pd) -> void;
 /// Unload blue-sky plugins method

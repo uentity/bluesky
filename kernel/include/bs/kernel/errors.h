@@ -21,7 +21,9 @@ enum class Error {
 	BadTypeDescriptor,
 	TypeIsNil,
 	TypeAlreadyRegistered,
-	CantCreateLogger
+	CantCreateLogger,
+	PythonDisabled,
+	BadPymod
 };
 
 BS_API std::error_code make_error_code(Error);

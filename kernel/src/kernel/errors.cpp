@@ -29,6 +29,12 @@ BS_API std::error_code make_error_code(Error e) {
 			case Error::CantRegisterType:
 				return "Type cannot be registered";
 
+			case Error::PythonDisabled:
+				return "No Python support found in this module";
+
+			case Error::BadPymod:
+				return "BS Python module isn't initialized";
+
 			default:
 				return "";
 			}

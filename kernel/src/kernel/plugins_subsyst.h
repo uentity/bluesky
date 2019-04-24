@@ -43,8 +43,8 @@ struct BS_HIDDEN_API plugins_subsyst {
 	using lib_descriptor = blue_sky::detail::lib_descriptor;
 	using type_tuple = tfactory::type_tuple;
 
-	static const plugin_descriptor& kernel_pd();
-	static const plugin_descriptor& runtime_pd();
+	static plugin_descriptor& kernel_pd();
+	static plugin_descriptor& runtime_pd();
 
 	// plugin_descriptor -> lib_descriptor 1-to-1 relation
 	// IMPORTANT: descriptors are stored by string name - thus allowing us
@@ -72,20 +72,12 @@ struct BS_HIDDEN_API plugins_subsyst {
 	>;
 	types_container_t types_;
 
-#ifdef BSPY_EXPORTING
-	struct bspy_module;
-	std::unique_ptr< bspy_module > pymod_;
-#endif
-
 	// ctor
 	plugins_subsyst();
 	~plugins_subsyst();
 
 	// allow obtain kernel's plugin descriptor
 	friend const plugin_descriptor* bs_get_plugin_descriptor();
-
-	// provide access to kernel's pybind11::module object
-	void* self_pymod() const;
 
 	/*-----------------------------------------------------------------
 	 * plugins managing
@@ -102,9 +94,9 @@ struct BS_HIDDEN_API plugins_subsyst {
 	std::pair< const plugin_descriptor*, bool >
 	register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld);
 
-	int load_plugin(const std::string& fname, bool init_py_subsyst);
+	int load_plugin(const std::string& fname);
 
-	int load_plugins(void* py_root_module);
+	int load_plugins();
 
 	/*-----------------------------------------------------------------
 	 * types management
