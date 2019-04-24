@@ -54,6 +54,7 @@ auto make_scope_guard(Fun f) -> scope_guard<Fun> {
 
 // import make_scope_guard into blue_sky namespace
 using detail::make_scope_guard;
+using detail::scope_guard;
 
 } /* namespace blue_sky */
 
