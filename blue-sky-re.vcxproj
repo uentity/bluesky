@@ -120,6 +120,8 @@
     <ClInclude Include="kernel\src\kernel\kimpl.h" />
     <ClInclude Include="kernel\src\kernel\logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\plugins_subsyst.h" />
+    <ClInclude Include="kernel\src\kernel\python_subsyst.h" />
+    <ClInclude Include="kernel\src\kernel\python_subsyst_impl.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
     <ClInclude Include="kernel\src\tree\link_impl.h" />
     <ClInclude Include="kernel\src\tree\link_invoke.h" />
@@ -142,6 +144,7 @@
     <ClCompile Include="kernel\src\kernel\plugins.cpp" />
     <ClCompile Include="kernel\src\kernel\plugins_discover.cpp" />
     <ClCompile Include="kernel\src\kernel\plugins_subsyst.cpp" />
+    <ClCompile Include="kernel\src\kernel\python_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\tools.cpp" />
     <ClCompile Include="kernel\src\kernel\types_factory.cpp" />
     <ClCompile Include="kernel\src\kernel\types_factory_subsyst.cpp" />

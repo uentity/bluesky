@@ -372,6 +372,12 @@
     <ClInclude Include="kernel\include\bs\serialize\tensor.h">
       <Filter>Заголовочные файлы\bs\serialize</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\src\kernel\python_subsyst.h">
+      <Filter>Файлы исходного кода\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\kernel\python_subsyst_impl.h">
+      <Filter>Файлы исходного кода\kernel</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -538,6 +544,9 @@
     </ClCompile>
     <ClCompile Include="kernel\src\python\py_node.cpp">
       <Filter>Файлы исходного кода\python</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\kernel\python_subsyst.cpp">
+      <Filter>Файлы исходного кода\kernel</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
