@@ -11,24 +11,53 @@
 #include <bs/python/tree.h>
 #include <bs/tree/link.h>
 #include <bs/tree/node.h>
+#include "../kernel/python_subsyst_impl.h"
 
 #include <boost/uuid/uuid_io.hpp>
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
+using namespace tree;
+
+NAMESPACE_BEGIN()
+
+auto py_kernel() -> kernel::detail::python_subsyst_impl& {
+	return kernel::detail::python_subsyst_impl::self();
+}
+
+auto adapt(sp_obj&& source) {
+	return py_kernel().adapt(std::move(source));
+}
+
+template<typename T>
+auto adapt(result_or_err<T>&& source) {
+	return std::move(source).map([](T&& obj) {
+		if constexpr(std::is_same_v<T, sp_obj>)
+			return py_kernel().adapt( std::move(obj) );
+		else
+			return py_kernel().adapt( std::static_pointer_cast<objbase>(std::move(obj)) );
+	});
+}
+
+using adapted_data_cb = std::function<void(result_or_err<py::object>, sp_clink)>;
+
+auto adapt(adapted_data_cb&& f) {
+	return [f = std::move(f)](result_or_err<sp_obj> obj, sp_clink L) {
+		f(adapt(std::move(obj)), std::move(L));
+	};
+}
+
+NAMESPACE_END()
 
 void py_bind_link(py::module& m) {
-	using namespace tree;
-
-	// inode binding
+	///////////////////////////////////////////////////////////////////////////////
+	//  inode
+	//
 	py::class_<inode>(m, "inode")
 		.def_readonly("owner", &inode::owner)
 		.def_readonly("group", &inode::group)
 		.def_readonly("mod_time", &inode::mod_time)
-		//.def_property_readonly("mod_time", [](const inode& i) {
-		//	return std::chrono::time_point_cast<std::chrono::system_clock::duration>(i.mod_time);
-		//})
 		.def_property_readonly("flags", [](const inode& i) { return i.flags; })
 		.def_property_readonly("u", [](const inode& i) { return i.u; })
 		.def_property_readonly("g", [](const inode& i) { return i.g; })
@@ -64,16 +93,24 @@ void py_bind_link(py::module& m) {
 	// link base class
 	link_pyface
 		.def("clone", &link::clone, "deep"_a = true, "Make shallow or deep copy of link")
-		.def("data_ex", &link::data_ex, "wait_if_busy"_a = true)
-		.def("data", py::overload_cast<>(&link::data, py::const_))
-		.def("data", py::overload_cast<link::process_data_cb, bool>(&link::data, py::const_),
-			"f"_a, "high_priority"_a = false
+
+		// [NOTE] return adapted objects (and pass 'em to callbacks)
+		.def("data_ex",
+			[](const link& L, bool wait_if_busy) { return adapt(L.data_ex(wait_if_busy)); },
+			"wait_if_busy"_a = true
 		)
+		.def("data", [](const link& L){ return adapt(L.data()); })
+		.def("data", [](const link& L, adapted_data_cb f, bool high_priority) {
+				return L.data(adapt(std::move(f)), high_priority);
+			}, "f"_a, "high_priority"_a = false
+		)
+
 		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = true)
 		.def("data_node", py::overload_cast<>(&link::data_node, py::const_))
 		.def("data_node", py::overload_cast<link::process_data_cb, bool>(&link::data_node, py::const_),
 			"f"_a, "high_priority"_a = false
 		)
+
 		.def("type_id", &link::type_id)
 		.def("oid", &link::oid)
 		.def("obj_type_id", &link::obj_type_id)
@@ -100,6 +137,27 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("info", &link::info)
 		.def_property("flags", &link::flags, &link::set_flags)
 	;
+
+	// export adapters manip functions
+	using adapter_fn = kernel::detail::python_subsyst_impl::adapter_fn;
+
+	m.def("register_adapter", [](std::string obj_type_id, adapter_fn f) {
+			py_kernel().register_adapter(std::move(obj_type_id), std::move(f));
+		}, "obj_type_id"_a, "adapter_fn"_a, "Register adapter for specified BS type"
+	);
+	m.def("register_default_adapter", [](adapter_fn f) {
+			py_kernel().register_default_adapter(std::move(f));
+		}, "adapter_fn"_a, "Register adapter for all non-explicitly-adapted BS types"
+	);
+	m.def("clear_adapters", []() { py_kernel().clear_adapters(); },
+		"Remove all adapters (including default) for BS types"
+	);
+	m.def("adapt", [](sp_obj obj) { return py_kernel().adapt(std::move(obj)); },
+		"Make adapter for given object"
+	);
+	m.def("adapted_types", []() { return py_kernel().adapted_types(); },
+		"Remove types for which adapters are registered, '*' for default adapter"
+	);
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Derived links

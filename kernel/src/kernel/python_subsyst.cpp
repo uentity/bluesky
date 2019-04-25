@@ -27,6 +27,7 @@
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 using namespace blue_sky::detail;
+namespace py = pybind11;
 
 NAMESPACE_BEGIN()
 
@@ -101,6 +102,49 @@ WITH_KMOD
 		return std::error_code(static_cast<Error>(ec));
 	}).execute(err_class);
 END_WITH
+}
+
+auto python_subsyst_impl::register_adapter(std::string obj_type_id, adapter_fn f) -> void {
+	if(f)
+		adapters_.insert_or_assign(std::move(obj_type_id), std::move(f));
+	else {
+		auto pa = adapters_.find(obj_type_id);
+		if(pa != adapters_.end())
+			adapters_.erase(pa);
+	}
+}
+
+auto python_subsyst_impl::register_default_adapter(adapter_fn f) -> void {
+	def_adapter_ = std::move(f);
+}
+
+auto python_subsyst_impl::clear_adapters() -> void {
+	adapters_.clear();
+	def_adapter_ = nullptr;
+}
+
+auto python_subsyst_impl::adapted_types() const -> std::vector<std::string> {
+	std::vector<std::string> res(adapters_.size());
+	std::transform(
+		adapters_.begin(), adapters_.end(), res.begin(),
+		[](const auto& A){ return A.first; }
+	);
+	if(def_adapter_) res.push_back("*");
+	return res;
+}
+
+auto python_subsyst_impl::adapt(sp_obj source) const -> py::object {
+	// adapt or passthrough
+	auto pf = adapters_.find(source->type_id());
+	auto&& obj = std::move(source);
+	return pf != adapters_.end() ?
+		pf->second(obj) :
+		( def_adapter_ ? def_adapter_(obj) : py::cast(obj) );
+}
+
+auto python_subsyst_impl::self() -> python_subsyst_impl& {
+	// [NOTE] unconditional cast, because if self() is called, then instance MUST be self for sure
+	return static_cast<python_subsyst_impl&>(singleton<python_subsyst>::Instance());
 }
 
 NAMESPACE_END(blue_sky::kernel::detail)

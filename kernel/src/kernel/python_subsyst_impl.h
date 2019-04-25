@@ -8,11 +8,20 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include <pybind11/pybind11.h>
+
+#include <bs/objbase.h>
+
+#include <unordered_map>
+#include <functional>
+
 #include "python_subsyst.h"
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
 struct BS_HIDDEN_API python_subsyst_impl : public python_subsyst {
+	using adapter_fn = std::function<pybind11::object(sp_obj)>;
+
 	python_subsyst_impl(void* kmod_ptr = nullptr);
 
 	auto py_init_plugin(
@@ -26,8 +35,25 @@ struct BS_HIDDEN_API python_subsyst_impl : public python_subsyst {
 
 	auto py_kmod() const -> void*;
 
+	auto register_adapter(std::string obj_type_id, adapter_fn f) -> void;
+
+	// pass nullptr to clear
+	auto register_default_adapter(adapter_fn f) -> void;
+
+	auto clear_adapters() -> void;
+
+	auto adapted_types() const -> std::vector<std::string>;
+
+	auto adapt(sp_obj source) const -> pybind11::object;
+
+	// access to instance of Python subsystem
+	static auto self() -> python_subsyst_impl&;
+
 private:
 	void* kmod_;
+	// adapters map {obj_type_id -> adapter fcn}
+	std::unordered_map<std::string, adapter_fn> adapters_;
+	adapter_fn def_adapter_;
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)
