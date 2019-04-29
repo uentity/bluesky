@@ -22,7 +22,7 @@
 
 //CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::link::process_data_cb)
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
 
 namespace {
 // treat Error::OKOK status as object is fully loaded by fusion_iface
@@ -72,7 +72,7 @@ struct BS_HIDDEN_API fusion_link::impl : public blue_sky::detail::async_api_mixi
 	//
 	// actor type for async API
 	using actor_t = caf::typed_actor<
-		caf::reacts_to<flnk_populate_atom, sp_clink, link::process_data_cb, std::string, bool>
+		caf::reacts_to<flnk_populate_atom, sp_clink, link::process_data_cb, std::string>
 	>;
 
 	// async API actor handle
@@ -81,19 +81,14 @@ struct BS_HIDDEN_API fusion_link::impl : public blue_sky::detail::async_api_mixi
 
 	// behaviour
 	static auto async_api(actor_t::pointer self) -> actor_t::behavior_type {
-		using cb_arg = result_or_err<sp_clink>;
-
 		return {
-			[](flnk_populate_atom, const sp_clink& lnk, const process_data_cb& f,
-				const std::string& obj_type_id, bool wait_if_busy
+			[](
+				flnk_populate_atom, const sp_clink& lnk, const process_data_cb& f, const std::string& obj_type_id
 			) {
-				f(std::static_pointer_cast<const fusion_link>(lnk)->populate(
-					obj_type_id, wait_if_busy
-				), lnk);
+				f(std::static_pointer_cast<const fusion_link>(lnk)->populate(obj_type_id), lnk);
 			}
 		};
 	}
 };
 
-NAMESPACE_END(blue_sky) NAMESPACE_END(tree)
-
+NAMESPACE_END(blue_sky::tree)

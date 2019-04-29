@@ -97,8 +97,7 @@ auto fusion_link::populate(const std::string& child_type_id, bool wait_if_busy) 
 auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) const
 -> void {
 	pimpl_->send(
-		flnk_populate_atom(), this->bs_shared_this<link>(), std::move(f),
-		std::move(child_type_id), true
+		flnk_populate_atom(), this->bs_shared_this<link>(), std::move(f), std::move(child_type_id)
 	);
 }
 

@@ -187,17 +187,17 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const 
 auto link::data(process_data_cb f, bool high_priority) const -> void {
 	high_priority ?
 		pimpl_->send<caf::message_priority::high>(
-			lnk_data_atom(), shared_from_this(), std::move(f), true
+			lnk_data_atom(), shared_from_this(), std::move(f)
 		) :
-		pimpl_->send(lnk_data_atom(), shared_from_this(), std::move(f), true);
+		pimpl_->send(lnk_data_atom(), shared_from_this(), std::move(f));
 }
 
 auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 	high_priority ?
 		pimpl_->send<caf::message_priority::high>(
-			lnk_dnode_atom(), shared_from_this(), std::move(f), true
+			lnk_dnode_atom(), shared_from_this(), std::move(f)
 		) :
-		pimpl_->send(lnk_dnode_atom(), shared_from_this(), std::move(f), true);
+		pimpl_->send(lnk_dnode_atom(), shared_from_this(), std::move(f));
 }
 
 /*-----------------------------------------------------------------------------

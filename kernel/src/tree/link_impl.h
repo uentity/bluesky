@@ -116,9 +116,8 @@ struct BS_HIDDEN_API link::impl : public blue_sky::detail::async_api_mixin<link:
 	//
 	// actor type for async API
 	using actor_t = caf::typed_actor<
-		caf::reacts_to<lnk_data_atom, sp_clink, link::process_data_cb, bool>,
-		caf::reacts_to<lnk_dnode_atom, sp_clink, link::process_data_cb, bool>,
-		caf::reacts_to<int>
+		caf::reacts_to<lnk_data_atom, sp_clink, link::process_data_cb>,
+		caf::reacts_to<lnk_dnode_atom, sp_clink, link::process_data_cb>
 	>;
 
 	// async API actor handle
@@ -127,30 +126,17 @@ struct BS_HIDDEN_API link::impl : public blue_sky::detail::async_api_mixin<link:
 
 	// behaviour
 	static auto async_api(actor_t::pointer self) -> actor_t::behavior_type {
-		using cb_arg = result_or_err<sp_clink>;
-
-		//self->set_exit_handler([](caf::exit_msg&) {
-		//	std::cout << "******* link::actor down ***********" << std::endl;
-		//});
 		return {
-			[](lnk_data_atom, const sp_clink& lnk, const process_data_cb& f, bool wait_if_busy) {
-				f(lnk->data_ex(wait_if_busy), lnk);
+			[](lnk_data_atom, const sp_clink& lnk, const process_data_cb& f) {
+				f(lnk->data_ex(true), lnk);
 			},
-			[](lnk_dnode_atom, const sp_clink& lnk, const process_data_cb& f, bool wait_if_busy) {
-				f(lnk->data_node_ex(wait_if_busy), lnk);
-			},
-			[](int) {
-				using namespace std::chrono_literals;
-				std::cout << "<<<<<< link::impl::actor test" << std::endl;
-				std::this_thread::sleep_for(3s);
+			[](lnk_dnode_atom, const sp_clink& lnk, const process_data_cb& f) {
+				f(lnk->data_node_ex(true), lnk);
 			}
 		};
 	}
 
-	~impl() {
-		//sender()->wait_for(actor());
-		//std::cout << "<<<<< link::impl::destructor" << std::endl;
-	}
+	//~impl() = default;
 };
 
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
