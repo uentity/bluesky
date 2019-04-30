@@ -65,22 +65,27 @@ struct anon_async_api_mixin {
 private:
 	template<typename A1 = int, typename... As>
 	static constexpr bool a1_is_priority = std::is_same_v<caf::message_priority, std::decay_t<A1>>;
+	template<typename A1 = int, typename... As>
+	static constexpr bool is_custom_ctor = !std::is_base_of_v<anon_async_api_mixin, std::decay_t<A1>>;
+
+	bool kill_actor_;
 
 public:
 	ActorT actor;
 
-	template<
-		caf::spawn_options Os = caf::no_spawn_options, typename F,
-		typename = std::enable_if_t<!std::is_base_of_v<anon_async_api_mixin, std::decay_t<F>>>
-	>
-	explicit anon_async_api_mixin(F&& async_behavior) {
-		spawn<Os>(std::forward<F>(async_behavior));
+	template<typename F, typename = std::enable_if_t< is_custom_ctor<F> >>
+	explicit anon_async_api_mixin(F&& async_behavior, bool kill_actor_on_death = true)
+		: kill_actor_(kill_actor_on_death)
+	{
+		spawn(std::forward<F>(async_behavior));
 	}
 	// empty ctor - don't spawn actor
-	anon_async_api_mixin() {}
+	anon_async_api_mixin(bool kill_actor_on_death = true)
+		: kill_actor_(kill_actor_on_death)
+	{}
 	// terminate controlled actor when this (master) instance is dying
 	~anon_async_api_mixin() {
-		caf::anon_send_exit(actor, caf::exit_reason::kill);
+		if(kill_actor_) caf::anon_send_exit(actor, caf::exit_reason::kill);
 	}
 
 	anon_async_api_mixin(const anon_async_api_mixin&) = default;
