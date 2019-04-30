@@ -18,8 +18,6 @@
 #include <caf/all.hpp>
 
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::deref_process_f)
-// [TODO] solve problem with function pointer
-//CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::deref_process_fp)
 
 using walk_down_ft = decltype( blue_sky::tree::detail::gen_walk_down_tree() );
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(walk_down_ft)
@@ -74,15 +72,11 @@ auto deref_path_async(
 	// sanity
 	if(!lnk) dp(nullptr);
 	// send message
-	high_priority ?
-		actor.send<caf::message_priority::high>(
-			std::move(path), std::move(lnk), std::move(lp), std::move(dp),
-			follow_lazy_links
-		) :
-		actor.send(
-			std::move(path), std::move(lnk), std::move(lp), std::move(dp),
-			follow_lazy_links
-		);
+	actor.send(
+		high_priority ? caf::message_priority::high : caf::message_priority::normal,
+		std::move(path), std::move(lnk), std::move(lp), std::move(dp),
+		follow_lazy_links
+	);
 }
 
 NAMESPACE_END(detail)
@@ -101,13 +95,6 @@ auto deref_path(
 		follow_lazy_links, high_priority
 	);
 }
-// accept function
-//auto deref_path(deref_process_fp f, std::string path, sp_link start, node::Key path_unit) -> void {
-//	detail::deref_path_async<deref_process_fp>(
-//		std::move(path), std::move(start),
-//		detail::gen_walk_down_tree(path_unit), f
-//	);
-//}
 
 NAMESPACE_END(blue_sky::tree)
 

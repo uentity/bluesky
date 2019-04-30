@@ -17,6 +17,10 @@ namespace blue_sky::detail {
 /// Mixin that allows bi-directional communication with controlled actor
 template<class Derived>
 class async_api_mixin {
+private:
+	template<typename A1 = int, typename... As>
+	static constexpr bool a1_is_priority = std::is_same_v<caf::message_priority, std::decay_t<A1>>;
+
 public:
 	using message_priority = caf::message_priority;
 	explicit async_api_mixin() : sender_(kernel::config::actor_system(), true) {}
@@ -26,10 +30,21 @@ public:
 		sender_->link_to(derived().actor());
 	}
 
-	// pass any message to target actor
-	template<message_priority P = message_priority::normal, typename... Args>
-	auto send(Args&&... args) const {
-		return sender_->send<P>(derived().actor(), std::forward<Args>(args)...);
+	// message priority can be passed as template arg
+	template<
+		message_priority P = message_priority::normal, typename... Args
+	>
+	auto send(Args&&... args) const -> std::enable_if_t<!a1_is_priority<Args...>> {
+		caf::anon_send<P>(derived().actor(), std::forward<Args>(args)...);
+	}
+
+	// message priority passed as first argument
+	template<typename... Args>
+	void send(message_priority prio, Args&&... args) const {
+		if(prio == message_priority::high)
+			caf::anon_send<message_priority::high>(derived().actor(), std::forward<Args>(args)...);
+		else
+			caf::anon_send<message_priority::normal>(derived().actor(), std::forward<Args>(args)...);
 	}
 
 	auto sender() const -> const caf::scoped_actor& {
@@ -47,6 +62,11 @@ private:
 // 3. sends `exit` (kill) message on destruction to terminate corresponding actor
 template<class ActorT>
 struct anon_async_api_mixin {
+private:
+	template<typename A1 = int, typename... As>
+	static constexpr bool a1_is_priority = std::is_same_v<caf::message_priority, std::decay_t<A1>>;
+
+public:
 	ActorT actor;
 
 	template<
@@ -73,11 +93,22 @@ struct anon_async_api_mixin {
 		return actor;
 	}
 
-	// pass any message to target actor
+	// message priority can be passed as template arg
 	using message_priority = caf::message_priority;
-	template<message_priority P = message_priority::normal, typename... Args>
-	void send(Args&&... args) const {
+	template<
+		message_priority P = message_priority::normal, typename... Args
+	>
+	auto send(Args&&... args) const -> std::enable_if_t<!a1_is_priority<Args...>> {
 		caf::anon_send<P>(actor, std::forward<Args>(args)...);
+	}
+
+	// message priority passed as first argument
+	template<typename... Args>
+	void send(message_priority prio, Args&&... args) const {
+		if(prio == message_priority::high)
+			caf::anon_send<message_priority::high>(actor, std::forward<Args>(args)...);
+		else
+			caf::anon_send<message_priority::normal>(actor, std::forward<Args>(args)...);
 	}
 };
 	
