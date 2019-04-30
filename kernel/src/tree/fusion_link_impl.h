@@ -28,9 +28,14 @@ namespace {
 // treat Error::OKOK status as object is fully loaded by fusion_iface
 static const auto obj_fully_loaded = make_error_code(Error::OKOK);
 
+// actor type for async API
+using flink_actor_t = caf::typed_actor<
+	caf::reacts_to<flnk_populate_atom, sp_clink, link::process_data_cb, std::string>
+>;
+
 } // hidden
 
-struct BS_HIDDEN_API fusion_link::impl : public blue_sky::detail::async_api_mixin<fusion_link::impl> {
+struct BS_HIDDEN_API fusion_link::impl : public blue_sky::detail::anon_async_api_mixin<flink_actor_t> {
 	// bridge
 	sp_fusion bridge_;
 	// contained object
@@ -40,7 +45,7 @@ struct BS_HIDDEN_API fusion_link::impl : public blue_sky::detail::async_api_mixi
 
 	// ctor
 	impl(sp_fusion&& bridge, sp_node&& data) :
-		bridge_(std::move(bridge)), data_(std::move(data))
+		anon_async_api_mixin(async_behavior), bridge_(std::move(bridge)), data_(std::move(data))
 	{}
 
 	auto reset_bridge(sp_fusion&& new_bridge) -> void {
@@ -68,19 +73,9 @@ struct BS_HIDDEN_API fusion_link::impl : public blue_sky::detail::async_api_mixi
 	}
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  async API
+	//  async API behavior
 	//
-	// actor type for async API
-	using actor_t = caf::typed_actor<
-		caf::reacts_to<flnk_populate_atom, sp_clink, link::process_data_cb, std::string>
-	>;
-
-	// async API actor handle
-	actor_t actor_;
-	auto actor() const -> const actor_t& { return actor_; }
-
-	// behaviour
-	static auto async_api(actor_t::pointer self) -> actor_t::behavior_type {
+	static auto async_behavior(flink_actor_t::pointer self) -> flink_actor_t::behavior_type {
 		return {
 			[](
 				flnk_populate_atom, const sp_clink& lnk, const process_data_cb& f, const std::string& obj_type_id

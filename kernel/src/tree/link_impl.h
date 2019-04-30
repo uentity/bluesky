@@ -21,7 +21,7 @@
 
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::link::process_data_cb)
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
 
 using namespace tree::detail;
 
@@ -36,12 +36,18 @@ namespace {
 // global random UUID generator for BS links
 static boost::uuids::random_generator gen;
 
+// link's actor type for async API
+using link_actor_t = caf::typed_actor<
+	caf::reacts_to<lnk_data_atom, sp_clink, link::process_data_cb>,
+	caf::reacts_to<lnk_dnode_atom, sp_clink, link::process_data_cb>
+>;
+
 } // eof hidden namespace
 
 /*-----------------------------------------------------------------------------
  *  link::impl
  *-----------------------------------------------------------------------------*/
-struct BS_HIDDEN_API link::impl : public blue_sky::detail::async_api_mixin<link::impl> {
+struct BS_HIDDEN_API link::impl : public blue_sky::detail::anon_async_api_mixin<link_actor_t> {
 	id_type id_;
 	std::string name_;
 	Flags flags_;
@@ -53,7 +59,7 @@ struct BS_HIDDEN_API link::impl : public blue_sky::detail::async_api_mixin<link:
 	std::mutex solo_;
 
 	impl(std::string&& name, Flags f)
-		: id_(gen()), name_(std::move(name)), flags_(f)
+		: anon_async_api_mixin(async_behavior), id_(gen()), name_(std::move(name)), flags_(f)
 	{}
 
 	auto rename_silent(std::string&& new_name) -> void {
@@ -112,20 +118,9 @@ struct BS_HIDDEN_API link::impl : public blue_sky::detail::async_api_mixin<link:
 	}
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  async API
+	//  async API behavior
 	//
-	// actor type for async API
-	using actor_t = caf::typed_actor<
-		caf::reacts_to<lnk_data_atom, sp_clink, link::process_data_cb>,
-		caf::reacts_to<lnk_dnode_atom, sp_clink, link::process_data_cb>
-	>;
-
-	// async API actor handle
-	actor_t actor_;
-	auto actor() const -> const actor_t& { return actor_; }
-
-	// behaviour
-	static auto async_api(actor_t::pointer self) -> actor_t::behavior_type {
+	static auto async_behavior(link_actor_t::pointer self) -> link_actor_t::behavior_type {
 		return {
 			[](lnk_data_atom, const sp_clink& lnk, const process_data_cb& f) {
 				f(lnk->data_ex(true), lnk);
@@ -135,9 +130,6 @@ struct BS_HIDDEN_API link::impl : public blue_sky::detail::async_api_mixin<link:
 			}
 		};
 	}
-
-	//~impl() = default;
 };
 
-NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::tree)

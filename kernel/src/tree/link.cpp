@@ -16,12 +16,7 @@ NAMESPACE_BEGIN(blue_sky::tree)
  *-----------------------------------------------------------------------------*/
 link::link(std::string name, Flags f)
 	: pimpl_(std::make_unique<impl>(std::move(name), f))
-{
-	// run actor
-	pimpl_->actor_ = kernel::config::actor_system().spawn(impl::async_api);
-	// connect actor with sender
-	pimpl_->init_sender();
-}
+{}
 
 link::~link() {}
 

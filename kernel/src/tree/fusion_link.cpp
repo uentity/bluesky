@@ -31,12 +31,7 @@ fusion_link::fusion_link(
 	// set LazyLoad flag by default
 	ilink(std::move(name), data, Flags(f | link::LazyLoad)),
 	pimpl_(std::make_unique<impl>(std::move(bridge), std::move(data)))
-{
-	// run actor
-	pimpl_->actor_ = kernel::config::actor_system().spawn(impl::async_api);
-	// connect actor with sender
-	pimpl_->init_sender();
-}
+{}
 
 fusion_link::fusion_link(
 	std::string name, const char* obj_type, std::string oid, sp_fusion bridge, Flags f
