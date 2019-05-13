@@ -7,7 +7,7 @@ lib_name = 'blue_sky';
 tar_name = 'kernel';
 
 # list of Boost libs used by kernel
-kboost_libs = ['regex', 'thread', 'signals', 'serialization', 'locale'];
+kboost_libs = ['regex', 'thread', 'serialization', 'locale'];
 
 # init stage
 if build_kind == "init" :
