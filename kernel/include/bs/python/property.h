@@ -34,6 +34,10 @@ struct type_caster<blue_sky::prop::property> {
 	PYBIND11_TYPE_CASTER(Type, _("property"));
 
 	bool load(handle src, bool convert) {
+		if(src.is_none()) {
+			value = blue_sky::prop::none();
+			return true;
+		}
 		auto caster = make_caster<UType>();
 		if (caster.load(src, convert)) {
 			value = cast_op<UType>(caster);
@@ -44,7 +48,9 @@ struct type_caster<blue_sky::prop::property> {
 
 	template <typename Variant>
 	static handle cast(Variant &&src, return_value_policy policy, handle parent) {
-		return make_caster<UType>::cast(std::forward<Variant>(src), policy, parent);
+		return blue_sky::prop::is_none(src) ?
+			pybind11::none().release() :
+			make_caster<UType>::cast(std::forward<Variant>(src), policy, parent);
 	}
 };
 
