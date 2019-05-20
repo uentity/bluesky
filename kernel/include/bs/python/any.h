@@ -14,6 +14,7 @@
 #include "../fwd.h"
 #include "../timetypes.h"
 
+#include <fmt/format.h>
 #include <any>
 
 #define bs_any std::any
@@ -39,6 +40,7 @@ struct any_caster {
 		// but with two exceptions for quick `handle` or `object` passthrough
 		if constexpr(std::is_same_v<U, py::object>) {
 			value = reinterpret_borrow<py::object>(src);
+			return true;
 		}
 		else {
 			auto caster = make_caster<U>();
@@ -85,16 +87,19 @@ struct any_caster {
 	static handle cast(Any&& src, return_value_policy pol, handle parent) {
 		namespace py = pybind11;
 
-		if(auto res = cast_alternative(&src, pol, parent, cast_seq_v))
+		if(!src.has_value()) return py::none().release();
+		else if(auto res = cast_alternative(&src, pol, parent, cast_seq_v))
 			return res;
-		throw py::value_error("Could not convert `any` value to Python");
+		throw py::value_error(
+			fmt::format("Could not convert `any` value of type '{}' to Python", src.type().name())
+		);
 	}
 };
 
 template<>
 struct type_caster<std::any> : any_caster<
-		std::int64_t, bool, double, std::string, blue_sky::timestamp, blue_sky::timespan, blue_sky::sp_obj
-		// object // <-- enables any Python object passthrough
+		std::int64_t, bool, double, std::string, blue_sky::timestamp, blue_sky::timespan, blue_sky::sp_obj,
+		object // <-- enables any Python object passthrough
 > {};
 
 NAMESPACE_END(detail::pybind11)
