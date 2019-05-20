@@ -7,8 +7,8 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/bs.h>
 #include <bs/compat/messaging.h>
+#include <bs/kernel/types_factory.h>
 
 #include <boost/signals2.hpp>
 
@@ -16,7 +16,7 @@ using namespace std;
 using namespace blue_sky;
 
 
-namespace blue_sky {
+NAMESPACE_BEGIN(blue_sky)
 
 BS_TYPE_IMPL(bs_signal, objbase, "bs_signal", "Compat BS signal", false, false)
 BS_TYPE_ADD_CONSTRUCTOR(bs_signal, (int))
@@ -38,11 +38,9 @@ template< class slot_ptr >
 class sync_layer {
 public:
 	static void fire_slot(
-		const slot_ptr& slot, sp_cobj&& sender, int signal_code, sp_obj&& param
+		const slot_ptr& slot, sp_cobj&& sender, int signal_code, std::any&& param
 	) {
-		if(slot)
-			// directly execute slot
-			slot->execute(std::move(sender), signal_code, std::move(param));
+		if(slot) slot->execute(std::move(sender), signal_code, std::move(param));
 	}
 };
 
@@ -71,11 +69,10 @@ public:
 		return (slot_ < rhs.slot_);
 	}
 
-	void operator()(const sp_cobj& sender, int signal_code, const sp_obj& param) const {
+	void operator()(const sp_cobj& sender, int signal_code, const std::any& param) const {
 		if(sender_.expired() || sender.get() == sender_.lock().get()) {
-			// right here NEW temp copies of sender and param will be created by compiler
-			// because fire_slot accepts only rvalue references
-			fire_slot(slot_, sp_cobj(sender), signal_code, sp_obj(param));
+			// construct NEW temp copies of sender and param from source
+			fire_slot(slot_, sp_cobj{sender}, signal_code, std::any{param});
 		}
 	}
 
@@ -96,7 +93,7 @@ class bs_signal::signal_impl
 public:
 	//send signal command
 	typedef boost::signals2::signal<
-		void (const sp_cobj& sender, int signal_code, const sp_obj& param)
+		void (const sp_cobj& sender, int signal_code, const std::any& param)
 	> signal_engine;
 
 	//default ctor
@@ -107,8 +104,8 @@ public:
 		: signal_code_(sig_code)
 	{}
 
-	void fire(const sp_cobj& sender, const sp_obj& param) {
-		my_signal_(sender, signal_code_, param);
+	void fire(const sp_cobj& sender, std::any&& param) {
+		my_signal_(sender, signal_code_, std::move(param));
 	}
 
 	// if sender != nullptr then slot will be activated only for given sender
@@ -143,8 +140,8 @@ void bs_signal::init(int signal_code) const {
 	pimpl_->signal_code_ = signal_code;
 }
 
-void bs_signal::fire(const sp_cobj& sender, const sp_obj& param) const {
-	pimpl_->fire(sender, param);
+void bs_signal::fire(const sp_cobj& sender, std::any param) const {
+	pimpl_->fire(sender, std::move(param));
 }
 
 bool bs_signal::connect(const sp_slot& slot, const sp_cobj& sender) const {
@@ -190,11 +187,11 @@ void bs_messaging::swap(bs_messaging& rhs) {
 //	return *this;
 //}
 
-bool bs_messaging::fire_signal(int signal_code, const sp_obj& params, const sp_cobj& sender) const {
+bool bs_messaging::fire_signal(int signal_code, std::any param, const sp_cobj& sender) const {
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig == signals_.end()) return false;
 
-	sig->second->fire(sender ? sender : shared_from_this(), params);
+	sig->second->fire(sender ? sender : shared_from_this(), std::move(param));
 	return true;
 }
 
@@ -232,8 +229,6 @@ std::vector< int > bs_messaging::get_signal_list() const
 	res.reserve(signals_.size());
 	for(const auto& sig : signals_)
 		res.emplace_back(sig.first);
-	//for (bs_signals_map::const_iterator p = signals_.begin(); p != signals_.end(); ++p)
-	//	res.push_back(p->first);
 	return res;
 }
 
@@ -270,28 +265,4 @@ ulong bs_messaging::clear() {
 	return cnt;
 }
 
-#ifdef BSPY_EXPORTING
-NAMESPACE_BEGIN(python)
-
-void py_bind_signal(py::module& m) {
-	// bind bs_signal
-	// place it here, because py::class_ needs to acccess full definition of exported type
-	py::class_<
-		bs_signal,
-		std::shared_ptr< bs_signal >
-	>(m, "signal")
-		.def(py::init<int>())
-		.def("init", &bs_signal::init)
-		.def_property_readonly("get_code", &bs_signal::get_code)
-		.def("connect", &bs_signal::connect, "slot"_a, "sender"_a = nullptr)
-		.def("disconnect", &bs_signal::disconnect)
-		.def_property_readonly("num_slots", &bs_signal::num_slots)
-		.def("fire", &bs_signal::fire, "sender"_a = nullptr, "param"_a = nullptr)
-	;
-}
-
-NAMESPACE_END(python)
-#endif
-
-}	//end of namespace blue_sky
-
+NAMESPACE_END(blue_sky)

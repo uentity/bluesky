@@ -9,13 +9,13 @@
 
 #include <bs/bs.h>
 #include <bs/compat/messaging.h>
+#include <bs/python/any.h>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(python)
+NAMESPACE_BEGIN(blue_sky::python)
 
 void py_bind_signal(py::module&);
 
-namespace {
+NAMESPACE_BEGIN()
 using namespace std;
 
 // bs_slot wrapper
@@ -23,7 +23,7 @@ class py_bs_slot : public bs_slot {
 public:
 	using bs_slot::bs_slot;
 
-	void execute(sp_cobj sender, int signal_code, sp_obj param) const override {
+	void execute(sp_cobj sender, int signal_code, std::any param) const override {
 		// Use modified version of PYBIND11_OVERLOAD_PURE macro code
 		// original implementation would fail with runtime error that pure virtual method is called
 		// if no overload was found. But slot should be safe in sutuation when Python object is
@@ -81,7 +81,7 @@ public:
 		);
 	}
 
-	bool fire_signal(int signal_code, const sp_obj& param, const sp_cobj& sender) const override {
+	bool fire_signal(int signal_code, std::any param, const sp_cobj& sender) const override {
 		PYBIND11_OVERLOAD_PURE(
 			bool,
 			Next,
@@ -131,7 +131,7 @@ public:
 		);
 	}
 
-	bool fire_signal(int signal_code, const sp_obj& param, const sp_cobj& sender) const override {
+	bool fire_signal(int signal_code, std::any param, const sp_cobj& sender) const override {
 		PYBIND11_OVERLOAD(
 			bool,
 			bs_messaging,
@@ -167,20 +167,34 @@ public:
 	}
 };
 
-void slot_tester(int c, const sp_slot& slot, const sp_obj& param ) {
-	slot->execute(nullptr, c, param);
+void slot_tester(int c, const sp_slot& slot, std::any param) {
+	slot->execute(nullptr, c, std::move(param));
 }
 
-} //eof hidden namespace
+NAMESPACE_END()
 
 // exporting function
 void py_bind_messaging(py::module& m) {
-	// export bs_slot wrapper
+	// slot
 	py::class_<
 		bs_slot, py_bs_slot, std::shared_ptr<bs_slot>
 	>(m, "slot")
 		.def(py::init<>())
 		.def("execute", &bs_slot::execute)
+	;
+
+	// signal
+	py::class_<
+		bs_signal,
+		std::shared_ptr< bs_signal >
+	>(m, "signal")
+		.def(py::init<int>())
+		.def("init", &bs_signal::init)
+		.def_property_readonly("get_code", &bs_signal::get_code)
+		.def("connect", &bs_signal::connect, "slot"_a, "sender"_a = nullptr)
+		.def("disconnect", &bs_signal::disconnect)
+		.def_property_readonly("num_slots", &bs_signal::num_slots)
+		.def("fire", &bs_signal::fire, "sender"_a = nullptr, "param"_a = std::any{})
 	;
 
 	// DEBUG
@@ -224,10 +238,6 @@ void py_bind_messaging(py::module& m) {
 			slot->execute(src.shared_from_this(), 42, param);
 		})
 	;
-
-	py_bind_signal(m);
 }
 
-NAMESPACE_END(python)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::python)

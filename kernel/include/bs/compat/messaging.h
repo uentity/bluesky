@@ -24,7 +24,7 @@ class BS_API bs_slot {
 public:
 	typedef std::shared_ptr< bs_slot > sp_slot;
 
-	virtual void execute(sp_cobj sender, int signal_code, sp_obj param) const = 0;
+	virtual void execute(sp_cobj sender, int signal_code, std::any param) const = 0;
 	virtual ~bs_slot();
 };
 using sp_slot = bs_slot::sp_slot;
@@ -52,7 +52,7 @@ public:
 	ulong num_slots() const;
 
 	//call slots, connected to this signal
-	void fire(const sp_cobj& sender = nullptr, const sp_obj& param = nullptr) const;
+	void fire(const sp_cobj& sender = nullptr, std::any param = {}) const;
 
 private:
 	class signal_impl;
@@ -83,7 +83,7 @@ public:
 	bool subscribe(int signal_code, const sp_slot& slot) const;
 	bool unsubscribe(int signal_code, const sp_slot& slot) const;
 	ulong num_slots(int signal_code) const;
-	bool fire_signal(int signal_code, const sp_obj& param = nullptr, const sp_cobj& sender = nullptr) const;
+	bool fire_signal(int signal_code, std::any param = {}, const sp_cobj& sender = nullptr) const;
 	std::vector< int > get_signal_list() const;
 
 	// default ctor - doesn't add any signals

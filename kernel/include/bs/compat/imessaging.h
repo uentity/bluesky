@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <memory>
+#include <any>
 
 //--------------- Signals macro-----------------------------------------------------------------------
 namespace blue_sky {
@@ -23,7 +24,7 @@ public:
 	virtual bool subscribe(int signal_code, const std::shared_ptr< bs_slot >& slot) const = 0;
 	virtual bool unsubscribe(int signal_code, const std::shared_ptr< bs_slot >& slot) const = 0;
 	virtual ulong num_slots(int signal_code) const = 0;
-	virtual bool fire_signal(int signal_code, const sp_obj& param = nullptr, const sp_cobj& sender = nullptr) const = 0;
+	virtual bool fire_signal(int signal_code, std::any param = {}, const sp_cobj& sender = nullptr) const = 0;
 	virtual std::vector< int > get_signal_list() const = 0;
 	// virtual dtor
 	virtual ~bs_imessaging();
