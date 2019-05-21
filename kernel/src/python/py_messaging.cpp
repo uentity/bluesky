@@ -7,8 +7,10 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/bs.h>
+#include <bs/python/common.h>
 #include <bs/compat/messaging.h>
+
+BSPY_ANY_CAST_EXTRA(long double)
 #include <bs/python/any.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
@@ -221,7 +223,7 @@ void py_bind_messaging(py::module& m) {
 		std::shared_ptr< bs_messaging >
 	>(m, "messaging", py::multiple_inheritance())
 		BSPY_EXPORT_DEF(bs_messaging)
-		BSPY_ENABLE_PYOBJ(bs_messaging)
+
 		.def(py::init_alias<>())
 		.def(py::init_alias< bs_messaging::sig_range_t >())
 		.def("subscribe"       , &bs_messaging::subscribe)
