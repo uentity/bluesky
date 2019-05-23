@@ -10,6 +10,7 @@
 #include <bs/bs.h>
 #include <bs/propdict.h>
 #include <bs/python/property.h>
+#include <bs/python/map.h>
 
 #include <ostream>
 #include <iostream>
@@ -44,41 +45,6 @@ BS_HIDDEN_API ostream& operator<<(ostream& os, const bs_type_info& ti) {
 }
 
 NAMESPACE_BEGIN(python)
-NAMESPACE_BEGIN()
-
-template<typename Propbook>
-auto bind_propbook(py::module& m, const char* cl_name) {
-	auto from_pydict = [](Propbook& tgt, py::dict src) {
-		using Key = typename Propbook::key_type;
-		using Value = typename Propbook::mapped_type;
-
-		auto key_caster = py::detail::make_caster<Key>();
-		auto value_caster = py::detail::make_caster<Value>();
-		for(const auto& [sk, sv] : src) {
-			if(!key_caster.load(sk, true) || !value_caster.load(sv, true)) continue;
-			tgt[py::detail::cast_op<Key>(key_caster)] = py::detail::cast_op<Value>(value_caster);
-		}
-	};
-
-	auto res = py::bind_map<Propbook>(m, cl_name, py::module_local(false))
-		.def(py::init([&from_pydict](py::dict D) {
-			auto B = std::make_unique<Propbook>();
-			from_pydict(*B, std::move(D));
-			return B;
-		}))
-		.def("to_dict", [](const Propbook& B) {
-			using Key = typename Propbook::key_type;
-			using Propmap = typename prop::propdict::underlying_type;
-			return std::map<Key, Propmap>(B.begin(), B.end());
-		})
-		.def("from_dict", from_pydict)
-	;
-
-	py::implicitly_convertible<py::dict, Propbook>();
-	return res;
-}
-
-NAMESPACE_END()
 
 // dumb function for testing type_d-tor <-> Py list
 typedef std::vector< type_descriptor > type_v;
@@ -173,19 +139,13 @@ void py_bind_common(py::module& m) {
 	py::implicitly_convertible<std::string, type_descriptor>();
 
 	// propdict binding
-	py::bind_map<prop::propdict>(m, "propdict", py::module_local(false))
-		.def(py::init<prop::propdict::underlying_type>())
-		.def("has_key", &prop::propdict::has_key)
-		.def("keys", &prop::propdict::keys)
-		.def("to_dict", [](const prop::propdict& D) -> const prop::propdict::underlying_type& {
-			return D;
-		})
-	;
+	bind_reach_map<prop::propdict>(m, "propdict", py::module_local(false));
 	// allow passing compatible Python dict in place of `propdict` (and init propdict from that Py dict)
 	py::implicitly_convertible<prop::propdict::underlying_type, prop::propdict>();
+
 	// opaque bindings of propbooks
-	bind_propbook<prop::propbook_s>(m, "propbook_s");
-	bind_propbook<prop::propbook_i>(m, "propbook_i");
+	bind_reach_map<prop::propbook_s>(m, "propbook_s", py::module_local(false));
+	bind_reach_map<prop::propbook_i>(m, "propbook_i", py::module_local(false));
 }
 
 NAMESPACE_END(python)
