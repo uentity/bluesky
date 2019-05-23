@@ -31,14 +31,14 @@ BS_REGISTER_TYPE("kernel", blue_sky::bs_messaging)
 bs_slot::~bs_slot() {}
 
 /*-----------------------------------------------------------------
- * BS signal helpers
+ * sync slot invoke layer
  *----------------------------------------------------------------*/
 // only sync execution layer is supported
 template< class slot_ptr >
 class sync_layer {
 public:
 	static void fire_slot(
-		const slot_ptr& slot, sp_cobj&& sender, int signal_code, std::any&& param
+		const slot_ptr& slot, std::any&& sender, int signal_code, std::any&& param
 	) {
 		if(slot) slot->execute(std::move(sender), signal_code, std::move(param));
 	}
@@ -53,8 +53,8 @@ public:
 	typedef sync_layer< slot_ptr > base_t;
 	using base_t::fire_slot;
 
-	slot_holder(slot_ptr slot, const sp_cobj& sender = nullptr)
-		: slot_(std::move(slot)), sender_(sender)
+	slot_holder(slot_ptr slot, std::any sender = {})
+		: slot_(std::move(slot)), sender_(std::move(sender))
 	{}
 
 	bool operator==(const slot_holder& rhs) const {
@@ -69,31 +69,28 @@ public:
 		return (slot_ < rhs.slot_);
 	}
 
-	void operator()(const sp_cobj& sender, int signal_code, const std::any& param) const {
-		if(sender_.expired() || sender.get() == sender_.lock().get()) {
-			// construct NEW temp copies of sender and param from source
-			fire_slot(slot_, sp_cobj{sender}, signal_code, std::any{param});
-		}
+	void operator()(const std::any& sender, int signal_code, const std::any& param) const {
+		fire_slot(
+			slot_,
+			sender.has_value() ? std::any{sender} : std::any{sender_},
+			signal_code, std::any{param}
+		);
 	}
 
 protected:
 	slot_ptr slot_;
-	// if sender != nullptr then only signals from this sender will be triggered
-	// if we store sp_obj then object will live forever, because every slot holds smart pointer to sender
-	// thats why only pure pointer to object is stored
-	// when sender is deleted, all slot_holders will be destroyed and there will be no dead references
-	sender_ptr sender_;
+	std::any sender_;
 };
 
 /*-----------------------------------------------------------------
- * BS signal implementation details
+ * signal::signal_impl
  *----------------------------------------------------------------*/
 class bs_signal::signal_impl
 {
 public:
 	//send signal command
 	typedef boost::signals2::signal<
-		void (const sp_cobj& sender, int signal_code, const std::any& param)
+		void (const std::any& sender, int signal_code, const std::any& param)
 	> signal_engine;
 
 	//default ctor
@@ -104,32 +101,34 @@ public:
 		: signal_code_(sig_code)
 	{}
 
-	void fire(const sp_cobj& sender, std::any&& param) {
-		my_signal_(sender, signal_code_, std::move(param));
+	void fire(std::any sender, std::any param) {
+		my_signal_(std::move(sender), signal_code_, std::move(param));
 	}
 
 	// if sender != nullptr then slot will be activated only for given sender
-	bool connect(const sp_slot& slot, const sp_cobj& sender = nullptr) {
+	bool connect(sp_slot slot, std::any sender = {}) {
 		if(!slot) return false;
-		my_signal_.connect(slot_holder<>(slot, sender));
+		my_signal_.connect(slot_holder<>(std::move(slot), std::move(sender)));
 		return true;
 	}
 
-	bool disconnect(const sp_slot& slot) {
+	bool disconnect(sp_slot slot) {
 		if(!slot) return false;
-		my_signal_.disconnect(slot_holder<>(slot));
+		my_signal_.disconnect(slot_holder<>(std::move(slot)));
 		return true;
 	}
 
 	ulong num_slots() const {
-		return static_cast< ulong >(my_signal_.num_slots());
+		return static_cast<ulong>(my_signal_.num_slots());
 	}
 
 	signal_engine my_signal_;
 	int signal_code_;
 };
 
-//=============================== bs_signal implementation =============================================================
+/*-----------------------------------------------------------------------------
+ *  signal
+ *-----------------------------------------------------------------------------*/
 bs_signal::bs_signal(int signal_code)
 	: pimpl_(new signal_impl(signal_code))
 {}
@@ -140,17 +139,16 @@ void bs_signal::init(int signal_code) const {
 	pimpl_->signal_code_ = signal_code;
 }
 
-void bs_signal::fire(const sp_cobj& sender, std::any param) const {
-	pimpl_->fire(sender, std::move(param));
+void bs_signal::fire(std::any sender, std::any param) const {
+	pimpl_->fire(std::move(sender), std::move(param));
 }
 
-bool bs_signal::connect(const sp_slot& slot, const sp_cobj& sender) const {
-	return pimpl_->connect(slot, sender);
+bool bs_signal::connect(sp_slot slot, std::any sender) const {
+	return pimpl_->connect(slot, std::move(sender));
 }
 
-bool bs_signal::disconnect(const sp_slot& slot) const
-{
-	return pimpl_->disconnect(slot);
+bool bs_signal::disconnect(sp_slot slot) const {
+	return pimpl_->disconnect(std::move(slot));
 }
 
 ulong bs_signal::num_slots() const {
@@ -161,7 +159,9 @@ int bs_signal::get_code() const {
 	return pimpl_->signal_code_;
 }
 
-//============================== bs_messaging implementation ===========================================================
+/*-----------------------------------------------------------------------------
+ *  messaging
+ *-----------------------------------------------------------------------------*/
 // virtual imessaging dtor
 bs_imessaging::~bs_imessaging() {}
 
@@ -182,16 +182,14 @@ void bs_messaging::swap(bs_messaging& rhs) {
 	std::swap(signals_, rhs.signals_);
 }
 
-//bs_messaging& bs_messaging::operator=(const bs_messaging& lhs) {
-//	bs_messaging(lhs).swap(*this);
-//	return *this;
-//}
-
-bool bs_messaging::fire_signal(int signal_code, std::any param, const sp_cobj& sender) const {
+bool bs_messaging::fire_signal(int signal_code, std::any param, std::any sender) const {
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig == signals_.end()) return false;
 
-	sig->second->fire(sender ? sender : shared_from_this(), std::move(param));
+	sig->second->fire(
+		sender.has_value() ? std::move(sender) : std::any{shared_from_this()},
+		std::move(param)
+	);
 	return true;
 }
 
@@ -232,21 +230,21 @@ std::vector< int > bs_messaging::get_signal_list() const
 	return res;
 }
 
-bool bs_messaging::subscribe(int signal_code, const sp_slot& slot) const {
+bool bs_messaging::subscribe(int signal_code, sp_slot slot) const {
 	if(!slot) return false;
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig != signals_.end()) {
-		sig->second->connect(slot);
+		sig->second->connect(std::move(slot));
 		return true;
 	}
 	return false;
 }
 
-bool bs_messaging::unsubscribe(int signal_code, const sp_slot& slot) const {
+bool bs_messaging::unsubscribe(int signal_code, sp_slot slot) const {
 	if(!slot) return false;
 	bs_signals_map::const_iterator sig = signals_.find(signal_code);
 	if(sig != signals_.end()) {
-		sig->second->disconnect(slot);
+		sig->second->disconnect(std::move(slot));
 		return true;
 	}
 	return false;

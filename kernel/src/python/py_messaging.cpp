@@ -25,7 +25,7 @@ class py_bs_slot : public bs_slot {
 public:
 	using bs_slot::bs_slot;
 
-	void execute(sp_cobj sender, int signal_code, std::any param) const override {
+	void execute(std::any sender, int signal_code, std::any param) const override {
 		// Use modified version of PYBIND11_OVERLOAD_PURE macro code
 		// original implementation would fail with runtime error that pure virtual method is called
 		// if no overload was found. But slot should be safe in sutuation when Python object is
@@ -56,21 +56,21 @@ class py_bs_imessaging : public Next {
 public:
 	using Next::Next;
 
-	bool subscribe(int signal_code, const sp_slot& slot) const override {
+	bool subscribe(int signal_code, sp_slot slot) const override {
 		PYBIND11_OVERLOAD_PURE(
 			bool,
 			Next,
 			subscribe,
-			signal_code, slot
+			signal_code, std::move(slot)
 		);
 	}
 
-	bool unsubscribe(int signal_code, const sp_slot& slot) const override {
+	bool unsubscribe(int signal_code, sp_slot slot) const override {
 		PYBIND11_OVERLOAD_PURE(
 			bool,
 			Next,
 			unsubscribe,
-			signal_code, slot
+			signal_code, std::move(slot)
 		);
 	}
 
@@ -83,12 +83,12 @@ public:
 		);
 	}
 
-	bool fire_signal(int signal_code, std::any param, const sp_cobj& sender) const override {
+	bool fire_signal(int signal_code, std::any param, std::any sender) const override {
 		PYBIND11_OVERLOAD_PURE(
 			bool,
 			Next,
 			fire_signal,
-			signal_code, param, sender
+			signal_code, std::move(param), std::move(sender)
 		);
 	}
 
@@ -106,21 +106,21 @@ class py_bs_messaging : public py_bs_imessaging< py_object<bs_messaging> > {
 public:
 	using py_bs_imessaging<py_object<bs_messaging>>::py_bs_imessaging;
 
-	bool subscribe(int signal_code, const sp_slot& slot) const override {
+	bool subscribe(int signal_code, sp_slot slot) const override {
 		PYBIND11_OVERLOAD(
 			bool,
 			bs_messaging,
 			subscribe,
-			signal_code, slot
+			signal_code, std::move(slot)
 		);
 	}
 
-	bool unsubscribe(int signal_code, const sp_slot& slot) const override {
+	bool unsubscribe(int signal_code, sp_slot slot) const override {
 		PYBIND11_OVERLOAD(
 			bool,
 			bs_messaging,
 			unsubscribe,
-			signal_code, slot
+			signal_code, std::move(slot)
 		);
 	}
 
@@ -133,12 +133,12 @@ public:
 		);
 	}
 
-	bool fire_signal(int signal_code, std::any param, const sp_cobj& sender) const override {
+	bool fire_signal(int signal_code, std::any param, std::any sender) const override {
 		PYBIND11_OVERLOAD(
 			bool,
 			bs_messaging,
 			fire_signal,
-			signal_code, param, sender
+			signal_code, std::move(param), std::move(sender)
 		);
 	}
 
