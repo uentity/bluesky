@@ -35,7 +35,7 @@ auto bind_reach_map(py::handle scope, std::string const &name, Args&&... args) {
 		return M;
 	}));
 	// and explicit conversion from Py dict
-	cl.def("from_dict", from_pydict);
+	cl.def("from_dict", from_pydict, "src"_a);
 
 	// copy content to Python dict
 	cl.def("to_dict", [](const Map& m) {
@@ -66,7 +66,7 @@ auto bind_reach_map(py::handle scope, std::string const &name, Args&&... args) {
 		return false;
 	};
 	cl.def("__contains__", contains);
-	cl.def("has_key", contains);
+	cl.def("has_key", contains, "key"_a);
 
 	cl.def("clear", [](Map& m) { m.clear(); });
 
@@ -81,7 +81,15 @@ auto bind_reach_map(py::handle scope, std::string const &name, Args&&... args) {
 			return res;
 		}
 		return def_value;
-	}, "key"_a, "def_value"_a = py::none());
+	}, "key"_a, "default"_a = py::none());
+
+	cl.def("get", [](Map& m, py::object key, py::object def_value) {
+		auto key_caster = py::detail::make_caster<KeyType>();
+		if(!key_caster.load(key, true)) return def_value;
+
+		auto pval = m.find(py::detail::cast_op<KeyType>(key_caster));
+		return pval != m.end() ? py::cast(pval->second) : std::move(def_value);
+	}, "key"_a, "default"_a = py::none());
 
 	// make Python dictionary implicitly convertible to Map
 	py::implicitly_convertible<py::dict, Map>();
