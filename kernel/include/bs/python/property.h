@@ -16,14 +16,9 @@
 #include "../property.h"
 #include "../propdict.h"
 
-// [NOTE] making propbooks transparent is much more convinient, but involves making data copies
-// BUT properties aren't dedicated to hold large amount of data
-// downside is that transaprent types can't be modified inplace (because of copies)
-// here's a switch that allows to flip on using opaque propbooks exported by kernel
-#ifdef BSPY_OPAQUE_PROPBOOK
-	PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_s);
-	PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_i);
-#endif
+// propbooks are opaque
+PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_s);
+PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_i);
 
 NAMESPACE_BEGIN(pybind11::detail)
 
