@@ -70,7 +70,7 @@ struct any_caster {
 	) -> handle {
 		if(auto src_v = std::any_cast<U>(src)) {
 			if constexpr(std::is_same_v<U, object>)
-				return *src_v;
+				return src_v->release();
 			else
 				return make_caster<U>().cast(*src_v, pol, parent);
 		}
