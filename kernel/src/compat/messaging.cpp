@@ -144,7 +144,7 @@ void bs_signal::fire(std::any sender, std::any param) const {
 }
 
 bool bs_signal::connect(sp_slot slot, std::any sender) const {
-	return pimpl_->connect(slot, std::move(sender));
+	return pimpl_->connect(std::move(slot), std::move(sender));
 }
 
 bool bs_signal::disconnect(sp_slot slot) const {
