@@ -147,7 +147,7 @@ constexpr decltype(auto) get(U&& pdict, std::string_view key) {
 	if(pval != std::forward<U>(pdict).end())
 		return get<T>(pval->second);
 	using namespace std::literals;
-	throw std::out_of_range("No property with name '"s.append(key.data(), key.size()).c_str());
+	throw std::out_of_range("No property with name '"s.append(key.data(), key.size()).append("'").c_str());
 }
 
 template<typename T, typename U>
