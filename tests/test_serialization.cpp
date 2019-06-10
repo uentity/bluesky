@@ -11,15 +11,12 @@
 #include "test_objects.h"
 #include "test_serialization.h"
 #include <bs/kernel/kernel.h>
-#include <bs/property.h>
 #include <bs/propdict.h>
+#include <bs/detail/is_container.h>
 
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/array.h>
-#include <cereal/types/vector.hpp>
-#include <cereal/types/variant.hpp>
-#include <cereal/types/map.hpp>
-#include <cereal/types/chrono.hpp>
+#include <bs/serialize/propdict.h>
 
 #include <boost/test/unit_test.hpp>
 #include <iostream>
@@ -142,5 +139,20 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 	D.ss<timestamp>("now") = make_timestamp();
 	test_json(D["E"]);
 	test_json(D);
+
+	// test that added values are not erased when loading props
+	auto S = test_save<true>(D);
+	D.ss<double>("F") = 3.14;
+	BOOST_TEST(D.has_key("F"));
+	// test added 'F' value isn't cleared when loading
+	test_load<true>(S, D);
+	BOOST_TEST(D.has_key("F"));
+	BOOST_TEST(get<double>(D, "F") == 3.14);
+	bsout() << to_string(D) << bs_end;
+	// test that if read into new propdict, it won't contain 'F'
+	propdict D1;
+	test_load<true>(S, D1);
+	BOOST_TEST(!D1.has_key("F"));
+	bsout() << to_string(D1) << bs_end;
 }
 
