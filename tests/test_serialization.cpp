@@ -12,11 +12,10 @@
 #include "test_serialization.h"
 #include <bs/kernel/kernel.h>
 #include <bs/propdict.h>
-#include <bs/detail/is_container.h>
 
 #include <bs/serialize/base_types.h>
-#include <bs/serialize/array.h>
 #include <bs/serialize/propdict.h>
+#include <bs/serialize/array.h>
 
 #include <boost/test/unit_test.hpp>
 #include <iostream>
