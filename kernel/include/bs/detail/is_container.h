@@ -14,9 +14,6 @@
 
 namespace blue_sky::meta {
 
-/// helper type for SFINAE
-template<typename...> using void_t  = void;
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Test if given type is container-like (can be iterated)
 //
@@ -24,7 +21,7 @@ template<typename T, typename = void>
 struct is_container : std::false_type {};
 
 template<typename T>
-struct is_container<T, void_t<
+struct is_container<T, std::void_t<
 	decltype(std::begin(std::declval<std::decay_t<T>>())),
 	decltype(std::end(std::declval<std::decay_t<T>>()))
 >> : public std::true_type {};
@@ -38,7 +35,7 @@ template<typename T, typename = void>
 struct is_map : std::false_type { using mapped_type = void; };
 
 template<typename T>
-struct is_map<T, std::enable_if_t<is_container_v<T>, void_t<typename T::mapped_type>>> : std::true_type {
+struct is_map<T, std::enable_if_t<is_container_v<T>, std::void_t<typename T::mapped_type>>> : std::true_type {
 	using mapped_type = typename T::mapped_type;
 };
 
