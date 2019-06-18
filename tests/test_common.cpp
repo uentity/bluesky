@@ -12,6 +12,7 @@
 #include <bs/detail/args.h>
 #include <bs/timetypes.h>
 #include <bs/log.h>
+#include <bs/detail/function_view.h>
 
 #include <boost/test/unit_test.hpp>
 #include <fmt/ostream.h>
@@ -96,6 +97,14 @@ void parse_args(Args... args) {
 	BOOST_TEST(r5 == -888.f);
 }
 
+int adder_fn(int x1, int x2) {
+	return x1 + x2;
+}
+
+auto invoke_function_view(function_view<int (int, int)> f, int x1, int x2) {
+	return f(x1, x2);
+}
+
 BOOST_AUTO_TEST_CASE(test_common) {
 	std::cout << "\n\n*** testing bs_args..." << std::endl;
 
@@ -115,5 +124,32 @@ BOOST_AUTO_TEST_CASE(test_common) {
 	BOOST_TEST(to_string(ts - ts) == "0ns");
 	std::cout << "Direct print timestamp: " << to_string(ts) << std::endl;
 	bsout() << "Print timestamp using fmt: {}" << ts << bs_end;
+
+	// test function_view
+	auto fv1 = function_view{adder_fn};
+	BOOST_TEST(fv1(42, 42) == 84);
+	BOOST_TEST(invoke_function_view(fv1, 42, 42) == 84);
+	BOOST_TEST(invoke_function_view(adder_fn, 42, 42) == 84);
+
+	auto f2 = [x0 = 0](int x1, int x2) { return x0 + x1 + x2; };
+	auto fv2 = function_view{f2};
+	BOOST_TEST(fv2(42, 42) == 84);
+	BOOST_TEST(invoke_function_view(fv2, 42, 42) == 84);
+	BOOST_TEST(invoke_function_view(f2, 42, 42) == 84);
+
+	auto f3 = std::function<int (int, int)>(adder_fn);
+	auto fv3 = function_view{f3};
+	BOOST_TEST(fv3(42, 42) == 84);
+	BOOST_TEST(invoke_function_view(fv3, 42, 42) == 84);
+	BOOST_TEST(invoke_function_view(f3, 42, 42) == 84);
+
+	auto f4 = std::plus<int>();
+	auto fv4 = function_view{f4};
+	BOOST_TEST(fv4(42, 42) == 84);
+	BOOST_TEST(invoke_function_view(fv4, 42, 42) == 84);
+	BOOST_TEST(invoke_function_view(f4, 42, 42) == 84);
+
+	// compile failure
+	//auto f4 = function_view{42.};
 }
 
