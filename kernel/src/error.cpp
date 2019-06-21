@@ -76,6 +76,8 @@ error::error(IsQuiet quiet, int ec)
 	if(quiet == IsQuiet::No) dump();
 }
 
+error::error(success_tag) : error(IsQuiet::Yes, Error::OK) {}
+
 // copy & move ctors are default
 error::error(const error& rhs) noexcept = default;
 error::error(error&& rhs) noexcept = default;
