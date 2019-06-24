@@ -111,8 +111,34 @@ public:
 
 	template<typename F, typename... Fs>
 	static auto eval(F&& f, Fs&&... fs) -> error {
-		auto x = f();
-		return x ? x : eval(std::forward<Fs>(fs)...);
+		// detect if f return void, result_or_err or simply error
+		// otherwise raise static assertion
+		using f_result = std::invoke_result_t<F>;
+		const auto eval_f = [](auto&& ff) -> error {
+			if constexpr(std::is_same_v<f_result, error>)
+				return std::invoke<F>(std::forward<F>(ff));
+			else if constexpr(std::is_same_v<f_result, void>) {
+				std::invoke<F>(std::forward<F>(ff));
+				return success_tag{};
+			}
+			else if constexpr(tl::detail::is_expected<f_result>::value) {
+				static_assert(
+					std::is_same_v<typename f_result::error_type, error>,
+					"Returned expected must contain error as second type"
+				);
+				// [NOTE] x.value is ignored!
+				auto x = std::invoke<F>(std::forward<F>(ff));
+				return x ? success_tag{} : x.error();
+			}
+			else
+				static_assert(
+					std::is_same_v<f_result, error>,
+					"Cannot derive error from functor return type"
+				);
+		};
+
+		auto er = eval_f(std::forward<F>(f));
+		return er ? er : eval(std::forward<Fs>(fs)...);
 	}
 
 	/// enable stream printing facility
