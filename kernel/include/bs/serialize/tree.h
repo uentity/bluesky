@@ -9,7 +9,7 @@
 #pragma once
 
 #include "../tree/tree.h"
-#include "serialize.h"
+#include "serialize_decl.h"
 
 // inode
 BSS_FCN_DECL(save, blue_sky::tree::inode)

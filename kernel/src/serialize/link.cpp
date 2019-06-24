@@ -7,10 +7,10 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/serialize/serialize.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/boost_uuid.h>
-#include <bs/serialize/carray.h>
-#include <bs/serialize/base_types.h>
+
 #include "../tree/link_impl.h"
 #include "../tree/fusion_link_impl.h"
 

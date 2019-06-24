@@ -12,8 +12,6 @@
 #include "../detail/tensor_meta.h"
 #include "carray.h"
 
-#include <cereal/types/array.hpp>
-
 namespace cereal {
 template<typename T> using TensorMeta = blue_sky::meta::tensor<T>;
 

@@ -7,10 +7,10 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/serialize/tree.h>
-#include <bs/serialize/base_types.h>
 #include <bs/log.h>
 #include "../tree/node_impl.h"
+#include <bs/serialize/serialize.h>
+#include <bs/serialize/tree.h>
 
 #include <fstream>
 #include <cereal/types/vector.hpp>
@@ -56,7 +56,6 @@ struct leafs_view {
 
 BSS_FCN_INL_BEGIN(serialize, node::node_impl)
 	ar(
-		//make_nvp("handle", t.handle_),
 		make_nvp("allowed_otypes", t.allowed_otypes_),
 		make_nvp("leafs", leafs_view(t.links_))
 	);
@@ -74,8 +73,6 @@ BSS_FCN_BEGIN(serialize, node)
 	// correct owner of all loaded links
 	if(Archive::is_loading::value)
 		t.propagate_owner();
-	//node::links_container tmp;
-	//ar(tmp);
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, node)

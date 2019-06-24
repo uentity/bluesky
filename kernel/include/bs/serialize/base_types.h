@@ -10,7 +10,7 @@
 
 #include "../objbase.h"
 
-#include "serialize.h"
+#include "serialize_decl.h"
 #include "carray.h"
 
 NAMESPACE_BEGIN(blue_sky)

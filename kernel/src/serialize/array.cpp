@@ -11,6 +11,7 @@
 #include <bs/log.h>
 #include <fmt/format.h>
 
+#include <bs/serialize/serialize.h>
 #include <bs/serialize/array.h>
 #include <bs/serialize/base_types.h>
 #include <cereal/types/vector.hpp>

@@ -9,7 +9,8 @@
 
 #include <bs/error.h>
 #include <bs/log.h>
-#include <bs/serialize/base_types.h>
+
+#include <bs/serialize/serialize.h>
 #ifdef BSPY_EXPORTING
 #include <bs/python/common.h>
 #include <bs/serialize/python.h>

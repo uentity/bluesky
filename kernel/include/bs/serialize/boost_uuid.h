@@ -8,8 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "serialize.h"
-#include <cereal/types/common.hpp>
+#include "serialize_decl.h"
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/string_generator.hpp>
