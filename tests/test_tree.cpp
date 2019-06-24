@@ -123,6 +123,12 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	BOOST_TEST(N1);
 	BOOST_TEST(N1->size() == N->size());
 
+	// serialize to FS
+	save_tree(hN, "tree_fs", TreeArchive::FS);
+	load_tree("tree_fs", TreeArchive::FS).map([](const sp_link& hN1) {
+		kernel::tools::print_link(hN1, false);
+	});
+
 	// test async dereference
 	deref_path([](const sp_link& lnk) {
 		std::cout << "*** Async deref callback: link : " <<

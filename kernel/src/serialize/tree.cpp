@@ -82,6 +82,11 @@ NAMESPACE_BEGIN(tree)
  *  tree save/load impl
  *-----------------------------------------------------------------------------*/
 auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar) -> error {
+	if(ar == TreeArchive::FS) {
+		auto ar = tree_fs_output(filename);
+		ar(root);
+		return success();
+	}
 	// open file for writing
 	std::ofstream fs(
 		filename,
@@ -102,6 +107,13 @@ auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar)
 }
 
 auto load_tree(const std::string& filename, TreeArchive ar) -> result_or_err<sp_link> {
+	sp_link res;
+	if(ar == TreeArchive::FS) {
+		auto ar = tree_fs_input(filename);
+		ar(res);
+		return res;
+	}
+
 	// open file for reading
 	std::ifstream fs(
 		filename,
@@ -110,7 +122,6 @@ auto load_tree(const std::string& filename, TreeArchive ar) -> result_or_err<sp_
 	if(!fs) return tl::make_unexpected(error(std::string("Cannot create file {}") + filename));
 
 	// load link from JSON archive
-	sp_link res;
 	if(ar == TreeArchive::Binary) {
 		cereal::PortableBinaryInputArchive ja(fs);
 		ja(res);

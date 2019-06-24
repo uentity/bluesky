@@ -107,6 +107,7 @@ void py_bind_tree(py::module& m) {
 	py::enum_<TreeArchive>(m, "TreeArchive")
 		.value("Text", TreeArchive::Text)
 		.value("Binary", TreeArchive::Binary)
+		.value("FS", TreeArchive::FS)
 	;
 	m.def("save_tree", &save_tree, "root"_a, "filename"_a, "ar"_a = TreeArchive::Text);
 	m.def("load_tree", &load_tree, "filename"_a, "ar"_a = TreeArchive::Text);
