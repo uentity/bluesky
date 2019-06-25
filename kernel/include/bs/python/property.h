@@ -16,14 +16,9 @@
 #include "../property.h"
 #include "../propdict.h"
 
-// [NOTE] making propbooks transparent is much more convinient, but involves making data copies
-// BUT properties aren't dedicated to hold large amount of data
-// downside is that transaprent types can't be modified inplace (because of copies)
-// here's a switch that allows to flip on using opaque propbooks exported by kernel
-#ifdef BSPY_OPAQUE_PROPBOOK
-	PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_s);
-	PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_i);
-#endif
+// propbooks are opaque
+PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_s);
+PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_i);
 
 NAMESPACE_BEGIN(pybind11::detail)
 
@@ -34,6 +29,10 @@ struct type_caster<blue_sky::prop::property> {
 	PYBIND11_TYPE_CASTER(Type, _("property"));
 
 	bool load(handle src, bool convert) {
+		if(src.is_none()) {
+			value = blue_sky::prop::none();
+			return true;
+		}
 		auto caster = make_caster<UType>();
 		if (caster.load(src, convert)) {
 			value = cast_op<UType>(caster);
@@ -44,7 +43,9 @@ struct type_caster<blue_sky::prop::property> {
 
 	template <typename Variant>
 	static handle cast(Variant &&src, return_value_policy policy, handle parent) {
-		return make_caster<UType>::cast(std::forward<Variant>(src), policy, parent);
+		return blue_sky::prop::is_none(src) ?
+			pybind11::none().release() :
+			make_caster<UType>::cast(std::forward<Variant>(src), policy, parent);
 	}
 };
 

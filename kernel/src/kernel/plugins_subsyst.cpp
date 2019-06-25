@@ -68,52 +68,6 @@ plugins_subsyst::plugins_subsyst() {
 
 plugins_subsyst::~plugins_subsyst() {}
 
-std::pair< const plugin_descriptor*, bool >
-plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) {
-	// deny registering nil plugin descriptors
-	if(!pd) return {&plugin_descriptor::nil(), false};
-
-	// find or insert passed plugin_descriptor
-	auto res = loaded_plugins_.emplace(pd, ld);
-	auto pplug = res.first->first;
-
-	// if plugin with same name was already registered
-	if(!res.second) {
-		if(pplug->is_nil() && !pd->is_nil()) {
-			// replace temp nil plugin with same name
-			loaded_plugins_.erase(res.first);
-			res = loaded_plugins_.emplace(pd, ld);
-			pplug = res.first->first;
-		}
-		else if(!res.first->second.handle_ && ld.handle_) {
-			// update lib descriptor to valid one
-			res.first->second = ld;
-			return {pplug, true};
-		}
-	}
-
-	// for newly inserted valid (non-nill) plugin descriptor
-	// update types that previousely referenced it by name
-	if(res.second && !pplug->is_nil()) {
-		auto& plug_name_view = types_.get< plug_name_key >();
-		auto ptypes = plug_name_view.equal_range(pplug->name);
-		for(auto ptype = ptypes.first; ptype != ptypes.second; ++ptype) {
-			plug_name_view.replace(ptype, type_tuple{*pplug, ptype->td()});
-		}
-
-		// remove entry from temp plugins if any
-		// temp plugins are always nill
-		auto tplug = temp_plugins_.find(*pplug);
-		if(tplug != temp_plugins_.end())
-			temp_plugins_.erase(tplug);
-
-		// merge serialization bindings maps
-		unify_serialization();
-	}
-
-	return {pplug, res.second};
-}
-
 void plugins_subsyst::clean_plugin_types(const plugin_descriptor& pd) {
 	// we cannot clear kernel internal types
 	if(pd == kernel_pd()) return;
@@ -243,11 +197,36 @@ auto plugins_subsyst::load_plugins() -> error {
 	return err_messages.empty() ? success() : error::quiet(err_messages);
 }
 
-namespace {
+NAMESPACE_BEGIN()
+// print types registered in passed bindings map
+template<typename bindings_t>
+void print_serial_map(
+	void* pB, std::string_view domain
+) {
+	auto B = reinterpret_cast<bindings_t*>(pB);
+	bsout() << "----> [{} at {}]" << domain << pB << bs_end;
+	if(!B) {
+		bsout() << "No bindings" << bs_end;
+	}
+	else {
+		//using Archives_map = typename bindings_t::Archives_map;
+		for(const auto& ar : B->archives_map) {
+			bsout() << "Archive [{}]" << ar.first.name() << bs_end;
+			for(const auto& ar_bnd : ar.second) {
+				if constexpr(std::is_same_v<std::type_index, std::decay_t<decltype(ar_bnd.first)>>)
+					bsout() << "  {}" << ar_bnd.first.name() << bs_end;
+				else
+					bsout() << "  {}" << ar_bnd.first << bs_end;
+			}
+		}
+	}
+	bsout() << "<----" << bs_end;
+}
+
 // helper to unify input or output bindings
 template<typename bindings_t>
 auto unify_bindings(const plugins_subsyst& K, void *const plugin_descriptor::*binding_var) {
-	using Serializers_map = typename bindings_t::Serializers_map;
+	//using Serializers_map = typename bindings_t::Serializers_map;
 	using Archives_map = typename bindings_t::Archives_map;
 	Archives_map united;
 	bindings_t* plug_bnd = nullptr;
@@ -290,9 +269,12 @@ auto unify_bindings(const plugins_subsyst& K, void *const plugin_descriptor::*bi
 		// merge all entries from plugin into united
 		merge_bindings(united, plug_bnd->archives_map);
 	}
+
+	// [DEBUG]
+	//print_serial_map<bindings_t>((void*)&united, "United serial map");
 }
 
-} // eof hidden namespace
+NAMESPACE_END()
 
 void plugins_subsyst::unify_serialization() const {
 	unify_bindings<cereal::detail::InputBindingMap>(
@@ -301,6 +283,60 @@ void plugins_subsyst::unify_serialization() const {
 	unify_bindings<cereal::detail::OutputBindingMap>(
 		*this, &plugin_descriptor::serial_output_bindings
 	);
+}
+
+std::pair< const plugin_descriptor*, bool >
+plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descriptor& ld) {
+	// deny registering nil plugin descriptors
+	if(!pd) return {&plugin_descriptor::nil(), false};
+
+	// find or insert passed plugin_descriptor
+	auto res = loaded_plugins_.emplace(pd, ld);
+	auto pplug = res.first->first;
+
+	// if plugin with same name was already registered
+	if(!res.second) {
+		if(pplug->is_nil() && !pd->is_nil()) {
+			// replace temp nil plugin with same name
+			loaded_plugins_.erase(res.first);
+			res = loaded_plugins_.emplace(pd, ld);
+			pplug = res.first->first;
+		}
+		else if(!res.first->second.handle_ && ld.handle_) {
+			// update lib descriptor to valid one
+			res.first->second = ld;
+			return {pplug, true};
+		}
+	}
+
+	// for newly inserted valid (non-nill) plugin descriptor
+	// update types that previousely referenced it by name
+	if(res.second && !pplug->is_nil()) {
+		auto& plug_name_view = types_.get< plug_name_key >();
+		auto ptypes = plug_name_view.equal_range(pplug->name);
+		for(auto ptype = ptypes.first; ptype != ptypes.second; ++ptype) {
+			plug_name_view.replace(ptype, type_tuple{*pplug, ptype->td()});
+		}
+
+		// remove entry from temp plugins if any
+		// temp plugins are always nill
+		auto tplug = temp_plugins_.find(*pplug);
+		if(tplug != temp_plugins_.end())
+			temp_plugins_.erase(tplug);
+
+		// [DEBUG]
+		//print_serial_map<cereal::detail::InputBindingMap>(
+		//	pd->serial_input_bindings, pd->name + " input serial bindings"
+		//);
+		//print_serial_map<cereal::detail::OutputBindingMap>(
+		//	pd->serial_output_bindings, pd->name + " output serial bindings"
+		//);
+
+		// merge serialization bindings maps
+		unify_serialization();
+	}
+
+	return {pplug, res.second};
 }
 
 NAMESPACE_END(blue_sky::kernel::detail)

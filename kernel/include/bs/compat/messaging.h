@@ -24,7 +24,7 @@ class BS_API bs_slot {
 public:
 	typedef std::shared_ptr< bs_slot > sp_slot;
 
-	virtual void execute(sp_cobj sender, int signal_code, sp_obj param) const = 0;
+	virtual void execute(std::any sender, int signal_code, std::any param) const = 0;
 	virtual ~bs_slot();
 };
 using sp_slot = bs_slot::sp_slot;
@@ -47,12 +47,12 @@ public:
 	int get_code() const;
 
 	// if sender != nullptr then slot will be activated only for given sender
-	bool connect(const sp_slot& slot, const sp_cobj& sender = nullptr) const;
-	bool disconnect(const sp_slot& slot) const;
+	bool connect(sp_slot slot, std::any sender = {}) const;
+	bool disconnect(sp_slot slot) const;
 	ulong num_slots() const;
 
 	//call slots, connected to this signal
-	void fire(const sp_cobj& sender = nullptr, const sp_obj& param = nullptr) const;
+	void fire(std::any sender = {}, std::any param = {}) const;
 
 private:
 	class signal_impl;
@@ -80,10 +80,10 @@ public:
 
 	typedef std::pair< int, int > sig_range_t;
 
-	bool subscribe(int signal_code, const sp_slot& slot) const;
-	bool unsubscribe(int signal_code, const sp_slot& slot) const;
+	bool subscribe(int signal_code, sp_slot slot) const;
+	bool unsubscribe(int signal_code, sp_slot slot) const;
 	ulong num_slots(int signal_code) const;
-	bool fire_signal(int signal_code, const sp_obj& param = nullptr, const sp_cobj& sender = nullptr) const;
+	bool fire_signal(int signal_code, std::any param = {}, std::any sender = nullptr) const;
 	std::vector< int > get_signal_list() const;
 
 	// default ctor - doesn't add any signals

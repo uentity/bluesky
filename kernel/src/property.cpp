@@ -37,7 +37,12 @@ auto& operator <<(std::ostream& os, const std::vector<T>& x) {
 }
 
 std::ostream& operator <<(std::ostream& os, const property& x) {
-	return visit([&os](auto&& v){ printv(os, v); }, x), os;
+	return visit([&os](auto&& v){
+		if(!is_none(v))
+			printv(os, v);
+		else
+			os << "None";
+	}, x), os;
 }
 
 std::string to_string(const property& p) {

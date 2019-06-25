@@ -124,8 +124,8 @@ constexpr auto get_or(const property* p, const T& def_value) -> const T& {
 		return def_value;
 }
 
-/// tries to find value by given key
-/// if value isn't found, target value is not modified
+/// Tries to extract value of type `From`
+/// If property doesn't hold such alternative,
 /// return if value was found and updated
 template<typename From = void, typename To = void>
 constexpr bool extract(const property& source, To& target) {
@@ -138,6 +138,13 @@ constexpr bool extract(const property& source, To& target) {
 		return false;
 	}
 }
+
+/// check if property holds 'None' value (null `sp_obj`)
+constexpr bool is_none(const property& P) {
+	return std::holds_alternative<object>(P) && get<object>(P) == nullptr;
+}
+
+inline auto none() { return property{ sp_obj() }; }
 
 /// custom analog of `std::visit` to fix compile issues with VS
 template<

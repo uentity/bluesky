@@ -30,7 +30,7 @@ typedef void (*bs_init_py_fn)(void*);
 /*-----------------------------------------------------------------------------
  *  macro definitions
  *-----------------------------------------------------------------------------*/
-// init Python subsystem in BS plugin
+/// init Python subsystem in BS plugin
 #define BS_INIT_PY(mod_name)                                                              \
 static void bs_init_py_subsystem_##mod_name(pybind11::module&);                           \
 BS_C_API_PLUGIN void bs_init_py_subsystem(void* py_plugin_module) {                       \
@@ -42,23 +42,7 @@ PYBIND11_MODULE(mod_name, m) {                                                  
 }                                                                                         \
 void bs_init_py_subsystem_##mod_name(pybind11::module& m)
 
-// this macro turns on `pyobj` property in any BS type T (`pyobj` is enabled for objbase)
-// to use it you *have* to declare constructors with `py::init_alias`
-// and *have trampoline class* derived from py_object<T>
-#define BSPY_ENABLE_PYOBJ_(T_tup)                                                      \
-.def_property("pyobj", [](const BOOST_PP_TUPLE_ENUM(T_tup)& src) -> py::object {       \
-    return static_cast<const py_object< BOOST_PP_TUPLE_ENUM(T_tup) >&>(src).pyobj;     \
-}, [](BOOST_PP_TUPLE_ENUM(T_tup)& src, py::object value) {                             \
-    static_cast<py_object<BOOST_PP_TUPLE_ENUM(T_tup)>&>(src).pyobj = std::move(value); \
-})
-// for types with <= 1 template params
-#define BSPY_ENABLE_PYOBJ(T) \
-BSPY_ENABLE_PYOBJ_((T))
-// for types with > 1 template params
-#define BSPY_ENABLE_PYOBJ_T(T, T_spec_tup) \
-BSPY_ENABLE_PYOBJ_((T<T_spec_tup>))
-
-// adds some required objbase API, for ex. bs_type(), to Python class interface
+/// adds some required objbase API, for ex. bs_type(), to Python class interface
 #define BSPY_EXPORT_DEF_(T_tup)                                \
 .def_property_readonly_static("bs_type", [](pybind11::object){ \
     return BOOST_PP_TUPLE_ENUM(T_tup)::bs_type();              \
@@ -78,7 +62,12 @@ BSPY_EXPORT_DEF_((T<T_spec_tup>))
         err_ctor.execute(err_class);                                                  \
         pybind11::implicitly_convertible<E, std::error_code>();                       \
     }                                                                                 \
-}();                                                                                  \
+}();
+
+/// add extra types that can passthrogh via `std::any`
+// [NOTE] define this BEFORE including <bs/python/any.h>
+#define BSPY_ANY_CAST_EXTRA(...) \
+namespace pybind11::detail { struct any_cast_extra { using type = type_list<__VA_ARGS__>; }; }
 
 NAMESPACE_BEGIN(blue_sky::python)
 
@@ -91,15 +80,9 @@ using namespace pybind11::literals;
 template<typename Object = objbase>
 class py_object : public Object {
 public:
-	// objbase can carry any Python instance
-	py::object pyobj = py::none();
-
 	// import derived type ctors
 	using Object::Object;
 	py_object() = default;
-
-	// construct from any Python object
-	py_object(py::object o) : pyobj(std::move(o)) {}
 
 	const type_descriptor& bs_resolve_type() const override {
 		PYBIND11_OVERLOAD(
