@@ -231,8 +231,6 @@ protected:
 
 private:
 	auto data_impl() const -> result_or_err<sp_obj> override;
-
-	//result_or_err<sp_node> data_node_impl() const override;
 };
 
 /*-----------------------------------------------------------------------------
@@ -276,8 +274,8 @@ public:
 	auto type_id() const -> std::string override;
 
 	/// additional sym link API
-	/// check is pointed link is alive
-	auto is_alive() const -> bool;
+	/// check is pointed link is alive, sets Data status to proper state
+	auto check_alive() -> bool;
 
 	/// return stored pointee path
 	auto src_path(bool human_readable = false) const -> std::string;
