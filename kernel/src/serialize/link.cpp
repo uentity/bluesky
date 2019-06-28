@@ -18,6 +18,8 @@
 
 using namespace cereal;
 using namespace blue_sky;
+using Req = blue_sky::tree::link::Req;
+using ReqStatus = blue_sky::tree::link::ReqStatus;
 
 /*-----------------------------------------------------------------------------
  *  inode
@@ -61,16 +63,13 @@ BSS_FCN_EXPORT(load, tree::inode)
 BSS_FCN_BEGIN(serialize, tree::link)
 	// [NOTE] intentionally DON'T save name,
 	// because name will be saved in derived classes to invoke minimal constructor
-	// also do not save owner, because owner will be correctly set by `node`
 	// [NOTE] intentionally do net serialize owner, it will be set up when parent node is loaded
 	ar(
 		make_nvp("id", t.pimpl_->id_),
-		make_nvp("flags", t.pimpl_->flags_),
-		make_nvp("data_status", t.pimpl_->status_[0].value),
-		make_nvp("data_node_status", t.pimpl_->status_[1].value)
+		make_nvp("flags", t.pimpl_->flags_)
 	);
 	// assume link is root by default -- it's safe when restoring link or tree from archive
-	if(typename Archive::is_loading())
+	if constexpr(Archive::is_loading::value)
 		t.propagate_handle();
 BSS_FCN_END
 
@@ -94,13 +93,31 @@ BSS_FCN_EXPORT(serialize, tree::ilink)
  *-----------------------------------------------------------------------------*/
 // provide non-empty constructor
 BSS_FCN_BEGIN(load_and_construct, tree::hard_link)
-	// load name? data & construct instance
+	// load name & construct instance
 	std::string name;
-	sp_obj data;
-	ar(name, data);
-	construct(std::move(name), std::move(data));
+	ar(name);
+	construct(std::move(name), sp_obj{});
+	auto plnk = construct.ptr();
+
+	// helper that sets OK status on successfull object deserialization
+	static const auto update_status = [](auto& L) {
+		L.data_impl().map([&L](const sp_obj& obj) {
+			if(!obj) return;
+			L.rs_reset(Req::Data, ReqStatus::OK);
+			if(obj->is_node())
+				L.rs_reset(Req::DataNode, ReqStatus::OK);
+		});
+	};
+	// load data with deferred 2nd trial
+	ar( defer_failed(plnk->data_, [plnk](sp_obj obj) {
+		plnk->data_ = std::move(obj);
+		update_status(*plnk);
+	}) );
+	// if 1st trial succeeded, update status
+	update_status(*plnk);
+
 	// load base link
-	ar( make_nvp("linkbase", base_class<tree::ilink>(construct.ptr())) );
+	ar( base_class<tree::ilink>(plnk) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::hard_link)
@@ -119,13 +136,33 @@ BSS_FCN_EXPORT(load_and_construct, tree::hard_link)
  *-----------------------------------------------------------------------------*/
 // provide non-empty constructor
 BSS_FCN_BEGIN(load_and_construct, tree::weak_link)
-	// load name? data & construct instance
+	// load name & construct instance
 	std::string name;
+	ar(name);
 	sp_obj data;
-	ar(name, data);
-	construct(std::move(name), std::move(data));
+	construct(std::move(name), data);
+	auto plnk = construct.ptr();
+
+	// helper that sets OK status on successfull object deserialization
+	static const auto update_status = [](auto& L) {
+		L.data_impl().map([&L](const sp_obj& obj) {
+			if(!obj) return;
+			L.rs_reset(Req::Data, ReqStatus::OK);
+			if(obj->is_node())
+				L.rs_reset(Req::DataNode, ReqStatus::OK);
+		});
+	};
+	// load data with deferred 2nd trial
+	ar( defer_failed(data, [plnk](const sp_obj& obj) {
+		plnk->data_ = obj;
+		update_status(*plnk);
+	}) );
+	// if 1st trial succeeded, update status
+	if(data) plnk->data_ = data;
+	update_status(*plnk);
+
 	// load base link
-	ar( make_nvp("linkbase", base_class<tree::ilink>(construct.ptr())) );
+	ar( base_class<tree::ilink>(plnk) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::weak_link)
@@ -148,8 +185,12 @@ BSS_FCN_BEGIN(load_and_construct, tree::sym_link)
 	std::string name, path;
 	ar(name, path);
 	construct(std::move(name), std::move(path));
+	auto plnk = construct.ptr();
+
 	// load base link
-	ar( make_nvp("linkbase", base_class<tree::link>(construct.ptr())) );
+	ar( base_class<tree::link>(plnk) );
+	// defer update symlink Data status
+	ar( defer(Functor{ [plnk](auto&) { plnk->check_alive(); } }) );
 BSS_FCN_END
 
 BSS_FCN_BEGIN(serialize, tree::sym_link)
@@ -169,22 +210,23 @@ BSS_FCN_EXPORT(load_and_construct, tree::sym_link)
 BSS_FCN_BEGIN(serialize, tree::fusion_link)
 	ar(
 		make_nvp("name", static_cast<tree::link&>(t).pimpl_->name_),
-		make_nvp("data", t.pimpl_->data_),
 		make_nvp("bridge", t.pimpl_->bridge_),
 		make_nvp("linkbase", base_class<tree::ilink>(&t))
 	);
 BSS_FCN_END
 
 BSS_FCN_BEGIN(load_and_construct, tree::fusion_link)
-	// load base data & construct instance
+	// load name & construct instance
 	std::string name;
-	tree::sp_node data;
-	tree::sp_fusion bridge;
-	ar(name, data, bridge);
-	construct(std::move(name), std::move(data), std::move(bridge));
-	auto& t = *construct.ptr();
+	ar(name);
+	construct(std::move(name), tree::sp_node{}, tree::sp_fusion{});
+	auto plnk = construct.ptr();
+
+	// load bridge with deferred trial
+	ar( defer_failed(plnk->pimpl_->bridge_) );
+
 	// base link
-	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
+	ar( base_class<tree::ilink>(plnk) );
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::fusion_link)
