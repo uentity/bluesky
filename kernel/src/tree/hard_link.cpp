@@ -72,11 +72,6 @@ result_or_err<sp_obj> weak_link::data_impl() const {
 	return data_.expired() ?
 		tl::make_unexpected(error::quiet(Error::LinkExpired)) :
 		result_or_err<sp_obj>(data_.lock());
-	//if(data_.expired())
-	//	return tl::make_unexpected(error::quiet("Link expired"));
-	//else if(auto obj = data_.lock())
-	//	return obj;
-	//return tl::make_unexpected(error::quiet("Empty data"));
 }
 
 NAMESPACE_END(blue_sky::tree)
