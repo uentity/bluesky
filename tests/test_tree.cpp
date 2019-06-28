@@ -10,6 +10,7 @@
 #define BOOST_TEST_DYN_LINK
 
 #include "test_objects.h"
+#include "test_serialization.h"
 #include <bs/kernel/kernel.h>
 #include <bs/kernel/tools.h>
 #include <bs/log.h>
@@ -28,31 +29,6 @@ using namespace blue_sky::log;
 using namespace blue_sky::tree;
 
 namespace {
-
-template<typename T>
-auto test_json(const T& obj) {
-	using namespace blue_sky;
-	using namespace blue_sky::log;
-
-	std::string dump;
-	// dump object into string
-	std::stringstream ss;
-	{
-		cereal::JSONOutputArchive ja(ss);
-		ja(obj);
-		dump = ss.str();
-		bsout() << I("JSON dump\n: {}", dump) << end;
-	}
-	// load object from dump
-	T obj1;
-	{
-		//std::istringstream is(dump);
-		cereal::JSONInputArchive ja(ss);
-		ja(obj1);
-	}
-	BOOST_TEST(obj->id() == obj1->id());
-	return obj1;
-}
 
 class fusion_client : public fusion_iface {
 	auto populate(const sp_node& root, const std::string& child_type_id = "") -> error override {
@@ -118,12 +94,14 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 
 	// serializze node
 	auto N1 = test_json(N);
+
 	// print loaded tree content
 	kernel::tools::print_link(std::make_shared<hard_link>("r", N1), false);
 	BOOST_TEST(N1);
 	BOOST_TEST(N1->size() == N->size());
 
 	// serialize to FS
+	bsout() << "\n===========================\n" << bs_end;
 	save_tree(hN, "tree_fs", TreeArchive::FS);
 	load_tree("tree_fs", TreeArchive::FS).map([](const sp_link& hN1) {
 		kernel::tools::print_link(hN1, false);
@@ -132,7 +110,8 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	// test async dereference
 	deref_path([](const sp_link& lnk) {
 		std::cout << "*** Async deref callback: link : " <<
-		(lnk ? abspath(lnk, node::Key::Name) : "None") << std::endl;
+		(lnk ? abspath(lnk, node::Key::Name) : "None") << ' ' <<
+		lnk->obj_type_id() << ' ' << (void*)lnk->data().get() << std::endl;
 	}, "hard_Citizen_0", hN, node::Key::Name);
 
 	// fusion link

@@ -195,7 +195,7 @@ inline auto save(blue_sky::tree_fs_output&, SizeTag<T> const&) -> void {}
 //  prologue/epilogue for misc types - repeat JSONOutputArchive
 //
 
-// write empty prologue/epilogue for corresponding types
+// empty prologue/epilogue for corresponding types
 template< typename T>
 inline auto prologue(blue_sky::tree_fs_output& ar, T const&)
 -> std::enable_if_t<blue_sky::tree_fs_output::has_empty_prologue<T>>

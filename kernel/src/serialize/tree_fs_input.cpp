@@ -165,6 +165,8 @@ struct tree_fs_input::impl {
 				dump_error(ex);
 			}
 		}
+		// correct owner of all loaded links
+		N.propagate_owner();
 
 		auto er = enter_dir(cur_path_.parent_path(), cur_path_);
 		return united_err_msg.empty() ?

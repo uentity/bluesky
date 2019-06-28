@@ -111,6 +111,7 @@ auto load_tree(const std::string& filename, TreeArchive ar) -> result_or_err<sp_
 	if(ar == TreeArchive::FS) {
 		auto ar = tree_fs_input(filename);
 		ar(res);
+		ar.serializeDeferments();
 		return res;
 	}
 

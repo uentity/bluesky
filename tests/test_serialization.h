@@ -71,6 +71,7 @@ auto test_load(typename select_archives<Binary>::StreamData data, T& obj) -> voi
 	{
 		InputArchive ja(S);
 		ja(obj);
+		ja.serializeDeferments();
 	}
 }
 

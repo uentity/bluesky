@@ -27,8 +27,7 @@ class BS_API tree_fs_input :
 public:
 	using Base = cereal::InputArchive<tree_fs_input>;
 	friend Base;
-	// indicate that polymorphic names will always be emitted
-	static constexpr auto always_emit_polymorphic_name = true;
+	// tweak serialization behaviour to better support out-of-order loading
 	static constexpr auto always_emit_class_version = true;
 
 	tree_fs_input(
@@ -193,7 +192,7 @@ inline auto load(blue_sky::tree_fs_input& ar, SizeTag<T>& t) -> void {
 //  prologue/epilogue for misc types - repeat JSONOutputArchive
 //
 
-// write empty prologue/epilogue for corresponding types
+// empty prologue/epilogue for corresponding types
 template< typename T>
 inline auto prologue(blue_sky::tree_fs_input& ar, T const&)
 -> std::enable_if_t<blue_sky::tree_fs_input::has_empty_prologue<T>>
