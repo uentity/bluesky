@@ -30,10 +30,10 @@ class BS_HIDDEN_API kimpl :
 public:
 	// per-type kernel any arrays storage
 	using str_any_map_t = std::map< std::string, str_any_array, std::less<> >;
-	str_any_map_t str_any_map_;
+	str_any_map_t str_key_storage_;
 
 	using idx_any_map_t = std::map< std::string, idx_any_array, std::less<> >;
-	idx_any_map_t idx_any_map_;
+	idx_any_map_t idx_key_storage_;
 
 	// kernel's actor system
 	// delayed actor system initialization
@@ -52,9 +52,9 @@ public:
 	using type_tuple = tfactory::type_tuple;
 	auto find_type(const std::string& key) const -> type_tuple;
 
-	auto pert_str_any_array(const std::string& master) -> str_any_array&;
+	auto str_key_storage(const std::string& key) -> str_any_array&;
 
-	auto pert_idx_any_array(const std::string& master) -> idx_any_array&;
+	auto idx_key_storage(const std::string& key) -> idx_any_array&;
 
 	auto actor_system() -> caf::actor_system&;
 };
