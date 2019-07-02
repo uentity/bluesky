@@ -34,9 +34,27 @@ NAMESPACE_BEGIN(blue_sky)
 //
 struct tree_fs_input::impl {
 
-	impl(std::string root_dirname, std::string data_fname) :
-		root_dname_(std::move(root_dirname)), data_fname_(std::move(data_fname))
-	{}
+	impl(std::string root_fname) :
+		root_fname_(std::move(root_fname))
+	{
+		// try convert root filename to absolute
+		auto root_path = fs::path(root_fname_);
+		auto abs_root = fs::absolute(root_path, file_er_);
+		if(!file_er_) {
+			// extract root dir from absolute filename
+			root_dname_ = abs_root.parent_path().string();
+			root_fname_ = abs_root.filename().string();
+		}
+		else if(root_path.has_parent_path()) {
+			// could not make abs path
+			root_dname_ = root_path.parent_path().string();
+			root_fname_ = root_path.filename().string();
+		}
+		else {
+			// best we can do
+			root_dname_ = fs::current_path(file_er_).string();
+		}
+	}
 
 	auto make_error(error&& cust_er = perfect) -> error {
 		return file_er_ ?
@@ -91,7 +109,7 @@ struct tree_fs_input::impl {
 		if(heads_.empty()) {
 			if(auto er = error::eval(
 				[&]{ return enter_root(); },
-				[&]{ return add_head(fs::path(root_path_) / data_fname_); }
+				[&]{ return add_head(fs::path(root_path_) / root_fname_); }
 			))
 				return tl::make_unexpected(std::move(er));
 
@@ -208,7 +226,7 @@ struct tree_fs_input::impl {
 		else return { fmt::format("Cannot open file '{}' for reading", obj_path) };
 	}
 
-	std::string root_dname_, data_fname_, objects_dname_, obj_frm_;
+	std::string root_fname_, root_dname_, objects_dname_, obj_frm_;
 	std::error_code file_er_;
 	fs::path root_path_, cur_path_, objects_path_;
 
@@ -219,12 +237,8 @@ struct tree_fs_input::impl {
 ///////////////////////////////////////////////////////////////////////////////
 //  input archive
 //
-tree_fs_input::tree_fs_input(
-	std::string root_path, std::string data_fname, std::string objects_dir
-)
-	: Base(this), pimpl_{std::make_unique<impl>(
-		std::move(root_path), std::move(data_fname)
-	)}
+tree_fs_input::tree_fs_input(std::string root_fname)
+	: Base(this), pimpl_{ std::make_unique<impl>(std::move(root_fname)) }
 {}
 
 tree_fs_input::~tree_fs_input() = default;

@@ -28,10 +28,7 @@ public:
 	static constexpr auto always_emit_class_version = true;
 	static constexpr auto custom_node_serialization = true;
 
-	tree_fs_input(
-		std::string root_dir, std::string root_fname = ".data",
-		std::string objects_dir = ".objects"
-	);
+	tree_fs_input(std::string root_fname);
 	~tree_fs_input();
 
 	// retrive stream for archive's head (if any)

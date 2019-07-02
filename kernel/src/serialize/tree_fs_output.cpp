@@ -29,15 +29,33 @@
 namespace fs = std::filesystem;
 
 NAMESPACE_BEGIN(blue_sky)
+
 ///////////////////////////////////////////////////////////////////////////////
 //  tree_fs_output::impl
 //
 struct tree_fs_output::impl {
 
-	impl(std::string root_dirname, std::string data_fname, std::string objects_dirname) :
-		root_dname_(std::move(root_dirname)), data_fname_(std::move(data_fname)),
-		objects_dname_(std::move(objects_dirname))
-	{}
+	impl(std::string root_fname, std::string objects_dirname) :
+		root_fname_(std::move(root_fname)), objects_dname_(std::move(objects_dirname))
+	{
+		// try convert root filename to absolute
+		auto root_path = fs::path(root_fname_);
+		auto abs_root = fs::absolute(root_path, file_er_);
+		if(!file_er_) {
+			// extract root dir from absolute filename
+			root_dname_ = abs_root.parent_path().string();
+			root_fname_ = abs_root.filename().string();
+		}
+		else if(root_path.has_parent_path()) {
+			// could not make abs path
+			root_dname_ = root_path.parent_path().string();
+			root_fname_ = root_path.filename().string();
+		}
+		else {
+			// best we can do
+			root_dname_ = fs::current_path(file_er_).string();
+		}
+	}
 
 	auto make_error(error&& cust_er = perfect) -> error {
 		return file_er_ ?
@@ -93,7 +111,7 @@ struct tree_fs_output::impl {
 	auto head() -> result_or_err<cereal::JSONOutputArchive*> {
 		if(heads_.empty()) {
 			if(auto er = enter_root()) return tl::make_unexpected(std::move(er));
-			if(auto er = add_head(fs::path(root_path_) / data_fname_))
+			if(auto er = add_head(fs::path(root_path_) / root_fname_))
 				return tl::make_unexpected(std::move(er));
 			else {
 				// write objects directory
@@ -202,7 +220,7 @@ struct tree_fs_output::impl {
 		return false;
 	}
 
-	std::string root_dname_, data_fname_, objects_dname_;
+	std::string root_fname_, objects_dname_, root_dname_;
 	std::error_code file_er_;
 	fs::path root_path_, cur_path_, objects_path_;
 
@@ -218,11 +236,9 @@ struct tree_fs_output::impl {
 //  output archive
 //
 tree_fs_output::tree_fs_output(
-	std::string root_path, std::string data_fname, std::string objects_dir
+	std::string root_fname, std::string objects_dir
 )
-	: Base(this), pimpl_{std::make_unique<impl>(
-		std::move(root_path), std::move(data_fname), std::move(objects_dir)
-	)}
+	: Base(this), pimpl_{ std::make_unique<impl>(std::move(root_fname), std::move(objects_dir)) }
 {}
 
 tree_fs_output::~tree_fs_output() = default;

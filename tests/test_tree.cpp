@@ -102,8 +102,8 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 
 	// serialize to FS
 	bsout() << "\n===========================\n" << bs_end;
-	save_tree(hN, "tree_fs", TreeArchive::FS);
-	load_tree("tree_fs", TreeArchive::FS).map([](const sp_link& hN1) {
+	save_tree(hN, "tree_fs/.data", TreeArchive::FS);
+	load_tree("tree_fs/.data", TreeArchive::FS).map([](const sp_link& hN1) {
 		kernel::tools::print_link(hN1, false);
 	});
 
