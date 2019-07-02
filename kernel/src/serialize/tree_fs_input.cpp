@@ -15,8 +15,6 @@
 #include <bs/tree/node.h>
 
 #include <cereal/types/vector.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/string_generator.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
@@ -95,7 +93,7 @@ struct tree_fs_input::impl {
 			heads_.emplace_back(necks_.back());
 			return perfect;
 		}
-		else return { fmt::format("Cannot open file '{}' for writing", head_path.string()) };
+		else return { fmt::format("Cannot open file '{}' for reading", head_path.string()) };
 	}
 
 	auto pop_head() -> void {
@@ -119,39 +117,7 @@ struct tree_fs_input::impl {
 		return &heads_.back();
 	}
 
-	//auto begin_link(const tree::sp_link& L) -> error {
-	//	if(auto er = enter_root()) return er;
-	//	if(cur_path_ == root_path_) return perfect;
-
-	//	return add_head(cur_path_ / to_string(L->id()));
-	//}
-
-	//auto end_link() -> error {
-	//	if(heads_.size() == 1) return error::quiet("No link file started");
-	//	pop_head();
-	//	return perfect;
-	//}
-
-	auto begin_node(const tree::node& N) -> error {
-		// read node's relative path
-		std::string node_dir;
-		return error::eval(
-			// read node's relative path
-			[&]{ return head().map( [&](auto* ar){
-				// read node's directory
-				(*ar)(cereal::make_nvp("node_dir", node_dir));
-				// read leafs order
-				std::vector<std::string> leafs_order;
-				(*ar)(cereal::make_nvp("leafs_order", leafs_order));
-			}); },
-			[&]{ return enter_root(); },
-			[&]{ return enter_dir(root_path_ / node_dir, cur_path_); }
-		);
-	}
-
-	auto end_node(tree_fs_input& ar, tree::node& N) -> error {
-		if(cur_path_.empty() || cur_path_ == root_path_) return {"No node saving were started"};
-
+	auto load_node(tree_fs_input& ar, tree::node& N, const std::vector<std::string>& leafs_order) -> error {
 		// loaded node in most cases will be empty (leafs are serialized to individual files)
 		// fill leafs by scanning directory and loading link files
 		file_er_.clear();
@@ -187,22 +153,45 @@ struct tree_fs_input::impl {
 		// correct owner of all loaded links
 		N.propagate_owner();
 
-		auto er = enter_dir(cur_path_.parent_path(), cur_path_);
-		return united_err_msg.empty() ?
-			(er ? er : perfect) :
-			(er ?
-				error{fmt::format("{} | {}", er.what(), std::move(united_err_msg)), er.code} :
-				std::move(united_err_msg)
-			);
+		if(united_err_msg.empty()) return perfect;
+		else return united_err_msg;
+	}
+
+	auto begin_node(tree_fs_input& ar, const tree::node& N) -> error {
+		return error::eval(
+			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); },
+			[&]{ return enter_root(); }
+		);
+	}
+
+	auto end_node(tree_fs_input& ar, tree::node& N) -> error {
+		if(cur_path_.empty()) return {"No node loading were started"};
+
+		std::string node_dir;
+		std::vector<std::string> leafs_order;
+		return error::eval(
+			// read node's metadata
+			[&]{ return head().map( [&](auto* ar){
+				(*ar)(cereal::make_nvp("node_dir", node_dir));
+				(*ar)(cereal::make_nvp("leafs_order", leafs_order));
+				// we finished reading node
+				epilogue(*ar, N);
+			}); },
+			// enter node's directory
+			[&]{ return enter_dir(cur_path_ / node_dir, cur_path_); },
+			// load leafs
+			[&]{ return load_node(ar, N, leafs_order); },
+			// enter parent dir
+			[&] { return enter_dir(cur_path_.parent_path(), cur_path_); }
+		);
 	}
 
 	auto load_object(tree_fs_input& ar, objbase& obj) -> error {
-		// open node & close on exit
 		auto cur_head = head();
-		cur_head.map([](auto* jar) { jar->startNode(); });
-		auto finally = scope_guard{ [&]{
-			cur_head.map([](auto* jar) { jar->finishNode(); });
-		} };
+		if(!cur_head) return cur_head.error();
+		// open node & close on exit
+		prologue(*cur_head.value(), obj);
+		auto finally = scope_guard{ [&]{ epilogue(*cur_head.value(), obj); } };
 
 		// read object format & filename
 		std::string obj_filename;
@@ -253,16 +242,8 @@ auto tree_fs_input::head() -> result_or_err<cereal::JSONInputArchive*> {
 	return pimpl_->head();
 }
 
-//auto tree_fs_input::begin_link(const tree::sp_link& L) -> error {
-//	return pimpl_->begin_link(L);
-//}
-//
-//auto tree_fs_input::end_link() -> error {
-//	return pimpl_->end_link();
-//}
-
 auto tree_fs_input::begin_node(const tree::node& N) -> error {
-	return pimpl_->begin_node(N);
+	return pimpl_->begin_node(*this, N);
 }
 
 auto tree_fs_input::end_node(const tree::node& N) -> error {
@@ -288,15 +269,6 @@ auto tree_fs_input::will_serialize_node(objbase const* obj) const -> bool {
 ///////////////////////////////////////////////////////////////////////////////
 //  prologue, epilogue
 //
-
-//auto prologue(tree_fs_input& ar, tree::sp_link const& L) -> void {
-//	ar.begin_link(L);
-//}
-//
-//auto epilogue(tree_fs_input& ar, tree::sp_link const&) -> void {
-//	ar.end_link();
-//}
-
 auto prologue(tree_fs_input& ar, tree::node const& N) -> void {
 	ar.begin_node(N);
 }

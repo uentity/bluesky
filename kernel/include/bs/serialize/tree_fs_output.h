@@ -40,7 +40,7 @@ public:
 	auto end_link() -> error;
 
 	auto begin_node(const tree::node& N) -> error;
-	auto end_node() -> error;
+	auto end_node(const tree::node& N) -> error;
 	auto will_serialize_node(objbase const* obj) -> bool;
 
 	auto save_object(const objbase& obj) -> error;
@@ -117,10 +117,10 @@ private:
 };
 
 BS_API auto prologue(tree_fs_output& ar, tree::sp_link const& L) -> void;
-BS_API auto epilogue(tree_fs_output& ar, tree::sp_link const&) -> void;
+BS_API auto epilogue(tree_fs_output& ar, tree::sp_link const& L) -> void;
 
 BS_API auto prologue(tree_fs_output& ar, tree::node const& N) -> void;
-BS_API auto epilogue(tree_fs_output& ar, tree::node const&) -> void;
+BS_API auto epilogue(tree_fs_output& ar, tree::node const& N) -> void;
 
 NAMESPACE_END(blue_sky)
 

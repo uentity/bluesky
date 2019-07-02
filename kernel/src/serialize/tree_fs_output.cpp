@@ -13,7 +13,6 @@
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
 #include <bs/tree/node.h>
-#include <bs/detail/scope_guard.h>
 
 #include <cereal/types/vector.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -136,12 +135,19 @@ struct tree_fs_output::impl {
 
 	auto begin_node(const tree::node& N) -> error {
 		return error::eval(
+			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); },
 			[&]{ return enter_root(); },
-			[&]{ return enter_dir(cur_path_ / N.id(), cur_path_); },
-			// write down node's metadata
-			[&]{ return head().map( [&](auto* ar){
+			[&]{ return enter_dir(cur_path_ / N.id(), cur_path_); }
+		);
+	}
+
+	auto end_node(const tree::node& N) -> error {
+		if(cur_path_.empty() || cur_path_ == root_path_) return {"No node saving were started"};
+		return error::eval(
+			// write down node's metadata nessessary to load it later
+			[&]{ return head().map( [&](auto* ar) {
 				// node directory
-				(*ar)(cereal::make_nvp("node_dir", fs::relative(cur_path_, root_path_).string()));
+				(*ar)(cereal::make_nvp("node_dir", N.id()));
 
 				// cusstom leafs order
 				std::vector<std::string> leafs_order;
@@ -149,20 +155,19 @@ struct tree_fs_output::impl {
 				for(const auto& L : N)
 					leafs_order.emplace_back(to_string(L->id()));
 				(*ar)(cereal::make_nvp("leafs_order", leafs_order));
-			}); }
+				// and finish
+				epilogue(*ar, N);
+			}); },
+			// enter parent dir
+			[&] { return enter_dir(cur_path_.parent_path(), cur_path_); }
 		);
-	}
-
-	auto end_node() -> error {
-		if(cur_path_.empty() || cur_path_ == root_path_) return {"No node saving were started"};
-		if(auto er = enter_dir(cur_path_.parent_path(), cur_path_)) return er;
-		return perfect;
 	}
 
 	auto save_object(tree_fs_output& ar, const objbase& obj) -> error {
 		// open node
 		auto cur_head = head();
-		cur_head.map([](auto* jar) { jar->startNode(); });
+		if(!cur_head) return cur_head.error();
+		prologue(*cur_head.value(), obj);
 
 		std::string obj_fmt, obj_filename;
 		bool fmt_ok = false, filename_ok = false;
@@ -172,7 +177,7 @@ struct tree_fs_output::impl {
 			if(!fmt_ok) ar(cereal::make_nvp("fmt", obj_fmt));
 			if(!filename_ok) cereal::make_nvp("filename", obj_filename);
 			// ... and close node
-			cur_head.map([](auto* jar) { jar->finishNode(); });
+			epilogue(*cur_head.value(), obj);
 		} };
 
 		// obtain formatter
@@ -278,8 +283,8 @@ auto tree_fs_output::begin_node(const tree::node& N) -> error {
 	return pimpl_->begin_node(N);
 }
 
-auto tree_fs_output::end_node() -> error {
-	return pimpl_->end_node();
+auto tree_fs_output::end_node(const tree::node& N) -> error {
+	return pimpl_->end_node(N);
 }
 
 auto tree_fs_output::save_object(const objbase& obj) -> error {
@@ -322,8 +327,8 @@ auto prologue(tree_fs_output& ar, tree::node const& N) -> void {
 	ar.begin_node(N);
 }
 
-auto epilogue(tree_fs_output& ar, tree::node const&) -> void {
-	ar.end_node();
+auto epilogue(tree_fs_output& ar, tree::node const& N) -> void {
+	ar.end_node(N);
 }
 
 NAMESPACE_END(blue_sky)
