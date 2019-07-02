@@ -92,7 +92,7 @@ void py_bind_link(py::module& m) {
 
 	// link base class
 	link_pyface
-		.def("clone", &link::clone, "deep"_a = true, "Make shallow or deep copy of link")
+		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link")
 
 		// [NOTE] return adapted objects (and pass 'em to callbacks)
 		.def("data_ex",
