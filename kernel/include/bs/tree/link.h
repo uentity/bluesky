@@ -253,6 +253,8 @@ private:
 	std::weak_ptr<objbase> data_;
 
 	auto data_impl() const -> result_or_err<sp_obj> override;
+
+	auto propagate_handle() -> result_or_err<sp_node> override;
 };
 
 /*-----------------------------------------------------------------------------

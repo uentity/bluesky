@@ -74,4 +74,9 @@ result_or_err<sp_obj> weak_link::data_impl() const {
 		result_or_err<sp_obj>(data_.lock());
 }
 
+auto weak_link::propagate_handle() -> result_or_err<sp_node> {
+	// weak link cannot be a node's handle
+	return data_node_ex();
+}
+
 NAMESPACE_END(blue_sky::tree)
