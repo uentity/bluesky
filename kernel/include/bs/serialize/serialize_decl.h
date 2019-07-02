@@ -10,6 +10,7 @@
 
 #include "atomizer.h"
 #include "macro.h"
+#include "make_base_class.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/polymorphic.hpp>

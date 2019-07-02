@@ -129,13 +129,16 @@ T BOOST_PP_CAT(BS_UNFOLD_TPL_PREFIX_, BS_IS_NONEMPTY_TUPLE(args_prefix))(args_pr
 /*-----------------------------------------------------------------------------
  *  register polymorphic type in cereal using type name from `type_descriptor`
  *-----------------------------------------------------------------------------*/
-// also register polymorphic relation with `objbase`
+// [TODO] remove explicit polymorphic relation with `objbase` when polycasters will get merged
+// across modules
 #define BSS_REGISTER_TYPE_EXT(T, tpl_args)                                              \
 namespace cereal { namespace detail {                                                   \
 template<>                                                                              \
 struct binding_name< BS_UNFOLD_TPL_T(T, tpl_args) >  {                                  \
    static char const * name() {                                                         \
-        return BS_UNFOLD_TPL_T(T, tpl_args)::bs_type().name.c_str(); }                  \
+      [[maybe_unused]] static const auto binfmt =                                       \
+         ::blue_sky::install_bin_formatter<BS_UNFOLD_TPL_T(T, tpl_args)>();             \
+      return BS_UNFOLD_TPL_T(T, tpl_args)::bs_type().name.c_str(); }                    \
 };                                                                                      \
 } } /* end namespaces */                                                                \
 CEREAL_BIND_TO_ARCHIVES( BS_UNFOLD_TPL_T(T, tpl_args) )                                 \

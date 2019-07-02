@@ -9,6 +9,7 @@
 #pragma once
 
 #include "serialize_decl.h"
+#include "formatter_tools.h"
 #include "base_types.h"
 // common archives to generate code for
 #include "archives.h"
