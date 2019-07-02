@@ -198,7 +198,7 @@ struct tree_fs_input::impl {
 		// obtain formatter
 		auto F = get_formatter(obj.type_id(), obj_frm_);
 		if(!F) return { fmt::format(
-			"Cannot load '{}' - missing object formatter '{}'", obj.type_id(), obj_frm_
+			"Cannot load '{}' - missing formatter '{}'", obj.type_id(), obj_frm_
 		) };
 
 		// if object is node and formatter don't store leafs, then load 'em explicitly
@@ -211,12 +211,9 @@ struct tree_fs_input::impl {
 			if(auto er = enter_dir(root_path_ / objects_dname_, objects_path_)) return er;
 
 		auto obj_path = objects_path_ / obj_filename;
-		auto objf = std::ifstream{obj_path, std::ios::in | std::ios::binary};
-
-		if(objf) return F->second(obj, objf, obj_frm_);
-		else return { fmt::format(
-			"Cannot load '{}' - unable to open file '{}' for reading", obj.type_id(), obj_path
-		) };
+		auto abs_obj_path = fs::absolute(obj_path, file_er_);
+		if(file_er_) return make_error();
+		return F->second(obj, obj_path.string(), obj_frm_);
 	}
 
 	std::string root_fname_, root_dname_, objects_dname_, obj_frm_;

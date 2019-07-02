@@ -11,6 +11,8 @@
 #include <bs/python/expected.h>
 #include <bs/serialize/object_formatter.h>
 
+#include <pybind11/functional.h>
+
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(python)
 
@@ -45,10 +47,17 @@ void py_bind_objbase(py::module& m) {
 
 	// object formatters
 	py::class_<object_formatter>(m, "object_formatter")
+		.def(py::init([](
+			std::string fmt_name, object_saver_fn saver, object_loader_fn loader, bool stores_node = false
+		) {
+			return object_formatter{ std::move(fmt_name), std::move(saver), std::move(loader), stores_node };
+		}), "fmt_name"_a, "saver_fn"_a, "loader_fn"_a, "stores_node"_a = false)
 		.def_readonly("name", &object_formatter::name,
 			"Formatter name treated by default as file extension")
 		.def_readonly("stores_node", &object_formatter::stores_node,
 			"For node-derived objects: false (default) if object file doesn't include leafs, true if include")
+		.def("save", &object_formatter::save, "obj"_a, "obj_fname"_a, "fmt_name"_a)
+		.def("load", &object_formatter::load, "obj"_a, "obj_fname"_a, "fmt_name"_a)
 	;
 
 	m.def("install_formatter", &install_formatter, "obj_type"_a, "obj_formatter"_a);

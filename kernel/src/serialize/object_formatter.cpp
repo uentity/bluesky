@@ -10,18 +10,31 @@
 #include <bs/serialize/object_formatter.h>
 #include <bs/type_descriptor.h>
 
-//#include <bs/kernel/misc.h>
-//#include <boost/uuid/random_generator.hpp>
-//#include <boost/uuid/uuid_io.hpp>
-
 #include <map>
 #include <set>
 #include <mutex>
 
 NAMESPACE_BEGIN(blue_sky)
 
-// generate random UUID key for storing formatters inside kernel
-//const auto impl_key = to_string(boost::uuids::random_generator()());
+/*-----------------------------------------------------------------------------
+ *  object_formatter
+ *-----------------------------------------------------------------------------*/
+object_formatter::object_formatter(
+	std::string fmt_name, object_saver_fn saver, object_loader_fn loader, bool stores_node_
+) : base_t{std::move(saver), std::move(loader)}, name(std::move(fmt_name)), stores_node(stores_node_)
+{}
+
+auto object_formatter::save(
+	const objbase& obj, std::string obj_fname, std::string_view fmt_name
+) const -> error {
+	return first(obj, std::move(obj_fname), fmt_name);
+}
+
+auto object_formatter::load(
+	objbase& obj, std::string obj_fname, std::string_view fmt_name
+) const -> error {
+	return second(obj, std::move(obj_fname), fmt_name);
+}
 
 // compare formatters by name
 auto operator<(const object_formatter& lhs, const object_formatter& rhs) {
@@ -36,6 +49,7 @@ auto operator<(std::string_view lhs, const object_formatter& rhs) {
 }
 
 NAMESPACE_BEGIN()
+
 /*-----------------------------------------------------------------------------
  *  Formatters manip impl
  *-----------------------------------------------------------------------------*/

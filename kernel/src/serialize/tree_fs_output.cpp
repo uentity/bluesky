@@ -184,7 +184,7 @@ struct tree_fs_output::impl {
 		auto F = get_active_formatter(obj.type_id());
 		if(!F) {
 			// output error to format
-			obj_fmt = fmt::format("Cannot save '{}' - no object formatters installed", obj.type_id());
+			obj_fmt = fmt::format("Cannot save '{}' - no formatters installed", obj.type_id());
 			return { obj_fmt };
 		}
 		obj_fmt = F->name;
@@ -198,25 +198,19 @@ struct tree_fs_output::impl {
 
 		auto obj_path = objects_path_ / obj.id();
 		obj_path += std::string(".") + obj_fmt;
-		auto objf = std::ofstream{obj_path, std::ios::out | std::ios::trunc | std::ios::binary};
-
-		if(objf) {
-			obj_filename = obj_path.filename().string();
-			// write down object filename
-			ar(cereal::make_nvp("filename", obj_filename));
-			filename_ok = true;
-		}
-		else {
-			// output error to format
-			obj_filename = fmt::format("Cannot open file '{}' for writing", obj_path);
-			return { obj_filename };
-		}
+		obj_filename = obj_path.filename().string();
+		// write down object filename
+		ar(cereal::make_nvp("filename", obj_filename));
+		filename_ok = true;
 
 		// if object is node and formatter don't store leafs, then save 'em explicitly
 		if(obj.is_node() && !F->stores_node)
 			ar(static_cast<const tree::node&>(obj));
+
 		// and actually save object data to file
-		return F->first(obj, objf, obj_fmt);
+		auto abs_obj_path = fs::absolute(obj_path, file_er_);
+		if(file_er_) return make_error();
+		return F->first(obj, abs_obj_path.string(), obj_fmt);
 	}
 
 	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter* {

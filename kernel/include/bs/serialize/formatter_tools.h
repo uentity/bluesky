@@ -14,6 +14,7 @@
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/portable_binary.hpp>
+#include <fmt/format.h>
 
 #include <functional>
 #include <fstream>
@@ -26,14 +27,22 @@ inline auto install_bin_formatter(bool store_node = false, bool force = false) {
 	const auto& td = T::bs_type();
 	if(!force && formatter_installed(td.name, detail::bin_fmt_name)) return false;
 
-	auto bin_saver = [](const objbase& obj, std::ofstream& obj_file, std::string_view) -> error {
-		cereal::PortableBinaryOutputArchive binar(obj_file);
+	auto bin_saver = [](const objbase& obj, std::string obj_fname, std::string_view) -> error {
+		auto objf = std::ofstream{obj_fname, std::ios::out | std::ios::trunc | std::ios::binary};
+		if(!objf) return {fmt::format(
+			"Cannot open file '{}' for writing '{}' with ID = {}", obj_fname, obj.type_id(), obj.id()
+		)};
+		cereal::PortableBinaryOutputArchive binar(objf);
 		binar(static_cast< std::add_lvalue_reference_t<const T> >(obj));
 		return perfect;
 	};
 
-	auto bin_loader = [](objbase& obj, std::ifstream& obj_file, std::string_view) -> error {
-		cereal::PortableBinaryInputArchive binar(obj_file);
+	auto bin_loader = [](objbase& obj, std::string obj_fname, std::string_view) -> error {
+		auto objf = std::ifstream{obj_fname, std::ios::in | std::ios::binary};
+		if(!objf) return {fmt::format(
+			"Cannot open file '{}' for reading '{}'", obj_fname, obj.type_id()
+		)};
+		cereal::PortableBinaryInputArchive binar(objf);
 		binar(static_cast< std::add_lvalue_reference_t<T> >(obj));
 		return perfect;
 	};
