@@ -9,6 +9,7 @@
 
 #include <bs/bs.h>
 #include <bs/python/expected.h>
+#include <bs/serialize/object_formatter.h>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(python)
@@ -41,6 +42,21 @@ void py_bind_objbase(py::module& m) {
 	td.add_copy_constructor([](bs_type_copy_param src) -> sp_obj {
 		return std::make_shared<py_object<>>( *static_cast<const py_object<>*>(src.get()) );
 	});
+
+	// object formatters
+	py::class_<object_formatter>(m, "object_formatter")
+		.def_readonly("name", &object_formatter::name,
+			"Formatter name treated by default as file extension")
+		.def_readonly("stores_node", &object_formatter::stores_node,
+			"For node-derived objects: false (default) if object file doesn't include leafs, true if include")
+	;
+
+	m.def("install_formatter", &install_formatter, "obj_type"_a, "obj_formatter"_a);
+	m.def("uninstall_formatter", &uninstall_formatter, "obj_type_id"_a, "fmt_name"_a);
+	m.def("formatter_installed", &formatter_installed, "obj_type_id"_a, "fmt_name"_a);
+	m.def("list_installed_formatters", &list_installed_formatters, "obj_type_id"_a);
+	m.def("get_formatter", &get_formatter, "obj_type_id"_a, "fmt_name"_a,
+		py::return_value_policy::reference);
 }
 
 NAMESPACE_END(python)
