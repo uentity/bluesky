@@ -150,8 +150,6 @@ struct tree_fs_input::impl {
 				dump_error(ex);
 			}
 		}
-		// correct owner of all loaded links
-		N.propagate_owner();
 
 		if(united_err_msg.empty()) return perfect;
 		else return united_err_msg;
