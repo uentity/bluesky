@@ -197,15 +197,18 @@ struct tree_fs_input::impl {
 	}
 
 	auto load_object(tree_fs_input& ar, objbase& obj) -> error {
-		// read object format and filename from archive
+		// open node & close on exit
 		auto cur_head = head();
 		cur_head.map([](auto* jar) { jar->startNode(); });
+		auto finally = scope_guard{ [&]{
+			cur_head.map([](auto* jar) { jar->finishNode(); });
+		} };
+
+		// read object format & filename
 		std::string obj_filename;
 		ar(cereal::make_nvp("fmt", obj_frm_), cereal::make_nvp("filename", obj_filename));
-		cur_head.map([](auto* jar) { jar->finishNode(); });
-		if(obj_frm_.size() + obj_filename.size() == 0)
-			return { fmt::format("Cannot load '{}' - missing filename or format name") };
 
+		// obtain formatter
 		auto F = get_formatter(obj.type_id(), obj_frm_);
 		if(!F) return { fmt::format(
 			"Cannot load '{}' - missing object formatter '{}'", obj.type_id(), obj_frm_
@@ -215,6 +218,7 @@ struct tree_fs_input::impl {
 		if(obj.is_node() && !F->stores_node)
 			ar(static_cast<tree::node&>(obj));
 
+		// read object data from specified file
 		if(auto er = enter_root()) return er;
 		if(objects_path_.empty())
 			if(auto er = enter_dir(root_path_ / objects_dname_, objects_path_)) return er;
@@ -223,7 +227,9 @@ struct tree_fs_input::impl {
 		auto objf = std::ifstream{obj_path, std::ios::in | std::ios::binary};
 
 		if(objf) return F->second(obj, objf, obj_frm_);
-		else return { fmt::format("Cannot open file '{}' for reading", obj_path) };
+		else return { fmt::format(
+			"Cannot load '{}' - unable to open file '{}' for reading", obj.type_id(), obj_path
+		) };
 	}
 
 	std::string root_fname_, root_dname_, objects_dname_, obj_frm_;
@@ -274,7 +280,7 @@ auto tree_fs_input::loadBinaryValue(void* data, size_t size, const char* name) -
 }
 
 auto tree_fs_input::will_serialize_node(objbase const* obj) const -> bool {
-	if(auto pfmt = get_formatter(obj->bs_type().name, pimpl_->obj_frm_); pfmt)
+	if(auto pfmt = get_formatter(obj->bs_type().name, pimpl_->obj_frm_); obj->is_node() && pfmt)
 		return pfmt->stores_node;
 	return true;
 }

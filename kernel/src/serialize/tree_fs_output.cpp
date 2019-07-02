@@ -160,24 +160,32 @@ struct tree_fs_output::impl {
 	}
 
 	auto save_object(tree_fs_output& ar, const objbase& obj) -> error {
-		// write down object format and filename on exit
+		// open node
+		auto cur_head = head();
+		cur_head.map([](auto* jar) { jar->startNode(); });
+
 		std::string obj_fmt, obj_filename;
+		bool fmt_ok = false, filename_ok = false;
+
 		auto finally = scope_guard{ [&]{
-			auto cur_head = head();
-			cur_head.map([](auto* jar) { jar->startNode(); });
-			ar(cereal::make_nvp("fmt", obj_fmt), cereal::make_nvp("filename", obj_filename));
+			// if error happened we still need to write values
+			if(!fmt_ok) ar(cereal::make_nvp("fmt", obj_fmt));
+			if(!filename_ok) cereal::make_nvp("filename", obj_filename);
+			// ... and close node
 			cur_head.map([](auto* jar) { jar->finishNode(); });
 		} };
 
+		// obtain formatter
 		auto F = get_active_formatter(obj.type_id());
-		if(!F) return { fmt::format(
-			"Cannot save '{}' - no object formatters installed", obj.type_id()
-		) };
+		if(!F) {
+			// output error to format
+			obj_fmt = fmt::format("Cannot save '{}' - no object formatters installed", obj.type_id());
+			return { obj_fmt };
+		}
 		obj_fmt = F->name;
-
-		// if object is node and formatter don't store leafs, then save 'em explicitly
-		if(obj.is_node() && !F->stores_node)
-			ar(static_cast<const tree::node&>(obj));
+		// write down object formatter name
+		ar(cereal::make_nvp("fmt", obj_fmt));
+		fmt_ok = true;
 
 		if(auto er = enter_root()) return er;
 		if(objects_path_.empty())
@@ -188,11 +196,22 @@ struct tree_fs_output::impl {
 		auto objf = std::ofstream{obj_path, std::ios::out | std::ios::trunc | std::ios::binary};
 
 		if(objf) {
-			F->first(obj, objf, obj_fmt);
 			obj_filename = obj_path.filename().string();
-			return perfect;
+			// write down object filename
+			ar(cereal::make_nvp("filename", obj_filename));
+			filename_ok = true;
 		}
-		else return { fmt::format("Cannot open file '{}' for writing", obj_path) };
+		else {
+			// output error to format
+			obj_filename = fmt::format("Cannot open file '{}' for writing", obj_path);
+			return { obj_filename };
+		}
+
+		// if object is node and formatter don't store leafs, then save 'em explicitly
+		if(obj.is_node() && !F->stores_node)
+			ar(static_cast<const tree::node&>(obj));
+		// and actually save object data to file
+		return F->first(obj, objf, obj_fmt);
 	}
 
 	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter* {
@@ -274,7 +293,7 @@ auto tree_fs_output::saveBinaryValue(const void* data, size_t size, const char* 
 }
 
 auto tree_fs_output::will_serialize_node(objbase const* obj) -> bool {
-	if(auto pfmt = get_active_formatter(obj->bs_type().name); pfmt)
+	if(auto pfmt = get_active_formatter(obj->bs_type().name); obj->is_node() && pfmt)
 		return pfmt->stores_node;
 	return true;
 }
