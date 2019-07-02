@@ -23,9 +23,9 @@ auto dumps(const py::object& obj) -> std::string {
 	return py::cast<std::string>(dumps(obj, -1));
 }
 
-auto loads(const std::string& obj_dump) -> py::object {
+auto loads(std::string obj_dump) -> py::object {
 	static const py::handle loads = py::module::import("pickle").attr("loads");
-	return loads(py::bytes(obj_dump));
+	return loads(py::bytes(std::move(obj_dump)));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ auto load(Archive& ar, py::object& t) -> void {
 	std::string obj_dump(sz, ' ');
 	ar.loadBinaryValue(&obj_dump[0], sizeof(std::string::value_type)*obj_dump.size(), "data");
 	// construct Python object
-	t = loads(obj_dump);
+	t = loads(std::move(obj_dump));
 }
 // binary archives
 template<typename Archive, traits::DisableIf<traits::is_text_archive<Archive>::value> = traits::sfinae>
@@ -66,7 +66,7 @@ auto load(Archive& ar, py::object& t) -> void {
 	std::string obj_dump;
 	ar(obj_dump);
 	// construct Python object
-	t = loads(obj_dump);
+	t = loads(std::move(obj_dump));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
