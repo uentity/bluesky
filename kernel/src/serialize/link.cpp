@@ -99,23 +99,16 @@ BSS_FCN_BEGIN(load_and_construct, tree::hard_link)
 	construct(std::move(name), sp_obj{});
 	auto plnk = construct.ptr();
 
-	// helper that sets OK status on successfull object deserialization
-	static const auto update_status = [](auto& L) {
-		L.data_impl().map([&L](const sp_obj& obj) {
-			if(!obj) return;
-			L.rs_reset(Req::Data, ReqStatus::OK);
-			if(obj->is_node())
-				L.rs_reset(Req::DataNode, ReqStatus::OK);
-		});
+	// initializer that sets OK status on successfull object deserialization
+	auto data_init = [plnk](auto obj) {
+		if(( plnk->data_ = std::move(obj) )) {
+			plnk->rs_reset(Req::Data, ReqStatus::OK);
+			if(plnk->data_->is_node())
+				plnk->rs_reset(Req::DataNode, ReqStatus::OK);
+		}
 	};
 	// load data with deferred 2nd trial
-	ar( defer_failed(plnk->data_, [plnk](sp_obj obj) {
-		plnk->data_ = std::move(obj);
-		update_status(*plnk);
-	}) );
-	// if 1st trial succeeded, update status
-	update_status(*plnk);
-
+	ar( defer_failed(plnk->data_, std::move(data_init), PtrInitTrigger::SuccessAndRetry) );
 	// load base link
 	ar( base_class<tree::ilink>(plnk) );
 BSS_FCN_END
@@ -144,23 +137,16 @@ BSS_FCN_BEGIN(load_and_construct, tree::weak_link)
 	auto plnk = construct.ptr();
 
 	// helper that sets OK status on successfull object deserialization
-	static const auto update_status = [](auto& L) {
-		L.data_impl().map([&L](const sp_obj& obj) {
-			if(!obj) return;
-			L.rs_reset(Req::Data, ReqStatus::OK);
+	auto data_init = [plnk](const sp_obj& obj) {
+		plnk->data_ = obj;
+		if(obj) {
+			plnk->rs_reset(Req::Data, ReqStatus::OK);
 			if(obj->is_node())
-				L.rs_reset(Req::DataNode, ReqStatus::OK);
-		});
+				plnk->rs_reset(Req::DataNode, ReqStatus::OK);
+		}
 	};
 	// load data with deferred 2nd trial
-	ar( defer_failed(data, [plnk](const sp_obj& obj) {
-		plnk->data_ = obj;
-		update_status(*plnk);
-	}) );
-	// if 1st trial succeeded, update status
-	if(data) plnk->data_ = data;
-	update_status(*plnk);
-
+	ar( defer_failed(data, std::move(data_init), PtrInitTrigger::SuccessAndRetry) );
 	// load base link
 	ar( base_class<tree::ilink>(plnk) );
 BSS_FCN_END
