@@ -100,10 +100,14 @@ constexpr auto swap(function_view<R (Args...)>& lhs, function_view<R (Args...)>&
 namespace detail {
 
 template<typename F, typename = void> struct deduce_callable {
-	static_assert(std::is_invocable_v<F>, "Cannot construct fuction_view from non-callable");
+	static_assert(std::is_invocable_v<F>, "Type isn't callable");
 };
-template<typename F> using deduce_callable_t = typename deduce_callable<F>::type;
+template<typename F> using deduce_callable_t = typename deduce_callable<std::remove_reference_t<F>>::type;
 
+template<typename R, typename... Args>
+struct deduce_callable<R (Args...), void> {
+	using type = R (Args...);
+};
 template<typename R, typename... Args>
 struct deduce_callable<R (*)(Args...), void> {
 	using type = R (Args...);
@@ -118,8 +122,8 @@ struct deduce_callable<R (C::*)(Args...) const, void> {
 };
 
 template<typename F>
-struct deduce_callable<F, std::void_t< decltype(&std::remove_reference_t<F>::operator()) >> {
-	using type = deduce_callable_t< decltype(&std::remove_reference_t<F>::operator()) >;
+struct deduce_callable<F, std::void_t< decltype(&F::operator()) >> {
+	using type = deduce_callable_t< decltype(&F::operator()) >;
 };
 
 } // eof blue_sky::detail
