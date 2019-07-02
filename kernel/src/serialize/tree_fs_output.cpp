@@ -8,8 +8,10 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/serialize/tree_fs_output.h>
+#include <bs/serialize/object_formatter.h>
 #include <bs/serialize/serialize_decl.h>
 #include <bs/serialize/base_types.h>
+#include <bs/serialize/tree.h>
 #include <bs/tree/node.h>
 #include <bs/detail/scope_guard.h>
 
@@ -139,25 +141,25 @@ struct tree_fs_output::impl {
 		return perfect;
 	}
 
-	auto install_object_saver(std::string obj_type_id, std::string fmt_descr, object_saver_fn f) -> bool {
-		obj_savers_[std::move(obj_type_id)] = std::pair{ std::move(fmt_descr), std::move(f) };
-		return true;
-	}
-
-	auto can_save_object(std::string_view obj_type_id) -> bool {
-		return obj_savers_.find(obj_type_id) != obj_savers_.end();
-	}
-
 	auto save_object(tree_fs_output& ar, const objbase& obj) -> error {
 		// write down object format and filename on exit
 		std::string obj_fmt, obj_filename;
 		auto finally = scope_guard{ [&]{
+			auto cur_head = head();
+			cur_head.map([](auto* jar) { jar->startNode(); });
 			ar(cereal::make_nvp("fmt", obj_fmt), cereal::make_nvp("filename", obj_filename));
+			cur_head.map([](auto* jar) { jar->finishNode(); });
 		} };
 
-		auto S = obj_savers_.find(obj.type_id());
-		if(S == obj_savers_.end()) return { fmt::format("Cannot save object of type {}", obj.type_id()) };
-		obj_fmt = S->second.first;
+		auto F = get_active_formatter(obj.type_id());
+		if(!F) return { fmt::format(
+			"Cannot save '{}' - no object formatters installed", obj.type_id()
+		) };
+		obj_fmt = F->name;
+
+		// if object is node and formatter don't store leafs, then save 'em explicitly
+		if(obj.is_node() && !F->stores_node)
+			ar(static_cast<const tree::node&>(obj));
 
 		if(auto er = enter_root()) return er;
 		if(objects_path_.empty())
@@ -168,12 +170,36 @@ struct tree_fs_output::impl {
 		auto objf = std::ofstream{obj_path, std::ios::out | std::ios::trunc | std::ios::binary};
 
 		if(objf) {
-			S->second.second(objf, obj);
+			F->first(obj, objf, obj_fmt);
 			obj_filename = obj_path.filename().string();
+			return perfect;
 		}
 		else return { fmt::format("Cannot open file '{}' for writing", obj_path) };
+	}
 
-		return perfect;
+	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter* {
+		if(auto paf = active_fmt_.find(obj_type_id); paf != active_fmt_.end())
+			return get_formatter(obj_type_id, paf->second);
+		else {
+			// if bin format installed - select it
+			if(select_active_formatter(obj_type_id, detail::bin_fmt_name))
+				return get_active_formatter(obj_type_id);
+			else if(
+				auto frms = list_installed_formatters(obj_type_id);
+				!frms.empty() && select_active_formatter(obj_type_id, *frms.begin())
+			)
+				return get_active_formatter(obj_type_id);
+
+		}
+		return nullptr;
+	}
+
+	auto select_active_formatter(std::string_view obj_type_id, std::string_view fmt_name) -> bool {
+		if(auto pfmt = get_formatter(obj_type_id, fmt_name); pfmt) {
+			active_fmt_[obj_type_id] = fmt_name;
+			return true;
+		}
+		return false;
 	}
 
 	std::string root_dname_, data_fname_, objects_dname_;
@@ -183,8 +209,9 @@ struct tree_fs_output::impl {
 	std::list<std::ofstream> necks_;
 	std::list<cereal::JSONOutputArchive> heads_;
 
-	using saver_descr = std::pair<std::string, object_saver_fn>;
-	std::map<std::string, saver_descr, std::less<>> obj_savers_;
+	// obj_type_id -> formatter name
+	using active_fmt_t = std::map<std::string_view, std::string, std::less<>>;
+	active_fmt_t active_fmt_;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -224,20 +251,24 @@ auto tree_fs_output::save_object(const objbase& obj) -> error {
 	return pimpl_->save_object(*this, obj);
 }
 
-auto tree_fs_output::install_object_saver(
-	std::string obj_type_id, std::string fmt_descr, object_saver_fn f
-) -> bool {
-	return pimpl_->install_object_saver(std::move(obj_type_id), std::move(fmt_descr), std::move(f));
-}
-
-auto tree_fs_output::can_save_object(std::string_view obj_type_id) const -> bool {
-	return pimpl_->can_save_object(obj_type_id);
-}
-
 auto tree_fs_output::saveBinaryValue(const void* data, size_t size, const char* name) -> void {
 	head().map([=](cereal::JSONOutputArchive* jar) {
 		jar->saveBinaryValue(data, size, name);
 	});
+}
+
+auto tree_fs_output::will_serialize_node(objbase const* obj) -> bool {
+	if(auto pfmt = get_active_formatter(obj->bs_type().name); pfmt)
+		return pfmt->stores_node;
+	return true;
+}
+
+auto tree_fs_output::get_active_formatter(std::string_view obj_type_id) -> object_formatter* {
+	return pimpl_->get_active_formatter(obj_type_id);
+}
+
+auto tree_fs_output::select_active_formatter(std::string_view obj_type_id, std::string_view fmt_name) -> bool {
+	return pimpl_->select_active_formatter(obj_type_id, fmt_name);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

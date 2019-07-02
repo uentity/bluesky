@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/serialize/tree_fs_input.h>
+#include <bs/serialize/object_formatter.h>
 #include <bs/serialize/serialize_decl.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
@@ -177,25 +178,24 @@ struct tree_fs_input::impl {
 			);
 	}
 
-	auto install_object_loader(std::string obj_type_id, std::string fmt_descr, object_loader_fn f) -> bool {
-		obj_loaders_[std::move(obj_type_id)] = std::pair{ std::move(fmt_descr), std::move(f) };
-		return true;
-	}
-
-	auto can_load_object(std::string_view obj_type_id) -> bool {
-		return obj_loaders_.find(obj_type_id) != obj_loaders_.end();
-	}
-
 	auto load_object(tree_fs_input& ar, objbase& obj) -> error {
-		// write down object format and filename from archive
-		std::string obj_fmt, obj_filename;
-		ar(cereal::make_nvp("fmt", obj_fmt), cereal::make_nvp("filename", obj_filename));
-		if(obj_fmt.size() + obj_filename.size() == 0)
-			return { fmt::format("Cannot load object of type {} - missing data") };
+		// read object format and filename from archive
+		auto cur_head = head();
+		cur_head.map([](auto* jar) { jar->startNode(); });
+		std::string obj_filename;
+		ar(cereal::make_nvp("fmt", obj_frm_), cereal::make_nvp("filename", obj_filename));
+		cur_head.map([](auto* jar) { jar->finishNode(); });
+		if(obj_frm_.size() + obj_filename.size() == 0)
+			return { fmt::format("Cannot load '{}' - missing filename or format name") };
 
-		auto S = obj_loaders_.find(obj.type_id());
-		if(S == obj_loaders_.end() || obj_fmt != S->second.first)
-			return { fmt::format("Cannot load object of type {} - missing loader", obj.type_id()) };
+		auto F = get_formatter(obj.type_id(), obj_frm_);
+		if(!F) return { fmt::format(
+			"Cannot load '{}' - missing object formatter '{}'", obj.type_id(), obj_frm_
+		) };
+
+		// if object is node and formatter don't store leafs, then load 'em explicitly
+		if(obj.is_node() && !F->stores_node)
+			ar(static_cast<tree::node&>(obj));
 
 		if(auto er = enter_root()) return er;
 		if(objects_path_.empty())
@@ -204,21 +204,16 @@ struct tree_fs_input::impl {
 		auto obj_path = objects_path_ / obj_filename;
 		auto objf = std::ifstream{obj_path, std::ios::in | std::ios::binary};
 
-		if(objf) S->second.second(objf, obj);
+		if(objf) return F->second(obj, objf, obj_frm_);
 		else return { fmt::format("Cannot open file '{}' for reading", obj_path) };
-
-		return perfect;
 	}
 
-	std::string root_dname_, data_fname_, objects_dname_;
+	std::string root_dname_, data_fname_, objects_dname_, obj_frm_;
 	std::error_code file_er_;
 	fs::path root_path_, cur_path_, objects_path_;
 
 	std::list<std::ifstream> necks_;
 	std::list<cereal::JSONInputArchive> heads_;
-
-	using loader_descr = std::pair<std::string, object_loader_fn>;
-	std::map<std::string, loader_descr, std::less<>> obj_loaders_;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -258,20 +253,16 @@ auto tree_fs_input::load_object(objbase& obj) -> error {
 	return pimpl_->load_object(*this, obj);
 }
 
-auto tree_fs_input::install_object_loader(
-	std::string obj_type_id, std::string fmt_descr, object_loader_fn f
-) -> bool {
-	return pimpl_->install_object_loader(std::move(obj_type_id), std::move(fmt_descr), std::move(f));
-}
-
-auto tree_fs_input::can_load_object(std::string_view obj_type_id) const -> bool {
-	return pimpl_->can_load_object(obj_type_id);
-}
-
 auto tree_fs_input::loadBinaryValue(void* data, size_t size, const char* name) -> void {
 	head().map([=](auto* jar) {
 		jar->loadBinaryValue(data, size, name);
 	});
+}
+
+auto tree_fs_input::will_serialize_node(objbase const* obj) const -> bool {
+	if(auto pfmt = get_formatter(obj->bs_type().name, pimpl_->obj_frm_); pfmt)
+		return pfmt->stores_node;
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

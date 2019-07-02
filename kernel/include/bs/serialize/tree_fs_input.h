@@ -14,9 +14,6 @@
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
-#include <cereal/archives/portable_binary.hpp>
-
-#include <fstream>
 
 NAMESPACE_BEGIN(blue_sky)
 
@@ -29,6 +26,7 @@ public:
 	friend Base;
 	// tweak serialization behaviour to better support out-of-order loading
 	static constexpr auto always_emit_class_version = true;
+	static constexpr auto custom_node_serialization = true;
 
 	tree_fs_input(
 		std::string root_dir, std::string root_fname = ".data",
@@ -41,10 +39,7 @@ public:
 
 	auto begin_node(const tree::node& N) -> error;
 	auto end_node(const tree::node& N) -> error;
-
-	using object_loader_fn = std::function<error(std::ifstream&, objbase&)>;
-	auto install_object_loader(std::string obj_type_id, std::string fmt_descr, object_loader_fn f) -> bool;
-	auto can_load_object(std::string_view obj_type_id) const -> bool;
+	auto will_serialize_node(objbase const* obj) const -> bool;
 
 	auto load_object(objbase& obj) -> error;
 
@@ -98,44 +93,21 @@ public:
 private:
 	friend class ::blue_sky::atomizer;
 
-	// detect specific processing overloads
-	template<typename T, typename = void> struct has_specific_processing : std::false_type {};
+	// detect pure objects (not nodes)
 	template<typename T>
-	static constexpr auto has_specific_processing_v = has_specific_processing<std::decay_t<T>>::value;
-
-	template<typename T> struct has_specific_processing<T, std::enable_if_t<
-		std::is_base_of_v<objbase, T> && !std::is_same_v<tree::node, T>
-	>> : std::true_type {};
+	static constexpr auto is_object_v = std::is_base_of_v<objbase, T> && !std::is_same_v<tree::node, T>;
 
 	// generic specialization that dispatch args to base or specific processing
 	template<typename... Ts>
 	inline auto process(Ts&&... ts) -> void {
 		const auto dispatch_process = [this](auto&& x) {
 			using Tx = decltype(x);
-			if constexpr(has_specific_processing_v<Tx>)
-				process_specific(std::forward<Tx>(x));
+			if constexpr(is_object_v<std::decay_t<Tx>>)
+				this->load_object(std::forward<Tx>(x));
 			else
 				Base::process(std::forward<Tx>(x));
 		};
 		(dispatch_process(std::forward<Ts>(ts)), ...);
-	}
-
-	// specialization for objects
-	template<typename T>
-	inline auto process_specific(T&& t) -> void {
-	//-> std::enable_if_t<!is_objbase_ptr_v<T>> {
-		if(!can_load_object(t.type_id())) {
-			install_object_loader(t.type_id(), "bin", [](std::ifstream& os, objbase& obj) -> error {
-				cereal::PortableBinaryInputArchive binar(os);
-				binar(static_cast< std::add_lvalue_reference_t<std::decay_t<T>> >(obj));
-				return success();
-			});
-		}
-
-		auto cur_head = head();
-		cur_head.map([](auto* jar) { jar->startNode(); });
-		load_object(std::forward<T>(t));
-		cur_head.map([](auto* jar) { jar->finishNode(); });
 	}
 
 	struct impl;

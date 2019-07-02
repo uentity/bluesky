@@ -11,13 +11,10 @@
 #include "../common.h"
 #include "../error.h"
 #include "atomizer.h"
+#include "object_formatter.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
-#include <cereal/archives/portable_binary.hpp>
-
-#include <optional>
-#include <fstream>
 
 NAMESPACE_BEGIN(blue_sky)
 
@@ -31,6 +28,7 @@ public:
 	// indicate that polymorphic names will always be emitted
 	static constexpr auto always_emit_polymorphic_name = true;
 	static constexpr auto always_emit_class_version = true;
+	static constexpr auto custom_node_serialization = true;
 
 	tree_fs_output(
 		std::string root_dir, std::string root_fname = ".data",
@@ -46,12 +44,11 @@ public:
 
 	auto begin_node(const tree::node& N) -> error;
 	auto end_node() -> error;
-
-	using object_saver_fn = std::function<error(std::ofstream&, const objbase&)>;
-	auto install_object_saver(std::string obj_type_id, std::string fmt_descr, object_saver_fn f) -> bool;
-	auto can_save_object(std::string_view obj_type_id) const -> bool;
+	auto will_serialize_node(objbase const* obj) -> bool;
 
 	auto save_object(const objbase& obj) -> error;
+	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter*;
+	auto select_active_formatter(std::string_view obj_type_id, std::string_view fmt_name) -> bool;
 
 	auto saveBinaryValue(const void* data, size_t size, const char* name = nullptr) -> void;
 
@@ -101,44 +98,21 @@ public:
 private:
 	friend class ::blue_sky::atomizer;
 
-	// detect specific processing overloads
-	template<typename T, typename = void> struct has_specific_processing : std::false_type {};
+	// detect pure objects (not nodes)
 	template<typename T>
-	static constexpr auto has_specific_processing_v = has_specific_processing<std::decay_t<T>>::value;
-
-	template<typename T> struct has_specific_processing<T, std::enable_if_t<
-		std::is_base_of_v<objbase, T> && !std::is_same_v<tree::node, T>
-	>> : std::true_type {};
+	static constexpr auto is_object_v = std::is_base_of_v<objbase, T> && !std::is_same_v<tree::node, T>;
 
 	// generic specialization that forwards everything to base archive
 	template<typename... Ts>
 	inline auto process(Ts&&... ts) -> void {
 		const auto dispatch_process = [this](auto&& x) {
 			using Tx = decltype(x);
-			if constexpr(has_specific_processing_v<Tx>)
-				this->process_specific(std::forward<Tx>(x));
+			if constexpr(is_object_v<std::decay_t<Tx>>)
+				this->save_object(std::forward<Tx>(x));
 			else
 				Base::process(std::forward<Tx>(x));
 		};
 		(dispatch_process(std::forward<Ts>(ts)), ...);
-	}
-
-	// specialization for objects
-	template<typename T>
-	inline auto process_specific(T&& t) -> void {
-		if(!can_save_object(t.type_id())) {
-			install_object_saver(t.type_id(), "bin", [](std::ofstream& os, const objbase& obj) -> error {
-				cereal::PortableBinaryOutputArchive binar(os);
-				//cereal::JSONOutputArchive binar(os);
-				binar(static_cast< std::add_lvalue_reference_t<const std::decay_t<T>> >(obj));
-				return success();
-			});
-		}
-
-		auto cur_head = head();
-		cur_head.map([](auto* jar) { jar->startNode(); });
-		save_object(std::forward<T>(t));
-		cur_head.map([](auto* jar) { jar->finishNode(); });
 	}
 
 	struct impl;
