@@ -9,6 +9,10 @@
 
 #include <bs/serialize/object_formatter.h>
 #include <bs/type_descriptor.h>
+#include <bs/kernel/misc.h>
+
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include <map>
 #include <set>
@@ -62,12 +66,20 @@ struct fmaster {
 	// sync access to storage above
 	std::mutex fmt_guard;
 
+	fmaster() {}
+	fmaster(const fmaster& rhs) : fmt_storage(rhs.fmt_storage) {}
+	fmaster(fmaster&& rhs) : fmt_storage(std::move(rhs.fmt_storage)) {}
+
 	static auto self() -> fmaster& {
-		static fmaster self_;
-		return self_;
-		//auto& kstorage = kernel::str_key_storage(impl_key);
-		//kstorage.insert_element("fmaster", fmaster());
-		//return kstorage.ss<fmaster>("fmaster");
+		static fmaster& self = []() -> fmaster& {
+			// generate random key
+			auto& kstorage = kernel::idx_key_storage(to_string( boost::uuids::random_generator()() ));
+			auto r = kstorage.insert_element(0, fmaster());
+			if(!r.first) throw error("Failed to make impl of object formatters in kernel storage!");
+			return *r.first;
+		}();
+
+		return self;
 	}
 
 	auto install_formatter(const type_descriptor& obj_type, object_formatter&& of) -> bool {
