@@ -61,12 +61,12 @@ public:
 			return k < C.size();
 		}
 
-		static bool insert(Cont& C, const key_type& k, std::any value) {
+		static auto insert(Cont& C, const key_type& k, std::any value) {
 			if(k <= C.size()) {
 				C.insert(std::next(C.begin(), k), std::move(value));
-				return true;
+				return std::pair{ std::next(C.begin(), k), true };
 			}
-			return false;
+			return std::pair{ C.end(), false };
 		}
 	};
 
@@ -95,8 +95,8 @@ public:
 			return C.find(k) != C.end();
 		}
 
-		static bool insert(Cont& C, const key_type& k, std::any value) {
-			return C.insert(value_type(k, std::move(value))).second;
+		static auto insert(Cont& C, const key_type& k, std::any value) {
+			return C.insert(value_type(k, std::move(value)));
 		}
 	};
 
@@ -262,8 +262,14 @@ public:
 
 	// insert an element into array
 	template< typename T >
-	bool insert_element(const key_type& k, T value) {
-		return trait::insert(*this, k, std::move(value));
+	auto insert_element(const key_type& k, T&& value) {
+		auto res = trait::insert(*this, k, std::forward<T>(value));
+		using value_type = std::remove_reference_t<T>;
+		if(res.first != end())
+			return std::pair{ std::any_cast<value_type>(&trait::iter2val(res.first)), res.second };
+		else {
+			return std::pair{ (value_type*)nullptr, res.second };
+		}
 	}
 };
 
