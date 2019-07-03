@@ -68,11 +68,15 @@ auto last_error() -> std::string {
 }
 
 auto str_key_storage(const std::string& key) -> str_any_array& {
-	return KIMPL.str_key_storage(key);
+	auto& kimpl = KIMPL;
+	auto solo = std::lock_guard{ kimpl.sync_storage_ };
+	return kimpl.str_key_storage(key);
 }
 
 auto idx_key_storage(const std::string& key) -> idx_any_array& {
-	return KIMPL.idx_key_storage(key);
+	auto& kimpl = KIMPL;
+	auto solo = std::lock_guard{ kimpl.sync_storage_ };
+	return kimpl.idx_key_storage(key);
 }
 
 NAMESPACE_END(blue_sky::kernel)

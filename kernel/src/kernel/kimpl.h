@@ -17,6 +17,8 @@
 
 #include <caf/fwd.hpp>
 
+#include <mutex>
+
 NAMESPACE_BEGIN(blue_sky::kernel)
 /*-----------------------------------------------------------------------------
  *  kernel impl
@@ -28,12 +30,14 @@ class BS_HIDDEN_API kimpl :
 	public detail::logging_subsyst
 {
 public:
-	// per-type kernel any arrays storage
+	// kernel generic data storage
 	using str_any_map_t = std::map< std::string, str_any_array, std::less<> >;
 	str_any_map_t str_key_storage_;
 
 	using idx_any_map_t = std::map< std::string, idx_any_array, std::less<> >;
 	idx_any_map_t idx_key_storage_;
+
+	std::mutex sync_storage_;
 
 	// kernel's actor system
 	// delayed actor system initialization
