@@ -131,18 +131,17 @@ T BOOST_PP_CAT(BS_UNFOLD_TPL_PREFIX_, BS_IS_NONEMPTY_TUPLE(args_prefix))(args_pr
  *-----------------------------------------------------------------------------*/
 // [TODO] remove explicit polymorphic relation with `objbase` when polycasters will get merged
 // across modules
-#define BSS_REGISTER_TYPE_EXT(T, tpl_args)                                              \
-namespace cereal { namespace detail {                                                   \
-template<>                                                                              \
-struct binding_name< BS_UNFOLD_TPL_T(T, tpl_args) >  {                                  \
-   static char const * name() {                                                         \
-      [[maybe_unused]] static const auto binfmt =                                       \
-         ::blue_sky::install_bin_formatter<BS_UNFOLD_TPL_T(T, tpl_args)>();             \
-      return BS_UNFOLD_TPL_T(T, tpl_args)::bs_type().name.c_str(); }                    \
-};                                                                                      \
-} } /* end namespaces */                                                                \
-CEREAL_BIND_TO_ARCHIVES( BS_UNFOLD_TPL_T(T, tpl_args) )                                 \
-CEREAL_REGISTER_POLYMORPHIC_RELATION(::blue_sky::objbase, BS_UNFOLD_TPL_T(T, tpl_args))
+#define BSS_REGISTER_TYPE_EXT(T, tpl_args)                                  \
+namespace cereal { namespace detail {                                       \
+template<>                                                                  \
+struct binding_name< BS_UNFOLD_TPL_T(T, tpl_args) >  {                      \
+   static char const * name() {                                             \
+      [[maybe_unused]] static const auto binfmt =                           \
+         ::blue_sky::install_bin_formatter<BS_UNFOLD_TPL_T(T, tpl_args)>(); \
+      return BS_UNFOLD_TPL_T(T, tpl_args)::bs_type().name.c_str(); }        \
+};                                                                          \
+} } /* end namespaces */                                                    \
+CEREAL_BIND_TO_ARCHIVES( BS_UNFOLD_TPL_T(T, tpl_args) )
 
 // simpler version for templates with one argument
 #define BSS_REGISTER_TYPE_T(T, tpl_arg) \

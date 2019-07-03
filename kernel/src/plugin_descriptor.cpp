@@ -13,35 +13,26 @@
 
 using namespace std;
 
-#define BS_NIL_PLUGIN_TAG "__blue_sky_nil_plugin__"
+inline constexpr auto BS_NIL_PLUGIN_TAG = "__blue_sky_nil_plugin__";
 
 namespace blue_sky {
 
-//------------------------------plugin_initializer----------------------------------------------------------
-//plugin_initializer::plugin_initializer()
-//	:
-//	k(NULL)
-//	// TODO: uncoment later
-//	//k_(give_kernel::Instance())
-//{}
-
 //------------------------------plugin_descriptor-----------------------------------------------------------
 plugin_descriptor::plugin_descriptor()
-	: name(BS_NIL_PLUGIN_TAG), serial_input_bindings(nullptr), serial_output_bindings(nullptr),
+	: name(BS_NIL_PLUGIN_TAG),
+	serial_input_bindings(nullptr), serial_output_bindings(nullptr), serial_polycasters(nullptr),
 	tag_(nil_type_info())
 {}
-
-//plugin_descriptor::plugin_descriptor(const char* name_)
-//	: name(name_), tag_(nil_type_info())
-//{}
 
 plugin_descriptor::plugin_descriptor(
 	const BS_TYPE_INFO& plugin_tag, const char* name_, const char* version_,
 	const char* description_, const char* py_namespace_,
-	void* serial_input_bindings_, void* serial_output_bindings_
+	void* serial_input_bindings_, void* serial_output_bindings_,
+	void* serial_polycasters_
 ) :
 	name(name_), version(version_), description(description_), py_namespace(py_namespace_),
 	serial_input_bindings(serial_input_bindings_), serial_output_bindings(serial_output_bindings_),
+	serial_polycasters(serial_polycasters_),
 	tag_(plugin_tag)
 {}
 

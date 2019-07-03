@@ -39,8 +39,8 @@ struct is_map<T, std::enable_if_t<is_container_v<T>, std::void_t<typename T::map
 	using mapped_type = typename T::mapped_type;
 };
 
-template<typename T> using mapped_type = typename is_map<T>::mapped_type;
-template<typename T> inline constexpr auto is_map_v = is_map<T>::value;
+template<typename T> using mapped_type = typename is_map<std::decay_t<T>>::mapped_type;
+template<typename T> inline constexpr auto is_map_v = is_map<std::decay_t<T>>::value;
 
 } // blue_sky
 

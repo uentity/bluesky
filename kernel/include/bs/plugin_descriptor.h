@@ -31,6 +31,7 @@ struct BS_API plugin_descriptor {
 	// per-plugin globals that holds polymorphic types serialization maps
 	void *const serial_input_bindings;
 	void *const serial_output_bindings;
+	void *const serial_polycasters;
 
 	// nil plugin constructor
 	plugin_descriptor();
@@ -39,7 +40,7 @@ struct BS_API plugin_descriptor {
 	template< typename T >
 	plugin_descriptor(T&& name_)
 		: name(std::forward< T >(name_)),
-		serial_input_bindings(nullptr), serial_output_bindings(nullptr),
+		serial_input_bindings(nullptr), serial_output_bindings(nullptr), serial_polycasters(nullptr),
 		tag_(nil_type_info())
 	{}
 
@@ -47,7 +48,8 @@ struct BS_API plugin_descriptor {
 	plugin_descriptor(
 		const BS_TYPE_INFO& plugin_tag, const char* name, const char* version,
 		const char* description = "", const char* py_namespace = "",
-		void* serial_input_bindings = nullptr, void* serial_output_bindings = nullptr
+		void* serial_input_bindings = nullptr, void* serial_output_bindings = nullptr,
+		void* serial_polycasters = nullptr
 	);
 
 	// obtain nil plugin descriptor
@@ -66,7 +68,6 @@ private:
 	BS_TYPE_INFO tag_;
 };
 
-// TODO: later move to common.h
 struct BS_API plugin_initializer {
 	plugin_descriptor const* pd; //!< Pointer to descriptor of plugin being loaded
 };
@@ -90,22 +91,23 @@ struct BS_API plugin_initializer {
 	\param version = plugin's version
 	\param description = description of the plugin
 	\param py_namespace = plugin's namespace in Python
-	\param no)serial = {0, 1}, set to 1 to disable united serialization support for this plugin
+	\param no_serial = {0, 1}, set to 1 to disable serialization support for this plugin
 */
-#define BS_PLUGIN_DESCRIPTOR_EXT(name, version, description, py_namespace, no_serial)             \
-namespace {                                                                                       \
-template <typename T> struct bs_this_plugin_tag {};                                               \
-}                                                                                                 \
-BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {                   \
-    static ::blue_sky::plugin_descriptor plugin_info_(                                            \
-        BS_GET_TI(bs_this_plugin_tag<typestring_is(name)>),                                       \
-        name, version, description, py_namespace,                                                 \
-        BOOST_PP_TUPLE_ENUM(BOOST_PP_IF(no_serial, (), (                                          \
-            (void*)&cereal::detail::StaticObject<cereal::detail::InputBindingMap>::getInstance(), \
-            (void*)&cereal::detail::StaticObject<cereal::detail::OutputBindingMap>::getInstance() \
-        )))                                                                                       \
-    );                                                                                            \
-    return &plugin_info_;                                                                         \
+#define BS_PLUGIN_DESCRIPTOR_EXT(name, version, description, py_namespace, no_serial)               \
+namespace {                                                                                         \
+template <typename T> struct bs_this_plugin_tag {};                                                 \
+}                                                                                                   \
+BS_C_API_PLUGIN const blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {                     \
+    static ::blue_sky::plugin_descriptor plugin_info_(                                              \
+        BS_GET_TI(bs_this_plugin_tag<typestring_is(name)>),                                         \
+        name, version, description, py_namespace,                                                   \
+        BOOST_PP_TUPLE_ENUM(BOOST_PP_IF(no_serial, (), (                                            \
+            (void*)&cereal::detail::StaticObject<cereal::detail::InputBindingMap>::getInstance(),   \
+            (void*)&cereal::detail::StaticObject<cereal::detail::OutputBindingMap>::getInstance(),  \
+            (void*)&cereal::detail::StaticObject<cereal::detail::PolymorphicCasters>::getInstance() \
+        )))                                                                                         \
+    );                                                                                              \
+    return &plugin_info_;                                                                           \
 }
 
 #ifdef BS_DEFAULT_SERIAL_DISABLED

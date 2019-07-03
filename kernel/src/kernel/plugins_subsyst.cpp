@@ -7,19 +7,16 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#ifdef BSPY_EXPORTING
-#include <bs/python/common.h>
-#endif
-
 #include <bs/error.h>
 #include <bs/kernel/errors.h>
 #include <bs/log.h>
 #include <bs/detail/scope_guard.h>
+#include <bs/detail/is_container.h>
 
 #include "plugins_subsyst.h"
 #include "python_subsyst.h"
 
-#define BS_KERNEL_VERSION "0.1" //!< version of blue-sky kernel
+inline constexpr auto BS_KERNEL_VERSION = "1.3.1";
 
 #define PYSS singleton<python_subsyst>::Instance()
 
@@ -47,7 +44,8 @@ auto plugins_subsyst::kernel_pd() -> plugin_descriptor& {
 		BS_GET_TI(__kernel_types_pd_tag__), "kernel", BS_KERNEL_VERSION,
 		"BlueSky virtual kernel plugin", "bs",
 		(void*)&cereal::detail::StaticObject<cereal::detail::InputBindingMap>::getInstance(),
-		(void*)&cereal::detail::StaticObject<cereal::detail::OutputBindingMap>::getInstance()
+		(void*)&cereal::detail::StaticObject<cereal::detail::OutputBindingMap>::getInstance(),
+		(void*)&cereal::detail::StaticObject<cereal::detail::PolymorphicCasters>::getInstance()
 	);
 	return kernel_pd;
 }
@@ -198,91 +196,107 @@ auto plugins_subsyst::load_plugins() -> error {
 }
 
 NAMESPACE_BEGIN()
-// print types registered in passed bindings map
-template<typename bindings_t>
+
+// [DEBUG] print types registered in passed bindings map
+template<typename Class, typename Target>
 void print_serial_map(
-	void* pB, std::string_view domain
+	void* pB, Target Class::*class_member, std::string_view domain
 ) {
-	auto B = reinterpret_cast<bindings_t*>(pB);
+	auto B = reinterpret_cast<Class*>(pB);
 	bsout() << "----> [{} at {}]" << domain << pB << bs_end;
-	if(!B) {
-		bsout() << "No bindings" << bs_end;
-	}
+	if(!B)
+		bsout() << "Empty" << bs_end;
 	else {
-		//using Archives_map = typename bindings_t::Archives_map;
-		for(const auto& ar : B->archives_map) {
-			bsout() << "Archive [{}]" << ar.first.name() << bs_end;
-			for(const auto& ar_bnd : ar.second) {
-				if constexpr(std::is_same_v<std::type_index, std::decay_t<decltype(ar_bnd.first)>>)
-					bsout() << "  {}" << ar_bnd.first.name() << bs_end;
-				else
-					bsout() << "  {}" << ar_bnd.first << bs_end;
+		for(const auto& ar : B->*class_member) {
+			bsout() << "[{}]" << ar.first.name() << bs_end;
+			if constexpr(meta::is_map_v<decltype(ar.second)>) {
+				for(const auto& ar_bnd : ar.second) {
+					if constexpr(std::is_same_v<std::type_index, std::decay_t<decltype(ar_bnd.first)>>)
+						bsout() << "  {}" << ar_bnd.first.name() << bs_end;
+					else
+						bsout() << "  {}" << ar_bnd.first << bs_end;
+				}
 			}
+			else bsout() << "  {}" << ar.second.name() << bs_end;
 		}
 	}
 	bsout() << "<----" << bs_end;
 }
 
 // helper to unify input or output bindings
-template<typename bindings_t>
-auto unify_bindings(const plugins_subsyst& K, void *const plugin_descriptor::*binding_var) {
-	//using Serializers_map = typename bindings_t::Serializers_map;
-	using Archives_map = typename bindings_t::Archives_map;
-	Archives_map united;
-	bindings_t* plug_bnd = nullptr;
-
+template<typename Class, typename Target>
+auto unify_serial_globals(
+	const plugins_subsyst& K, void* const plugin_descriptor::*class_storage,
+	Target Class::*class_member
+) {
 	// lambda helper to merge bindings from source to destination
-	auto merge_bindings = [](const auto& src, auto& dest) {
-		// loop over archive entries
-		for(const auto& ar : src) {
-			auto ar_dest = dest.find(ar.first);
-			// if entries for archive not found at all - insert 'em all at once
-			// otherwise go deeper and loop over entries per selected archive
-			if(ar_dest == dest.end())
-				dest.insert(ar);
-			else {
-				// loop over bindings for selected archive
-				// and insert bindings that are missing in destination
-				auto& dest_binds = ar_dest->second;
-				for(const auto& src_bind : ar.second) {
-					if(dest_binds.find(src_bind.first) == dest_binds.end())
-						dest_binds.insert(src_bind);
+	auto merge_targets = [](const auto& src, auto& dest) {
+		auto merger = [](const auto& src, auto& dest, [[maybe_unused]] auto self) {
+			// supports map, vector, list, etc
+			auto search = [](auto& where, auto& what) {
+				if constexpr(meta::is_map_v<decltype(where)>)
+					return where.find(what.first);
+				else return std::find(where.begin(), where.end(), what);
+			};
+			auto append = [](auto& where, auto& what) {
+				if constexpr(meta::is_map_v<decltype(where)>)
+					where.insert(what);
+				else where.push_back(what);
+			};
+
+			for(const auto& S : src) {
+				// if entries for archive not found at all - insert 'em all at once
+				// otherwise go deeper and loop over entries per selected archive
+				if(auto D = search(dest, S); D == dest.end())
+					append(dest, S);
+				else if constexpr(meta::is_map_v<decltype(src)>) {
+					// recursively merge mapped values if they're containers
+					if constexpr(meta::is_container_v<decltype(S.second)>)
+						self(S.second, D->second, self);
 				}
 			}
-		}
+		};
+
+		merger(src, dest, merger);
 	};
+
+	Target united;
+	Class* storage = nullptr;
 
 	// first pass -- collect all bindings into single map
 	for(const auto& plugin : K.loaded_plugins_) {
 		// extract bindings global from plugin descriptor
-		if( !(plug_bnd = reinterpret_cast<bindings_t*>(plugin.first->*binding_var)) )
+		if( !(storage = reinterpret_cast<Class*>(plugin.first->*class_storage)) )
 			continue;
 		// merge plugin bindings into united map
-		merge_bindings(plug_bnd->archives_map, united);
+		merge_targets(storage->*class_member, united);
 	}
 
 	// 2nd pass - merge united into plugins' bindings
 	for(const auto& plugin : K.loaded_plugins_) {
 		// extract bindings global from plugin descriptor
-		if( !(plug_bnd = reinterpret_cast<bindings_t*>(plugin.first->*binding_var)) )
+		if( !(storage = reinterpret_cast<Class*>(plugin.first->*class_storage)) )
 			continue;
 		// merge all entries from plugin into united
-		merge_bindings(united, plug_bnd->archives_map);
+		merge_targets(united, storage->*class_member);
 	}
-
-	// [DEBUG]
-	//print_serial_map<bindings_t>((void*)&united, "United serial map");
 }
 
 NAMESPACE_END()
 
 void plugins_subsyst::unify_serialization() const {
-	unify_bindings<cereal::detail::InputBindingMap>(
-		*this, &plugin_descriptor::serial_input_bindings
-	);
-	unify_bindings<cereal::detail::OutputBindingMap>(
-		*this, &plugin_descriptor::serial_output_bindings
-	);
+	using IBM = cereal::detail::InputBindingMap;
+	unify_serial_globals(*this, &plugin_descriptor::serial_input_bindings, &IBM::archives_map);
+
+	using OBM = cereal::detail::OutputBindingMap;
+	unify_serial_globals(*this, &plugin_descriptor::serial_output_bindings, &OBM::archives_map);
+
+	using PC = cereal::detail::PolymorphicCasters;
+	unify_serial_globals(*this, &plugin_descriptor::serial_polycasters, &PC::map);
+	unify_serial_globals(*this, &plugin_descriptor::serial_polycasters, &PC::reverseMap);
+
+	// [DEBUG]
+	//print_serial_map(kernel_pd().serial_polycasters, &PC::map, "Polycasters map");
 }
 
 std::pair< const plugin_descriptor*, bool >
@@ -323,14 +337,6 @@ plugins_subsyst::register_plugin(const plugin_descriptor* pd, const lib_descript
 		auto tplug = temp_plugins_.find(*pplug);
 		if(tplug != temp_plugins_.end())
 			temp_plugins_.erase(tplug);
-
-		// [DEBUG]
-		//print_serial_map<cereal::detail::InputBindingMap>(
-		//	pd->serial_input_bindings, pd->name + " input serial bindings"
-		//);
-		//print_serial_map<cereal::detail::OutputBindingMap>(
-		//	pd->serial_output_bindings, pd->name + " output serial bindings"
-		//);
 
 		// merge serialization bindings maps
 		unify_serialization();
