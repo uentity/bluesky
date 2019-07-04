@@ -85,6 +85,7 @@ auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar)
 	if(ar == TreeArchive::FS) {
 		auto ar = tree_fs_output(filename);
 		ar(root);
+		ar.serializeDeferments();
 		return success();
 	}
 	// open file for writing

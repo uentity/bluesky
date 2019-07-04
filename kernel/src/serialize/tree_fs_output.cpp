@@ -13,6 +13,8 @@
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
 #include <bs/tree/node.h>
+#include <bs/log.h>
+#include <bs/kernel/config.h>
 
 #include <cereal/types/vector.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -27,6 +29,10 @@
 
 namespace fs = std::filesystem;
 
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::sp_cobj)
+
+template<typename T> struct TD;
+
 NAMESPACE_BEGIN(blue_sky)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,7 +41,8 @@ NAMESPACE_BEGIN(blue_sky)
 struct tree_fs_output::impl {
 
 	impl(std::string root_fname, std::string objects_dirname) :
-		root_fname_(std::move(root_fname)), objects_dname_(std::move(objects_dirname))
+		root_fname_(std::move(root_fname)), objects_dname_(std::move(objects_dirname)),
+		manager_(kernel::config::actor_system().spawn<savers_manager>())
 	{
 		// try convert root filename to absolute
 		auto root_path = fs::path(root_fname_);
@@ -210,7 +217,20 @@ struct tree_fs_output::impl {
 		// and actually save object data to file
 		auto abs_obj_path = fs::absolute(obj_path, file_er_);
 		if(file_er_) return make_error();
-		return F->first(obj, abs_obj_path.string(), obj_fmt);
+
+		// spawn object save actor
+		auto A = kernel::config::actor_system().spawn(async_saver, F, manager_);
+		auto pm = caf::actor_cast<savers_manager_ptr>(manager_);
+		// defer wait until save completes
+		if(!has_wait_deferred_) {
+			ar(cereal::defer(cereal::Functor{ [](auto& ar){ ar.wait_objects_saved(); } }));
+			has_wait_deferred_ = true;
+		}
+		// inc started counter
+		++pm->state.nstarted_;
+		// post invoke save mesage
+		pm->send(A, obj.shared_from_this(), abs_obj_path.string());
+		return perfect;
 	}
 
 	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter* {
@@ -238,6 +258,90 @@ struct tree_fs_output::impl {
 		return false;
 	}
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  async saver API
+	//
+	using saver_actor_t = caf::typed_actor<
+		caf::reacts_to< sp_cobj, std::string > // invoke save
+	>;
+
+	using savers_manager_t = caf::typed_actor<
+		//caf::reacts_to< bool >, // increment started counter
+		caf::reacts_to< std::string > // store error from saver and increment finished counter
+	>;
+
+	// saver
+	static auto async_saver(
+		saver_actor_t::pointer self, object_formatter* F, savers_manager_t manager
+	) -> saver_actor_t::behavior_type {
+		return {
+			[=](const sp_cobj& obj, const std::string& fname) {
+				auto er = F->save(*obj, fname, F->name);
+				self->send(manager, er ? er.what() : "");
+			}
+		};
+	}
+
+	// savers manager
+	struct manager_state {
+		// errors collection
+		std::vector<std::string> er_stack_;
+		std::mutex er_sync_;
+		// track running savers
+		size_t nstarted_ = 0;
+		std::atomic<size_t> nfinished_ = 0;
+		std::mutex running_mtx_;
+		std::condition_variable running_cv_;
+	};
+
+	using savers_manager_ptr = typename savers_manager_t::stateful_pointer<manager_state>;
+
+	struct savers_manager : savers_manager_t::stateful_base<manager_state> {
+
+		savers_manager(caf::actor_config& cfg) : savers_manager_t::stateful_base<manager_state>(cfg) {}
+
+		behavior_type make_behavior() override {
+			return {
+				[this](std::string ermsg) {
+					{
+						auto solo = std::lock_guard{ state.er_sync_ };
+						state.er_stack_.push_back(std::move(ermsg));
+					}
+					// dec counter
+					finished();
+				},
+			};
+		}
+
+		void finished() {
+			std::unique_lock guard{ state.running_mtx_ };
+			if(++state.nfinished_ == state.nstarted_)
+				state.running_cv_.notify_all();
+		}
+	};
+
+	auto wait_objects_saved(timespan how_long) -> std::vector<std::string> {
+		auto pm = caf::actor_cast<savers_manager_ptr>(manager_);
+		auto& S = pm->state;
+		auto res = std::move(S.er_stack_);
+
+		// reset state on exit
+		auto finally = scope_guard{ [&S, this]{
+			S.nstarted_ = 0;
+			S.nfinished_ = 0;
+			S.er_stack_.clear();
+			has_wait_deferred_ = false;
+		}};
+
+		std::unique_lock guard{ S.running_mtx_ };
+		if(!S.running_cv_.wait_for( guard, how_long, [&S]{ return S.nfinished_ == S.nstarted_; }))
+			res.push_back("Timeout waiting for Tree FS save to complete");
+		return res;
+	}
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  data
+	//
 	std::string root_fname_, objects_dname_, root_dname_;
 	std::error_code file_er_;
 	fs::path root_path_, cur_path_, objects_path_;
@@ -248,6 +352,10 @@ struct tree_fs_output::impl {
 	// obj_type_id -> formatter name
 	using active_fmt_t = std::map<std::string_view, std::string, std::less<>>;
 	active_fmt_t active_fmt_;
+
+	// async savers manager
+	savers_manager_t manager_;
+	bool has_wait_deferred_ = false;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -283,6 +391,10 @@ auto tree_fs_output::end_node(const tree::node& N) -> error {
 
 auto tree_fs_output::save_object(const objbase& obj) -> error {
 	return pimpl_->save_object(*this, obj);
+}
+
+auto tree_fs_output::wait_objects_saved(timespan how_long) const -> std::vector<std::string> {
+	return pimpl_->wait_objects_saved(how_long);
 }
 
 auto tree_fs_output::saveBinaryValue(const void* data, size_t size, const char* name) -> void {

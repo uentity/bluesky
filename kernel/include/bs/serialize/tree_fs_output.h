@@ -10,6 +10,7 @@
 
 #include "../common.h"
 #include "../error.h"
+#include "../timetypes.h"
 #include "atomizer.h"
 #include "object_formatter.h"
 
@@ -44,6 +45,9 @@ public:
 	auto will_serialize_node(objbase const* obj) -> bool;
 
 	auto save_object(const objbase& obj) -> error;
+	auto wait_objects_saved(timespan how_long = std::chrono::seconds(30)) const
+	-> std::vector<std::string>;
+
 	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter*;
 	auto select_active_formatter(std::string_view obj_type_id, std::string_view fmt_name) -> bool;
 
