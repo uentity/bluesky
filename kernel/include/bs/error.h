@@ -45,6 +45,23 @@ public:
 	// indicates that no error happened
 	struct success_tag {};
 
+	template<typename Category>
+	class category : public std::error_category {
+	public:
+		// create instance of Category & auto-register it
+		static auto self() -> Category const& {
+			const auto& self_ = []() -> const auto& {
+				static const auto self_ = Category{};
+				error::register_category(&self_);
+				return self_;
+			}();
+			return self_;
+		}
+	};
+
+	/// [NOTE] expects that `cat` is singleton instance
+	static auto register_category(std::error_category const* cat) -> void;
+
 private:
 	// should we log error in constructor?
 	enum class IsQuiet { Yes, No };
@@ -52,8 +69,9 @@ private:
 	// helper to narrow gready nature of perfect forwarding ctor
 	template<typename A1 = int, typename... As>
 	struct allow_forward {
-		static constexpr bool value = !std::is_same_v<A1, IsQuiet> && !std::is_same_v<A1, success_tag>
-			&& !std::is_base_of_v<error, std::decay_t<A1>>;
+		using T1 = std::remove_cv_t<std::remove_reference_t<A1>>;
+		static constexpr bool value = !std::is_same_v<T1, IsQuiet> && !std::is_same_v<T1, success_tag>
+			&& !std::is_base_of_v<error, T1>;
 	};
 
 public:
@@ -82,7 +100,6 @@ public:
 	static error quiet(Ts&&... args) {
 		return error(IsQuiet::Yes, std::forward<Ts>(args)...);
 	}
-
 
 	/// use what() from base class
 	using std::runtime_error::what;
@@ -146,11 +163,13 @@ public:
 
 private:
 	/// construct from message and error code
-	explicit error(IsQuiet, const std::string message, const std::error_code = Error::Undefined);
+	explicit error(IsQuiet, std::string message, std::error_code = Error::Undefined);
 	/// construct from error code solely
-	explicit error(IsQuiet, const std::error_code = Error::Undefined);
-	/// construct from int operation result
-	explicit error(IsQuiet, int err_code);
+	explicit error(IsQuiet, std::error_code = Error::Undefined);
+	/// construct from message, int code and possible registered category name
+	explicit error(IsQuiet, std::string message, int err_code, std::string_view cat_name = "");
+	/// construct from int error code and possible registered category name
+	explicit error(IsQuiet, int err_code, std::string_view cat_name = "");
 };
 
 /// produces quiet error from given params
