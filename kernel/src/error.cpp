@@ -87,7 +87,7 @@ std::error_code make_error_code(Error e) {
 
 		std::string message(int ec) const override {
 			// in any case we should just substitute custom error message
-				return "";
+			return "";
 		}
 	};
 
@@ -108,10 +108,7 @@ error::error(IsQuiet quiet, std::string message, std::error_code ec)
 	}()),
 	code(ec == Error::Undefined ? (quiet == IsQuiet::Yes ? Error::OK : Error::Happened) : std::move(ec))
 {
-	// If message is empty and passed error code `ec` is undefined,
-	// don't dump error even quiet == No - such error don't contain eny sensible info.
-	// Hence, default constructed empty error won't log itself
-	if(quiet == IsQuiet::No && !(message.empty() && ec == Error::Undefined)) dump();
+	if(quiet == IsQuiet::No) dump();
 }
 
 error::error(IsQuiet quiet, std::error_code ec) : error(quiet, "", std::move(ec)) {}
@@ -126,6 +123,9 @@ error::error(IsQuiet quiet, int ec, std::string_view cat_name)
 		ECR.make_error_code(ec, cat_name)
 	)
 {}
+
+// [NOTE] unpacking is always quiet
+error::error(IsQuiet quiet, box b) : error(IsQuiet::Yes, std::move(b.message), b.ec, b.domain) {}
 
 error::error(success_tag) : error(IsQuiet::Yes, Error::OK) {}
 
@@ -163,6 +163,14 @@ BS_API std::string to_string(const error& er) {
 	return s;
 }
 
+auto error::pack() const -> box {
+	return { code.value(), message(), domain() };
+}
+
+auto error::unpack(box b) -> error {
+	return error{ IsQuiet::Yes, std::move(b) };
+}
+
 void error::dump() const {
 	if(code)
 		bserr() << log::E(to_string(*this)) << log::end;
@@ -176,4 +184,3 @@ BS_API std::ostream& operator <<(std::ostream& os, const error& ec) {
 }
 
 NAMESPACE_END(blue_sky)
-

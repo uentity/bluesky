@@ -49,6 +49,7 @@ auto test_save(const T& obj, bool dump_serialized = true) {
 	{
 		OutputArchive ja(S);
 		ja(obj);
+		ja.serializeDeferments();
 		if constexpr(!Binary) {
 			if(dump_serialized) {
 				dump = S.str();

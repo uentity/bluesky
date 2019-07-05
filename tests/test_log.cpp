@@ -96,6 +96,6 @@ BOOST_AUTO_TEST_CASE(test_bs_log) {
 	bsout() << I("It's a pity that a little {} {}") << "kitty"
 		<< "lives in a big {} for {}.{} years" << "city" << y << m << end;
 
-	bsout() << error("Kernel::test: Kernel panic!").to_string() << bs_end;
+	bsout() << to_string(error("Kernel::test: Kernel panic!")) << bs_end;
 }
 

@@ -8,6 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #define BOOST_TEST_DYN_LINK
+#include "test_serialization.h"
+
 #include <bs/error.h>
 #include <bs/detail/args.h>
 #include <bs/timetypes.h>
@@ -151,5 +153,18 @@ BOOST_AUTO_TEST_CASE(test_common) {
 
 	// compile failure
 	//auto f4 = function_view{42.};
+
+	// test error
+	auto er = error{"Something bad", -1};
+	auto ec = make_error_code(Error::Happened);
+	BOOST_TEST(er.code.value() == -1);
+	BOOST_TEST(er.message() == "Something bad");
+	BOOST_TEST(er.domain() == ec.category().name());
+	BOOST_TEST(er.what() == "|> Something bad");
+	// test serialization
+	auto er1 = success(test_json(er.pack()));
+	BOOST_TEST(er.code == er1.code);
+	BOOST_TEST(er.domain() == er1.domain());
+	BOOST_TEST(er.what() == er1.what());
 }
 

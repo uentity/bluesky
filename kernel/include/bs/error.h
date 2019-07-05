@@ -45,6 +45,7 @@ public:
 	// indicates that no error happened
 	struct success_tag {};
 
+	/// registers inherited error category automatically
 	template<typename Category>
 	class category : public std::error_category {
 	public:
@@ -58,9 +59,14 @@ public:
 			return self_;
 		}
 	};
-
 	/// [NOTE] expects that `cat` is singleton instance
 	static auto register_category(std::error_category const* cat) -> void;
+
+	/// serializable type that can carry error information and later reconstruct packed error
+	struct box {
+		int ec;
+		std::string message, domain;
+	};
 
 private:
 	// should we log error in constructor?
@@ -121,6 +127,11 @@ public:
 		return !ok();
 	}
 
+	/// pack error to serializable box
+	auto pack() const -> box;
+	/// unpack error from box
+	static auto unpack(box b) -> error;
+
 	/// eval errors of functions sequence
 	static inline auto eval() -> error {
 		return success_tag{};
@@ -173,6 +184,8 @@ private:
 	explicit error(IsQuiet, std::string message, int err_code, std::string_view cat_name = "");
 	/// construct from int error code and possible registered category name
 	explicit error(IsQuiet, int err_code, std::string_view cat_name = "");
+	/// unpacking error from box is always quiet
+	explicit error(IsQuiet, box b);
 };
 
 /// produces quiet error from given params
