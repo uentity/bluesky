@@ -26,19 +26,7 @@
 using namespace std;
 
 NAMESPACE_BEGIN(blue_sky)
-/*-----------------------------------------------------------------------------
- *  hidden details
- *-----------------------------------------------------------------------------*/
-namespace {
-
-// not throwing error message formatter
-inline std::string format_errmsg(std::string ec_message, std::string custom_message) {
-	return ec_message.size() ? (
-			custom_message.size() ?
-				std::move(ec_message) + ": " + std::move(custom_message) : std::move(ec_message)
-		) :
-		std::move(custom_message);
-};
+NAMESPACE_BEGIN()
 
 // implements categories registry
 struct cat_registry {
@@ -85,7 +73,7 @@ struct cat_registry {
 
 #define ECR cat_registry::self()
 
-} // hidden namespace
+NAMESPACE_END()
 
 /*-----------------------------------------------------------------------------
  *  Default error category for generic exception
@@ -110,10 +98,20 @@ std::error_code make_error_code(Error e) {
  *  error implementation
  *-----------------------------------------------------------------------------*/
 error::error(IsQuiet quiet, std::string message, std::error_code ec)
-	: runtime_error(format_errmsg(ec.message(), std::move(message))),
-	  code(ec == Error::Undefined ? (quiet == IsQuiet::Yes ? Error::OK : Error::Happened) : std::move(ec))
+	: runtime_error([ec_msg = ec.message(), msg = std::move(message)] {
+		auto res = std::move(ec_msg);
+		if(!msg.empty()) {
+			res += res.empty() ? "|> " : " |> ";
+			res += std::move(msg);
+		}
+		return res;
+	}()),
+	code(ec == Error::Undefined ? (quiet == IsQuiet::Yes ? Error::OK : Error::Happened) : std::move(ec))
 {
-	if(quiet == IsQuiet::No) dump();
+	// If message is empty and passed error code `ec` is undefined,
+	// don't dump error even quiet == No - such error don't contain eny sensible info.
+	// Hence, default constructed empty error won't log itself
+	if(quiet == IsQuiet::No && !(message.empty() && ec == Error::Undefined)) dump();
 }
 
 error::error(IsQuiet quiet, std::error_code ec) : error(quiet, "", std::move(ec)) {}
@@ -144,20 +142,11 @@ const char* error::domain() const noexcept {
 	return code.category().name();
 }
 
-std::string error::to_string() const {
-	std::string s = fmt::format("[{}] [{}] {}", domain(), code.value(), what());
-#if defined(_DEBUG) && !defined(_MSC_VER)
-	if(!ok()) s += kernel::tools::get_backtrace(20, 4);
-#endif
-	return s;
-}
-
-void error::dump() const {
-	//const auto msg = fmt::format("[{}] [{}] {}", domain(), code.value(), what());
-	if(code)
-		bserr() << log::E(to_string()) << log::end;
-	else
-		bsout() << log::I(to_string()) << log::end;
+const char* error::message() const noexcept {
+	// custom message is tail part delimited by semicolon and space
+	if(auto pos = strstr(what(), "|>"); pos)
+		return pos + 3;
+	return "";
 }
 
 bool error::ok() const {
@@ -166,9 +155,24 @@ bool error::ok() const {
 	return !(bool)code || (code == tree_extra_ok);
 }
 
+BS_API std::string to_string(const error& er) {
+	std::string s = fmt::format("[{}] [{}] {}", er.domain(), er.code.value(), er.what());
+#if defined(_DEBUG) && !defined(_MSC_VER)
+	if(!er.ok()) s += kernel::tools::get_backtrace(20, 4);
+#endif
+	return s;
+}
+
+void error::dump() const {
+	if(code)
+		bserr() << log::E(to_string(*this)) << log::end;
+	else
+		bsout() << log::I(to_string(*this)) << log::end;
+}
+
 // error printing
 BS_API std::ostream& operator <<(std::ostream& os, const error& ec) {
-	return os << ec.to_string();
+	return os << to_string(ec);
 }
 
 NAMESPACE_END(blue_sky)

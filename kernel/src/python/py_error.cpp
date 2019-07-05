@@ -99,12 +99,13 @@ void py_bind_error(py::module& m) {
 		// other methods
 		.def_property_readonly("domain", &error::domain, "Get error domain (error_code::category)")
 		.def("dump", &error::dump, "Log current error")
-		.def("__repr__", &error::to_string)
+		.def("__repr__", [](const error& er){ return to_string(er); })
 		// export code memeber
 		.def_readonly("code", &error::code, "Access code of this error")
 		// error message
 		.def_property_readonly("what", [](const error& e){ return e.what(); }, "Get error message")
-		.def_property_readonly("ok", &error::ok, "Test if no error happened (successfull op)")
+		.def_property_readonly("ok", &error::ok, "Test if no error happened (successful op)")
+		.def_property_readonly("message", &error::message, "Get custom part of message passed to constructor")
 	;
 	py::implicitly_convertible<Error, error>();
 }

@@ -101,14 +101,14 @@ public:
 		return error(IsQuiet::Yes, std::forward<Ts>(args)...);
 	}
 
-	/// use what() from base class
+	/// returns error message
 	using std::runtime_error::what;
 
 	/// get error domain (category name of contained error_code)
 	const char* domain() const noexcept;
 
-	/// make formatted string representation of error
-	std::string to_string() const;
+	/// returns custom error message that was passed to constructor
+	const char* message() const noexcept;
 
 	/// write error to kernel log
 	void dump() const;
@@ -159,7 +159,10 @@ public:
 	}
 
 	/// enable stream printing facility
-	friend BS_API std::ostream& operator <<(std::ostream& os, const error& ec);
+	friend BS_API std::ostream& operator <<(std::ostream& os, const error& er);
+
+	/// make formatted string representation of error
+	friend BS_API std::string to_string(const error& er);
 
 private:
 	/// construct from message and error code
