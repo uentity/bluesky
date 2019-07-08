@@ -55,20 +55,22 @@ inline auto install_bin_formatter(bool store_node = false, bool force = false) {
 template<typename T, typename Archive>
 struct formatter_tools {
 private:
-	static constexpr auto sibling_archive() {
-		if constexpr(Archive::is_saving::value)
-			return (typename cereal::traits::detail::get_input_from_output<Archive>::type*)nullptr;
-		else
-			return (typename cereal::traits::detail::get_output_from_input<Archive>::type*)nullptr;
-	}
-	using siblig_archive_t = std::remove_pointer_t<decltype(sibling_archive())>;
+	template<typename A, typename = std::enable_if_t<A::is_saving::value>>
+	struct sibling_archive {
+		using type = typename cereal::traits::detail::get_input_from_output<Archive>::type;
+	};
+	template<typename A>
+	struct sibling_archive<A, std::enable_if_t<A::is_loading::value>> {
+		using type = typename cereal::traits::detail::get_output_from_input<Archive>::type;
+	};
+	using sibling_archive_t = typename sibling_archive<Archive>::type;
 
 public:
 	using type = std::decay_t<T>;
 	using archive_t = Archive;
 	/// make sure that `custom_node_serialization` is the same in both input and output archives
 	static_assert(
-		detail::custom_node_serialization_v<Archive> == detail::custom_node_serialization_v<siblig_archive_t>,
+		detail::custom_node_serialization_v<Archive> == detail::custom_node_serialization_v<sibling_archive_t>,
 		"Custom node serialization switch must be the same for both Input and Output archives"
 	);
 
