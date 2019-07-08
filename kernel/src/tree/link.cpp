@@ -111,14 +111,11 @@ std::string link::obj_type_id() const {
 }
 
 result_or_err<sp_node> link::data_node_impl() const {
-	return data_ex().and_then([](const sp_obj& obj){
-		return obj ?
-
-			obj->is_node() ?
-				result_or_err<sp_node>(std::static_pointer_cast<tree::node>(obj)) :
-				tl::make_unexpected(error::quiet(Error::NotANode)) :
-
-			tl::make_unexpected(error::quiet(Error::EmptyData));
+	return data_ex().and_then([](const sp_obj& obj) {
+		// don't check if obj is nullptr, because data_ex() never returns NULL
+		return obj->is_node() ?
+			result_or_err<sp_node>(std::static_pointer_cast<tree::node>(obj)) :
+			tl::make_unexpected(error::quiet(Error::NotANode));
 	});
 }
 
@@ -144,7 +141,7 @@ result_or_err<sp_node> link::data_node_ex(bool wait_if_busy) const {
 	).and_then([](sp_node&& N) {
 		return N ?
 			result_or_err<sp_node>(std::move(N)) :
-			tl::make_unexpected(error::quiet(Error::NotANode));
+			tl::make_unexpected(error::quiet(Error::EmptyData));
 	});
 }
 

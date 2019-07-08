@@ -13,7 +13,7 @@
 #include "../python/nparray.h"
 #endif
 
-#include "serialize.h"
+#include "serialize_decl.h"
 
 // bs_array
 BSS_FCN_DECL_EXT(serialize, blue_sky::bs_array, (class, template< class > class))

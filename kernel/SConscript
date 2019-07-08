@@ -16,7 +16,8 @@ if build_kind == "init" :
 		custom_vars.Update (custom_env)
 	# query for reuired boost libs
 	boost_require(kboost_libs);
-	includes[tar_name] = os.path.join(tar_plugin_dir, "include");
+	includes["bs"] = os.path.join(tar_plugin_dir, "include");
+	includes["bs/tests"] = "#tests";
 	Return();
 
 # setup list of source files to compile
@@ -60,6 +61,9 @@ kernel_cpp_list = [
 	"src/serialize/link.cpp",
 	"src/serialize/python.cpp",
 	"src/serialize/tree.cpp",
+	"src/serialize/tree_fs_output.cpp",
+	"src/serialize/tree_fs_input.cpp",
+	"src/serialize/object_formatter.cpp",
 
 	"src/tree/inode.cpp",
 	"src/tree/link.cpp",

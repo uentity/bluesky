@@ -49,6 +49,7 @@ auto test_save(const T& obj, bool dump_serialized = true) {
 	{
 		OutputArchive ja(S);
 		ja(obj);
+		ja.serializeDeferments();
 		if constexpr(!Binary) {
 			if(dump_serialized) {
 				dump = S.str();
@@ -71,6 +72,7 @@ auto test_load(typename select_archives<Binary>::StreamData data, T& obj) -> voi
 	{
 		InputArchive ja(S);
 		ja(obj);
+		ja.serializeDeferments();
 	}
 }
 

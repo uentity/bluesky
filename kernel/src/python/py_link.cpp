@@ -92,7 +92,7 @@ void py_bind_link(py::module& m) {
 
 	// link base class
 	link_pyface
-		.def("clone", &link::clone, "deep"_a = true, "Make shallow or deep copy of link")
+		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link")
 
 		// [NOTE] return adapted objects (and pass 'em to callbacks)
 		.def("data_ex",
@@ -183,7 +183,7 @@ void py_bind_link(py::module& m) {
 		.def(py::init<std::string, const sp_link&, link::Flags>(),
 			"name"_a, "source"_a, "flags"_a = link::Flags::Plain)
 
-		.def_property_readonly("is_alive", &sym_link::is_alive)
+		.def_property_readonly("check_alive", &sym_link::check_alive)
 		.def("src_path", &sym_link::src_path, "human_readable"_a = false)
 	;
 

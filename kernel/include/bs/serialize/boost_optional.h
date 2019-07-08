@@ -20,7 +20,7 @@ void CEREAL_SAVE_FUNCTION_NAME(Archive& ar, const boost::optional<T>& optional) 
 		ar(CEREAL_NVP_("nullopt", true));
 	} else {
 		ar(CEREAL_NVP_("nullopt", false),
-				CEREAL_NVP_("data", *optional));
+			CEREAL_NVP_("data", *optional));
 	}
 }
 

@@ -36,10 +36,7 @@ std::string sym_link::type_id() const {
 void sym_link::reset_owner(const sp_node& new_owner) {
 	link::reset_owner(new_owner);
 	// update link's status
-	if(is_alive()) {
-		rs_reset(Req::Data, ReqStatus::OK);
-		rs_reset(Req::DataNode, ReqStatus::OK);
-	}
+	check_alive();
 }
 
 result_or_err<sp_obj> sym_link::data_impl() const {
@@ -52,8 +49,10 @@ result_or_err<sp_obj> sym_link::data_impl() const {
 		tl::make_unexpected(error::quiet(Error::LinkExpired));
 }
 
-bool sym_link::is_alive() const {
-	return bool(deref_path(path_, owner()));
+bool sym_link::check_alive() {
+	auto res = bool(deref_path(path_, owner()));
+	rs_reset(Req::Data, res ? ReqStatus::OK : ReqStatus::Error);
+	return res;
 }
 
 /// return stored pointee path

@@ -13,7 +13,7 @@ NAMESPACE_BEGIN(blue_sky::kernel)
 
 BS_API std::error_code make_error_code(Error e) {
 	// error_category for kernel errors
-	static const struct : std::error_category {
+	struct kernel_category : error::category<kernel_category> {
 		const char* name() const noexcept override {
 			return "blue_sky::kernel";
 		}
@@ -54,9 +54,9 @@ BS_API std::error_code make_error_code(Error e) {
 				return "";
 			}
 		}
-	} kernel_category;
+	};
 
-	return { static_cast<int>(e), kernel_category };
+	return { static_cast<int>(e), kernel_category::self() };
 }
 
 NAMESPACE_END(blue_sky::kernel)

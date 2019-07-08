@@ -12,9 +12,9 @@
 NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
 
 BS_API std::error_code make_error_code(Error e) {
-	static const struct : public std::error_category {
+	struct tree_domain : public error::category<tree_domain> {
 		const char* name() const noexcept override {
-			return "blue-sky::tree";
+			return "blue_sky::tree";
 		}
 
 		std::string message(int ev) const override {
@@ -48,9 +48,9 @@ BS_API std::error_code make_error_code(Error e) {
 				return "";
 			}
 		}
-	} tree_domain;
+	};
 
-	return {static_cast<int>(e), tree_domain};
+	return { static_cast<int>(e), tree_domain::self() };
 }
 
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)

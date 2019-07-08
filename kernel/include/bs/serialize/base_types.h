@@ -10,16 +10,22 @@
 
 #include "../objbase.h"
 
-#include "serialize.h"
+#include "serialize_decl.h"
 #include "carray.h"
 
-NAMESPACE_BEGIN(blue_sky)
-/*-----------------------------------------------------------------------------
- *  objbase
- *-----------------------------------------------------------------------------*/
 BSS_FCN_DECL(serialize, blue_sky::objbase)
+
+NAMESPACE_BEGIN(blue_sky)
+
+template<typename Archive>
+auto serialize(Archive& ar, error::box& t) -> void {
+	ar(
+		cereal::make_nvp("code", t.ec),
+		cereal::make_nvp("domain", t.domain),
+		cereal::make_nvp("message", t.message)
+	);
+}
 
 NAMESPACE_END(blue_sky)
 
 BSS_FORCE_DYNAMIC_INIT(base_types)
-

@@ -9,7 +9,7 @@
 #pragma once
 
 #include <pybind11/pybind11.h>
-#include "serialize.h"
+#include "serialize_decl.h"
 
 BSS_FCN_DECL(serialize, pybind11::object)
 

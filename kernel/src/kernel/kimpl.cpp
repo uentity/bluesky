@@ -65,12 +65,12 @@ auto kimpl::find_type(const std::string& key) const -> type_tuple {
 	return tp != I.end() ? *tp : type_tuple();
 }
 
-auto kimpl::pert_str_any_array(const std::string& key) -> str_any_array& {
-	return str_any_map_[key];
+auto kimpl::str_key_storage(const std::string& key) -> str_any_array& {
+	return str_key_storage_[key];
 }
 
-auto kimpl::pert_idx_any_array(const std::string& key) -> idx_any_array& {
-	return idx_any_map_[key];
+auto kimpl::idx_key_storage(const std::string& key) -> idx_any_array& {
+	return idx_key_storage_[key];
 }
 
 auto kimpl::actor_system() -> caf::actor_system& {
@@ -86,7 +86,7 @@ auto kimpl::actor_system() -> caf::actor_system& {
 NAMESPACE_END(kernel)
 
 /*-----------------------------------------------------------------------------
- *  kernel internal signleton instantiation
+ *  kernel subsystems impl instantiation
  *-----------------------------------------------------------------------------*/
 using namespace kernel::detail;
 
