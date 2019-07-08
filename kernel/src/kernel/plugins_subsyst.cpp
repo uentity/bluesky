@@ -12,6 +12,7 @@
 #include <bs/log.h>
 #include <bs/detail/scope_guard.h>
 #include <bs/detail/is_container.h>
+#include <bs/detail/function_view.h>
 
 #include "plugins_subsyst.h"
 #include "python_subsyst.h"
@@ -227,7 +228,8 @@ void print_serial_map(
 template<typename Class, typename Target>
 auto unify_serial_globals(
 	const plugins_subsyst& K, void* const plugin_descriptor::*class_storage,
-	Target Class::*class_member
+	Target Class::*class_member,
+	function_view<void (Class*)> postprocess_united_fn = [](Class*){}
 ) {
 	// lambda helper to merge bindings from source to destination
 	auto merge_targets = [](const auto& src, auto& dest) {
@@ -263,22 +265,32 @@ auto unify_serial_globals(
 	Target united;
 	Class* storage = nullptr;
 
-	// first pass -- collect all bindings into single map
+	// first pass -- collect all bindings into `united` container
 	for(const auto& plugin : K.loaded_plugins_) {
-		// extract bindings global from plugin descriptor
+		// extract bindings static variable from plugin descriptor
 		if( !(storage = reinterpret_cast<Class*>(plugin.first->*class_storage)) )
 			continue;
+
 		// merge plugin bindings into united map
 		merge_targets(storage->*class_member, united);
 	}
 
-	// 2nd pass - merge united into plugins' bindings
+	// assign united map to kernel's plugin descriptor
+	auto* kstor = reinterpret_cast<Class*>(K.kernel_pd().*class_storage);
+	kstor->*class_member = std::move(united);
+	// invoke postprocessing
+	postprocess_united_fn(kstor);
+
+	// 2nd pass -- assign back to plugin's maps from kernel's sample
 	for(const auto& plugin : K.loaded_plugins_) {
-		// extract bindings global from plugin descriptor
-		if( !(storage = reinterpret_cast<Class*>(plugin.first->*class_storage)) )
+		if( *plugin.first == K.kernel_pd() ||
+			!(storage = reinterpret_cast<Class*>(plugin.first->*class_storage))
+		)
 			continue;
+
+		storage->*class_member = kstor->*class_member;
 		// merge all entries from plugin into united
-		merge_targets(united, storage->*class_member);
+		//merge_targets(united, storage->*class_member);
 	}
 }
 
@@ -291,12 +303,28 @@ void plugins_subsyst::unify_serialization() const {
 	using OBM = cereal::detail::OutputBindingMap;
 	unify_serial_globals(*this, &plugin_descriptor::serial_output_bindings, &OBM::archives_map);
 
-	using PC = cereal::detail::PolymorphicCasters;
-	unify_serial_globals(*this, &plugin_descriptor::serial_polycasters, &PC::map);
-	unify_serial_globals(*this, &plugin_descriptor::serial_polycasters, &PC::reverseMap);
+	using PCs = cereal::detail::PolymorphicCasters;
+	// [NOTE] important to unify reverseMap first, because it's used on next stage
+	unify_serial_globals(*this, &plugin_descriptor::serial_polycasters, &PCs::reverseMap);
+	// unify main forward map with postprocessing
+	unify_serial_globals(
+		*this, &plugin_descriptor::serial_polycasters, &PCs::map,
+		{ [this](PCs* kcasters) -> void {
+			// refresh polycaster maps (forward and reverse), because new relations are merged
+			kcasters->refresh_relations();
+			// because `reverseMap` refreshed, spread it among plugins
+			for(const auto& plugin : loaded_plugins_) {
+				if(auto storage = reinterpret_cast<PCs*>(plugin.first->serial_polycasters);
+					*plugin.first != kernel_pd() && storage
+				)
+					storage->reverseMap = kcasters->reverseMap;
+			}
+		} }
+	);
 
 	// [DEBUG]
-	//print_serial_map(kernel_pd().serial_polycasters, &PC::map, "Polycasters map");
+	//print_serial_map(kernel_pd().serial_polycasters, &PCs::map, "Polycasters map");
+	//print_serial_map(kernel_pd().serial_polycasters, &PCs::reverseMap, "Polycasters reverse map");
 }
 
 std::pair< const plugin_descriptor*, bool >
