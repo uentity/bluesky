@@ -73,10 +73,10 @@ inspect(Inspector& f, T& x) {
 	return f(x_data);
 }
 
-// to string conversion via JSON archive
+/// to string conversion via JSON archive
 template<typename T>
 auto to_string(const T& t)
--> std::enable_if_t< sizeof(decltype(::blue_sky::to_string(std::declval<T>()))), std::string > {
+-> std::enable_if_t< sizeof(decltype(::blue_sky::to_string(std::declval<T>()))) != 0, std::string > {
 	return blue_sky::to_string(t);
 }
 

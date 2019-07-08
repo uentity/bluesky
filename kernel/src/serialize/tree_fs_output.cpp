@@ -12,6 +12,8 @@
 #include <bs/serialize/serialize_decl.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
+#include <bs/serialize/cafbind.h>
+
 #include <bs/tree/node.h>
 #include <bs/log.h>
 #include <bs/kernel/config.h>
