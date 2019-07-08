@@ -30,6 +30,7 @@
 namespace fs = std::filesystem;
 
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::sp_cobj)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::error::box)
 
 template<typename T> struct TD;
 
@@ -266,8 +267,7 @@ struct tree_fs_output::impl {
 	>;
 
 	using savers_manager_t = caf::typed_actor<
-		//caf::reacts_to< bool >, // increment started counter
-		caf::reacts_to< std::string > // store error from saver and increment finished counter
+		caf::reacts_to< error::box > // store error from saver and increment finished counter
 	>;
 
 	// saver
@@ -276,8 +276,7 @@ struct tree_fs_output::impl {
 	) -> saver_actor_t::behavior_type {
 		return {
 			[=](const sp_cobj& obj, const std::string& fname) {
-				auto er = F->save(*obj, fname, F->name);
-				self->send(manager, er ? er.what() : "");
+				self->send( manager, F->save(*obj, fname, F->name).pack() );
 			}
 		};
 	}
@@ -285,7 +284,7 @@ struct tree_fs_output::impl {
 	// savers manager
 	struct manager_state {
 		// errors collection
-		std::vector<std::string> er_stack_;
+		std::vector<error::box> er_stack_;
 		std::mutex er_sync_;
 		// track running savers
 		size_t nstarted_ = 0;
@@ -302,10 +301,10 @@ struct tree_fs_output::impl {
 
 		behavior_type make_behavior() override {
 			return {
-				[this](std::string ermsg) {
+				[this](error::box er) {
 					{
 						auto solo = std::lock_guard{ state.er_sync_ };
-						state.er_stack_.push_back(std::move(ermsg));
+						state.er_stack_.push_back(std::move(er));
 					}
 					// dec counter
 					finished();
@@ -320,10 +319,14 @@ struct tree_fs_output::impl {
 		}
 	};
 
-	auto wait_objects_saved(timespan how_long) -> std::vector<std::string> {
+	auto wait_objects_saved(timespan how_long) -> std::vector<error> {
 		auto pm = caf::actor_cast<savers_manager_ptr>(manager_);
 		auto& S = pm->state;
-		auto res = std::move(S.er_stack_);
+		//auto res = std::move(S.er_stack_);
+		// unpack error boxes -> result vector of errors
+		auto res = std::vector<error>{};
+		for(auto& er_box : S.er_stack_)
+			res.emplace_back( error::unpack(std::move(er_box)) );
 
 		// reset state on exit
 		auto finally = scope_guard{ [&S, this]{
@@ -335,7 +338,7 @@ struct tree_fs_output::impl {
 
 		std::unique_lock guard{ S.running_mtx_ };
 		if(!S.running_cv_.wait_for( guard, how_long, [&S]{ return S.nfinished_ == S.nstarted_; }))
-			res.push_back("Timeout waiting for Tree FS save to complete");
+			res.emplace_back("Timeout waiting for Tree FS save to complete");
 		return res;
 	}
 
@@ -393,7 +396,7 @@ auto tree_fs_output::save_object(const objbase& obj) -> error {
 	return pimpl_->save_object(*this, obj);
 }
 
-auto tree_fs_output::wait_objects_saved(timespan how_long) const -> std::vector<std::string> {
+auto tree_fs_output::wait_objects_saved(timespan how_long) const -> std::vector<error> {
 	return pimpl_->wait_objects_saved(how_long);
 }
 

@@ -73,7 +73,7 @@ public:
 	/// if `deep` flag is set, then clone pointed object as well
 	virtual auto clone(bool deep = false) const -> sp_link = 0;
 
-	/// create root link to node with handle preset to returned link
+	/// create root link to node with and set it as node's handle
 	template<typename Link, typename... Args>
 	static auto make_root(Args&&... args) -> std::shared_ptr<Link> {
 		if(auto lnk = std::make_shared<Link>(std::forward<Args>(args)...)) {
@@ -96,7 +96,6 @@ public:
 	virtual auto obj_type_id() const -> std::string;
 
 	/// get pointer to object link is pointing to -- slow, never returns invalid (NULL) sp_obj
-	/// NOTE: returned pointer can be null
 	auto data_ex(bool wait_if_busy = true) const -> result_or_err<sp_obj>;
 	/// simple data accessor that returns nullptr on error
 	auto data() const -> sp_obj {
