@@ -183,4 +183,16 @@ BS_API std::ostream& operator <<(std::ostream& os, const error& ec) {
 	return os << to_string(ec);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//  error::box
+//
+
+error::box::box(const error& er) {
+	*this = er.pack();
+}
+
+error::box::box(int ec_, std::string message_, std::string domain_)
+	: ec(ec_), message(std::move(message_)), domain(std::move(domain_))
+{}
+
 NAMESPACE_END(blue_sky)

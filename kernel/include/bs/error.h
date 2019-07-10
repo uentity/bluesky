@@ -66,6 +66,10 @@ public:
 	struct box {
 		int ec;
 		std::string message, domain;
+
+		box() = default;
+		box(const error& er);
+		box(int ec, std::string message, std::string domain);
 	};
 
 private:
@@ -199,6 +203,7 @@ inline constexpr auto perfect = error::success_tag{};
 
 /// carries result (of type T) OR error
 template<class T> using result_or_err = tl::expected<T, error>;
+template<class T> using result_or_errbox = tl::expected<T, error::box>;
 
 NAMESPACE_END(blue_sky)
 
