@@ -10,12 +10,14 @@
 
 #include "serialize_decl.h"
 #include "to_string.h"
+#include "base_types.h"
+
 #include <cereal/archives/portable_binary.hpp>
+#include <boost/interprocess/streams/vectorstream.hpp>
 
 #include <caf/sec.hpp>
 #include <caf/detail/scope_guard.hpp>
 #include <caf/detail/stringification_inspector.hpp>
-#include <boost/interprocess/streams/vectorstream.hpp>
 
 namespace caf {
 /*-----------------------------------------------------------------------------
