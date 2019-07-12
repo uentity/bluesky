@@ -12,12 +12,13 @@
 #include <bs/error.h>
 #include <bs/tree/link.h>
 #include <bs/tree/errors.h>
+#include <bs/detail/function_view.h>
 
 #include <atomic>
 #include <mutex>
 #include <boost/smart_ptr/detail/yield_k.hpp>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree) NAMESPACE_BEGIN(detail)
+NAMESPACE_BEGIN(blue_sky::tree::detail)
 
 // microsleep until flag is released by someone else
 inline auto raise_atomic_flag(std::atomic_flag& flag) -> void {
@@ -71,33 +72,19 @@ struct status_handle {
 	std::mutex busy_wait;
 };
 
+// Invoke `f(lnk)` and properly set status depending on result
+// [NOTE] `status_changed_f` is not called when rasing/dropping Busy status
 template<typename L, typename F>
 static auto link_invoke(
-	L* lnk, F f, status_handle& status, bool wait_if_busy = false
+	L* lnk, F f, status_handle& status, bool wait_if_busy = false,
+	function_view< void(ReqStatus, ReqStatus) > status_changed_f = [](ReqStatus, ReqStatus) {}
 ) -> decltype(f(lnk)) {
 	using ret_t = decltype(f(lnk));
 
 	// make scoped atomic flag and raise it immediately
 	auto status_flag = scope_atomic_flag(status.flag);
-	// local flag indicating that we have locked busy mutex
+	// local flag indicating if we have locked busy mutex
 	bool busy_waiting = false;
-
-	const auto set_status = [&status, &status_flag, &busy_waiting](ret_t&& res) {
-		// set flag depending on result
-		status_flag.raise();
-		status.value = res ?
-			res.value() ?
-				ReqStatus::OK :
-				ReqStatus::Void :
-			ReqStatus::Error;
-		// unlock busy mutex if it is locked
-		if(busy_waiting) {
-			status.busy_wait.unlock();
-			busy_waiting = false;
-		}
-		// and return
-		return std::move(res);
-	};
 
 	// 1. check Busy state: return error or wait until we can capture the flag in non-Busy state
 	// [NOTE] flag is in raised state here
@@ -108,6 +95,32 @@ static auto link_invoke(
 		status_flag.raise();
 	}
 	// here we always have: status is non-busy, flag is raised, busy mutex is unlocked
+
+	// setup result processing functor
+	auto prev_status = status.value;
+	const auto set_status =
+	[&status, &status_flag, &busy_waiting, prev_status, status_changed_f](ret_t&& res) {
+		// set flag depending on result
+		status_flag.raise();
+		status.value = res ?
+			res.value() ?
+				ReqStatus::OK :
+				ReqStatus::Void :
+			ReqStatus::Error;
+		// [NOTE] capture new & old status values atomically while flag is raised
+		auto finally = scope_guard{[new_status = status.value, prev_status, status_changed_f] {
+			status_changed_f(new_status, prev_status);
+		}};
+		// unlock busy mutex if it is locked
+		if(busy_waiting) {
+			status.busy_wait.unlock();
+			busy_waiting = false;
+		}
+		// and return
+		// [NOTE] explicity drop flag, because status callback can take long time
+		status_flag.drop();
+		return std::move(res);
+	};
 
 	// 2. invoke link::f
 	try {
@@ -122,7 +135,6 @@ static auto link_invoke(
 		status_flag.drop();
 		// invoke operation, set status and return result
 		return set_status(f(lnk));
-		// [TODO] we have to notify parent node that content changed
 	}
 	catch(const error& e) {
 		return set_status( tl::make_unexpected(e) );
@@ -135,5 +147,4 @@ static auto link_invoke(
 	}
 }
 
-NAMESPACE_END(detail) NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::tree::detail)
