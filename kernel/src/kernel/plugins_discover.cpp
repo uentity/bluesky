@@ -12,6 +12,7 @@
 #include <bs/kernel/config.h>
 #include "plugins_subsyst.h"
 
+#include <deque>
 #include <filesystem>
 #include <boost/regex.hpp>
 
