@@ -6,12 +6,11 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include "link.h"
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
 
 /*-----------------------------------------------------------------------------
  *  Interface of Fusion client that have to populate root item with children
@@ -30,6 +29,7 @@ using sp_fusion = std::shared_ptr<fusion_iface>;
 /*-----------------------------------------------------------------------------
  *  Fusion link populates object children when `data_node()` or `data()` is called
  *-----------------------------------------------------------------------------*/
+class fusion_link_actor;
 class BS_API fusion_link : public ilink {
 	friend class blue_sky::atomizer;
 
@@ -43,16 +43,11 @@ public:
 		std::string name, const char* obj_type, std::string oid = "",
 		sp_fusion bridge = nullptr, Flags f = Plain
 	);
-	// dtor
-	~fusion_link();
 
 	auto clone(bool deep = false) const -> sp_link override;
 
 	// link API implementation
 	auto type_id() const -> std::string override;
-	// ID functions operate directly on cached object and don't invoke `data()` inside
-	auto oid() const -> std::string override;
-	auto obj_type_id() const -> std::string override;
 
 	// force `fusion_iface::populate()` call with specified children types
 	// regardless of populate status
@@ -71,18 +66,13 @@ public:
 	auto cache() const -> sp_node;
 
 private:
-	struct impl;
-	std::unique_ptr<impl> pimpl_;
+	friend class fusion_link_actor;
+	auto pimpl() const -> fusion_link_actor*;
 
-	// pull object's data via `fusion_iface::pull_data()`
-	auto data_impl() const -> result_or_err<sp_obj> override;
-	// pull leafs via `fusion_iface::populate()`
-	auto data_node_impl() const -> result_or_err<sp_node> override;
 	// bypass `data_node_ex()` call and directly set handle of contained node object
 	auto propagate_handle() -> result_or_err<sp_node> override;
 };
 using sp_fusion_link = std::shared_ptr<fusion_link>;
 using sp_cfusion_link = std::shared_ptr<const fusion_link>;
 
-NAMESPACE_END(blue_sky) NAMESPACE_END(tree)
-
+NAMESPACE_END(blue_sky::tree)

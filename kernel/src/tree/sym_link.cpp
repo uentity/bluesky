@@ -10,23 +10,54 @@
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/tree/errors.h>
-#include "tree_impl.h"
+#include <bs/kernel/config.h>
+
+#include <bs/serialize/tree.h>
+#include <bs/serialize/cafbind.h>
+
+#include "link_actor.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
+///////////////////////////////////////////////////////////////////////////////
+//  actor
+//
+sym_link_actor::sym_link_actor(caf::actor_config& cfg, std::string name, std::string path, Flags f)
+	: super(cfg, std::move(name), f), path_(std::move(path))
+{}
 
+auto sym_link_actor::data() -> result_or_err<sp_obj> {
+	//pdbg() << "sym_link::aimpl: data()" << std::endl;
+	using result_t = result_or_errbox<sp_obj>;
+
+	// cannot dereference dangling sym link
+	const auto parent = owner_.lock();
+	if(!parent) return tl::make_unexpected(error::quiet(Error::UnboundSymLink));
+	const auto src_link = deref_path(path_, parent);
+	return src_link ?
+		result_t(src_link->data_ex()) :
+		tl::make_unexpected(error::quiet(Error::LinkExpired));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  class
+//
 /// ctor -- pointee is specified by string path
 sym_link::sym_link(std::string name, std::string path, Flags f)
-	: link(std::move(name), f), path_(std::move(path))
+	: link(spawn_lactor<sym_link_actor>(std::move(name), std::move(path), f))
 {}
 /// ctor -- pointee is specified directly - absolute path will be stored
 sym_link::sym_link(std::string name, const sp_link& src, Flags f)
 	: sym_link(std::move(name), abspath(src), f)
 {}
 
+auto sym_link::pimpl() const -> sym_link_actor* {
+	return static_cast<sym_link_actor*>(link::pimpl());
+}
+
 /// implement link's API
 sp_link sym_link::clone(bool deep) const {
 	// no deep copy support for symbolic link
-	return std::make_shared<sym_link>(name(), path_, flags());
+	return std::make_shared<sym_link>(name(), pimpl()->path_, flags());
 }
 
 std::string sym_link::type_id() const {
@@ -39,27 +70,17 @@ void sym_link::reset_owner(const sp_node& new_owner) {
 	check_alive();
 }
 
-result_or_err<sp_obj> sym_link::data_impl() const {
-	// cannot dereference dangling sym link
-	const auto parent = owner();
-	if(!parent) return tl::make_unexpected(error::quiet(Error::UnboundSymLink));
-	const auto src_link = deref_path(path_, parent);
-	return src_link ?
-		result_or_err<sp_obj>(src_link->data_ex()) :
-		tl::make_unexpected(error::quiet(Error::LinkExpired));
-}
-
 bool sym_link::check_alive() {
-	auto res = bool(deref_path(path_, owner()));
+	auto res = bool(deref_path(pimpl()->path_, owner()));
 	rs_reset(Req::Data, res ? ReqStatus::OK : ReqStatus::Error);
 	return res;
 }
 
 /// return stored pointee path
 std::string sym_link::src_path(bool human_readable) const {
-	if(!human_readable) return path_;
+	if(!human_readable) return pimpl()->path_;
 	else if(const auto parent = owner())
-		return convert_path(path_, parent->handle());
+		return convert_path(pimpl()->path_, parent->handle());
 	return {};
 }
 
@@ -69,4 +90,3 @@ result_or_err<sp_node> sym_link::propagate_handle() {
 }
 
 NAMESPACE_END(blue_sky::tree)
-

@@ -8,20 +8,26 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/kernel/config.h>
-#include "link_impl.h"
+#include "link_actor.h"
+
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-/*-----------------------------------------------------------------------------
- *  misc
- *-----------------------------------------------------------------------------*/
-link::link(std::string name, Flags f)
-	: pimpl_(std::make_unique<impl>(std::move(name), f))
-{}
 
-link::~link() {}
+link::link(caf::actor impl_a) : aimpl_(std::move(impl_a)) {
+	pimpl_ = caf::actor_cast<link_actor*>(aimpl_);
+	if(!pimpl_) throw error{ "Trying to construct tree::link with invalid actor" };
+	fimpl_ = caf::make_function_view(aimpl_, caf::duration{pimpl_->timeout_});
+	//pimpl_->master_ = this;
+}
 
-auto link::pimpl() const -> impl* {
-	return pimpl_.get();
+link::~link() {
+	pimpl_->on_link_destroy();
+}
+
+auto link::pimpl() const -> link_actor* {
+	return pimpl_;
 }
 
 /// access link's unique ID
@@ -40,39 +46,15 @@ auto link::owner() const -> sp_node {
 }
 
 void link::reset_owner(const sp_node& new_owner) {
-	std::lock_guard<std::mutex> g(pimpl_->solo_);
-	pimpl_->owner_ = new_owner;
+	pimpl_->reset_owner(new_owner);
 }
 
 auto link::info() const -> result_or_err<inode> {
-	return get_inode().and_then([](const inodeptr& i) {
+	return pimpl_->get_inode().and_then([](const inodeptr& i) {
 		return i ?
 			result_or_err<inode>(*i) :
 			tl::make_unexpected(error::quiet(Error::EmptyInode));
 	});
-}
-
-auto link::get_inode() const -> result_or_err<inodeptr> {
-	// default implementation obtains inode from `data_ex()->inode_`
-	return data_ex().and_then([](const sp_obj& obj) {
-		return obj ?
-			result_or_err<inodeptr>(obj->inode_.lock()) :
-			tl::make_unexpected(error::quiet(Error::EmptyData));
-	});
-}
-
-auto link::make_inode(const sp_obj& obj, inodeptr new_i) -> inodeptr {
-	if(!obj) return nullptr;
-
-	auto obj_i = obj->inode_.lock();
-	if(!obj_i) {
-		obj_i = new_i ? std::move(new_i) : std::make_shared<inode>();
-		obj->inode_ = obj_i;
-	}
-	else if(new_i) {
-		*obj_i = *new_i;
-	}
-	return obj_i;
 }
 
 link::Flags link::flags() const {
@@ -85,81 +67,13 @@ void link::set_flags(Flags new_flags) {
 }
 
 auto link::rename(std::string new_name) -> void {
-	pimpl_->rename(std::move(new_name));
+	pimpl_->send(pimpl_, a_lnk_rename(), std::move(new_name), false);
 }
 
 auto link::rename_silent(std::string new_name) -> void {
-	pimpl_->rename_silent(std::move(new_name));
+	pimpl_->send(pimpl_, a_lnk_rename(), std::move(new_name), true);
 }
 
-/*-----------------------------------------------------------------------------
- *  sync API
- *-----------------------------------------------------------------------------*/
-// get link's object ID
-std::string link::oid() const {
-	if(pimpl_->req_status(Req::Data) == ReqStatus::OK) {
-		if(auto D = data()) return D->id();
-	}
-	return boost::uuids::to_string(boost::uuids::nil_uuid());
-}
-
-std::string link::obj_type_id() const {
-	if(pimpl_->req_status(Req::Data) == ReqStatus::OK) {
-		if(auto D = data()) return D->type_id();
-	}
-	return type_descriptor::nil().name;
-}
-
-result_or_err<sp_node> link::data_node_impl() const {
-	return data_ex().and_then([](const sp_obj& obj) {
-		// don't check if obj is nullptr, because data_ex() never returns NULL
-		return obj->is_node() ?
-			result_or_err<sp_node>(std::static_pointer_cast<tree::node>(obj)) :
-			tl::make_unexpected(error::quiet(Error::NotANode));
-	});
-}
-
-result_or_err<sp_obj> link::data_ex(bool wait_if_busy) const {
-	// never returns NULL object
-	return link_invoke(
-		this,
-		[](const link* lnk) { return lnk->data_impl(); },
-		pimpl_->status_[0], wait_if_busy
-	).and_then([](sp_obj&& obj) {
-		return obj ?
-			result_or_err<sp_obj>(std::move(obj)) :
-			tl::make_unexpected(error::quiet(Error::EmptyData));
-	});
-}
-
-result_or_err<sp_node> link::data_node_ex(bool wait_if_busy) const {
-	// never returns NULL node
-	return link_invoke(
-		this,
-		[](const link* lnk) { return lnk->data_node_impl(); },
-		pimpl_->status_[1], wait_if_busy
-	).and_then([](sp_node&& N) {
-		return N ?
-			result_or_err<sp_node>(std::move(N)) :
-			tl::make_unexpected(error::quiet(Error::EmptyData));
-	});
-}
-
-void link::self_handle_node(const sp_node& N) {
-	if(N) N->set_handle(shared_from_this());
-}
-
-result_or_err<sp_node> link::propagate_handle() {
-	return data_node_ex().and_then([this](sp_node&& N) -> result_or_err<sp_node> {
-		N->set_handle(shared_from_this());
-		return std::move(N);
-	});
-}
-
-
-/*-----------------------------------------------------------------------------
- *  async API
- *-----------------------------------------------------------------------------*/
 auto link::req_status(Req request) const -> ReqStatus {
 	return pimpl_->req_status(request);
 }
@@ -176,29 +90,70 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const 
 	return pimpl_->rs_reset_if_neq(request, self, new_rs);
 }
 
-auto link::data(process_data_cb f, bool high_priority) const -> void {
-	pimpl_->send(
-		high_priority ? caf::message_priority::high : caf::message_priority::normal,
-		lnk_data_atom(), shared_from_this(), std::move(f)
-	);
+/*-----------------------------------------------------------------------------
+ *  sync API
+ *-----------------------------------------------------------------------------*/
+// get link's object ID
+std::string link::oid() const {
+	//pimpl_->pdbg() << "link: oid()" << std::endl;
+	return actorf<std::string>(fimpl_, a_lnk_oid())
+		.value_or( to_string(boost::uuids::nil_uuid()) );
 }
 
-auto link::data_node(process_data_cb f, bool high_priority) const -> void {
-	pimpl_->send(
-		high_priority ? caf::message_priority::high : caf::message_priority::normal,
-		lnk_dnode_atom(), shared_from_this(), std::move(f)
-	);
+std::string link::obj_type_id() const {
+	//pimpl_->pdbg() << "link: obj_type_id()" << std::endl;
+	return actorf<std::string>(fimpl_, a_lnk_otid())
+		.value_or( type_descriptor::nil().name );
+}
+
+result_or_err<sp_obj> link::data_ex(bool wait_if_busy) const {
+	return pimpl_->data_ex(wait_if_busy);
+}
+
+result_or_err<sp_node> link::data_node_ex(bool wait_if_busy) const {
+	return pimpl_->data_node_ex(wait_if_busy);
+}
+
+void link::self_handle_node(const sp_node& N) {
+	if(N) N->set_handle(shared_from_this());
+}
+
+result_or_err<sp_node> link::propagate_handle() {
+	return data_node_ex()
+	.and_then( [this](sp_node&& N) -> result_or_err<sp_node> {
+		N->set_handle(shared_from_this());
+		return std::move(N);
+	} );
 }
 
 /*-----------------------------------------------------------------------------
- *  ilink
+ *  async API
  *-----------------------------------------------------------------------------*/
-ilink::ilink(std::string name, const sp_obj& data, Flags f)
-	: link(std::move(name), f), inode_(make_inode(data))
-{}
 
-auto ilink::get_inode() const -> result_or_err<inodeptr> {
-	return inode_;
+auto link::data(process_data_cb f, bool high_priority) const -> void {
+	auto lazy_f = [ f = std::move(f), self = shared_from_this()]( result_or_errbox<sp_obj> eobj) {
+		f(std::move(eobj), std::move(self));
+	};
+
+	if(high_priority)
+		pimpl_->request<caf::message_priority::high>(aimpl_, pimpl_->timeout_, a_lnk_data(), true)
+		.then(std::move(lazy_f));
+	else
+		pimpl_->request<caf::message_priority::normal>(aimpl_, pimpl_->timeout_, a_lnk_data(), true)
+		.then(std::move(lazy_f));
+}
+
+auto link::data_node(process_data_cb f, bool high_priority) const -> void {
+	auto lazy_f = [ f = std::move(f), this ]( result_or_errbox<sp_node> eobj) {
+		f(std::move(eobj), shared_from_this());
+	};
+
+	if(high_priority)
+		pimpl_->request<caf::message_priority::high>(aimpl_, pimpl_->timeout_, a_lnk_dnode(), true)
+		.then(std::move(lazy_f));
+	else
+		pimpl_->request<caf::message_priority::normal>(aimpl_, pimpl_->timeout_, a_lnk_dnode(), true)
+		.then(std::move(lazy_f));
 }
 
 NAMESPACE_END(blue_sky::tree)

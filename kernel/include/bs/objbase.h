@@ -23,7 +23,7 @@ NAMESPACE_BEGIN(blue_sky)
 	\brief This is a base class for all objects.
 */
 class BS_API objbase : public std::enable_shared_from_this< objbase > {
-	friend class tree::link;
+	friend class tree::link_actor;
 	friend class tree::node;
 	friend class atomizer;
 

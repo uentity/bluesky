@@ -60,6 +60,7 @@ namespace tree {
 
 struct inode;
 class link;
+class link_actor;
 class node;
 typedef std::shared_ptr< link > sp_link;
 typedef std::shared_ptr< node > sp_node;

@@ -11,12 +11,21 @@
 #include <caf/atom.hpp>
 
 namespace blue_sky {
+
+// used as 'acquired` tag
+using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 // async invoke `link::data()`
-using lnk_data_atom = caf::atom_constant<caf::atom("tl data")>;
+using a_lnk_data = caf::atom_constant<caf::atom("tl data")>;
 // async invoke `link::data_node()`
-using lnk_dnode_atom = caf::atom_constant<caf::atom("tl dnode")>;
+using a_lnk_dnode = caf::atom_constant<caf::atom("tl dnode")>;
 // async invoke `fusion_link::populate()`
-using flnk_populate_atom = caf::atom_constant<caf::atom("tfl pull")>;
-	
+using a_flnk_populate = caf::atom_constant<caf::atom("tfl pull")>;
+
+using a_lnk_rename = caf::atom_constant<caf::atom("tl rename")>;
+using a_lnk_status = caf::atom_constant<caf::atom("tl status")>;
+using a_lnk_oid = caf::atom_constant<caf::atom("tl oid")>;
+using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
+using a_lnk_inode = caf::atom_constant<caf::atom("tl inode")>;
+
 } /* namespace blue_sky */
 
