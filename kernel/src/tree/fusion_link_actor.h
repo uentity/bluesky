@@ -90,7 +90,11 @@ public:
 		return detail::link_invoke(
 			this,
 			[&populate_impl](fusion_link_actor*) { return populate_impl(); },
-			status_[1], wait_if_busy
+			status_[1], wait_if_busy,
+			// send status changed message
+			function_view{ [this](ReqStatus prev_v, ReqStatus new_v) {
+				if(prev_v != new_v) send(self_grp, a_lnk_status(), a_ack(), new_v, prev_v);
+			} }
 		);
 	}
 

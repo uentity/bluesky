@@ -135,7 +135,11 @@ auto link_actor::data_ex(bool wait_if_busy) -> result_or_err<sp_obj> {
 	return link_invoke(
 		this,
 		[](link_actor* lnk) { return lnk->data(); },
-		status_[0], wait_if_busy
+		status_[0], wait_if_busy,
+		// send status changed message
+		function_view{ [this](ReqStatus prev_v, ReqStatus new_v) {
+			if(prev_v != new_v) send(self_grp, a_lnk_status(), a_ack(), new_v, prev_v);
+		} }
 	).and_then([](sp_obj&& obj) {
 		return obj ?
 			result_or_err<sp_obj>(std::move(obj)) :
@@ -151,7 +155,11 @@ auto link_actor::data_node_ex(bool wait_if_busy) -> result_or_err<sp_node> {
 	return link_invoke(
 		this,
 		[](link_actor* lnk) { return lnk->data_node(); },
-		status_[1], wait_if_busy
+		status_[1], wait_if_busy,
+		// send status changed message
+		function_view{ [this](ReqStatus prev_v, ReqStatus new_v) {
+			if(prev_v != new_v) send(self_grp, a_lnk_status(), a_ack(), new_v, prev_v);
+		} }
 	).and_then([](sp_node&& N) {
 		return N ?
 			result_or_err<sp_node>(std::move(N)) :
