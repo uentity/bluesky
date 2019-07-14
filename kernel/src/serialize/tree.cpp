@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/log.h>
-#include "../tree/node_impl.h"
+#include "../tree/node_actor.h"
 #include <bs/serialize/serialize.h>
 #include <bs/serialize/tree.h>
 
@@ -54,12 +54,12 @@ struct leafs_view {
 
 } // eof hidden namespace
 
-BSS_FCN_INL_BEGIN(serialize, node::node_impl)
+BSS_FCN_INL_BEGIN(serialize, node_actor)
 	ar(
 		make_nvp("allowed_otypes", t.allowed_otypes_),
 		make_nvp("leafs", leafs_view(t.links_))
 	);
-BSS_FCN_INL_END(save, node::node_impl)
+BSS_FCN_INL_END(save, node_actor)
 
 /*-----------------------------------------------------------------------------
  *  node
@@ -68,7 +68,7 @@ BSS_FCN_BEGIN(serialize, node)
 	//t.propagate_owner();
 	ar(
 		make_nvp("objbase", base_class<objbase>(&t)),
-		make_nvp("node_impl", t.pimpl_)
+		make_nvp("node_impl", *t.pimpl_)
 	);
 	// correct owner of all loaded links
 	if(Archive::is_loading::value)

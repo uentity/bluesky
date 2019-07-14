@@ -71,6 +71,7 @@ kernel_cpp_list = [
 	"src/tree/hard_link.cpp",
 	"src/tree/sym_link.cpp",
 	"src/tree/node.cpp",
+	"src/tree/node_actor.cpp",
 	"src/tree/tree.cpp",
 	"src/tree/tree_async.cpp",
 	"src/tree/fusion_link.cpp",

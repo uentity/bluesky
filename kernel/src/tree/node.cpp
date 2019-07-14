@@ -7,8 +7,9 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include "node_impl.h"
+#include "node_actor.h"
 #include <bs/kernel/types_factory.h>
+#include <bs/kernel/config.h>
 
 #include <boost/uuid/string_generator.hpp>
 
@@ -21,27 +22,38 @@ static boost::uuids::string_generator uuid_from_str;
 
 NAMESPACE_END()
 
-using links_locker_t = std::lock_guard<std::mutex>;
 /*-----------------------------------------------------------------------------
  *  node
  *-----------------------------------------------------------------------------*/
 node::node(std::string custom_id)
-	: objbase(true, custom_id), pimpl_(std::make_unique<node_impl>())
-{}
+	: objbase(true, custom_id),
+	aimpl_(kernel::config::actor_system().spawn<node_actor>(id_))
+{
+	pimpl_ = caf::actor_cast<node_actor*>(aimpl_);
+	if(!pimpl_) throw error{ "Trying to construct tree::node with invalid actor" };
+	fimpl_ = caf::make_function_view(aimpl_, caf::duration{pimpl_->timeout_});
+}
 
 node::node(const node& src)
-	: objbase(src), pimpl_(std::make_unique<node_impl>(*src.pimpl_))
-{}
+	: objbase(src),
+	aimpl_(kernel::config::actor_system().spawn<node_actor>(id_, src.aimpl_))
+{
+	pimpl_ = caf::actor_cast<node_actor*>(aimpl_);
+	if(!pimpl_) throw error{ "Trying to copy construct tree::node with invalid actor" };
+	fimpl_ = caf::make_function_view(aimpl_, caf::duration{pimpl_->timeout_});
+}
 
-node::~node() = default;
+node::~node() {
+	pimpl_->goodbye();
+}
 
 void node::propagate_owner(bool deep) {
-	links_locker_t my_turn(pimpl_->links_guard_);
+	auto solo = std::lock_guard{ pimpl_->links_guard_ };
 	// properly setup owner in node's leafs
 	const auto self = bs_shared_this<node>();
 	sp_node child_node;
 	for(auto& plink : pimpl_->links_) {
-		child_node = node_impl::adjust_inserted_link(plink, self);
+		child_node = node_actor::adjust_inserted_link(plink, self);
 		if(deep && child_node)
 			child_node->propagate_owner(true);
 	}
@@ -60,7 +72,6 @@ sp_link node::handle() const {
 //	pimpl_->set_handle(root_lnk);
 //	return root_lnk;
 //}
-
 
 std::size_t node::size() const {
 	return pimpl_->links_.size();
@@ -169,7 +180,7 @@ insert_status<Key::ID> node::insert(sp_link l, InsertPolicy pol) {
 	auto res = pimpl_->insert(l, pol);
 	if(res.second) {
 		// inserted link postprocessing
-		node_impl::adjust_inserted_link(*res.first, bs_shared_this<node>());
+		node_actor::adjust_inserted_link(*res.first, bs_shared_this<node>());
 	}
 	else if(enumval(pol & InsertPolicy::Merge) && res.first != end<Key::ID>()) {
 		// check if we need to deep merge given links
@@ -191,7 +202,7 @@ insert_status<Key::AnyOrder> node::insert(sp_link l, iterator<> pos, InsertPolic
 	auto res = insert(std::move(l), pol);
 	if(res.first != end<Key::ID>()) {
 		// 2. reposition an element in AnyOrder index
-		links_locker_t my_turn(pimpl_->links_guard_);
+		auto solo = std::lock_guard{ pimpl_->links_guard_ };
 		auto src = pimpl_->project<Key::ID>(res.first);
 		if(pos != src) {
 			auto& ord_idx = pimpl_->links_.get<Key_tag<Key::AnyOrder>>();
@@ -214,7 +225,7 @@ insert_status<Key::ID> node::insert(std::string name, sp_obj obj, InsertPolicy p
 
 // ---- erase
 void node::erase(const std::size_t idx) {
-	links_locker_t my_turn(pimpl_->links_guard_);
+	auto solo = std::lock_guard{ pimpl_->links_guard_ };
 	pimpl_->links_.get<Key_tag<Key::AnyOrder>>().erase(find(idx));
 }
 
@@ -253,7 +264,7 @@ void node::erase(const range<Key::OID>& r) {
 }
 
 void node::clear() {
-	links_locker_t my_turn(pimpl_->links_guard_);
+	auto solo = std::lock_guard{ pimpl_->links_guard_ };
 	pimpl_->links_.clear();
 }
 

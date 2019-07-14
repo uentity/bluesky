@@ -25,6 +25,8 @@ NAMESPACE_BEGIN(blue_sky::tree)
  *  base class of all links
  *-----------------------------------------------------------------------------*/
 class link_actor;
+class node_actor;
+
 class BS_API link  : public std::enable_shared_from_this<link> {
 public:
 	using id_type = boost::uuids::uuid;
@@ -150,6 +152,7 @@ protected:
 	friend class blue_sky::atomizer;
 	// full access for node
 	friend class node;
+	friend class node_actor;
 
 	/// ctor accept name of created link
 	link(caf::actor impl_a);

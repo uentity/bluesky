@@ -27,6 +27,7 @@ NAMESPACE_BEGIN(blue_sky::tree)
 // global alias to shorten typing
 namespace mi = boost::multi_index;
 
+class node_actor;
 class BS_API node : public objbase {
 public:
 	using id_type = link::id_type;
@@ -275,9 +276,14 @@ public:
 private:
 	friend class blue_sky::atomizer;
 	friend class link;
+
 	// PIMPL
-	class node_impl;
-	std::unique_ptr< node_impl > pimpl_;
+	friend class node_actor;
+	// strong ref to link's actor
+	caf::actor aimpl_;
+	node_actor* pimpl_;
+	// make blocking request + get link actor response as single function call
+	mutable caf::function_view<caf::actor> fimpl_;
 
 	// set node's handle
 	void set_handle(const sp_link& handle);
