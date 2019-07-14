@@ -137,9 +137,10 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  track link events
 	//
-	enum class Event {
-		Renamed,
-		StatusChanged
+	enum class Event : std::uint32_t {
+		Renamed = 1,
+		StatusChanged = 2,
+		All = std::uint32_t(-1)
 	};
 	using handle_event_cb = std::function< void(sp_link, prop::propdict) >;
 

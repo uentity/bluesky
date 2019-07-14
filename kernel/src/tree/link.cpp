@@ -9,10 +9,13 @@
 
 #include <bs/log.h>
 #include <bs/kernel/config.h>
+#include <bs/detail/enumops.h>
 #include "link_actor.h"
 
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+
+BS_ALLOW_ENUMOPS(blue_sky::tree::link::Event);
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
@@ -181,34 +184,37 @@ auto link::subscribe(Event listen_to, handle_event_cb f) -> std::uint64_t {
 	};
 
 	// produce event bhavior that calls passed callback with proper params
-	static constexpr auto make_ev_character = [](const sp_link& self, Event listen_to_, handle_event_cb& f_)
-	-> caf::message_handler {
-		switch(listen_to_) {
-		case Event::Renamed :
-			return [f = std::move(f_), self = std::weak_ptr{self}] (
-				a_lnk_rename, a_ack, std::string new_name, std::string old_name
-			) {
-				if(auto lnk = self.lock())
-					f(std::move(lnk), {
-						{"new_name", std::move(new_name)},
-						{"prev_name", std::move(old_name)}
-					});
-			};
+	static constexpr auto make_ev_character = [](const sp_link& self, Event listen_to_, handle_event_cb& f_) {
+		auto res = caf::message_handler{};
 
-		case Event::StatusChanged :
-			return [f = std::move(f_), self = std::weak_ptr{self}](
-				a_lnk_status, a_ack, Req request, ReqStatus new_v, ReqStatus prev_v
-			) {
-				if(auto lnk = self.lock())
-					f(std::move(lnk), {
-						{"request", prop::integer(new_v)},
-						{"new_status", prop::integer(new_v)},
-						{"prev_status", prop::integer(prev_v)}
-					});
-			};
+		if(enumval(listen_to_ & Event::Renamed))
+			res = res.or_else(
+				[f = std::move(f_), self = std::weak_ptr{self}] (
+					a_lnk_rename, a_ack, std::string new_name, std::string old_name
+				) {
+					if(auto lnk = self.lock())
+						f(std::move(lnk), {
+							{"new_name", std::move(new_name)},
+							{"prev_name", std::move(old_name)}
+						});
+				}
+			);
 
-		default: return [] {};
-		}
+		if(enumval(listen_to_ & Event::StatusChanged))
+			res = res.or_else(
+				[f = std::move(f_), self = std::weak_ptr{self}](
+					a_lnk_status, a_ack, Req request, ReqStatus new_v, ReqStatus prev_v
+				) {
+					if(auto lnk = self.lock())
+						f(std::move(lnk), {
+							{"request", prop::integer(new_v)},
+							{"new_status", prop::integer(new_v)},
+							{"prev_status", prop::integer(prev_v)}
+						});
+				}
+			);
+
+		return res;
 	};
 
 	// make shiny new subscriber actor and place into parent's room
