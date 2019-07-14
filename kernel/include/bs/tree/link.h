@@ -11,6 +11,7 @@
 #include "../error.h"
 #include "../objbase.h"
 #include "../detail/enumops.h"
+#include "../propdict.h"
 #include "inode.h"
 
 #include <boost/uuid/uuid.hpp>
@@ -113,7 +114,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  async API
 	//
-	// enum slow requests
+	// enum core object data requests
 	enum class Req { Data = 0, DataNode = 1 };
 	// states of single reuqest
 	enum class ReqStatus { Void, Busy, OK, Error };
@@ -130,6 +131,19 @@ public:
 	auto data(process_data_cb f, bool high_priority = false) const -> void;
 	/// ... and data node
 	auto data_node(process_data_cb f, bool high_priority = false) const -> void;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  track link events
+	//
+	enum class Event {
+		Renamed,
+		StatusChanged
+	};
+	using handle_event_cb = std::function< void(sp_link, prop::propdict) >;
+
+	/// returns ID of suscriber that is required for unsubscribe
+	auto subscribe(Event listen_to, handle_event_cb f) -> std::uint64_t;
+	auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
 protected:
 	// serialization support

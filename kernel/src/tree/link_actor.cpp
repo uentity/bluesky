@@ -32,7 +32,9 @@ link_actor::link_actor(caf::actor_config& cfg, std::string name, Flags f, timesp
 
 link_actor::~link_actor() = default;
 
-auto link_actor::on_link_destroy() -> void {
+auto link_actor::goodbye() -> void {
+	// say goodbye to self group and leave it
+	send(self_grp, a_lnk_bye());
 	leave(self_grp);
 }
 
@@ -58,8 +60,12 @@ auto link_actor::rs_reset(Req request, ReqStatus new_rs, bool silent) -> ReqStat
 	const auto self = status_[i].value;
 	status_[i].value = new_rs;
 
-	if(!silent && new_rs != self)
-		send(self_grp, a_lnk_status(), a_ack(), new_rs, self);
+	if(!silent && new_rs != self) {
+		//pdbg() << " rs_reset: " << (request == Req::Data ? " Data " : " DataNode ") <<
+		//	int(self) << " -> " << int(new_rs) << std::endl;
+
+		send(self_grp, a_lnk_status(), a_ack(), request, new_rs, self);
+	}
 	return self;
 }
 
@@ -73,7 +79,7 @@ auto link_actor::rs_reset_if_eq(Req request, ReqStatus self_rs, ReqStatus new_rs
 	if(status_[i].value == self_rs) {
 		status_[i].value = new_rs;
 		if(!silent && new_rs != self)
-			send(self_grp, a_lnk_status(), a_ack(), new_rs, self);
+			send(self_grp, a_lnk_status(), a_ack(), request, new_rs, self);
 	}
 	return self;
 }
@@ -88,7 +94,7 @@ auto link_actor::rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_r
 	if(status_[i].value != self_rs) {
 		status_[i].value = new_rs;
 		if(!silent && new_rs != self)
-			send(self_grp, a_lnk_status(), a_ack(), new_rs, self);
+			send(self_grp, a_lnk_status(), a_ack(), request, new_rs, self);
 	}
 	return self;
 }
@@ -137,8 +143,8 @@ auto link_actor::data_ex(bool wait_if_busy) -> result_or_err<sp_obj> {
 		[](link_actor* lnk) { return lnk->data(); },
 		status_[0], wait_if_busy,
 		// send status changed message
-		function_view{ [this](ReqStatus prev_v, ReqStatus new_v) {
-			if(prev_v != new_v) send(self_grp, a_lnk_status(), a_ack(), new_v, prev_v);
+		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
+			if(prev_v != new_v) send(self_grp, a_lnk_status(), a_ack(), Req::Data, new_v, prev_v);
 		} }
 	).and_then([](sp_obj&& obj) {
 		return obj ?
@@ -157,8 +163,8 @@ auto link_actor::data_node_ex(bool wait_if_busy) -> result_or_err<sp_node> {
 		[](link_actor* lnk) { return lnk->data_node(); },
 		status_[1], wait_if_busy,
 		// send status changed message
-		function_view{ [this](ReqStatus prev_v, ReqStatus new_v) {
-			if(prev_v != new_v) send(self_grp, a_lnk_status(), a_ack(), new_v, prev_v);
+		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
+			if(prev_v != new_v) send(self_grp, a_lnk_status(), a_ack(), Req::DataNode, new_v, prev_v);
 		} }
 	).and_then([](sp_node&& N) {
 		return N ?
@@ -184,8 +190,13 @@ auto link_actor::make_behavior() -> behavior_type {
 }
 
 auto link_actor::make_generic_behavior() -> behavior_type { return {
+	/// skip `bye` message (should always come from myself)
+	[](a_lnk_bye) {},
+
 	/// rename
 	[this](a_lnk_rename, std::string new_name, bool silent) {
+		//pdbg() << "aimpl: lnk_rename: = " << name_ << " -> " << new_name <<
+		//	(silent ? " silent" : " loud") << std::endl;
 		auto solo = std::lock_guard{ solo_ };
 		auto old_name = name_;
 		name_ = std::move(new_name);
@@ -195,12 +206,18 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 	},
 	// rename ack
 	[this](a_lnk_rename, a_ack, std::string new_name, const std::string& old_name) {
-		if(current_sender() != this)
+		//pdbg() << "=> lnk_rename: = " << old_name << " -> " << new_name << std::endl;
+		if(current_sender() != this) {
 			send(this, a_lnk_rename(), std::move(new_name), true);
+		}
 	},
 
 	// [NOTE] nop for a while
-	[](a_lnk_status, a_ack, ReqStatus, ReqStatus) {},
+	[](a_lnk_status, a_ack, Req req, ReqStatus new_s, ReqStatus prev_s) {
+		//pdbg() << " => a_lnk_status ack: " <<
+		//	(req == Req::Data ? " Data " : " DataNode ") <<
+		//	int(prev_s) << " -> " << int(new_s) << std::endl;
+	},
 
 	// get oid
 	[this](a_lnk_oid) -> std::string {

@@ -122,7 +122,7 @@ public:
 	virtual ~link_actor();
 
 	// cleanup code executes leaving from local group & must be called from outside
-	auto on_link_destroy() -> void;
+	auto goodbye() -> void;
 
 	// get handle of this actor
 	inline auto handle() -> caf::actor {

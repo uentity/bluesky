@@ -26,6 +26,9 @@ using a_lnk_status = caf::atom_constant<caf::atom("tl status")>;
 using a_lnk_oid = caf::atom_constant<caf::atom("tl oid")>;
 using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
 using a_lnk_inode = caf::atom_constant<caf::atom("tl inode")>;
+// called when links leaves it's local group - signal others to leave too
+using a_lnk_bye = caf::atom_constant<caf::atom("tl bye")>;
+
 
 } /* namespace blue_sky */
 
