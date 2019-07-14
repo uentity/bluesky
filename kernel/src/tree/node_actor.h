@@ -9,14 +9,21 @@
 #pragma once
 
 #include <bs/tree/node.h>
+#include <bs/kernel/config.h>
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/boost_uuid.h>
+
 #include "actor_common.h"
 
 #include <set>
 #include <mutex>
+#include <unordered_map>
 
+#include <boost/uuid/uuid_hash.hpp>
 #include <caf/event_based_actor.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using namespace kernel::config;
 
 using links_container = node::links_container;
 using Key = node::Key;
@@ -50,6 +57,9 @@ public:
 	std::mutex links_guard_;
 	caf::group self_grp;
 
+	// map links to retranslator actors
+	std::unordered_map<link::id_type, std::uint64_t> lnk_wires_;
+
 	// default ctor
 	node_actor(caf::actor_config& cfg, const std::string& id, timespan data_timeout = def_data_timeout);
 
@@ -58,6 +68,8 @@ public:
 
 	// say goodbye to others & leave self group
 	auto goodbye() -> void;
+
+	auto make_behavior() -> behavior_type override;
 
 	template<Key K = Key::ID>
 	static auto deep_search_impl(
@@ -121,21 +133,12 @@ public:
 	}
 
 	template<Key K, Key R = Key::AnyOrder>
-	auto find(
-		const Key_type<K>& key,
-		std::enable_if_t<std::is_same<Key_const<K>, Key_const<R>>::value>* = nullptr
-	) const {
-		return links_.get<Key_tag<K>>().find(key);
-	}
-
-	template<Key K, Key R = Key::AnyOrder>
-	auto find(
-		const Key_type<K>& key,
-		std::enable_if_t<!std::is_same<Key_const<K>, Key_const<R>>::value>* = nullptr
-	) const {
-		return links_.project<Key_tag<R>>(
-			links_.get<Key_tag<K>>().find(key)
-		);
+	auto find(const Key_type<K>& key) const {
+		auto res = links_.get<Key_tag<K>>().find(key);
+		if constexpr(std::is_same_v<Key_const<K>, Key_const<R>>)
+			return res;
+		else
+			return links_.project<Key_tag<R>>( std::move(res) );
 	}
 
 	template<Key K = Key::ID>
@@ -146,13 +149,28 @@ public:
 	template<Key K = Key::ID>
 	auto erase(const Key_type<K>& key) -> void {
 		auto solo = std::lock_guard{ links_guard_ };
-		links_.get<Key_tag<K>>().erase(key);
+		auto victim = find<K, Key::ID>(key);
+
+		if(victim != end<Key::ID>()) {
+			// stop retranslator
+			const auto lid = (*victim)->id();
+			const auto rid = lnk_wires_[lid];
+			auto& Reg = actor_system().registry();
+			send(caf::actor_cast<caf::actor>(Reg.get( rid )), a_bye());
+			// send message that link erased
+			send(self_grp, a_lnk_erase(), lid);
+
+			// and erase link
+			links_.get<Key_tag<Key::ID>>().erase(victim);
+		}
 	}
 
 	template<Key K = Key::ID>
 	auto erase(const range<K>& r) -> void {
-		auto solo = std::lock_guard{ links_guard_ };
-		links_.get<Key_tag<K>>().erase(r.first, r.second);
+		//auto solo = std::lock_guard{ links_guard_ };
+		for(const auto& k : r)
+			erase<K>(links_.get<Key_tag<K>>().key_extractor()(k));
+		//links_.get<Key_tag<K>>().erase(r.first, r.second);
 	}
 
 	auto insert(sp_link L, const InsertPolicy pol) -> insert_status<Key::ID>;
@@ -185,16 +203,7 @@ public:
 		return cnt;
 	}
 
-	void on_rename(const Key_type<Key::ID>& key) {
-		auto solo = std::lock_guard{ links_guard_ };
-
-		// find target link by it's ID
-		auto& I = links_.get<Key_tag<Key::ID>>();
-		auto pos = I.find(key);
-		// invoke replace as most safe & easy choice
-		if(pos != I.end())
-			I.replace(pos, *pos);
-	}
+	void on_rename(const Key_type<Key::ID>& key);
 
 	bool accepts(const sp_link& what) const;
 

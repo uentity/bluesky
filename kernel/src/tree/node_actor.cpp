@@ -7,9 +7,10 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/atoms.h>
-#include <bs/kernel/config.h>
 #include "node_actor.h"
+
+#include <boost/uuid/uuid_io.hpp>
+#include <caf/actor_ostream.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
@@ -43,10 +44,61 @@ auto node_actor::goodbye() -> void {
 	leave(self_grp);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//  link insert
+//
+NAMESPACE_BEGIN()
+
+// actor that retranslate some of link's messages attaching a link's ID to them
+auto link_retranlator(caf::event_based_actor* self, caf::group node_grp, link::id_type lid) -> caf::behavior {
+	// join link's group
+	auto Lgrp = kernel::config::actor_system().groups().get_local( to_string(lid) );
+	self->join(Lgrp);
+	// register self
+	const auto sid = self->id();
+	kernel::config::actor_system().registry().put(sid, self);
+
+	// silently drop all other messages not in my character
+	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
+		return caf::drop(self, mv);
+	});
+
+	return {
+		// quit after link
+		[=](a_bye) {
+			self->leave(Lgrp);
+			kernel::config::actor_system().registry().erase(sid);
+		},
+
+		// retranslate events
+		[=](a_lnk_rename, a_ack, const std::string& new_name, const std::string& old_name) {
+			self->send(node_grp, a_lnk_rename(), lid, new_name, old_name);
+		},
+
+		[=](a_lnk_status, a_ack, Req req, ReqStatus new_s, ReqStatus prev_s) {
+			self->send(node_grp, a_lnk_status(), lid, req, new_s, prev_s);
+		}
+	};
+}
+
+NAMESPACE_END()
+
 auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key::ID> {
+	const auto make_result = [=](insert_status<Key::ID>&& res) {
+		if(res.second) {
+			// create retranlator & save in registry
+			const auto& lid = (*res.first)->id();
+			auto ra = actor_system().spawn(link_retranlator, self_grp, lid);
+			lnk_wires_[lid] = ra.id();
+			// send message that link inserted
+			send(self_grp, a_lnk_insert(), lid);
+		}
+		return std::move(res);
+	};
+
 	// can't move persistent node from it's owner
 	if(!L || !accepts(L) || (L->flags() & Flags::Persistent && L->owner()))
-		return {end<Key::ID>(), false};
+		return { end<Key::ID>(), false };
 
 	// make insertion in one single transaction
 	auto solo = std::lock_guard{ links_guard_ };
@@ -65,7 +117,7 @@ auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key:
 					new_name = L->name() + '_' + std::to_string(i);
 					if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
 						// we've found a unique name
-						L->rename_silent(std::move(new_name));
+						L->rename(std::move(new_name));
 						unique_found = true;
 						break;
 					}
@@ -84,13 +136,35 @@ auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key:
 			bool is_inserted = false;
 			if(enumval(pol & InsertPolicy::ReplaceDupOID))
 				is_inserted = I.replace(dup, std::move(L));
-			return {dup, is_inserted};
+			return make_result({ dup, is_inserted });
 		}
 	}
 	// try to insert given link
-	return I.insert(std::move(L));
+	return make_result(I.insert(std::move(L)));
 }
 
+// postprocessing of just inserted link
+// if link points to node, return it
+auto node_actor::adjust_inserted_link(const sp_link& lnk, const sp_node& n) -> sp_node {
+	// sanity
+	if(!lnk) return nullptr;
+
+	// change link's owner
+	// [NOTE] for sym links it's important to set new owner early
+	// otherwise, `data()` will return null and statuses will become Error
+	auto prev_owner = lnk->owner();
+	if(prev_owner != n) {
+		if(prev_owner) prev_owner->erase(lnk->id());
+		lnk->reset_owner(n);
+	}
+
+	// if we're inserting a node, relink it to ensure a single hard link exists
+	return lnk->propagate_handle().value_or(nullptr);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  misc
+//
 auto node_actor::accepts(const sp_link& what) const -> bool {
 	if(!allowed_otypes_.size()) return true;
 	const auto& what_type = what->obj_type_id();
@@ -112,23 +186,42 @@ auto node_actor::set_handle(const sp_link& new_handle) -> void {
 	handle_ = new_handle;
 }
 
-// postprocessing of just inserted link
-// if link points to node, return it
-auto node_actor::adjust_inserted_link(const sp_link& lnk, const sp_node& n) -> sp_node {
-	// sanity
-	if(!lnk) return nullptr;
+void node_actor::on_rename(const Key_type<Key::ID>& key) {
+	auto solo = std::lock_guard{ links_guard_ };
 
-	// change link's owner
-	// [NOTE] for sym links it's important to set new owner early
-	// otherwise, `data()` will return null and statuses will become Error
-	auto prev_owner = lnk->owner();
-	if(prev_owner != n) {
-		if(prev_owner) prev_owner->erase(lnk->id());
-		lnk->reset_owner(n);
-	}
-
-	// if we're inserting a node, relink it to ensure a single hard link exists
-	return lnk->propagate_handle().value_or(nullptr);
+	// find target link by it's ID
+	auto& I = links_.get<Key_tag<Key::ID>>();
+	auto pos = I.find(key);
+	// invoke replace as most safe & easy choice
+	if(pos != I.end())
+		I.replace(pos, *pos);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+//  behavior
+//
+auto node_actor::make_behavior() -> behavior_type { return {
+	// bye comes from myself
+	[=](a_bye) {
+		// suspend link leafs retranslators
+		auto solo = std::lock_guard{ links_guard_ };
+		auto& Reg = actor_system().registry();
+		for(auto& [lid, rid] : lnk_wires_)
+			send(caf::actor_cast<caf::actor>(Reg.get(rid)), a_bye());
+		lnk_wires_.clear();
+	},
+
+	// handle link rename
+	[=](a_lnk_rename, link::id_type lid, const std::string&, const std::string&) {
+		on_rename(lid);
+	},
+	// skip link status - not interested
+	[](a_lnk_status, link::id_type, Req, ReqStatus, ReqStatus) {},
+
+	// [TODO] add impl
+	[=](a_lnk_insert, link::id_type lid) {},
+	// [TODO] add impl
+	[=](a_lnk_erase, link::id_type lid) {}
+}; }
 
 NAMESPACE_END(blue_sky::tree)

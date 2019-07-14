@@ -16,6 +16,7 @@ namespace blue_sky {
 using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 // used to inform others that I'm quit
 using a_bye = caf::atom_constant<caf::atom("bs bye")>;
+
 // async invoke `link::data()`
 using a_lnk_data = caf::atom_constant<caf::atom("tl data")>;
 // async invoke `link::data_node()`
@@ -24,6 +25,9 @@ using a_lnk_dnode = caf::atom_constant<caf::atom("tl dnode")>;
 using a_flnk_populate = caf::atom_constant<caf::atom("tfl pull")>;
 
 using a_lnk_rename = caf::atom_constant<caf::atom("tl rename")>;
+using a_lnk_insert = caf::atom_constant<caf::atom("tl insert")>;
+using a_lnk_erase = caf::atom_constant<caf::atom("tl erase")>;
+
 using a_lnk_status = caf::atom_constant<caf::atom("tl status")>;
 using a_lnk_oid = caf::atom_constant<caf::atom("tl oid")>;
 using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
