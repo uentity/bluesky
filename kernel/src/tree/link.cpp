@@ -173,7 +173,7 @@ auto link::subscribe(Event listen_to, handle_event_cb f) -> std::uint64_t {
 		self->join(link_grp);
 		// unsubscribe when parent leaves its group
 		return character.or_else(
-			[self, grp = std::move(link_grp)](a_lnk_bye) {
+			[self, grp = std::move(link_grp)](a_bye) {
 				self->leave(grp);
 				kernel::config::actor_system().registry().erase(self->id());
 			}
@@ -224,7 +224,7 @@ auto link::unsubscribe(std::uint64_t event_cb_id) -> void {
 	auto& AS = kernel::config::actor_system();
 	const auto ev_actor = AS.registry().get(event_cb_id);
 	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
-	pimpl_->send(caf::actor_cast<caf::actor>(ev_actor), a_lnk_bye());
+	pimpl_->send(caf::actor_cast<caf::actor>(ev_actor), a_bye());
 }
 
 NAMESPACE_END(blue_sky::tree)

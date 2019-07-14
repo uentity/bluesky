@@ -34,7 +34,7 @@ link_actor::~link_actor() = default;
 
 auto link_actor::goodbye() -> void {
 	// say goodbye to self group and leave it
-	send(self_grp, a_lnk_bye());
+	send(self_grp, a_bye());
 	leave(self_grp);
 }
 
@@ -191,7 +191,7 @@ auto link_actor::make_behavior() -> behavior_type {
 
 auto link_actor::make_generic_behavior() -> behavior_type { return {
 	/// skip `bye` message (should always come from myself)
-	[](a_lnk_bye) {},
+	[](a_bye) {},
 
 	/// rename
 	[this](a_lnk_rename, std::string new_name, bool silent) {
