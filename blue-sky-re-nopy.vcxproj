@@ -114,8 +114,13 @@
     <ClInclude Include="kernel\src\kernel\kimpl.h" />
     <ClInclude Include="kernel\src\kernel\logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\plugins_subsyst.h" />
+    <ClInclude Include="kernel\src\tree\actor_common.h" />
+    <ClInclude Include="kernel\src\tree\fusion_link_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
+    <ClInclude Include="kernel\src\tree\link_actor.h" />
     <ClInclude Include="kernel\src\tree\link_impl.h" />
+    <ClInclude Include="kernel\src\tree\link_invoke.h" />
+    <ClInclude Include="kernel\src\tree\node_actor.h" />
     <ClInclude Include="kernel\src\tree\node_impl.h" />
     <ClInclude Include="kernel\src\tree\tree_impl.h" />
   </ItemGroup>
@@ -158,10 +163,14 @@
     <ClCompile Include="kernel\src\serialize\tree_fs_output.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
     <ClCompile Include="kernel\src\timetypes.cpp" />
+    <ClCompile Include="kernel\src\tree\errors.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
     <ClCompile Include="kernel\src\tree\hard_link.cpp" />
+    <ClCompile Include="kernel\src\tree\inode.cpp" />
     <ClCompile Include="kernel\src\tree\link.cpp" />
+    <ClCompile Include="kernel\src\tree\link_actor.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
+    <ClCompile Include="kernel\src\tree\node_actor.cpp" />
     <ClCompile Include="kernel\src\tree\sym_link.cpp" />
     <ClCompile Include="kernel\src\tree\tree.cpp" />
     <ClCompile Include="kernel\src\tree\tree_async.cpp" />
