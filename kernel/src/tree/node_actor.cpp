@@ -91,7 +91,7 @@ auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key:
 			auto ra = actor_system().spawn(link_retranlator, self_grp, lid);
 			lnk_wires_[lid] = ra.id();
 			// send message that link inserted
-			send(self_grp, a_lnk_insert(), lid);
+			send(self_grp, a_lnk_insert(), a_ack(), lid);
 		}
 		return std::move(res);
 	};
@@ -219,9 +219,9 @@ auto node_actor::make_behavior() -> behavior_type { return {
 	[](a_lnk_status, link::id_type, Req, ReqStatus, ReqStatus) {},
 
 	// [TODO] add impl
-	[=](a_lnk_insert, link::id_type lid) {},
+	[=](a_lnk_insert, a_ack, link::id_type lid) {},
 	// [TODO] add impl
-	[=](a_lnk_erase, link::id_type lid) {}
+	[=](a_lnk_erase, a_ack, link::id_type lid) {}
 }; }
 
 NAMESPACE_END(blue_sky::tree)

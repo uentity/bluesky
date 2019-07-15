@@ -9,13 +9,10 @@
 
 #include <bs/log.h>
 #include <bs/kernel/config.h>
-#include <bs/detail/enumops.h>
 #include "link_actor.h"
 
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-
-BS_ALLOW_ENUMOPS(blue_sky::tree::link::Event);
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
@@ -163,50 +160,53 @@ auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 /*-----------------------------------------------------------------------------
  *  subscribers management
  *-----------------------------------------------------------------------------*/
-auto link::subscribe(Event listen_to, handle_event_cb f) -> std::uint64_t {
-	// event actor
-	static constexpr auto listener_actor = [](
-		caf::event_based_actor* self, caf::group link_grp, caf::message_handler character
-	) {
-		// silently drop all other messages not in my character
-		self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
-			return caf::drop(self, mv);
-		});
-		// come to mummy
-		self->join(link_grp);
-		// unsubscribe when parent leaves its group
-		return character.or_else(
-			[self, grp = std::move(link_grp)](a_bye) {
-				self->leave(grp);
-				kernel::config::actor_system().registry().erase(self->id());
-			}
-		);
-	};
+// event actor
+auto ev_listener_actor(
+	caf::event_based_actor* self, caf::group tgt_grp, caf::message_handler character
+) -> caf::behavior {
+	// silently drop all other messages not in my character
+	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
+		return caf::drop(self, mv);
+	});
+	// come to mummy
+	self->join(tgt_grp);
+	auto& Reg = kernel::config::actor_system().registry();
+	Reg.put(self->id(), self);
 
+	// unsubscribe when parent leaves its group
+	return character.or_else(
+		[self, grp = std::move(tgt_grp), &Reg](a_bye) {
+			self->leave(grp);
+			Reg.erase(self->id());
+		}
+	);
+};
+
+auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 	// produce event bhavior that calls passed callback with proper params
-	static constexpr auto make_ev_character = [](const sp_link& self, Event listen_to_, handle_event_cb& f_) {
+	static constexpr auto make_ev_character = [](const sp_link& self, Event listen_to_, handle_event_cb& f) {
 		auto res = caf::message_handler{};
 
-		if(enumval(listen_to_ & Event::Renamed))
+		if(enumval(listen_to_ & Event::LinkRenamed))
 			res = res.or_else(
-				[f = std::move(f_), self = std::weak_ptr{self}] (
+				[f, self = std::weak_ptr{self}] (
 					a_lnk_rename, a_ack, std::string new_name, std::string old_name
 				) {
 					if(auto lnk = self.lock())
-						f(std::move(lnk), {
+						f(std::move(lnk), Event::LinkRenamed, {
 							{"new_name", std::move(new_name)},
 							{"prev_name", std::move(old_name)}
 						});
 				}
 			);
 
-		if(enumval(listen_to_ & Event::StatusChanged))
+		if(enumval(listen_to_ & Event::LinkStatusChanged))
 			res = res.or_else(
-				[f = std::move(f_), self = std::weak_ptr{self}](
+				[f, self = std::weak_ptr{self}](
 					a_lnk_status, a_ack, Req request, ReqStatus new_v, ReqStatus prev_v
 				) {
 					if(auto lnk = self.lock())
-						f(std::move(lnk), {
+						f(std::move(lnk), Event::LinkStatusChanged, {
 							{"request", prop::integer(new_v)},
 							{"new_status", prop::integer(new_v)},
 							{"prev_status", prop::integer(prev_v)}
@@ -219,7 +219,10 @@ auto link::subscribe(Event listen_to, handle_event_cb f) -> std::uint64_t {
 
 	// make shiny new subscriber actor and place into parent's room
 	auto& AS = kernel::config::actor_system();
-	auto baby = AS.spawn(listener_actor, pimpl_->self_grp, make_ev_character(shared_from_this(), listen_to, f));
+	auto baby = AS.spawn(
+		ev_listener_actor, pimpl_->self_grp,
+		make_ev_character(shared_from_this(), listen_to, f)
+	);
 	// register him
 	AS.registry().put(baby.id(), baby);
 	// and return ID

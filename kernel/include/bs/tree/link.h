@@ -27,6 +27,14 @@ NAMESPACE_BEGIN(blue_sky::tree)
 class link_actor;
 class node_actor;
 
+enum class Event : std::uint64_t {
+	LinkRenamed = 1,
+	LinkStatusChanged = 2,
+	LinkInserted = 4,
+	LinkErased = 8,
+	All = std::uint64_t(-1)
+};
+
 class BS_API link  : public std::enable_shared_from_this<link> {
 public:
 	using id_type = boost::uuids::uuid;
@@ -137,15 +145,10 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  track link events
 	//
-	enum class Event : std::uint32_t {
-		Renamed = 1,
-		StatusChanged = 2,
-		All = std::uint32_t(-1)
-	};
-	using handle_event_cb = std::function< void(sp_link, prop::propdict) >;
+	using handle_event_cb = std::function< void(sp_link, Event, prop::propdict) >;
 
 	/// returns ID of suscriber that is required for unsubscribe
-	auto subscribe(Event listen_to, handle_event_cb f) -> std::uint64_t;
+	auto subscribe(handle_event_cb f, Event listen_to = Event::All) -> std::uint64_t;
 	auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
 protected:
@@ -282,5 +285,6 @@ private:
 	auto propagate_handle() -> result_or_err<sp_node> override;
 };
 
-
 NAMESPACE_END(blue_sky::tree)
+
+BS_ALLOW_ENUMOPS(blue_sky::tree::Event)

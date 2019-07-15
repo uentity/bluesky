@@ -13,6 +13,7 @@
 #include <bs/error.h>
 #include <bs/atoms.h>
 
+#include <caf/fwd.hpp>
 #include <caf/function_view.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
@@ -60,5 +61,9 @@ inline auto actorf(const H& handle, blue_sky::timespan timeout, Args&&... args) 
 		caf::make_function_view(handle, caf::duration{ timeout }), std::forward<Args>(args)...
 	);
 }
+
+/// listens to event from specified group, execute given character & self-detruct on `a_bye` message
+auto ev_listener_actor(caf::event_based_actor* self, caf::group listen_grp, caf::message_handler character)
+-> caf::behavior;
 
 NAMESPACE_END(blue_sky::tree)

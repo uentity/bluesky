@@ -127,21 +127,21 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 
 	// test link events
 	std::atomic<int> rename_cnt = 0;
-	auto h_rename = L->subscribe(link::Event::Renamed, [&](sp_link who, prop::propdict what) -> void {
+	auto h_rename = L->subscribe([&](sp_link who, Event, prop::propdict what) -> void {
 		using namespace blue_sky::prop;
 		++rename_cnt;
 		bsout() << "=> {}: renamed '{}' -> '{}'" << to_string(who->id())
 			<< get<std::string>(what, "prev_name") << get<std::string>(what, "new_name") << bs_end;
-	});
+	}, Event::LinkRenamed);
 
 	std::atomic<int> status_cnt = 0;
-	auto h_status = L->subscribe(link::Event::StatusChanged, [&](sp_link who, prop::propdict what) {
+	auto h_status = L->subscribe([&](sp_link who, Event, prop::propdict what) {
 		using namespace blue_sky::prop;
 		++status_cnt;
 		bsout() << "=> {}: status {}: {} -> {}" << to_string(who->id()) <<
 			get<integer>(what, "request") << get<integer>(what, "prev_status") << 
 			get<integer>(what, "new_status") << bs_end;
-	});
+	}, Event::LinkStatusChanged);
 
 	bsout() << "\n===========================\n" << bs_end;
 	// try rename

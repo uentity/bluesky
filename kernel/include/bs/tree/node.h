@@ -251,6 +251,15 @@ public:
 	iterator<Key::AnyOrder> project(iterator<Key::OID>) const;
 	iterator<Key::AnyOrder> project(iterator<Key::Type>) const;
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  track node events
+	//
+	using handle_event_cb = std::function< void(sp_node, Event, prop::propdict) >;
+
+	/// returns ID of suscriber that is required for unsubscribe
+	auto subscribe(handle_event_cb f, Event listen_to = Event::All) -> std::uint64_t;
+	auto unsubscribe(std::uint64_t event_cb_id) -> void;
+
 	/// API for managing link filters
 	/// test is given link can be inserted into the node
 	bool accepts(const sp_link& what) const;

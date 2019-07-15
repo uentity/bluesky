@@ -158,7 +158,7 @@ public:
 			auto& Reg = actor_system().registry();
 			send(caf::actor_cast<caf::actor>(Reg.get( rid )), a_bye());
 			// send message that link erased
-			send(self_grp, a_lnk_erase(), lid);
+			send(self_grp, a_lnk_erase(), a_ack(), lid);
 
 			// and erase link
 			links_.get<Key_tag<Key::ID>>().erase(victim);
