@@ -10,6 +10,7 @@
 #pragma once
 
 #include <bs/objbase.h>
+#include <bs/tree/link.h>
 #include <bs/serialize/serialize.h>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -44,6 +45,8 @@ public:
 using sp_person = std::shared_ptr< bs_person >;
 
 BSS_FCN_DECL(serialize, bs_person)
+
+auto make_persons_tree() -> tree::sp_link;
 
 /*-----------------------------------------------------------------------------
  * templated class

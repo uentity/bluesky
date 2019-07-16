@@ -39,7 +39,7 @@ using namespace std::chrono_literals;
 using Req = link::Req;
 using ReqStatus = link::ReqStatus;
 
-namespace {
+NAMESPACE_BEGIN()
 
 class fusion_client : public fusion_iface {
 	auto populate(const sp_node& root, const std::string& child_type_id = "") -> error override {
@@ -53,20 +53,11 @@ class fusion_client : public fusion_iface {
 	}
 };
 
-} // eof hidden namespace
+NAMESPACE_END()
 
-BOOST_AUTO_TEST_CASE(test_tree) {
-	std::cout << "\n\n*** testing tree..." << std::endl;
-	std::cout << "*********************************************************************" << std::endl;
+NAMESPACE_BEGIN(blue_sky)
 
-	// person
-	sp_obj P = kernel::tfactory::create_object(bs_person::bs_type(), std::string("Tyler"), double(33));
-	// person link
-	auto L = std::make_shared<hard_link>("person link", std::move(P));
-	BOOST_TEST(L);
-	auto L1 = test_json(L, false);
-	BOOST_TEST(L->name() == L1->name());
-
+auto make_persons_tree() -> tree::sp_link {
 	// create root link and node
 	sp_node N = kernel::tfactory::create_object("node");
 	// create several persons and insert 'em into node
@@ -94,8 +85,26 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	N->insert(std::make_shared<sym_link>(
 		"sym_dot", "."
 	));
-	// print resulting tree content
-	auto hN = link::make_root<hard_link>("r", N);
+
+	return link::make_root<hard_link>("r", std::move(N));
+}
+
+NAMESPACE_END(blue_sky)
+
+BOOST_AUTO_TEST_CASE(test_tree) {
+	std::cout << "\n\n*** testing tree..." << std::endl;
+	std::cout << "*********************************************************************" << std::endl;
+
+	// person
+	sp_obj P = kernel::tfactory::create_object(bs_person::bs_type(), std::string("Tyler"), double(33));
+	// person link
+	auto L = std::make_shared<hard_link>("person link", std::move(P));
+	BOOST_TEST(L);
+	auto L1 = test_json(L, false);
+	BOOST_TEST(L->name() == L1->name());
+
+	auto hN = make_persons_tree();
+	auto N = hN->data_node();
 	bsout() << "root node abspath: {}" << abspath(hN) << bs_end;
 	bsout() << "root node abspath: {}" << convert_path(abspath(hN), hN, node::Key::ID, node::Key::Name) << bs_end;
 	bsout() << "sym_Citizen_2 abspath: {}" << convert_path(
@@ -124,48 +133,5 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 		(lnk ? abspath(lnk, node::Key::Name) : "None") << ' ' <<
 		lnk->obj_type_id() << ' ' << (void*)lnk->data().get() << std::endl;
 	}, "hard_Citizen_0", hN, node::Key::Name);
-
-	// test link events
-	std::atomic<int> rename_cnt = 0;
-	auto h_rename = L->subscribe([&](sp_link who, Event, prop::propdict what) -> void {
-		using namespace blue_sky::prop;
-		++rename_cnt;
-		bsout() << "=> {}: renamed '{}' -> '{}'" << to_string(who->id())
-			<< get<std::string>(what, "prev_name") << get<std::string>(what, "new_name") << bs_end;
-	}, Event::LinkRenamed);
-
-	std::atomic<int> status_cnt = 0;
-	auto h_status = L->subscribe([&](sp_link who, Event, prop::propdict what) {
-		using namespace blue_sky::prop;
-		++status_cnt;
-		bsout() << "=> {}: status {}: {} -> {}" << to_string(who->id()) <<
-			get<integer>(what, "request") << get<integer>(what, "prev_status") << 
-			get<integer>(what, "new_status") << bs_end;
-	}, Event::LinkStatusChanged);
-
-	bsout() << "\n===========================\n" << bs_end;
-	// try rename
-	L->rename("Test rename event");
-	// try change status
-	L->rs_reset(Req::Data, ReqStatus::Error);
-	L->rs_reset(Req::Data, ReqStatus::OK);
-	//std::this_thread::sleep_for(10ms);
-
-	// disconnect renamer
-	//L->unsubscribe(h_rename);
-	//std::this_thread::sleep_for(10ms);
-	L->rename("Can't see me");
-	
-	// disconnect status
-	L->rs_reset(Req::Data, ReqStatus::Error);
-	//std::this_thread::sleep_for(10ms);
-	//L->unsubscribe(h_status);
-	// nobody will know abut that
-	//std::this_thread::sleep_for(10ms);
-	L->rs_reset(Req::Data, ReqStatus::OK);
-
-	std::this_thread::sleep_for(500ms);
-	std::cout << "### rename calls: " << rename_cnt << std::endl;
-	std::cout << "### status calls: " << status_cnt << std::endl;
 }
 
