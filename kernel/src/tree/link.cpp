@@ -225,8 +225,6 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 		ev_listener_actor, pimpl_->self_grp,
 		make_ev_character(shared_from_this(), listen_to, f)
 	);
-	// register him
-	AS.registry().put(baby.id(), baby);
 	// and return ID
 	return baby.id();
 }

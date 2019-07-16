@@ -45,18 +45,18 @@ auto node_actor::goodbye() -> void {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  link insert
+//  leafs events retranslators
 //
 NAMESPACE_BEGIN()
 
 // actor that retranslate some of link's messages attaching a link's ID to them
 auto link_retranslator(caf::event_based_actor* self, caf::group node_grp, link::id_type lid) -> caf::behavior {
 	// join link's group
-	auto Lgrp = kernel::config::actor_system().groups().get_local( to_string(lid) );
+	auto Lgrp = actor_system().groups().get_local( to_string(lid) );
 	self->join(Lgrp);
 	// register self
 	const auto sid = self->id();
-	kernel::config::actor_system().registry().put(sid, self);
+	actor_system().registry().put(sid, self);
 
 	// silently drop all other messages not in my character
 	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
@@ -72,11 +72,11 @@ auto link_retranslator(caf::event_based_actor* self, caf::group node_grp, link::
 
 		// retranslate events
 		[=](a_lnk_rename, a_ack, const std::string& new_name, const std::string& old_name) {
-			self->send(node_grp, a_lnk_rename(), lid, new_name, old_name);
+			self->send(node_grp, a_lnk_rename(), a_ack(), lid, new_name, old_name);
 		},
 
 		[=](a_lnk_status, a_ack, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			self->send(node_grp, a_lnk_status(), lid, req, new_s, prev_s);
+			self->send(node_grp, a_lnk_status(), a_ack(), lid, req, new_s, prev_s);
 		}
 	};
 }
@@ -84,11 +84,11 @@ auto link_retranslator(caf::event_based_actor* self, caf::group node_grp, link::
 // actor that retranslate some of link's messages attaching a link's ID to them
 auto node_retranslator(caf::event_based_actor* self, caf::group node_grp, const std::string& subnode_id) -> caf::behavior {
 	// join link's group
-	auto Sgrp = kernel::config::actor_system().groups().get_local( subnode_id );
+	auto Sgrp = actor_system().groups().get_local( subnode_id );
 	self->join(Sgrp);
 	// register self
 	const auto sid = self->id();
-	kernel::config::actor_system().registry().put(sid, self);
+	actor_system().registry().put(sid, self);
 
 	// silently drop all other messages not in my character
 	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
@@ -103,39 +103,40 @@ auto node_retranslator(caf::event_based_actor* self, caf::group node_grp, const 
 		},
 
 		// retranslate events
-		[=](a_lnk_rename, link::id_type lid, const std::string& new_name, const std::string& old_name) {
-			self->send(node_grp, a_lnk_rename(), lid, new_name, old_name);
+		[=](a_lnk_rename, a_ack, link::id_type lid, const std::string& new_name, const std::string& old_name) {
+			self->send(node_grp, a_lnk_rename(), a_ack(), lid, new_name, old_name);
 		},
 
-		[=](a_lnk_status, link::id_type lid, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			self->send(node_grp, a_lnk_status(), lid, req, new_s, prev_s);
+		[=](a_lnk_status, a_ack, link::id_type lid, Req req, ReqStatus new_s, ReqStatus prev_s) {
+			self->send(node_grp, a_lnk_status(), a_ack(), lid, req, new_s, prev_s);
 		},
 
 		[=](a_lnk_insert, a_ack, link::id_type lid) {
-			self->send(node_grp, a_lnk_insert(), lid);
+			self->send(node_grp, a_lnk_insert(), a_ack(), lid);
 		},
 
 		[=](a_lnk_erase, a_ack, link::id_type lid) {
-			self->send(node_grp, a_lnk_erase(), lid);
+			self->send(node_grp, a_lnk_erase(), a_ack(), lid);
 		}
 	};
 }
 
 NAMESPACE_END()
 
+///////////////////////////////////////////////////////////////////////////////
+//  leafs insert & erase
+//
 auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key::ID> {
 	const auto make_result = [=](insert_status<Key::ID>&& res) {
 		if(res.second) {
-			// create retranlator
+			// create retranlators for inserted link & subnode (if any)
 			const auto& child_L = **res.first;
 			const auto& lid = child_L.id();
-			auto ra = actor_system().spawn(link_retranslator, self_grp, lid);
-			lnk_wires_[lid] = ra.id();
-			// if inserted link points to node, add node retranslator
-			if(auto subN = L->data_node()) {
-				auto sa = actor_system().spawn(node_retranslator, self_grp, subN->id());
-				subn_wires_[lid] = sa.id();
-			}
+			axons_[lid] = {
+				actor_system().spawn(link_retranslator, self_grp, lid).id(),
+				actor_system().spawn(node_retranslator, self_grp, L->oid()).id()
+			};
+
 			// send message that link inserted
 			send(self_grp, a_lnk_insert(), a_ack(), lid);
 		}
@@ -208,6 +209,25 @@ auto node_actor::adjust_inserted_link(const sp_link& lnk, const sp_node& n) -> s
 	return lnk->propagate_handle().value_or(nullptr);
 }
 
+auto node_actor::erase_impl(iterator<Key::ID> victim) -> void {
+	if(victim == end<Key::ID>()) return;
+	auto solo = std::lock_guard{ links_guard_ };
+
+	const auto lid = (*victim)->id();
+	const auto rs = axons_[lid];
+	auto& Reg = actor_system().registry();
+
+	// stop link & subnode retranslators
+	for(auto& ractor : { Reg.get(rs.first), Reg.get(rs.second) })
+		send(caf::actor_cast<caf::actor>(ractor), a_bye());
+	axons_.erase(lid);
+
+	// send message that link erased
+	send(self_grp, a_lnk_erase(), a_ack(), lid);
+	// and erase link
+	links_.get<Key_tag<Key::ID>>().erase(victim);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //  misc
 //
@@ -252,21 +272,19 @@ auto node_actor::make_behavior() -> behavior_type { return {
 		// suspend link leafs retranslators
 		auto solo = std::lock_guard{ links_guard_ };
 		auto& Reg = actor_system().registry();
-		for(auto& [lid, rid] : lnk_wires_)
-			send(caf::actor_cast<caf::actor>(Reg.get(rid)), a_bye());
-		lnk_wires_.clear();
-
-		for(auto& [lid, rid] : subn_wires_)
-			send(caf::actor_cast<caf::actor>(Reg.get(rid)), a_bye());
-		subn_wires_.clear();
+		for(auto& [lid, rs] : axons_) {
+			for(auto& ractor : { Reg.get(rs.first), Reg.get(rs.second) })
+				send(caf::actor_cast<caf::actor>(ractor), a_bye());
+		}
+		axons_.clear();
 	},
 
 	// handle link rename
-	[=](a_lnk_rename, link::id_type lid, const std::string&, const std::string&) {
+	[=](a_lnk_rename, a_ack, link::id_type lid, const std::string&, const std::string&) {
 		on_rename(lid);
 	},
 	// skip link status - not interested
-	[](a_lnk_status, link::id_type, Req, ReqStatus, ReqStatus) {},
+	[](a_lnk_status, a_ack, link::id_type, Req, ReqStatus, ReqStatus) {},
 
 	// [TODO] add impl
 	[=](a_lnk_insert, a_ack, link::id_type lid) {},
