@@ -81,15 +81,61 @@ auto link_retranslator(caf::event_based_actor* self, caf::group node_grp, link::
 	};
 }
 
+// actor that retranslate some of link's messages attaching a link's ID to them
+auto node_retranslator(caf::event_based_actor* self, caf::group node_grp, const std::string& subnode_id) -> caf::behavior {
+	// join link's group
+	auto Sgrp = kernel::config::actor_system().groups().get_local( subnode_id );
+	self->join(Sgrp);
+	// register self
+	const auto sid = self->id();
+	kernel::config::actor_system().registry().put(sid, self);
+
+	// silently drop all other messages not in my character
+	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
+		return caf::drop(self, mv);
+	});
+
+	return {
+		// quit after link
+		[=](a_bye) {
+			self->leave(Sgrp);
+			kernel::config::actor_system().registry().erase(sid);
+		},
+
+		// retranslate events
+		[=](a_lnk_rename, link::id_type lid, const std::string& new_name, const std::string& old_name) {
+			self->send(node_grp, a_lnk_rename(), lid, new_name, old_name);
+		},
+
+		[=](a_lnk_status, link::id_type lid, Req req, ReqStatus new_s, ReqStatus prev_s) {
+			self->send(node_grp, a_lnk_status(), lid, req, new_s, prev_s);
+		},
+
+		[=](a_lnk_insert, a_ack, link::id_type lid) {
+			self->send(node_grp, a_lnk_insert(), lid);
+		},
+
+		[=](a_lnk_erase, a_ack, link::id_type lid) {
+			self->send(node_grp, a_lnk_erase(), lid);
+		}
+	};
+}
+
 NAMESPACE_END()
 
 auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key::ID> {
 	const auto make_result = [=](insert_status<Key::ID>&& res) {
 		if(res.second) {
-			// create retranlator & save in registry
-			const auto& lid = (*res.first)->id();
+			// create retranlator
+			const auto& child_L = **res.first;
+			const auto& lid = child_L.id();
 			auto ra = actor_system().spawn(link_retranslator, self_grp, lid);
 			lnk_wires_[lid] = ra.id();
+			// if inserted link points to node, add node retranslator
+			if(auto subN = L->data_node()) {
+				auto sa = actor_system().spawn(node_retranslator, self_grp, subN->id());
+				subn_wires_[lid] = sa.id();
+			}
 			// send message that link inserted
 			send(self_grp, a_lnk_insert(), a_ack(), lid);
 		}
@@ -209,6 +255,10 @@ auto node_actor::make_behavior() -> behavior_type { return {
 		for(auto& [lid, rid] : lnk_wires_)
 			send(caf::actor_cast<caf::actor>(Reg.get(rid)), a_bye());
 		lnk_wires_.clear();
+
+		for(auto& [lid, rid] : subn_wires_)
+			send(caf::actor_cast<caf::actor>(Reg.get(rid)), a_bye());
+		subn_wires_.clear();
 	},
 
 	// handle link rename

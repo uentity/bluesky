@@ -59,6 +59,7 @@ public:
 
 	// map links to retranslator actors
 	std::unordered_map<link::id_type, std::uint64_t> lnk_wires_;
+	std::unordered_map<link::id_type, std::uint64_t> subn_wires_;
 
 	// default ctor
 	node_actor(caf::actor_config& cfg, const std::string& id, timespan data_timeout = def_data_timeout);
@@ -156,10 +157,17 @@ public:
 			const auto lid = (*victim)->id();
 			const auto rid = lnk_wires_[lid];
 			auto& Reg = actor_system().registry();
+			// link retranslator
 			send(caf::actor_cast<caf::actor>(Reg.get( rid )), a_bye());
+			lnk_wires_.erase(lid);
+			// subnode retranslator
+			if(auto pr = subn_wires_.find(lid); pr != subn_wires_.end()) {
+				send(caf::actor_cast<caf::actor>(Reg.get( pr->second )), a_bye());
+				subn_wires_.erase(pr);
+			}
+
 			// send message that link erased
 			send(self_grp, a_lnk_erase(), a_ack(), lid);
-
 			// and erase link
 			links_.get<Key_tag<Key::ID>>().erase(victim);
 		}
