@@ -90,6 +90,15 @@ void py_bind_link(py::module& m) {
 		.value("Error", link::ReqStatus::Error)
 	;
 
+	// Events enum
+	py::enum_<Event>(m, "Event")
+		.value("LinkRenamed", Event::LinkRenamed)
+		.value("LinkStatusChanged", Event::LinkStatusChanged)
+		.value("LinkInserted", Event::LinkInserted)
+		.value("LinkErased", Event::LinkErased)
+		.value("All", Event::All)
+	;
+
 	// link base class
 	link_pyface
 		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link")
@@ -136,6 +145,10 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("owner", &link::owner)
 		.def_property_readonly("info", &link::info)
 		.def_property("flags", &link::flags, &link::set_flags)
+
+		// events subscrition
+		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All)
+		.def("unsubscribe", &link::unsubscribe, "event_cb_id"_a)
 	;
 
 	// export adapters manip functions

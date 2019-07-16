@@ -307,6 +307,10 @@ void py_bind_node(py::module& m) {
 		.def("propagate_owner", &node::propagate_owner, "deep"_a = false,
 			"Set owner of all contained links to this node (if deep, fix owner in entire subtree)"
 		)
+
+		// events subscrition
+		.def("subscribe", &node::subscribe, "event_cb"_a, "events"_a = Event::All)
+		.def("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
 	;
 }
 
