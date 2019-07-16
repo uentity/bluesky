@@ -50,7 +50,7 @@ auto node_actor::goodbye() -> void {
 NAMESPACE_BEGIN()
 
 // actor that retranslate some of link's messages attaching a link's ID to them
-auto link_retranlator(caf::event_based_actor* self, caf::group node_grp, link::id_type lid) -> caf::behavior {
+auto link_retranslator(caf::event_based_actor* self, caf::group node_grp, link::id_type lid) -> caf::behavior {
 	// join link's group
 	auto Lgrp = kernel::config::actor_system().groups().get_local( to_string(lid) );
 	self->join(Lgrp);
@@ -88,7 +88,7 @@ auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key:
 		if(res.second) {
 			// create retranlator & save in registry
 			const auto& lid = (*res.first)->id();
-			auto ra = actor_system().spawn(link_retranlator, self_grp, lid);
+			auto ra = actor_system().spawn(link_retranslator, self_grp, lid);
 			lnk_wires_[lid] = ra.id();
 			// send message that link inserted
 			send(self_grp, a_lnk_insert(), a_ack(), lid);

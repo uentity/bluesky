@@ -13,6 +13,8 @@
 
 #include <boost/uuid/string_generator.hpp>
 
+OMIT_OBJ_SERIALIZATION
+
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
 

@@ -14,6 +14,8 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+OMIT_OBJ_SERIALIZATION
+
 NAMESPACE_BEGIN(blue_sky::tree)
 
 link::link(caf::actor impl_a) : aimpl_(std::move(impl_a)) {

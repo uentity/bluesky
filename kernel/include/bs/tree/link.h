@@ -158,7 +158,7 @@ protected:
 	friend class node;
 	friend class node_actor;
 
-	/// ctor accept name of created link
+	/// ctor accept spawned link actor
 	link(caf::actor impl_a);
 
 	/// deny making link copies

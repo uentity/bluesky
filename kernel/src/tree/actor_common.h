@@ -16,6 +16,15 @@
 #include <caf/fwd.hpp>
 #include <caf/function_view.hpp>
 
+#define OMIT_OBJ_SERIALIZATION                                                         \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::error::box)                                  \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::sp_obj)                                      \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_link)                               \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_node)                               \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::sp_obj>)        \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::sp_link>) \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::sp_node>)
+
 NAMESPACE_BEGIN(blue_sky::tree)
 
 inline constexpr auto def_data_timeout = timespan{ std::chrono::seconds(3) };
