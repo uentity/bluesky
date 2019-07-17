@@ -200,6 +200,10 @@ public:
 	// postprocessing of just inserted link
 	// if link points to node, return it
 	static sp_node adjust_inserted_link(const sp_link& lnk, const sp_node& n);
+
+	auto retranslate_from(const sp_link& L) -> void;
+	auto stop_retranslate_from(const sp_link& L) -> void;
+	auto fix_retranslators() -> void;
 };
 
 NAMESPACE_END(blue_sky::tree)

@@ -10,6 +10,8 @@
 #include "node_actor.h"
 #include <bs/kernel/types_factory.h>
 #include <bs/kernel/config.h>
+#include <bs/log.h>
+#include <bs/tree/tree.h>
 
 #include <boost/uuid/string_generator.hpp>
 
@@ -393,11 +395,12 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 	static constexpr auto make_ev_character = [](const sp_node& self, Event listen_to_, handle_event_cb& f) {
 		auto res = caf::message_handler{};
 
-		if(enumval(listen_to_ & Event::LinkRenamed))
+		if(enumval(listen_to_ & Event::LinkRenamed)) {
 			res = res.or_else(
 				[f, self = std::weak_ptr{self}] (
 					a_lnk_rename, a_ack, const link::id_type& lid, std::string new_name, std::string old_name
 				) {
+					bsout() << "*-* node: fired LinkRenamed event" << bs_end;
 					if(auto N = self.lock())
 						f(std::move(N), Event::LinkRenamed, {
 							{"link_id", to_string(lid)},
@@ -406,12 +409,15 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 						});
 				}
 			);
+			bsout() << "*-* node: subscribed to LinkRenamed event" << bs_end;
+		}
 
-		if(enumval(listen_to_ & Event::LinkStatusChanged))
+		if(enumval(listen_to_ & Event::LinkStatusChanged)) {
 			res = res.or_else(
 				[f, self = std::weak_ptr{self}](
 					a_lnk_status, a_ack, link::id_type lid, Req req, ReqStatus new_s, ReqStatus prev_s
 				) {
+					bsout() << "*-* node: fired LinkStatusChanged event" << bs_end;
 					if(auto N = self.lock())
 						f(std::move(N), Event::LinkStatusChanged, {
 							{"link_id", to_string(lid)},
@@ -421,30 +427,38 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 						});
 				}
 			);
+			bsout() << "*-* node: subscribed to LinkStatusChanged event" << bs_end;
+		}
 
-		if(enumval(listen_to_ & Event::LinkInserted))
+		if(enumval(listen_to_ & Event::LinkInserted)) {
 			res = res.or_else(
 				[f, self = std::weak_ptr{self}](
 					a_lnk_insert, a_ack, link::id_type lid
 				) {
+					bsout() << "*-* node: fired LinkInserted event" << bs_end;
 					if(auto N = self.lock())
 						f(std::move(N), Event::LinkInserted, {
 							{"link_id", to_string(lid)}
 						});
 				}
 			);
+			bsout() << "*-* node: subscribed to LinkInserted event" << bs_end;
+		}
 
-		if(enumval(listen_to_ & Event::LinkErased))
+		if(enumval(listen_to_ & Event::LinkErased)) {
 			res = res.or_else(
 				[f, self = std::weak_ptr{self}](
 					a_lnk_erase, a_ack, link::id_type lid
 				) {
+					bsout() << "*-* node: fired LinkErased event" << bs_end;
 					if(auto N = self.lock())
 						f(std::move(N), Event::LinkErased, {
 							{"link_id", to_string(lid)}
 						});
 				}
 			);
+			bsout() << "*-* node: subscribed to LinkErased event" << bs_end;
+		}
 
 		return res;
 	};
@@ -463,6 +477,16 @@ auto node::unsubscribe(std::uint64_t event_cb_id) -> void {
 	const auto ev_actor = AS.registry().get(event_cb_id);
 	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
 	pimpl_->send(caf::actor_cast<caf::actor>(ev_actor), a_bye());
+}
+
+auto node::fix_retranslators() -> void {
+	pimpl_->fix_retranslators();
+	walk(pimpl_->handle_.lock(),
+		[](const sp_link&, std::list<sp_link>& Ns, std::vector<sp_link>&) {
+			for(const auto& N : Ns)
+				N->data_node_ex().map( [](const sp_node& n) { n->fix_retranslators(); });
+		}
+	);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

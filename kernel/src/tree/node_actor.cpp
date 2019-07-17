@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "node_actor.h"
+#include <bs/log.h>
 
 #include <boost/uuid/uuid_io.hpp>
 #include <caf/actor_ostream.hpp>
@@ -123,22 +124,50 @@ auto node_retranslator(caf::event_based_actor* self, caf::group node_grp, const 
 
 NAMESPACE_END()
 
+auto node_actor::retranslate_from(const sp_link& L) -> void {
+	const auto& lid = L->id();
+	axons_[lid] = {
+		actor_system().spawn(link_retranslator, self_grp, lid).id(),
+		actor_system().spawn(node_retranslator, self_grp, L->oid()).id()
+	};
+	bsout() << "*-* node: retranslating events from link {}" << L->name() << bs_end;
+}
+
+auto node_actor::stop_retranslate_from(const sp_link& L) -> void {
+	auto prs = axons_.find(L->id());
+	if(prs == axons_.end()) return;
+	auto& rs_ids = prs->second;
+	auto& Reg = actor_system().registry();
+
+	// stop link & subnode retranslators
+	for(auto& ractor : { Reg.get(rs_ids.first), Reg.get(rs_ids.second) })
+		send(caf::actor_cast<caf::actor>(ractor), a_bye());
+	axons_.erase(L->id());
+	bsout() << "*-* node: stopped retranslating events from link {}" << L->name() << bs_end;
+}
+
+auto node_actor::fix_retranslators() -> void {
+	bsout() << "*** fix_retranslators" << bs_end;
+	auto solo = std::lock_guard{ links_guard_ };
+	for(auto& L : links_) {
+		if(axons_.find(L->id()) != axons_.end())
+			bsout() << "*-* node: link {} ({}) retranslating OK" << L->name() << to_string(L->id()) << bs_end;
+		else
+			retranslate_from(L);
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //  leafs insert & erase
 //
 auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key::ID> {
 	const auto make_result = [=](insert_status<Key::ID>&& res) {
 		if(res.second) {
+			const auto& child_L = *res.first;
 			// create retranlators for inserted link & subnode (if any)
-			const auto& child_L = **res.first;
-			const auto& lid = child_L.id();
-			axons_[lid] = {
-				actor_system().spawn(link_retranslator, self_grp, lid).id(),
-				actor_system().spawn(node_retranslator, self_grp, L->oid()).id()
-			};
-
+			retranslate_from(child_L);
 			// send message that link inserted
-			send(self_grp, a_lnk_insert(), a_ack(), lid);
+			send(self_grp, a_lnk_insert(), a_ack(), child_L->id());
 		}
 		return std::move(res);
 	};
@@ -214,13 +243,7 @@ auto node_actor::erase_impl(iterator<Key::ID> victim) -> void {
 	auto solo = std::lock_guard{ links_guard_ };
 
 	const auto lid = (*victim)->id();
-	const auto rs = axons_[lid];
-	auto& Reg = actor_system().registry();
-
-	// stop link & subnode retranslators
-	for(auto& ractor : { Reg.get(rs.first), Reg.get(rs.second) })
-		send(caf::actor_cast<caf::actor>(ractor), a_bye());
-	axons_.erase(lid);
+	stop_retranslate_from(*victim);
 
 	// send message that link erased
 	send(self_grp, a_lnk_erase(), a_ack(), lid);
