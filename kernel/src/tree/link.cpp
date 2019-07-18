@@ -93,6 +93,12 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const 
 	return pimpl_->rs_reset_if_neq(request, self, new_rs);
 }
 
+auto link::rs_data_changed() const -> void {
+	// unconditionally sends Data = OK, ack
+	pimpl_->send(pimpl_, a_lnk_status(), a_ack(), Req::Data, ReqStatus::OK, req_status(Req::Data));
+}
+
+
 /*-----------------------------------------------------------------------------
  *  sync API
  *-----------------------------------------------------------------------------*/

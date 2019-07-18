@@ -137,6 +137,7 @@ void py_bind_link(py::module& m) {
 			"request"_a, "self_rs"_a, "new_rs"_a = link::ReqStatus::Void,
 			"Set status of given request if it is NOT equal to given value, returns prev status"
 		)
+		.def("rs_data_changed", &link::rs_data_changed, "Signal tree that pointee has been midified")
 
 		.def_property_readonly("id", [](const link& L) {
 			return boost::uuids::to_string(L.id());

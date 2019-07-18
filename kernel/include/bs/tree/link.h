@@ -129,12 +129,15 @@ public:
 	// states of single reuqest
 	enum class ReqStatus { Void, Busy, OK, Error };
 
-	// get/set request status
+	// get request status
 	auto req_status(Req request) const -> ReqStatus;
 	// unconditional reset request status
 	auto rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) const -> ReqStatus;
+	// conditional reset request status
 	auto rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
 	auto rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
+	// unconditionally sends OK status over the tree to signal that data has been changed
+	auto rs_data_changed() const -> void;
 
 	/// obtain data in async manner passing it to callback
 	using process_data_cb = std::function<void(result_or_err<sp_obj>, sp_clink)>;
