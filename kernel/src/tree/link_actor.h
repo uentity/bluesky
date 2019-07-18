@@ -64,6 +64,8 @@ public:
 	// virtual dtor
 	virtual ~link_actor();
 
+	// init new self group after ID has been set
+	auto bind_new_id() -> void;
 	// cleanup code executes leaving from local group & must be called from outside
 	auto goodbye() -> void;
 

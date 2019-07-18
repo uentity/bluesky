@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "link_actor.h"
+#include <bs/kernel/tools.h>
 
 #include <bs/kernel/config.h>
 #include <bs/serialize/tree.h>
@@ -25,17 +26,30 @@ static boost::uuids::random_generator gen;
 link_actor::link_actor(caf::actor_config& cfg, std::string name, Flags f, timespan data_timeout)
 	: super(cfg), id_(gen()), name_(std::move(name)), flags_(f), timeout_(def_data_timeout)
 {
-	// create self local group & join into it
-	self_grp = kernel::config::actor_system().groups().get_local( to_string(id_) );
-	join(self_grp);
+	bind_new_id();
 }
 
 link_actor::~link_actor() = default;
 
 auto link_actor::goodbye() -> void {
-	// say goodbye to self group and leave it
-	send(self_grp, a_bye());
-	leave(self_grp);
+	if(self_grp) {
+		// say goodbye to self group
+		send(self_grp, a_bye());
+		leave(self_grp);
+		//aout(this) << "link left self group " << self_grp.get()->identifier() << std::endl;
+		//	<< "\n" << kernel::tools::get_backtrace(30, 4) << std::endl;
+	}
+}
+
+auto link_actor::bind_new_id() -> void {
+	// inform friends about ID change
+	// [NOTE] don't send bye, otherwise retranslators from this will quit
+	send(self_grp, a_bind_id(), id_);
+	//goodbye();
+	// create self local group & join into it
+	self_grp = kernel::config::actor_system().groups().get_local( to_string(id_) );
+	join(self_grp);
+	//aout(this) << "link joined self group " << self_grp.get()->identifier() << std::endl;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -190,23 +204,25 @@ auto link_actor::make_behavior() -> behavior_type {
 }
 
 auto link_actor::make_generic_behavior() -> behavior_type { return {
-	/// skip `bye` message (should always come from myself)
+	/// skip `id bind` and `bye` message (should always come from myself)
+	[](a_bind_id, const link::id_type&) {},
 	[](a_bye) {},
 
 	/// rename
 	[this](a_lnk_rename, std::string new_name, bool silent) {
-		//pdbg() << "aimpl: lnk_rename: = " << name_ << " -> " << new_name <<
-		//	(silent ? " silent" : " loud") << std::endl;
 		auto solo = std::lock_guard{ solo_ };
 		auto old_name = name_;
 		name_ = std::move(new_name);
 		// send rename ack message
-		if(!silent)
+		if(!silent) {
+			//pdbg() << "=> lnk_rename: = " << name_ << " -> " << new_name <<
+			//	(silent ? " silent" : " loud") << std::endl;
 			send(self_grp, a_lnk_rename(), a_ack(), name_, std::move(old_name));
+		}
 	},
 	// rename ack
 	[this](a_lnk_rename, a_ack, std::string new_name, const std::string& old_name) {
-		//pdbg() << "=> lnk_rename: = " << old_name << " -> " << new_name << std::endl;
+		//pdbg() << "=> lnk_rename ack: = " << old_name << " -> " << new_name << std::endl;
 		if(current_sender() != this) {
 			send(this, a_lnk_rename(), std::move(new_name), true);
 		}
@@ -221,7 +237,7 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 
 	// get oid
 	[this](a_lnk_oid) -> std::string {
-		//pdbg() << "aimpl: obj id()" << std::endl;
+		//pdbg() << "=> a_lnk_oid" << std::endl;
 
 		if(req_status(Req::Data) == ReqStatus::OK) {
 			if(auto D = data(); D && *D) return (*D)->id();

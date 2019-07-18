@@ -16,6 +16,8 @@ namespace blue_sky {
 using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 // used to inform others that I'm quit
 using a_bye = caf::atom_constant<caf::atom("bs bye")>;
+// signals that link or node ID changed
+using a_bind_id = caf::atom_constant<caf::atom("bs bind id")>;
 
 // async invoke `link::data()`
 using a_lnk_data = caf::atom_constant<caf::atom("tl data")>;
@@ -32,7 +34,6 @@ using a_lnk_status = caf::atom_constant<caf::atom("tl status")>;
 using a_lnk_oid = caf::atom_constant<caf::atom("tl oid")>;
 using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
 using a_lnk_inode = caf::atom_constant<caf::atom("tl inode")>;
-
 
 } /* namespace blue_sky */
 

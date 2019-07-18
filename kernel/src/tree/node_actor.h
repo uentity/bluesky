@@ -10,8 +10,6 @@
 
 #include <bs/tree/node.h>
 #include <bs/kernel/config.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/boost_uuid.h>
 
 #include "actor_common.h"
 
@@ -66,6 +64,8 @@ public:
 	// performs deep links copy
 	node_actor(caf::actor_config& cfg, const std::string& id, caf::actor src);
 
+	// init new self group after ID has been set
+	auto bind_new_id(const std::string& new_id) -> void;
 	// say goodbye to others & leave self group
 	auto goodbye() -> void;
 

@@ -11,6 +11,7 @@
 #include "serialize_decl.h"
 #include "to_string.h"
 #include "base_types.h"
+#include "boost_uuid.h"
 
 #include <cereal/archives/portable_binary.hpp>
 #include <boost/interprocess/streams/vectorstream.hpp>

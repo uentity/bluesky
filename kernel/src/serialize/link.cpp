@@ -68,9 +68,13 @@ BSS_FCN_BEGIN(serialize, tree::link)
 		make_nvp("id", t.pimpl_->id_),
 		make_nvp("flags", t.pimpl_->flags_)
 	);
-	// assume link is root by default -- it's safe when restoring link or tree from archive
-	if constexpr(Archive::is_loading::value)
+
+	if constexpr(Archive::is_loading::value) {
+		// first rebind to new ID
+		t.pimpl_->bind_new_id();
+		// assume link is root by default -- it's safe when restoring link or tree from archive
 		t.propagate_handle();
+	}
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::link)

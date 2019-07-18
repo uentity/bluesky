@@ -9,6 +9,8 @@
 
 #include <bs/error.h>
 #include <bs/log.h>
+#include <bs/tree/node.h>
+#include "../tree/node_actor.h"
 
 #include <bs/serialize/serialize.h>
 #ifdef BSPY_EXPORTING
@@ -26,20 +28,26 @@ using namespace cereal;
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, blue_sky::objbase)
 	// dump typeid for text archives
-	if constexpr(cereal::traits::is_text_archive<Archive>()) {
-		if constexpr(typename Archive::is_saving()) {
-			ar(make_nvp("typeid", const_cast<std::string&>(t.bs_resolve_type().name)));
-		}
-		else {
-			std::string stype;
-			ar(make_nvp("typeid", stype));
-		}
-	}
+	// [NOTE] disabled, this feature can be turned on for polymorphic pointers via Archive
+	//if constexpr(cereal::traits::is_text_archive<Archive>()) {
+	//	if constexpr(typename Archive::is_saving()) {
+	//		ar(make_nvp("typeid", const_cast<std::string&>(t.bs_resolve_type().name)));
+	//	}
+	//	else {
+	//		std::string stype;
+	//		ar(make_nvp("typeid", stype));
+	//	}
+	//}
 
 	ar(
 		make_nvp("id", t.id_),
 		make_nvp("is_node", t.is_node_)
 	);
+	if constexpr(Archive::is_loading::value) {
+		// if we loaded a node, it needs to rebind to new ID
+		if(t.is_node_)
+			static_cast<tree::node&>(t).pimpl_->bind_new_id(t.id_);
+	}
 BSS_FCN_END
 
 BSS_REGISTER_TYPE(blue_sky::objbase)

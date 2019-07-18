@@ -479,16 +479,6 @@ auto node::unsubscribe(std::uint64_t event_cb_id) -> void {
 	pimpl_->send(caf::actor_cast<caf::actor>(ev_actor), a_bye());
 }
 
-auto node::fix_retranslators() -> void {
-	pimpl_->fix_retranslators();
-	walk(pimpl_->handle_.lock(),
-		[](const sp_link&, std::list<sp_link>& Ns, std::vector<sp_link>&) {
-			for(const auto& N : Ns)
-				N->data_node_ex().map( [](const sp_node& n) { n->fix_retranslators(); });
-		}
-	);
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 //  misc
 //
