@@ -203,7 +203,8 @@ public:
 
 	auto retranslate_from(const sp_link& L) -> void;
 	auto stop_retranslate_from(const sp_link& L) -> void;
-	auto fix_retranslators() -> void;
+	// stops retranslating from all leafs
+	auto disconnect() -> void;
 };
 
 NAMESPACE_END(blue_sky::tree)

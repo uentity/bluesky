@@ -259,7 +259,10 @@ public:
 	/// returns ID of suscriber that is required for unsubscribe
 	auto subscribe(handle_event_cb f, Event listen_to = Event::All) -> std::uint64_t;
 	auto unsubscribe(std::uint64_t event_cb_id) -> void;
-	auto fix_retranslators() -> void;
+
+	// stops retranslating messages to this node
+	// if `deep` is true, then also disconnect each subtree node
+	auto disconnect(bool deep = true) -> void;
 
 	/// API for managing link filters
 	/// test is given link can be inserted into the node

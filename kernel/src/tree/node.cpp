@@ -51,6 +51,21 @@ node::~node() {
 	pimpl_->goodbye();
 }
 
+auto node::disconnect(bool deep) -> void {
+	if(deep) {
+		// don't follow symlinks & lazy links
+		walk(handle(), [](const sp_link&, std::list<sp_link>& subnodes, std::vector<sp_link>&) {
+			for(const auto& L : subnodes) {
+				auto N = L->data_node_ex();
+				if(N && *N) (*N)->disconnect(false);
+			}
+		}, true, false, false);
+	}
+
+	// disconnect self
+	pimpl_->disconnect();
+}
+
 void node::propagate_owner(bool deep) {
 	auto solo = std::lock_guard{ pimpl_->links_guard_ };
 	// properly setup owner in node's leafs
