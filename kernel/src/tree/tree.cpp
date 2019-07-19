@@ -24,9 +24,8 @@ template<Key K> using Key_type = typename node::Key_type<K>;
  *-----------------------------------------------------------------------------*/
 NAMESPACE_BEGIN()
 
-template<class Callback>
 void walk_impl(
-	const std::list<sp_link>& nodes, const Callback& step_f,
+	const std::list<sp_link>& nodes, walk_links_fv step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links,
 	std::set<Key_type<Key::ID>> active_symlinks = {}
 ) {
@@ -38,12 +37,9 @@ void walk_impl(
 	for(const auto& N : nodes) {
 		if(!N) continue;
 		// remember symlink
-		const auto is_symlink = N->type_id() == "sym_link";
-		if(is_symlink) {
-			if(follow_symlinks && active_symlinks.find(N->id()) == active_symlinks.end())
-				active_symlinks.insert(N->id());
-			else continue;
-		}
+		const auto is_symlink = follow_symlinks && N->type_id() == "sym_link";
+		if(is_symlink && !active_symlinks.insert(N->id()).second)
+			continue;
 
 		// obtain node from link honoring LazyLoad flag
 		cur_node = (follow_lazy_links || can_call_dnode(*N)) ? N->data_node() : nullptr;
@@ -76,6 +72,58 @@ void walk_impl(
 		// forget symlink
 		if(is_symlink)
 			active_symlinks.erase(N->id());
+	}
+}
+
+void walk_impl(
+	const std::list<sp_node>& nodes, walk_nodes_fv step_f,
+	bool topdown, bool follow_symlinks, bool follow_lazy_links,
+	std::set<Key_type<Key::ID>> active_symlinks = {}
+) {
+	using detail::can_call_dnode;
+	std::list<sp_node> next_nodes;
+	std::vector<sp_link> next_leafs;
+
+	// for each node
+	for(const auto& cur_node : nodes) {
+		if(!cur_node) continue;
+
+		next_nodes.clear();
+		next_leafs.clear();
+
+		// symlinks among cur_node
+		std::vector<Key_type<Key::ID>> cur_symlinks;
+
+		// for each link in node
+		for(const auto& l : *cur_node) {
+			// remember symlinks
+			if(follow_symlinks && l->type_id() == "sym_link") {
+				if(active_symlinks.insert(l->id()).second)
+					cur_symlinks.push_back(l->id());
+				else continue;
+			}
+
+			// collect nodes
+			auto sub_node = follow_lazy_links || can_call_dnode(*l) ? l->data_node() : nullptr;
+			if(sub_node)
+				next_nodes.push_back(sub_node);
+			else
+				next_leafs.push_back(l);
+		}
+
+		// if `topdown` == true, process this node BEFORE leafs processing
+		if(topdown)
+			step_f(cur_node, next_nodes, next_leafs);
+		// process list of next nodes
+		if(!next_nodes.empty())
+			walk_impl(next_nodes, step_f, topdown, follow_symlinks, follow_lazy_links, active_symlinks);
+		// if walking from most deep subdir, process current node after all subtree
+		if(!topdown)
+			step_f(cur_node, next_nodes, next_leafs);
+
+		// forget symlinks
+		for(const auto& sym_id : cur_symlinks)
+			active_symlinks.erase(sym_id);
 	}
 }
 
@@ -246,12 +294,32 @@ sp_link deref_path(
 //  walk
 //
 auto walk(
-	const sp_link& root, step_process_fv step_f,
+	const sp_link& root, walk_links_fv step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links
 ) -> void {
 	walk_impl({root}, step_f, topdown, follow_symlinks, follow_lazy_links);
 }
 
+auto walk(
+	const sp_node& root, walk_links_fv step_f,
+	bool topdown, bool follow_symlinks, bool follow_lazy_links
+) -> void {
+	if(!root) return;
+	auto hr = root->handle();
+	if(!hr) hr = std::make_shared<hard_link>("/", root);
+	walk_impl({hr}, step_f, topdown, follow_symlinks, follow_lazy_links);
+}
+
+auto walk(
+	const sp_node& root, walk_nodes_fv step_f,
+	bool topdown, bool follow_symlinks, bool follow_lazy_links
+) -> void {
+	walk_impl({root}, step_f, topdown, follow_symlinks, follow_lazy_links);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  misc
+//
 auto make_root_link(
 	const std::string& link_type, std::string name, sp_node root_node
 ) -> sp_link {

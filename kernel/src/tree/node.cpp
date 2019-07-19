@@ -54,11 +54,9 @@ node::~node() {
 auto node::disconnect(bool deep) -> void {
 	if(deep) {
 		// don't follow symlinks & lazy links
-		walk(handle(), [](const sp_link&, std::list<sp_link>& subnodes, std::vector<sp_link>&) {
-			for(const auto& L : subnodes) {
-				auto N = L->data_node_ex();
-				if(N && *N) (*N)->disconnect(false);
-			}
+		walk(bs_shared_this<node>(), [](const sp_node&, std::list<sp_node>& subnodes, std::vector<sp_link>&) {
+			for(const auto& N : subnodes)
+				N->disconnect(false);
 		}, true, false, false);
 	}
 

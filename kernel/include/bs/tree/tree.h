@@ -59,9 +59,16 @@ BS_API sp_link deref_path(
 );
 
 /// walk the tree just like the Python's `os.walk` is implemented
-using step_process_fv = function_view<void (const sp_link&, std::list<sp_link>&, std::vector<sp_link>&)>;
+using walk_links_fv = function_view<void (const sp_link&, std::list<sp_link>&, std::vector<sp_link>&)>;
 BS_API void walk(
-	const sp_link& root, step_process_fv step_f,
+	const sp_link& root, walk_links_fv step_f,
+	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
+);
+
+/// alt walk implementation
+using walk_nodes_fv = function_view<void (const sp_node&, std::list<sp_node>&, std::vector<sp_link>&)>;
+BS_API void walk(
+	const sp_node& root, walk_nodes_fv step_f,
 	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
 );
 
