@@ -9,6 +9,7 @@
 
 #include "node_actor.h"
 #include <bs/log.h>
+#include <bs/tree/tree.h>
 #include <bs/serialize/cafbind.h>
 
 #include <boost/uuid/uuid_io.hpp>
@@ -365,11 +366,24 @@ auto node_actor::erase_impl(iterator<Key::ID> victim) -> void {
 	if(victim == end<Key::ID>()) return;
 	auto solo = std::lock_guard{ links_guard_ };
 
-	const auto lid = (*victim)->id();
-	stop_retranslate_from(*victim);
+	auto& L = *victim;
+	const auto lid = L->id();
+	stop_retranslate_from(L);
+
+	// collecct pairs {link ID, obj ID} over all subtree elements
+	std::vector<std::pair<link::id_type, std::string>> victim_ids;
+	// first elem is erased link
+	victim_ids.emplace_back(lid, L->oid());
+	// then subtree goes
+	walk(L, [&victim_ids](const sp_link&, std::list<sp_link> Ns, std::vector<sp_link> Os) {
+		for(const auto& N : Ns)
+			victim_ids.emplace_back(N->id(), N->oid());
+		for(const auto& O : Os)
+			victim_ids.emplace_back(O->id(), O->oid());
+	});
 
 	// send message that link erased
-	send(self_grp, a_lnk_erase(), a_ack(), lid);
+	send(self_grp, a_lnk_erase(), a_ack(), victim_ids);
 	// and erase link
 	links_.get<Key_tag<Key::ID>>().erase(victim);
 }
@@ -437,7 +451,7 @@ auto node_actor::make_behavior() -> behavior_type { return {
 	// [TODO] add impl
 	[=](a_lnk_insert, a_ack, link::id_type lid) {},
 	// [TODO] add impl
-	[=](a_lnk_erase, a_ack, link::id_type lid) {}
+	[=](a_lnk_erase, a_ack, std::vector<std::pair<link::id_type, std::string>>) {}
 }; }
 
 NAMESPACE_END(blue_sky::tree)
