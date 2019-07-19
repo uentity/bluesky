@@ -11,11 +11,11 @@
 #include <pybind11/pybind11.h>
 
 #include <bs/objbase.h>
+#include "python_subsyst.h"
 
 #include <unordered_map>
 #include <functional>
-
-#include "python_subsyst.h"
+#include <mutex>
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
@@ -46,6 +46,7 @@ struct BS_HIDDEN_API python_subsyst_impl : public python_subsyst {
 
 	auto adapt(sp_obj source) -> pybind11::object;
 
+	auto get_cached_adapter(const std::string& obj_id) const -> pybind11::object;
 	// returns number of cleared instances
 	auto drop_adapted_cache(const std::string& obj_id = "") -> std::size_t;
 
@@ -59,6 +60,7 @@ private:
 	adapter_fn def_adapter_;
 	// adapters instances cache
 	std::unordered_map<std::string, pybind11::object> acache_;
+	std::mutex acache_guard_;
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)

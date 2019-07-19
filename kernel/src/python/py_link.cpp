@@ -161,7 +161,7 @@ void py_bind_link(py::module& m) {
 	);
 	m.def("register_default_adapter", [](adapter_fn f) {
 			py_kernel().register_default_adapter(std::move(f));
-		}, "adapter_fn"_a, "Register adapter for all non-explicitly-adapted BS types"
+		}, "adapter_fn"_a, "Register default adapter for all BS types with no adapter registered"
 	);
 	m.def("clear_adapters", []() { py_kernel().clear_adapters(); },
 		"Remove all adapters (including default) for BS types"
@@ -170,12 +170,17 @@ void py_bind_link(py::module& m) {
 		"Make adapter for given object"
 	);
 	m.def("adapted_types", []() { return py_kernel().adapted_types(); },
-		"Remove types for which adapters are registered, '*' for default adapter"
+		"Return list of types with registered adapters ('*' denotes default adapter)"
 	);
 	m.def("drop_adapted_cache", [](const std::string& obj_id) {
 			return py_kernel().drop_adapted_cache(obj_id);
 		}, "obj_id"_a = "",
-		"Clear cached adapter for given `obj_id` (or drop overall cache if ID is empty)"
+		"Clear cached adapter for given OID (or drop all cached adapters if OID is empty)"
+	);
+	m.def("get_cached_adapter", [](const std::string& obj_type_id) {
+			return py_kernel().get_cached_adapter(obj_type_id);
+		},
+		"obj_type_id"_a, "Get cached adapter for object with given OID (if created before, otherwise None)"
 	);
 
 	///////////////////////////////////////////////////////////////////////////////

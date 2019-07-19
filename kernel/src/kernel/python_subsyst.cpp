@@ -105,6 +105,7 @@ END_WITH
 }
 
 auto python_subsyst_impl::register_adapter(std::string obj_type_id, adapter_fn f) -> void {
+	auto solo = std::lock_guard{ acache_guard_ };
 	if(f)
 		adapters_.insert_or_assign(std::move(obj_type_id), std::move(f));
 	else {
@@ -115,10 +116,12 @@ auto python_subsyst_impl::register_adapter(std::string obj_type_id, adapter_fn f
 }
 
 auto python_subsyst_impl::register_default_adapter(adapter_fn f) -> void {
+	auto solo = std::lock_guard{ acache_guard_ };
 	def_adapter_ = std::move(f);
 }
 
 auto python_subsyst_impl::clear_adapters() -> void {
+	auto solo = std::lock_guard{ acache_guard_ };
 	adapters_.clear();
 	def_adapter_ = nullptr;
 }
@@ -145,23 +148,29 @@ auto python_subsyst_impl::adapt(sp_obj source) -> py::object {
 	auto A = pf != adapters_.end() ?
 		pf->second(obj) :
 		( def_adapter_ ? def_adapter_(obj) : py::cast(obj) );
+
 	// cache adapter instance
+	auto solo = std::lock_guard{ acache_guard_ };
 	acache_[source->id()] = A;
 	return A;
 }
 
+auto python_subsyst_impl::get_cached_adapter(const std::string& obj_id) const -> pybind11::object {
+	if(auto cached_A = acache_.find(obj_id); cached_A != acache_.end())
+		return cached_A->second;
+	return py::none();
+}
+
 auto python_subsyst_impl::drop_adapted_cache(const std::string& obj_id) -> std::size_t {
+	auto solo = std::lock_guard{ acache_guard_ };
 	std::size_t res = 0;
 	if(obj_id.empty()) {
 		res = acache_.size();
 		acache_.clear();
 	}
-	else {
-		auto cached_A = acache_.find(obj_id);
-		if(cached_A != acache_.end()) {
-			acache_.erase(cached_A);
-			res = 1;
-		}
+	else if(auto cached_A = acache_.find(obj_id); cached_A != acache_.end()) {
+		acache_.erase(cached_A);
+		res = 1;
 	}
 	return res;
 }
