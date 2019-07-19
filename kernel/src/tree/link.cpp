@@ -191,30 +191,33 @@ auto ev_listener_actor(
 };
 
 auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
-	// produce event bhavior that calls passed callback with proper params
-	static constexpr auto make_ev_character = [](const sp_link& self, Event listen_to_, handle_event_cb& f) {
-		auto res = caf::message_handler{};
+	struct ev_state { handle_event_cb f; };
 
-		if(enumval(listen_to_ & Event::LinkRenamed))
+	// produce event bhavior that calls passed callback with proper params
+	const auto make_ev_character = [L = shared_from_this(), listen_to, &f](caf::stateful_actor<ev_state>* self) {
+		auto res = caf::message_handler{};
+		self->state.f = std::move(f);
+
+		if(enumval(listen_to & Event::LinkRenamed))
 			res = res.or_else(
-				[f, self = std::weak_ptr{self}] (
+				[self, wL = std::weak_ptr{L}] (
 					a_lnk_rename, a_ack, std::string new_name, std::string old_name
 				) {
-					if(auto lnk = self.lock())
-						f(std::move(lnk), Event::LinkRenamed, {
+					if(auto lnk = wL.lock())
+						self->state.f(std::move(lnk), Event::LinkRenamed, {
 							{"new_name", std::move(new_name)},
 							{"prev_name", std::move(old_name)}
 						});
 				}
 			);
 
-		if(enumval(listen_to_ & Event::LinkStatusChanged))
+		if(enumval(listen_to & Event::LinkStatusChanged))
 			res = res.or_else(
-				[f, self = std::weak_ptr{self}](
+				[self, wL = std::weak_ptr{L}] (
 					a_lnk_status, a_ack, Req request, ReqStatus new_v, ReqStatus prev_v
 				) {
-					if(auto lnk = self.lock())
-						f(std::move(lnk), Event::LinkStatusChanged, {
+					if(auto lnk = wL.lock())
+						self->state.f(std::move(lnk), Event::LinkStatusChanged, {
 							{"request", prop::integer(new_v)},
 							{"new_status", prop::integer(new_v)},
 							{"prev_status", prop::integer(prev_v)}
@@ -227,10 +230,7 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 
 	// make shiny new subscriber actor and place into parent's room
 	auto& AS = kernel::config::actor_system();
-	auto baby = AS.spawn(
-		ev_listener_actor, pimpl_->self_grp,
-		make_ev_character(shared_from_this(), listen_to, f)
-	);
+	auto baby = AS.spawn(ev_listener_actor<ev_state>, pimpl_->self_grp, make_ev_character);
 	// and return ID
 	return baby.id();
 }

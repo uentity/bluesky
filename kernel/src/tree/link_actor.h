@@ -18,7 +18,6 @@
 #include <boost/uuid/uuid_io.hpp>
 
 #include <caf/actor_system.hpp>
-#include <caf/event_based_actor.hpp>
 #include <caf/actor_ostream.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)

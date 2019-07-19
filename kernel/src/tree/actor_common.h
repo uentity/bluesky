@@ -12,9 +12,13 @@
 #include <bs/timetypes.h>
 #include <bs/error.h>
 #include <bs/atoms.h>
+#include <bs/kernel/config.h>
+#include <bs/detail/function_view.h>
 
 #include <caf/fwd.hpp>
 #include <caf/function_view.hpp>
+#include <caf/event_based_actor.hpp>
+#include <caf/stateful_actor.hpp>
 
 #define OMIT_OBJ_SERIALIZATION                                                         \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::error::box)                                  \
@@ -72,7 +76,27 @@ inline auto actorf(const H& handle, blue_sky::timespan timeout, Args&&... args) 
 }
 
 /// listens to event from specified group, execute given character & self-detruct on `a_bye` message
-auto ev_listener_actor(caf::event_based_actor* self, caf::group listen_grp, caf::message_handler character)
--> caf::behavior;
+template<typename State>
+auto ev_listener_actor(
+	caf::stateful_actor<State>* self, caf::group tgt_grp,
+	blue_sky::function_view<caf::message_handler (caf::stateful_actor<State>*)> make_character
+) -> caf::behavior {
+	// silently drop all other messages not in my character
+	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
+		return caf::drop(self, mv);
+	});
+	// come to mummy
+	self->join(tgt_grp);
+	auto& Reg = kernel::config::actor_system().registry();
+	Reg.put(self->id(), self);
+
+	// unsubscribe when parent leaves its group
+	return make_character(self).or_else(
+		[self, grp = std::move(tgt_grp), &Reg](a_bye) {
+			self->leave(grp);
+			Reg.erase(self->id());
+		}
+	);
+}
 
 NAMESPACE_END(blue_sky::tree)

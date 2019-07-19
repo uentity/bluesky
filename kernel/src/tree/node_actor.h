@@ -18,7 +18,6 @@
 #include <unordered_map>
 
 #include <boost/uuid/uuid_hash.hpp>
-#include <caf/event_based_actor.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::config;

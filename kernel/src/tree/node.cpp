@@ -406,18 +406,20 @@ iterator<Key::AnyOrder> node::project(iterator<Key::Type> src) const {
 //  events handling
 //
 auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
-	// produce event bhavior that calls passed callback with proper params
-	static constexpr auto make_ev_character = [](const sp_node& self, Event listen_to_, handle_event_cb& f) {
-		auto res = caf::message_handler{};
+	struct ev_state { handle_event_cb f; };
 
-		if(enumval(listen_to_ & Event::LinkRenamed)) {
+	const auto make_ev_character = [N = bs_shared_this<node>(), listen_to, &f](caf::stateful_actor<ev_state>* self) {
+		auto res = caf::message_handler{};
+		self->state.f = std::move(f);
+
+		if(enumval(listen_to & Event::LinkRenamed)) {
 			res = res.or_else(
-				[f, self = std::weak_ptr{self}] (
+				[self, wN = std::weak_ptr{N}] (
 					a_lnk_rename, a_ack, const link::id_type& lid, std::string new_name, std::string old_name
 				) {
 					bsout() << "*-* node: fired LinkRenamed event" << bs_end;
-					if(auto N = self.lock())
-						f(std::move(N), Event::LinkRenamed, {
+					if(auto N = wN.lock())
+						self->state.f(std::move(N), Event::LinkRenamed, {
 							{"link_id", to_string(lid)},
 							{"new_name", std::move(new_name)},
 							{"prev_name", std::move(old_name)}
@@ -427,14 +429,14 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 			bsout() << "*-* node: subscribed to LinkRenamed event" << bs_end;
 		}
 
-		if(enumval(listen_to_ & Event::LinkStatusChanged)) {
+		if(enumval(listen_to & Event::LinkStatusChanged)) {
 			res = res.or_else(
-				[f, self = std::weak_ptr{self}](
+				[self, wN = std::weak_ptr{N}](
 					a_lnk_status, a_ack, link::id_type lid, Req req, ReqStatus new_s, ReqStatus prev_s
 				) {
 					bsout() << "*-* node: fired LinkStatusChanged event" << bs_end;
-					if(auto N = self.lock())
-						f(std::move(N), Event::LinkStatusChanged, {
+					if(auto N = wN.lock())
+						self->state.f(std::move(N), Event::LinkStatusChanged, {
 							{"link_id", to_string(lid)},
 							{"request", prop::integer(req)},
 							{"new_status", prop::integer(new_s)},
@@ -445,14 +447,14 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 			bsout() << "*-* node: subscribed to LinkStatusChanged event" << bs_end;
 		}
 
-		if(enumval(listen_to_ & Event::LinkInserted)) {
+		if(enumval(listen_to & Event::LinkInserted)) {
 			res = res.or_else(
-				[f, self = std::weak_ptr{self}](
+				[self, wN = std::weak_ptr{N}](
 					a_lnk_insert, a_ack, link::id_type lid
 				) {
 					bsout() << "*-* node: fired LinkInserted event" << bs_end;
-					if(auto N = self.lock())
-						f(std::move(N), Event::LinkInserted, {
+					if(auto N = wN.lock())
+						self->state.f(std::move(N), Event::LinkInserted, {
 							{"link_id", to_string(lid)}
 						});
 				}
@@ -460,14 +462,14 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 			bsout() << "*-* node: subscribed to LinkInserted event" << bs_end;
 		}
 
-		if(enumval(listen_to_ & Event::LinkErased)) {
+		if(enumval(listen_to & Event::LinkInserted)) {
 			res = res.or_else(
-				[f, self = std::weak_ptr{self}](
+				[self, wN = std::weak_ptr{N}](
 					a_lnk_erase, a_ack, link::id_type lid
 				) {
 					bsout() << "*-* node: fired LinkErased event" << bs_end;
-					if(auto N = self.lock())
-						f(std::move(N), Event::LinkErased, {
+					if(auto N = wN.lock())
+						self->state.f(std::move(N), Event::LinkErased, {
 							{"link_id", to_string(lid)}
 						});
 				}
@@ -480,8 +482,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 
 	// make shiny new subscriber actor and place into parent's room
 	auto baby = kernel::config::actor_system().spawn(
-		ev_listener_actor, pimpl_->self_grp,
-		make_ev_character(bs_shared_this<node>(), listen_to, f)
+		ev_listener_actor<ev_state>, pimpl_->self_grp, make_ev_character
 	);
 	// and return ID
 	return baby.id();
