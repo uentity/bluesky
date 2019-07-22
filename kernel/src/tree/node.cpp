@@ -406,7 +406,9 @@ iterator<Key::AnyOrder> node::project(iterator<Key::Type> src) const {
 auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 	struct ev_state { handle_event_cb f; };
 
-	const auto make_ev_character = [N = bs_shared_this<node>(), listen_to, &f](caf::stateful_actor<ev_state>* self) {
+	auto make_ev_character = [N = bs_shared_this<node>(), listen_to, f = std::move(f)](
+		caf::stateful_actor<ev_state>* self
+	) {
 		auto res = caf::message_handler{};
 		self->state.f = std::move(f);
 
@@ -482,7 +484,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 
 	// make shiny new subscriber actor and place into parent's room
 	auto baby = kernel::config::actor_system().spawn(
-		ev_listener_actor<ev_state>, pimpl_->self_grp, make_ev_character
+		ev_listener_actor<ev_state>, pimpl_->self_grp, std::move(make_ev_character)
 	);
 	// and return ID
 	return baby.id();

@@ -79,12 +79,10 @@ inline auto actorf(const H& handle, blue_sky::timespan timeout, Args&&... args) 
 template<typename State>
 auto ev_listener_actor(
 	caf::stateful_actor<State>* self, caf::group tgt_grp,
-	blue_sky::function_view<caf::message_handler (caf::stateful_actor<State>*)> make_character
+	std::function<caf::message_handler (caf::stateful_actor<State>*)> make_character
 ) -> caf::behavior {
 	// silently drop all other messages not in my character
-	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
-		return caf::drop(self, mv);
-	});
+	self->set_default_handler(caf::drop);
 	// come to mummy
 	self->join(tgt_grp);
 	auto& Reg = kernel::config::actor_system().registry();

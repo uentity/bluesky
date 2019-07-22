@@ -194,7 +194,9 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 	struct ev_state { handle_event_cb f; };
 
 	// produce event bhavior that calls passed callback with proper params
-	const auto make_ev_character = [L = shared_from_this(), listen_to, &f](caf::stateful_actor<ev_state>* self) {
+	auto make_ev_character = [L = shared_from_this(), listen_to, f = std::move(f)](
+		caf::stateful_actor<ev_state>* self
+	) {
 		auto res = caf::message_handler{};
 		self->state.f = std::move(f);
 
@@ -230,7 +232,7 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 
 	// make shiny new subscriber actor and place into parent's room
 	auto& AS = kernel::config::actor_system();
-	auto baby = AS.spawn(ev_listener_actor<ev_state>, pimpl_->self_grp, make_ev_character);
+	auto baby = AS.spawn(ev_listener_actor<ev_state>, pimpl_->self_grp, std::move(make_ev_character));
 	// and return ID
 	return baby.id();
 }
