@@ -240,6 +240,15 @@ auto bind_tools(py::module& m) -> void {
 	}, "node"_a, "root_name"_a = "/");
 }
 
+auto bind_radio(py::module& m) -> void {
+	namespace kr = kernel::radio;
+	m.def("toggle", &kr::toggle, "Start/stop radio subsystem");
+	m.def("start_server", &kr::start_server, "Helper that toggles radio on & starts listening");
+	m.def("start_client", &kr::start_client, "Helper that toggles radio on & starts client");
+	m.def("publish_link", &kr::publish_link);
+	m.def("unpublish_link", &kr::unpublish_link);
+}
+
 auto bind_kernel_api(py::module& m) -> void {
 	py::enum_<kernel::Error>(m, "Error")
 		.value("OK", kernel::Error::OK)
@@ -272,6 +281,9 @@ auto bind_kernel_api(py::module& m) -> void {
 
 	k_subm = m.def_submodule("tools", "Kernel tools API");
 	bind_tools(k_subm);
+
+	k_subm = m.def_submodule("radio", "Distribution API");
+	bind_radio(k_subm);
 }
 
 NAMESPACE_END() // eof hodden namespace

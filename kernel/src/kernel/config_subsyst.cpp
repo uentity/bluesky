@@ -14,7 +14,6 @@
 #include <caf/detail/ini_consumer.hpp>
 #include <caf/detail/parser/read_ini.hpp>
 #include <caf/detail/parser/read_string.hpp>
-#include <caf/io/middleman.hpp>
 #include <fmt/ostream.h>
 
 #include <sstream>
@@ -134,6 +133,12 @@ config_subsyst::config_subsyst() {
 		.add<std::uint8_t>("err-flush-level", "Minimum message level that triggers err log flush")
 		.add<std::uint32_t>("flush-interval", "Multithreaded logs background flush interval")
 	;
+	opt_group(confopt_, "radio")
+		.add<std::uint16_t>("port", "Port number for main BS network interface")
+		.add<std::uint16_t>("groups-port", "Port number for publishing actor groups")
+		.add<timespan>("timeout", "General timeout for remote operations")
+		.add<timespan>("data-timeout", "Timeout for tree::link `data()` and `data_node()`")
+	;
 
 	/*-----------------------------------------------------------------------------
 	*  Logic here is the following
@@ -232,10 +237,6 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 		bsout() << confdump.str() << log::end;
 		put(confdata_, "global.dump-config", false);
 	}
-
-	// load middleman module only once
-	if(!kernel_configured)
-		actor_cfg_.load<caf::io::middleman>();
 
 	kernel_configured = true;
 }

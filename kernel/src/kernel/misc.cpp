@@ -11,40 +11,42 @@
 #include <bs/kernel/misc.h>
 #include <bs/misc.h>
 #include "kimpl.h"
+#include "python_subsyst.h"
 
 #include <spdlog/spdlog.h>
 
 NAMESPACE_BEGIN(blue_sky::kernel)
 
-auto init() -> void {
+auto init() -> error {
 	using InitState = kimpl::InitState;
 
 	// do initialization only once from non-initialized state
 	auto expected_state = InitState::NonInitialized;
 	if(KIMPL.init_state_.compare_exchange_strong(expected_state, InitState::Initialized)) {
+		// if init wasn't finished - return kernel to non-initialized status
+		auto init_ok = false;
+		auto finally = scope_guard{ [&]{ if(!init_ok) KIMPL.init_state_ = InitState::NonInitialized; } };
+
 		// configure kernel
 		KIMPL.configure();
 		// switch to mt logs
 		KIMPL.toggle_mt_logs(true);
-		// init actor system
-		auto& actor_sys = KIMPL.actor_sys_;
-		if(!actor_sys) {
-			actor_sys = std::make_unique<caf::actor_system>(KIMPL.actor_cfg_);
-			if(!actor_sys)
-				throw error("Can't create CAF actor_system!");
-		}
+		// init kernel radio subsystem
+		auto er = KIMPL.init_radio();
+		init_ok = er.ok();
+		return er;
 	}
+	return perfect;
 }
 
 auto shutdown() -> void {
 	using InitState = kimpl::InitState;
 
 	// shut down if not already Down
-	if(KIMPL.init_state_.exchange(InitState::Down) != InitState::Down) {
-		// destroy actor system
-		if(KIMPL.actor_sys_) {
-			KIMPL.actor_sys_.release();
-		}
+	auto expected_state = InitState::Initialized;
+	if(KIMPL.init_state_.compare_exchange_strong(expected_state, InitState::Down)) {
+		// turn off radio subsystem
+		KIMPL.shutdown_radio();
 		// shutdown mt logs
 		KIMPL.toggle_mt_logs(false);
 		spdlog::shutdown();

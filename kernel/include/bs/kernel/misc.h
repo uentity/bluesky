@@ -14,9 +14,8 @@
 NAMESPACE_BEGIN(blue_sky::kernel)
 
 /// kernel initialization routine
-/// call this AFTER initialization of statics is done (adter `DllMain()` exit on Windows)
-/// this is mostly needed on Windows where omitting this call may lead to deadlock
-BS_API auto init() -> void;
+/// call this AFTER static globals are initialized (after `DllMain()` exit on Windows)
+BS_API auto init() -> error;
 
 /// executable should call this function before program ends (before exit from `main()`)
 /// this is mostly needed on Windows where omitting this call will lead to hangup on exit

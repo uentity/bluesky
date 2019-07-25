@@ -8,18 +8,25 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include <bs/error.h>
 #include <bs/any_array.h>
 #include "logging_subsyst.h"
 #include "plugins_subsyst.h"
 #include "instance_subsyst.h"
 #include "config_subsyst.h"
-#include "python_subsyst.h"
 
 #include <caf/fwd.hpp>
 
 #include <mutex>
 
 NAMESPACE_BEGIN(blue_sky::kernel)
+// forward declare subsystems
+NAMESPACE_BEGIN(detail)
+
+struct python_subsyst;
+struct radio_subsyst;
+
+NAMESPACE_END(detail)
 /*-----------------------------------------------------------------------------
  *  kernel impl
  *-----------------------------------------------------------------------------*/
@@ -39,19 +46,20 @@ public:
 
 	std::mutex sync_storage_;
 
-	// kernel's actor system
-	// delayed actor system initialization
-	std::unique_ptr<caf::actor_system> actor_sys_;
-
 	// indicator of kernel initialization state
 	enum class InitState { NonInitialized, Initialized, Down };
 	std::atomic<InitState> init_state_;
 
 	// Python support depends on compile flags and can be 'dumb' or 'real'
 	std::unique_ptr<detail::python_subsyst> pysupport_;
+	// radio subsystem
+	std::unique_ptr<detail::radio_subsyst> radio_ss_;
 
 	kimpl();
 	~kimpl();
+
+	auto init_radio() -> error;
+	auto shutdown_radio() -> void;
 
 	using type_tuple = tfactory::type_tuple;
 	auto find_type(const std::string& key) const -> type_tuple;
@@ -59,8 +67,6 @@ public:
 	auto str_key_storage(const std::string& key) -> str_any_array&;
 
 	auto idx_key_storage(const std::string& key) -> idx_any_array&;
-
-	auto actor_system() -> caf::actor_system&;
 };
 
 /// Kernel internal singleton

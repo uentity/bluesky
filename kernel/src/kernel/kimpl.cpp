@@ -10,43 +10,38 @@
 #include <bs/error.h>
 #include <bs/kernel/misc.h>
 #include "kimpl.h"
-#ifdef BSPY_EXPORTING
-#include "python_subsyst_impl.h"
-#endif
+#include "radio_subsyst.h"
 
-#include <caf/actor_system.hpp>
 #include <fmt/format.h>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(kernel)
+#ifdef BSPY_EXPORTING
+#include "python_subsyst_impl.h"
+#else
+#include "python_subsyst.h"
 NAMESPACE_BEGIN()
 
-struct python_subsyt_dumb : public detail::python_subsyst {
-	auto py_init_kernel() -> error { return success(); }
-
+struct python_subsyt_dumb : public blue_sky::kernel::detail::python_subsyst {
 	auto py_init_plugin(
 		const blue_sky::detail::lib_descriptor&, plugin_descriptor&
-	) -> result_or_err<std::string> {
+	) -> result_or_err<std::string> override {
 		return "";
 	}
 
 	// construct `error` from any int value -- call after all modules initialized
-	auto py_add_error_closure() -> void {}
+	auto py_add_error_closure() -> void override {}
 
-	auto setup_py_kmod(void*) -> void {};
+	auto setup_py_kmod(void*) -> void override {};
+	auto py_kmod() const -> void* override { return nullptr; }
 };
 
 NAMESPACE_END()
+#endif
+
+NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(kernel)
 
 kimpl::kimpl()
 	: init_state_(InitState::NonInitialized)
 {
-	// [NOTE] We can't create `caf::actor_system` here.
-	// `actor_system` starts worker and other service threads in constructor.
-	// At the same time kernel singleton is constructed most of the time during
-	// initialization of kernel shared library. And on Windows it is PROHIBITED to start threads
-	// in `DllMain()`, because that cause a deadlock.
-	// Solution: delay construction of actor_system until first usage, don't use CAf in kernel ctor.
-
 	// setup Python support
 #ifdef BSPY_EXPORTING
 	pysupport_ = std::make_unique<detail::python_subsyst_impl>();
@@ -56,6 +51,24 @@ kimpl::kimpl()
 }
 
 kimpl::~kimpl() = default;
+
+auto kimpl::init_radio() -> error {
+	try {
+		if(radio_ss_)
+			return radio_ss_->init();
+		else
+			radio_ss_ = std::make_unique<detail::radio_subsyst>();
+	}
+	catch(error& er) {
+		radio_ss_.reset();
+		return std::move(er);
+	}
+	return perfect;
+}
+
+auto kimpl::shutdown_radio() -> void {
+	if(radio_ss_) radio_ss_->shutdown();
+}
 
 auto kimpl::find_type(const std::string& key) const -> type_tuple {
 	using search_key = plugins_subsyst::type_name_key;
@@ -71,16 +84,6 @@ auto kimpl::str_key_storage(const std::string& key) -> str_any_array& {
 
 auto kimpl::idx_key_storage(const std::string& key) -> idx_any_array& {
 	return idx_key_storage_[key];
-}
-
-auto kimpl::actor_system() -> caf::actor_system& {
-	// delayed actor system initialization
-	// [TODO] write safer code
-	static auto* actor_sys = [this]{
-		init();
-		return actor_sys_.get();
-	}();
-	return *actor_sys;
 }
 
 NAMESPACE_END(kernel)
@@ -110,6 +113,15 @@ template<> auto singleton<instance_subsyst>::Instance() -> instance_subsyst& {
 
 template<> auto singleton<logging_subsyst>::Instance() -> logging_subsyst& {
 	return static_cast<logging_subsyst&>(KIMPL);
+}
+
+template<> auto singleton<radio_subsyst>::Instance() -> radio_subsyst& {
+	// ensure radio subsystem is initialized
+	static auto& radio = []() -> radio_subsyst& {
+		KIMPL.init_radio();
+		return *KIMPL.radio_ss_;
+	}();
+	return radio;
 }
 
 template<> auto singleton<python_subsyst>::Instance() -> python_subsyst& {

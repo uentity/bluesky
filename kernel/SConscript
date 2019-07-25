@@ -42,6 +42,7 @@ kernel_cpp_list = [
 	"src/kernel/logging_subsyst.cpp",
 	"src/kernel/plugins_discover.cpp",
 	"src/kernel/plugins_subsyst.cpp",
+	"src/kernel/radio_subsyst.cpp",
 	"src/kernel/types_factory_subsyst.cpp",
 	"src/kernel/kimpl.cpp",
 
@@ -49,6 +50,7 @@ kernel_cpp_list = [
 	"src/kernel/tools.cpp",
 	"src/kernel/config.cpp",
 	"src/kernel/misc.cpp",
+	"src/kernel/radio.cpp",
 	"src/kernel/plugins.cpp",
 	"src/kernel/types_factory.cpp",
 

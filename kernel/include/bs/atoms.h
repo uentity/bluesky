@@ -12,12 +12,14 @@
 
 namespace blue_sky {
 
-// used as 'acquired` tag
-using a_ack = caf::atom_constant<caf::atom("bs ack")>;
+// discover neighbourhood
+using a_hi = caf::atom_constant<caf::atom("bs hi")>;
 // used to inform others that I'm quit
 using a_bye = caf::atom_constant<caf::atom("bs bye")>;
 // signals that link or node ID changed
 using a_bind_id = caf::atom_constant<caf::atom("bs bind id")>;
+// used as 'acquired` tag
+using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 
 // async invoke `link::data()`
 using a_lnk_data = caf::atom_constant<caf::atom("tl data")>;
