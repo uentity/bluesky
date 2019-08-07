@@ -14,7 +14,7 @@ NAMESPACE_BEGIN(blue_sky::kernel::config)
 
 auto configure(
 	std::vector<std::string> args, std::string ini_fname, bool force
-) -> const caf::config_value_map& {
+) -> const caf::settings& {
 	KIMPL.configure(std::move(args), ini_fname, force);
 	return KIMPL.confdata_;
 }
@@ -23,7 +23,7 @@ auto is_configured() -> bool {
 	return detail::config_subsyst::is_configured();
 }
 
-auto config() -> const caf::config_value_map& {
+auto config() -> const caf::settings& {
 	return KIMPL.confdata_;
 }
 

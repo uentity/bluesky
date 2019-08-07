@@ -10,20 +10,22 @@
 
 #include "../common.h"
 
+#include <caf/config.hpp>
 #include <caf/config_value.hpp>
 #include <caf/config_option_adder.hpp>
+#include <caf/settings.hpp>
 
 NAMESPACE_BEGIN(blue_sky::kernel::config)
 
 /// configure kernel
 BS_API auto configure(
 	std::vector<std::string> args = {}, std::string ini_fname = "", bool force = false
-) -> const caf::config_value_map&;
+) -> const caf::settings&;
 
 BS_API auto is_configured() -> bool;
 
 /// access to kernel's config variables
-BS_API auto config() -> const caf::config_value_map&;
+BS_API auto config() -> const caf::settings&;
 
 /// allows to add custom options to specified config section
 BS_API auto config_section(std::string_view name) -> caf::config_option_adder;

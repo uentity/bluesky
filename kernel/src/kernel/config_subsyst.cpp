@@ -206,31 +206,33 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 	using std::make_move_iterator;
 	auto res = confopt_.parse(confdata_, args);
 	if (res.second != args.end()) {
-		if (res.first != pec::success) {
+		if (res.first != pec::success && starts_with(*res.second, "-")) {
 			bserr() << log::W("error: at CLI config argument \"{}\": {}") << *res.second
 				<< to_string(res.first) << log::end;
 		}
 	};
 	// Generate help text if needed.
 	// These options are one-shot
-	if(get_or(confdata_, "global.help", false) || get_or(confdata_, "global.long-help", false)) {
-		bool long_help = get_or(confdata_, "global.long-help", false);
+	if(get_or(confdata_, "help", false) || get_or(confdata_, "long-help", false)) {
+		bool long_help = get_or(confdata_, "long-help", false);
 		bsout() << confopt_.help_text(!long_help) << log::end;
-		put(confdata_, "global.help", false);
-		put(confdata_, "global.long-help", false);
+		put(confdata_, "help", false);
+		put(confdata_, "long-help", false);
 	}
 	// Generate INI dump if needed.
-	if(get_or(confdata_, "global.dump-config", false)) {
+	if(get_or(confdata_, "dump-config", false)) {
 		std::stringstream confdump;
 		confdump << '\n';
 		for (auto& category : confdata_) {
-			confdump << "[" << category.first << "]\n";
-			for (auto& kvp : category.second)
-				if (kvp.first != "dump-config")
-					confdump << kvp.first << '=' << to_string(kvp.second) << '\n';
+			if (auto dict = get_if<config_value::dictionary>(&category.second)) {
+				confdump << '[' << category.first << "]\n";
+				for (auto& kvp : *dict)
+					if (kvp.first != "dump-config")
+						confdump << kvp.first << '=' << to_string(kvp.second) << '\n';
+			}
 		}
 		bsout() << confdump.str() << log::end;
-		put(confdata_, "global.dump-config", false);
+		put(confdata_, "dump-config", false);
 	}
 
 	// load middleman module only once
@@ -252,4 +254,3 @@ auto config_subsyst::is_configured() -> bool {
 bool config_subsyst::kernel_configured = false;
 
 NAMESPACE_END(blue_sky::kernel::detail)
-
