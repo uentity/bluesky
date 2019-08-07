@@ -47,7 +47,7 @@ inspect(Inspector& f, T& x) {
 	catch(cereal::Exception&) {
 		return sec::state_not_serializable;
 	}
-	return f(ss.vector());
+	return f.apply_raw(ss.vector().size()*sizeof(char), (void*)ss.vector().data());
 }
 
 // deserialize
@@ -73,7 +73,7 @@ inspect(Inspector& f, T& x) {
 			return sec::state_not_serializable;
 		}
 	});
-	return f(x_data);
+	return f.apply_raw(x_data.size()*sizeof(char), x_data.data());
 }
 
 /// to string conversion via JSON archive
