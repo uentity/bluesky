@@ -32,7 +32,7 @@ struct BS_HIDDEN_API config_subsyst {
 	// predefined config options that can be parsed from CLI or config file
 	caf::config_option_set confopt_;
 	// config values storage: map from string key -> any parsed value
-	caf::config_value_map confdata_;
+	caf::settings confdata_;
 	// kernel's actor system & config
 	caf::actor_system_config actor_cfg_;
 

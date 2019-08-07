@@ -256,8 +256,7 @@ auto bind_kernel_api(py::module& m) -> void {
 	bind_any_array<idx_any_traits>(m, "idx_any_array");
 
 	py::class_<caf::config_value>(m, "caf_config_value");
-	bind_cafdict<caf::config_value::dictionary>(m, "caf_config_dict");
-	bind_cafdict<caf::config_value_map>(m, "caf_config_map");
+	bind_cafdict<caf::settings>(m, "caf_settings");
 
 	bind_misc_api(m);
 
