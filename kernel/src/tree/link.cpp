@@ -33,6 +33,10 @@ auto link::pimpl() const -> link_actor* {
 	return pimpl_;
 }
 
+auto link::actor() const -> caf::actor {
+	return aimpl_;
+}
+
 /// access link's unique ID
 auto link::id() const -> const id_type& {
 	return pimpl_->id_;

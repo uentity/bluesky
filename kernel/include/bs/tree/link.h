@@ -124,6 +124,9 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  async API
 	//
+	// return link's actor handle
+	auto actor() const -> caf::actor;
+
 	// enum core object data requests
 	enum class Req { Data = 0, DataNode = 1 };
 	// states of single reuqest
