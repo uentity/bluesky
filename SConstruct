@@ -216,7 +216,7 @@ custom_env.AppendUnique(
 		osp.join("#third_party", "actor-framework", "libcaf_io"),
 		osp.join("#third_party", "eigen"),
 		osp.join("#third_party", "cereal", "include"),
-		osp.join("#third_party", "expected"),
+		osp.join("#third_party", "expected", "include"),
 		osp.join("#third_party", "object_ptr")
 	],
 	LIBPATH = [osp.join("#third_party", "actor-framework", "build", "lib")],
