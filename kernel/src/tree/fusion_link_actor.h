@@ -45,7 +45,7 @@ public:
 
 	using super = ilink_actor;
 	using super::owner_;
-	
+
 	fusion_link_actor(caf::actor_config& cfg, std::string name, sp_node data, sp_fusion bridge, Flags f)
 		: super(cfg, std::move(name), data, f), bridge_(std::move(bridge)), data_(std::move(data))
 	{}
@@ -80,7 +80,7 @@ public:
 			if(const auto B = bridge()) {
 				auto err = B->populate(data_, child_type_id);
 				if(err.code == obj_fully_loaded)
-					rs_reset_if_neq(Req::Data, ReqStatus::Busy, ReqStatus::OK);
+					rs_reset(Req::Data, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
 				return err.ok() ?
 					result_or_err<sp_node>(data_) : tl::make_unexpected(std::move(err));
 			}
@@ -105,7 +105,7 @@ public:
 		if(const auto B = bridge()) {
 			auto err = B->pull_data(data_);
 			if(err.code == obj_fully_loaded)
-				rs_reset_if_neq(Req::DataNode, ReqStatus::Busy, ReqStatus::OK);
+				rs_reset(Req::DataNode, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
 			return err.ok() ? result_or_err<sp_obj>(data_) : tl::make_unexpected(std::move(err));
 		}
 		return tl::make_unexpected(error{Error::NoFusionBridge});

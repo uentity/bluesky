@@ -65,49 +65,26 @@ auto link_actor::req_status(Req request) const -> ReqStatus {
 	return ReqStatus::Void;
 }
 
-auto link_actor::rs_reset(Req request, ReqStatus new_rs, bool silent) -> ReqStatus {
+auto link_actor::rs_reset(
+	Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs
+) -> ReqStatus {
 	const auto i = (unsigned)request;
 	if(i >= 2) return ReqStatus::Error;
 
 	// atomic set value
-	auto S = scope_atomic_flag(status_[i].flag);
-	const auto self = status_[i].value;
-	status_[i].value = new_rs;
-
-	if(!silent && new_rs != self) {
-		//pdbg() << " rs_reset: " << (request == Req::Data ? " Data " : " DataNode ") <<
-		//	int(self) << " -> " << int(new_rs) << std::endl;
-
-		send(self_grp, a_lnk_status(), a_ack(), request, new_rs, self);
-	}
-	return self;
-}
-
-auto link_actor::rs_reset_if_eq(Req request, ReqStatus self_rs, ReqStatus new_rs, bool silent) -> ReqStatus {
-	const auto i = (unsigned)request;
-	if(i >= 2) return ReqStatus::Error;
-
-	// atomic set value
-	auto S = scope_atomic_flag(status_[i].flag);
-	const auto self = status_[i].value;
-	if(status_[i].value == self_rs) {
-		status_[i].value = new_rs;
-		if(!silent && new_rs != self)
-			send(self_grp, a_lnk_status(), a_ack(), request, new_rs, self);
-	}
-	return self;
-}
-
-auto link_actor::rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs, bool silent) -> ReqStatus {
-	const auto i = (unsigned)request;
-	if(i >= 2) return ReqStatus::Error;
-
-	// atomic set value
-	auto S = scope_atomic_flag(status_[i].flag);
-	const auto self = status_[i].value;
-	if(status_[i].value != self_rs) {
-		status_[i].value = new_rs;
-		if(!silent && new_rs != self)
+	auto& S = status_[i];
+	auto guard = scope_atomic_flag(S.flag);
+	const auto self = S.value;
+	if( cond == ReqReset::Always ||
+		(cond == ReqReset::IfEq && self == old_rs) ||
+		(cond == ReqReset::IfNeq && self != old_rs)
+	) {
+		S.value = new_rs;
+		// Data = OK will always fire (work as 'data changed' signal)
+		if(
+			!bool(cond & ReqReset::Silent) &&
+			(new_rs != self || (request == Req::Data && new_rs == ReqStatus::OK))
+		)
 			send(self_grp, a_lnk_status(), a_ack(), request, new_rs, self);
 	}
 	return self;

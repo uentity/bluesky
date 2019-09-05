@@ -11,6 +11,7 @@
 #include <bs/tree/link.h>
 #include <bs/tree/node.h>
 #include <bs/kernel/config.h>
+#include <bs/detail/enumops.h>
 
 #include "actor_common.h"
 #include "link_invoke.h"
@@ -25,6 +26,11 @@ using namespace tree::detail;
 
 using id_type = link::id_type;
 using Flags = link::Flags;
+
+enum class ReqReset {
+	Always = 0, IfEq = 1, IfNeq = 2,
+	Silent = 4
+};
 
 /*-----------------------------------------------------------------------------
  *  link_actor
@@ -75,11 +81,9 @@ public:
 
 	auto req_status(Req request) const -> ReqStatus;
 
-	auto rs_reset(Req request, ReqStatus new_rs, bool silent = false) -> ReqStatus;
-
-	auto rs_reset_if_eq(Req request, ReqStatus self_rs, ReqStatus new_rs, bool silent = false) -> ReqStatus;
-
-	auto rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs, bool silent = false) -> ReqStatus;
+	auto rs_reset(
+		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void
+	) -> ReqStatus;
 
 	auto reset_owner(const sp_node& new_owner) -> void;
 
@@ -183,3 +187,5 @@ struct BS_API sym_link_actor : public link_actor {
 };
 
 NAMESPACE_END(blue_sky::tree)
+
+BS_ALLOW_ENUMOPS(blue_sky::tree::ReqReset)

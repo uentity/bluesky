@@ -82,15 +82,15 @@ auto link::req_status(Req request) const -> ReqStatus {
 }
 
 auto link::rs_reset(Req request, ReqStatus new_rs) const -> ReqStatus {
-	return pimpl_->rs_reset(request, new_rs);
+	return pimpl_->rs_reset(request, ReqReset::Always, new_rs);
 }
 
 auto link::rs_reset_if_eq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
-	return pimpl_->rs_reset_if_eq(request, self, new_rs);
+	return pimpl_->rs_reset(request, ReqReset::IfEq, new_rs, self);
 }
 
 auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
-	return pimpl_->rs_reset_if_neq(request, self, new_rs);
+	return pimpl_->rs_reset(request, ReqReset::IfNeq, new_rs, self);
 }
 
 auto link::rs_data_changed() const -> void {

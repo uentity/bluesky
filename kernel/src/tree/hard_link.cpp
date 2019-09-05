@@ -30,8 +30,11 @@ hard_link_actor::hard_link_actor(caf::actor_config& cfg, std::string name, sp_ob
 {
 	if(data_) {
 		// set status silently
-		rs_reset(Req::Data, ReqStatus::OK, true);
-		rs_reset(Req::DataNode, data_->is_node() ? ReqStatus::OK : ReqStatus::Error, true);
+		rs_reset(Req::Data, ReqReset::Always | ReqReset::Silent, ReqStatus::OK);
+		rs_reset(
+			Req::DataNode, ReqReset::Always | ReqReset::Silent,
+			data_->is_node() ? ReqStatus::OK : ReqStatus::Error
+		);
 	}
 }
 
@@ -77,8 +80,11 @@ weak_link_actor::weak_link_actor(caf::actor_config& cfg, std::string name, const
 	data().map([this](const sp_obj& obj) {
 		if(obj) {
 			// set status silently
-			rs_reset(Req::Data, ReqStatus::OK, true);
-			rs_reset(Req::DataNode, obj->is_node() ? ReqStatus::OK : ReqStatus::Error, true);
+			rs_reset(Req::Data, ReqReset::Always | ReqReset::Silent, ReqStatus::OK);
+			rs_reset(
+				Req::DataNode, ReqReset::Always | ReqReset::Silent,
+				obj->is_node() ? ReqStatus::OK : ReqStatus::Error
+			);
 		}
 	});
 }
