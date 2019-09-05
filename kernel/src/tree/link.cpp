@@ -140,29 +140,23 @@ result_or_err<sp_node> link::propagate_handle() {
  *-----------------------------------------------------------------------------*/
 
 auto link::data(process_data_cb f, bool high_priority) const -> void {
-	auto lazy_f = [ f = std::move(f), self = shared_from_this()]( result_or_errbox<sp_obj> eobj) {
-		f(std::move(eobj), std::move(self));
-	};
-
-	if(high_priority)
-		pimpl_->request<caf::message_priority::high>(aimpl_, pimpl_->timeout_, a_lnk_data(), true)
-		.then(std::move(lazy_f));
-	else
-		pimpl_->request<caf::message_priority::normal>(aimpl_, pimpl_->timeout_, a_lnk_data(), true)
-		.then(std::move(lazy_f));
+	anon_request(
+		aimpl_, pimpl_->timeout_, high_priority,
+		[f = std::move(f), self = shared_from_this()](result_or_errbox<sp_obj> eobj) {
+			f(std::move(eobj), std::move(self));
+		},
+		a_lnk_data(), true
+	);
 }
 
 auto link::data_node(process_data_cb f, bool high_priority) const -> void {
-	auto lazy_f = [ f = std::move(f), this ]( result_or_errbox<sp_node> eobj) {
-		f(std::move(eobj), shared_from_this());
-	};
-
-	if(high_priority)
-		pimpl_->request<caf::message_priority::high>(aimpl_, pimpl_->timeout_, a_lnk_dnode(), true)
-		.then(std::move(lazy_f));
-	else
-		pimpl_->request<caf::message_priority::normal>(aimpl_, pimpl_->timeout_, a_lnk_dnode(), true)
-		.then(std::move(lazy_f));
+	anon_request(
+		aimpl_, pimpl_->timeout_, high_priority,
+		[f = std::move(f), self = shared_from_this()](result_or_errbox<sp_obj> eobj) {
+			f(std::move(eobj), std::move(self));
+		},
+		a_lnk_dnode(), true
+	);
 }
 
 /*-----------------------------------------------------------------------------
@@ -230,7 +224,7 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 		return res;
 	};
 
-	// make shiny new subscriber actor and place into parent's room
+	// make shiny new subscriber actor, place into parent's room and return it's ID
 	auto& AS = kernel::config::actor_system();
 	auto baby = AS.spawn(ev_listener_actor<ev_state>, pimpl_->self_grp, std::move(make_ev_character));
 	// and return ID

@@ -12,7 +12,7 @@
 #include <bs/timetypes.h>
 #include <bs/error.h>
 #include <bs/atoms.h>
-#include <bs/kernel/config.h>
+#include <bs/kernel/radio.h>
 #include <bs/detail/function_view.h>
 
 #include <caf/fwd.hpp>
@@ -75,6 +75,24 @@ inline auto actorf(const H& handle, blue_sky::timespan timeout, Args&&... args) 
 	);
 }
 
+/// spawn temp actor that makes specified request to `A` and pass result to callback `f`
+template<typename Actor, typename F, typename... Args>
+auto anon_request(Actor A, timespan timeout, bool high_priority, F f, Args&&... args) -> void {
+	kernel::radio::system().spawn([
+		high_priority, f = std::move(f), A = std::move(A), t = std::move(timeout),
+		args = std::make_tuple(std::forward<Args>(args)...)
+	] (caf::event_based_actor* self) mutable -> caf::behavior {
+		std::apply([self, high_priority, A = std::move(A), t = caf::duration{t}](auto&&... args) {
+			return high_priority ?
+				self->request<caf::message_priority::high>(A, t, std::forward<decltype(args)>(args)...) :
+				self->request<caf::message_priority::normal>(A, t, std::forward<decltype(args)>(args)...);
+		}, std::move(args))
+		.then(std::move(f));
+
+		return {};
+	});
+}
+
 /// listens to event from specified group, execute given character & self-detruct on `a_bye` message
 template<typename State>
 auto ev_listener_actor(
@@ -85,7 +103,7 @@ auto ev_listener_actor(
 	self->set_default_handler(caf::drop);
 	// come to mummy
 	self->join(tgt_grp);
-	auto& Reg = kernel::config::actor_system().registry();
+	auto& Reg = kernel::radio::system().registry();
 	Reg.put(self->id(), self);
 
 	// unsubscribe when parent leaves its group
