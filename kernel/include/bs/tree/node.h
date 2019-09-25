@@ -34,7 +34,7 @@ public:
 
 	// links are sorted by unique ID
 	using id_key = mi::const_mem_fun<
-		link, const id_type&, &link::id
+		link, id_type, &link::id
 	>;
 	// and non-unique name
 	using name_key = mi::const_mem_fun<

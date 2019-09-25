@@ -55,7 +55,7 @@ public:
 	}
 
 	/// access link's unique ID
-	auto id() const -> const id_type&;
+	auto id() const -> id_type;
 
 	/// obtain link's symbolic name
 	auto name() const -> std::string;

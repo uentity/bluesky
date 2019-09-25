@@ -36,13 +36,13 @@ auto link::actor() const -> caf::actor {
 }
 
 /// access link's unique ID
-auto link::id() const -> const id_type& {
-	return pimpl_->id_;
+auto link::id() const -> id_type {
+	return actorf<id_type>(fimpl_, a_lnk_id()).value_or(nil_uid);
 }
 
-/// obtain link's symbolic name
+/// obtain link's human-readable name
 auto link::name() const -> std::string {
-	return pimpl_->name_;
+	return actorf<std::string>(fimpl_, a_lnk_name()).value_or("");
 }
 
 /// get link's container
@@ -55,7 +55,9 @@ void link::reset_owner(const sp_node& new_owner) {
 }
 
 auto link::info() const -> result_or_err<inode> {
-	return pimpl_->get_inode().and_then([](const inodeptr& i) {
+	//return pimpl_->get_inode()
+	return actorf<result_or_errbox<inodeptr>>(fimpl_, a_lnk_inode())
+	.and_then([](const inodeptr& i) {
 		return i ?
 			result_or_err<inode>(*i) :
 			tl::make_unexpected(error::quiet(Error::EmptyInode));

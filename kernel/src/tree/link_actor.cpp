@@ -181,9 +181,19 @@ auto link_actor::make_behavior() -> behavior_type {
 }
 
 auto link_actor::make_generic_behavior() -> behavior_type { return {
-	/// skip `id bind` and `bye` message (should always come from myself)
-	[](a_bind_id, const link::id_type&) {},
+	/// skip `bye` message (should always come from myself)
 	[](a_bye) {},
+
+	/// get id
+	[this](a_lnk_id) { return id_; },
+
+	/// update self ID from sibling link in self group
+	[](a_bind_id, const link::id_type&) {
+		// [TODO] add impl
+	},
+
+	/// get name
+	[this](a_lnk_name) { return name_; },
 
 	/// rename
 	[this](a_lnk_rename, std::string new_name, bool silent) {

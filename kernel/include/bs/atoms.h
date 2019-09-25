@@ -28,6 +28,8 @@ using a_lnk_dnode = caf::atom_constant<caf::atom("tl dnode")>;
 // async invoke `fusion_link::populate()`
 using a_flnk_populate = caf::atom_constant<caf::atom("tfl pull")>;
 
+using a_lnk_id = caf::atom_constant<caf::atom("tl id")>;
+using a_lnk_name = caf::atom_constant<caf::atom("tl name")>;
 using a_lnk_rename = caf::atom_constant<caf::atom("tl rename")>;
 using a_lnk_insert = caf::atom_constant<caf::atom("tl insert")>;
 using a_lnk_erase = caf::atom_constant<caf::atom("tl erase")>;
