@@ -8,7 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/tree/tree.h>
-#include <bs/kernel/config.h>
 #include <bs/detail/async_api_mixin.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>

@@ -10,13 +10,14 @@
 #include "link_actor.h"
 #include <bs/kernel/tools.h>
 
-#include <bs/kernel/config.h>
+#include <bs/kernel/radio.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
 #include <boost/uuid/uuid_generators.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using namespace kernel::radio;
 
 // global random UUID generator for BS links
 static boost::uuids::random_generator gen;
@@ -45,9 +46,8 @@ auto link_actor::bind_new_id() -> void {
 	// inform friends about ID change
 	// [NOTE] don't send bye, otherwise retranslators from this will quit
 	send(self_grp, a_bind_id(), id_);
-	//goodbye();
 	// create self local group & join into it
-	self_grp = kernel::config::actor_system().groups().get_local( to_string(id_) );
+	self_grp = system().groups().get_local( to_string(id_) );
 	join(self_grp);
 	//aout(this) << "link joined self group " << self_grp.get()->identifier() << std::endl;
 }

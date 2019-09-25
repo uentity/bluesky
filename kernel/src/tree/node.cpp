@@ -9,7 +9,7 @@
 
 #include "node_actor.h"
 #include <bs/kernel/types_factory.h>
-#include <bs/kernel/config.h>
+#include <bs/kernel/radio.h>
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 
@@ -31,7 +31,7 @@ NAMESPACE_END()
  *-----------------------------------------------------------------------------*/
 node::node(std::string custom_id)
 	: objbase(true, custom_id),
-	aimpl_(kernel::config::actor_system().spawn<node_actor>(id_))
+	aimpl_(kernel::radio::system().spawn<node_actor>(id_))
 {
 	pimpl_ = caf::actor_cast<node_actor*>(aimpl_);
 	if(!pimpl_) throw error{ "Trying to construct tree::node with invalid actor" };
@@ -40,7 +40,7 @@ node::node(std::string custom_id)
 
 node::node(const node& src)
 	: objbase(src),
-	aimpl_(kernel::config::actor_system().spawn<node_actor>(id_, src.aimpl_))
+	aimpl_(kernel::radio::system().spawn<node_actor>(id_, src.aimpl_))
 {
 	pimpl_ = caf::actor_cast<node_actor*>(aimpl_);
 	if(!pimpl_) throw error{ "Trying to copy construct tree::node with invalid actor" };
@@ -483,7 +483,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 	};
 
 	// make shiny new subscriber actor and place into parent's room
-	auto baby = kernel::config::actor_system().spawn(
+	auto baby = kernel::radio::system().spawn(
 		ev_listener_actor<ev_state>, pimpl_->self_grp, std::move(make_ev_character)
 	);
 	// and return ID
@@ -491,7 +491,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 }
 
 auto node::unsubscribe(std::uint64_t event_cb_id) -> void {
-	auto& AS = kernel::config::actor_system();
+	auto& AS = kernel::radio::system();
 	const auto ev_actor = AS.registry().get(event_cb_id);
 	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
 	pimpl_->send(caf::actor_cast<caf::actor>(ev_actor), a_bye());

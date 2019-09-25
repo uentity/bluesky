@@ -16,8 +16,6 @@
 #include "actor_common.h"
 #include "link_invoke.h"
 
-#include <boost/uuid/uuid_io.hpp>
-
 #include <caf/actor_system.hpp>
 #include <caf/actor_ostream.hpp>
 
@@ -53,8 +51,6 @@ public:
 
 	// timeout for most queries
 	timespan timeout_;
-	// sender used for blocking wait for responses
-	caf::function_view<caf::actor> factor_;
 
 	// keep local link group
 	caf::group self_grp;
@@ -128,7 +124,7 @@ protected:
 template<typename T, caf::spawn_options Os = caf::no_spawn_options, class... Ts>
 inline auto spawn_lactor(Ts&&... args) {
 	// spawn actor
-	auto A = kernel::config::actor_system().spawn<T, Os>(std::forward<Ts>(args)...);
+	auto A = kernel::radio::system().spawn<T, Os>(std::forward<Ts>(args)...);
 	auto L = caf::actor_cast<T*>(A);
 	if(!L) throw error{ "Cannot spawn link actor!" };
 	return A;
@@ -153,7 +149,7 @@ struct BS_API hard_link_actor : public ilink_actor {
 	sp_obj data_;
 
 	using super = ilink_actor;
-	
+
 	hard_link_actor(caf::actor_config& cfg, std::string name, sp_obj data, Flags f);
 
 	auto data() -> result_or_err<sp_obj> override;
@@ -166,7 +162,7 @@ struct BS_API weak_link_actor : public ilink_actor {
 	std::weak_ptr<objbase> data_;
 
 	using super = ilink_actor;
-	
+
 	weak_link_actor(caf::actor_config& cfg, std::string name, const sp_obj& data, Flags f);
 
 	auto data() -> result_or_err<sp_obj> override;
@@ -180,7 +176,7 @@ struct BS_API sym_link_actor : public link_actor {
 
 	using super = link_actor;
 	using super::owner_;
-	
+
 	sym_link_actor(caf::actor_config& cfg, std::string name, std::string path, Flags f);
 
 	auto data() -> result_or_err<sp_obj> override;

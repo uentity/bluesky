@@ -16,7 +16,7 @@
 
 #include <bs/tree/node.h>
 #include <bs/log.h>
-#include <bs/kernel/config.h>
+#include <bs/kernel/radio.h>
 
 #include <cereal/types/vector.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -45,7 +45,7 @@ struct tree_fs_output::impl {
 
 	impl(std::string root_fname, std::string objects_dirname) :
 		root_fname_(std::move(root_fname)), objects_dname_(std::move(objects_dirname)),
-		manager_(kernel::config::actor_system().spawn<savers_manager>())
+		manager_(kernel::radio::system().spawn<savers_manager>())
 	{
 		// try convert root filename to absolute
 		auto root_path = fs::path(root_fname_);
@@ -222,7 +222,7 @@ struct tree_fs_output::impl {
 		if(file_er_) return make_error();
 
 		// spawn object save actor
-		auto A = kernel::config::actor_system().spawn(async_saver, F, manager_);
+		auto A = kernel::radio::system().spawn(async_saver, F, manager_);
 		auto pm = caf::actor_cast<savers_manager_ptr>(manager_);
 		// defer wait until save completes
 		if(!has_wait_deferred_) {

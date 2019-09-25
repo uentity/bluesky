@@ -9,7 +9,7 @@
 #pragma once
 
 #include <bs/tree/node.h>
-#include <bs/kernel/config.h>
+#include <bs/kernel/radio.h>
 
 #include "actor_common.h"
 
@@ -20,7 +20,7 @@
 #include <boost/uuid/uuid_hash.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-using namespace kernel::config;
+using namespace kernel::radio;
 
 using links_container = node::links_container;
 using Key = node::Key;

@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "../kernel/config.h"
+#include "../kernel/radio.h"
 #include <caf/scoped_actor.hpp>
 #include <caf/send.hpp>
 
@@ -23,7 +23,7 @@ private:
 
 public:
 	using message_priority = caf::message_priority;
-	explicit async_api_mixin() : sender_(kernel::config::actor_system(), true) {}
+	explicit async_api_mixin() : sender_(kernel::radio::system(), true) {}
 
 	// link sender with target actor, so they die together
 	auto init_sender() const -> void {
@@ -94,7 +94,7 @@ public:
 
 	template<caf::spawn_options Os = caf::no_spawn_options, typename F>
 	auto& spawn(F&& async_behavior) {
-		actor = kernel::config::actor_system().spawn<Os>(std::forward<F>(async_behavior));
+		actor = kernel::radio::system().spawn<Os>(std::forward<F>(async_behavior));
 		return actor;
 	}
 

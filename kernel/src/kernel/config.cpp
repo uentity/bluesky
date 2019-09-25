@@ -9,7 +9,6 @@
 
 #include <bs/kernel/config.h>
 #include "kimpl.h"
-#include "radio_subsyst.h"
 
 NAMESPACE_BEGIN(blue_sky::kernel::config)
 
@@ -34,10 +33,6 @@ auto config_section(std::string_view name) -> caf::config_option_adder {
 
 auto actor_config() -> caf::actor_system_config& {
 	return KIMPL.actor_cfg_;
-}
-
-auto actor_system() -> caf::actor_system& {
-	return singleton<detail::radio_subsyst>::Instance().system();
 }
 
 NAMESPACE_END(blue_sky::kernel::config)

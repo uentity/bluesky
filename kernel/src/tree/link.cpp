@@ -8,15 +8,13 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/log.h>
-#include <bs/kernel/config.h>
+#include <bs/kernel/radio.h>
 #include "link_actor.h"
-
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
 
 OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using namespace kernel::radio;
 
 link::link(caf::actor impl_a) : aimpl_(std::move(impl_a)) {
 	pimpl_ = caf::actor_cast<link_actor*>(aimpl_);
@@ -176,7 +174,7 @@ auto ev_listener_actor(
 	});
 	// come to mummy
 	self->join(tgt_grp);
-	auto& Reg = kernel::config::actor_system().registry();
+	auto& Reg = system().registry();
 	Reg.put(self->id(), self);
 
 	// unsubscribe when parent leaves its group
@@ -229,14 +227,14 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 	};
 
 	// make shiny new subscriber actor, place into parent's room and return it's ID
-	auto& AS = kernel::config::actor_system();
+	auto& AS = system();
 	auto baby = AS.spawn(ev_listener_actor<ev_state>, pimpl_->self_grp, std::move(make_ev_character));
 	// and return ID
 	return baby.id();
 }
 
 auto link::unsubscribe(std::uint64_t event_cb_id) -> void {
-	auto& AS = kernel::config::actor_system();
+	auto& AS = system();
 	const auto ev_actor = AS.registry().get(event_cb_id);
 	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
 	pimpl_->send(caf::actor_cast<caf::actor>(ev_actor), a_bye());
