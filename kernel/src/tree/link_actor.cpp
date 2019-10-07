@@ -56,12 +56,15 @@ auto link_actor::bind_new_id() -> void {
 //  manual status management
 //
 auto link_actor::pdbg() -> caf::actor_ostream {
+	auto guard = std::shared_lock{solo_};
 	return caf::aout(this) << to_string(id_); //<< " " << master_->type_id() << ": ";
 }
 
 auto link_actor::req_status(Req request) const -> ReqStatus {
-	if(const auto i = (unsigned)request; i < 2)
+	if(const auto i = (unsigned)request; i < 2) {
+		auto guard = scope_atomic_flag{ status_[i].flag };
 		return status_[i].value;
+	}
 	return ReqStatus::Void;
 }
 
@@ -91,7 +94,7 @@ auto link_actor::rs_reset(
 }
 
 auto link_actor::reset_owner(const sp_node& new_owner) -> void {
-	auto guard = std::lock_guard{solo_};
+	auto guard = std::unique_lock{solo_};
 	owner_ = new_owner;
 }
 
@@ -135,6 +138,7 @@ auto link_actor::data_ex(bool wait_if_busy) -> result_or_err<sp_obj> {
 		status_[0], wait_if_busy,
 		// send status changed message
 		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
+			auto guard = std::shared_lock{solo_};
 			if(prev_v != new_v) send(self_grp, a_lnk_status(), a_ack(), Req::Data, new_v, prev_v);
 		} }
 	).and_then([](sp_obj&& obj) {
@@ -155,6 +159,7 @@ auto link_actor::data_node_ex(bool wait_if_busy) -> result_or_err<sp_node> {
 		status_[1], wait_if_busy,
 		// send status changed message
 		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
+			auto guard = std::shared_lock{solo_};
 			if(prev_v != new_v) send(self_grp, a_lnk_status(), a_ack(), Req::DataNode, new_v, prev_v);
 		} }
 	).and_then([](sp_node&& N) {
@@ -185,7 +190,10 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 	[](a_bye) {},
 
 	/// get id
-	[this](a_lnk_id) { return id_; },
+	[this](a_lnk_id) {
+		auto guard = std::shared_lock{solo_};
+		return id_;
+	},
 
 	/// update self ID from sibling link in self group
 	[](a_bind_id, const link::id_type&) {
@@ -193,11 +201,14 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 	},
 
 	/// get name
-	[this](a_lnk_name) { return name_; },
+	[this](a_lnk_name) {
+		auto guard = std::shared_lock{solo_};
+		return name_;
+	},
 
 	/// rename
 	[this](a_lnk_rename, std::string new_name, bool silent) {
-		auto solo = std::lock_guard{ solo_ };
+		auto solo = std::unique_lock{ solo_ };
 		auto old_name = name_;
 		name_ = std::move(new_name);
 		// send rename ack message
@@ -314,6 +325,7 @@ ilink_actor::ilink_actor(caf::actor_config& cfg, std::string name, const sp_obj&
 {}
 
 auto ilink_actor::get_inode() -> result_or_err<inodeptr> {
+	auto guard = std::shared_lock{solo_};
 	return inode_;
 };
 

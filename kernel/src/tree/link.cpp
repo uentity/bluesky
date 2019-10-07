@@ -47,6 +47,7 @@ auto link::name() const -> std::string {
 
 /// get link's container
 auto link::owner() const -> sp_node {
+	auto guard = std::shared_lock{pimpl_->solo_};
 	return pimpl_->owner_.lock();
 }
 
@@ -69,7 +70,7 @@ link::Flags link::flags() const {
 }
 
 void link::set_flags(Flags new_flags) {
-	std::lock_guard<std::mutex> g(pimpl_->solo_);
+	auto guard = std::unique_lock{pimpl_->solo_};
 	pimpl_->flags_ = new_flags;
 }
 
@@ -189,6 +190,7 @@ auto ev_listener_actor(
 };
 
 auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
+	auto guard = std::shared_lock{pimpl_->solo_};
 	struct ev_state { handle_event_cb f; };
 
 	// produce event bhavior that calls passed callback with proper params
@@ -229,15 +231,14 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 	};
 
 	// make shiny new subscriber actor, place into parent's room and return it's ID
-	auto& AS = system();
-	auto baby = AS.spawn(ev_listener_actor<ev_state>, pimpl_->self_grp, std::move(make_ev_character));
+	auto baby = system().spawn(ev_listener_actor<ev_state>, pimpl_->self_grp, std::move(make_ev_character));
 	// and return ID
 	return baby.id();
 }
 
 auto link::unsubscribe(std::uint64_t event_cb_id) -> void {
-	auto& AS = system();
-	const auto ev_actor = AS.registry().get(event_cb_id);
+	auto guard = std::shared_lock{pimpl_->solo_};
+	const auto ev_actor = system().registry().get(event_cb_id);
 	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
 	pimpl_->send(caf::actor_cast<caf::actor>(ev_actor), a_bye());
 }

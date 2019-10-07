@@ -19,6 +19,8 @@
 #include <caf/actor_system.hpp>
 #include <caf/actor_ostream.hpp>
 
+#include <shared_mutex>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace tree::detail;
 
@@ -45,9 +47,9 @@ public:
 	/// owner node
 	std::weak_ptr<tree::node> owner_;
 	/// status of operations
-	status_handle status_[2];
+	mutable status_handle status_[2];
 	// sync access
-	std::mutex solo_;
+	std::shared_mutex solo_;
 
 	// timeout for most queries
 	timespan timeout_;
