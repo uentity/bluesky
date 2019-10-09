@@ -25,9 +25,9 @@
 #include <atomic>
 
 #define BSCONFIG ::blue_sky::kernel::config::config()
-constexpr auto FILE_LOG_PATTERN = "[%Y-%m-%d %T.%e] [%L] %v";
-constexpr auto CONSOLE_LOG_PATTERN = "[%L] %v";
-constexpr auto LOG_FNAME_PREFIX = "bs_";
+constexpr char FILE_LOG_PATTERN[] = "[%Y-%m-%d %T.%e] [%L] %v";
+constexpr char CONSOLE_LOG_PATTERN[] = "[%L] %v";
+constexpr char LOG_FNAME_PREFIX[] = "bs_";
 constexpr auto ROTATING_FSIZE_DEFAULT = 1024*1024*5;
 constexpr auto DEF_FLUSH_INTERVAL = 5;
 constexpr auto DEF_FLUSH_LEVEL = spdlog::level::err;
