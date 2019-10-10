@@ -158,8 +158,8 @@ void py_bind_link(py::module& m) {
 	m.def("adapted_types", []() { return py_kernel().adapted_types(); },
 		"Remove types for which adapters are registered, '*' for default adapter"
 	);
-	m.def("drop_adapted_cache", [](const std::string& obj_id) {
-			return py_kernel().drop_adapted_cache(obj_id);
+	m.def("drop_adapted_cache", [](const sp_obj& obj) {
+			return py_kernel().drop_adapted_cache(obj);
 		}, "obj_id"_a = "",
 		"Clear cached adapter for given `obj_id` (or drop overall cache if ID is empty)"
 	);

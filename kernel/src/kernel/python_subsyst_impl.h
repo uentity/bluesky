@@ -47,7 +47,7 @@ struct BS_HIDDEN_API python_subsyst_impl : public python_subsyst {
 	auto adapt(sp_obj source) -> pybind11::object;
 
 	// returns number of cleared instances
-	auto drop_adapted_cache(const std::string& obj_id = "") -> std::size_t;
+	auto drop_adapted_cache(const sp_obj& obj = nullptr) -> std::size_t;
 
 	// access to instance of Python subsystem
 	static auto self() -> python_subsyst_impl&;
@@ -58,7 +58,7 @@ private:
 	std::unordered_map<std::string, adapter_fn> adapters_;
 	adapter_fn def_adapter_;
 	// adapters instances cache
-	std::unordered_map<std::string, pybind11::object> acache_;
+	std::unordered_map<std::size_t, pybind11::object> acache_;
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)
