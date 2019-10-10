@@ -140,18 +140,22 @@ auto python_subsyst_impl::adapted_types() const -> std::vector<std::string> {
 auto python_subsyst_impl::adapt(sp_obj source) -> py::object {
 	if(!source) return py::none();
 	// check if adpater already created for given object
-	auto cached_A = acache_.find(sp_obj_hash(source));
+	const auto source_key = sp_obj_hash(source);
+	auto cached_A = acache_.find(source_key);
 	if(cached_A != acache_.end())
 		return cached_A->second;
+
 	// adapt or passthrough
+	const auto adapt_and_cache = [this, source_key](auto&& obj, auto&& afn) {
+		return acache_.try_emplace(
+			source_key, afn(std::move(obj))
+		).first->second;
+	};
 	auto pf = adapters_.find(source->type_id());
 	auto&& obj = std::move(source);
-	auto A = pf != adapters_.end() ?
-		pf->second(obj) :
-		( def_adapter_ ? def_adapter_(obj) : py::cast(obj) );
-	// cache adapter instance
-	acache_[sp_obj_hash(source)] = A;
-	return A;
+	return pf != adapters_.end() ?
+		adapt_and_cache(obj, pf->second) :
+		( def_adapter_ ? adapt_and_cache(obj, def_adapter_) : py::cast(obj) );
 }
 
 auto python_subsyst_impl::drop_adapted_cache(const sp_obj& obj) -> std::size_t {
