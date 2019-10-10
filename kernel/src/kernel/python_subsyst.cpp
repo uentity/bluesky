@@ -15,6 +15,8 @@
 #include "python_subsyst_impl.h"
 #include "plugins_subsyst.h"
 
+#include <functional>
+
 #define WITH_KMOD \
 [[maybe_unused]] auto res = pykmod(this).map([&](auto kmod_ptr) { \
 [[maybe_unused]] auto& kmod = *kmod_ptr;
@@ -55,6 +57,8 @@ std::string extract_root_name(const std::string& full_name) {
 
 	return pyl_name;
 }
+
+constexpr auto sp_obj_hash = std::hash<sp_obj>{};
 
 NAMESPACE_END()
 
@@ -138,8 +142,10 @@ auto python_subsyst_impl::adapted_types() const -> std::vector<std::string> {
 
 auto python_subsyst_impl::adapt(sp_obj source) -> py::object {
 	if(!source) return py::none();
+	auto solo = std::lock_guard{ acache_guard_ };
+
 	// check if adpater already created for given object
-	auto cached_A = acache_.find(source->id());
+	auto cached_A = acache_.find(sp_obj_hash(source));
 	if(cached_A != acache_.end())
 		return cached_A->second;
 	// adapt or passthrough
@@ -150,25 +156,24 @@ auto python_subsyst_impl::adapt(sp_obj source) -> py::object {
 		( def_adapter_ ? def_adapter_(obj) : py::cast(obj) );
 
 	// cache adapter instance
-	auto solo = std::lock_guard{ acache_guard_ };
-	acache_[source->id()] = A;
+	acache_[sp_obj_hash(source)] = A;
 	return A;
 }
 
-auto python_subsyst_impl::get_cached_adapter(const std::string& obj_id) const -> pybind11::object {
-	if(auto cached_A = acache_.find(obj_id); cached_A != acache_.end())
+auto python_subsyst_impl::get_cached_adapter(const sp_obj& obj) const -> pybind11::object {
+	if(auto cached_A = acache_.find(sp_obj_hash(obj)); cached_A != acache_.end())
 		return cached_A->second;
 	return py::none();
 }
 
-auto python_subsyst_impl::drop_adapted_cache(const std::string& obj_id) -> std::size_t {
+auto python_subsyst_impl::drop_adapted_cache(const sp_obj& obj) -> std::size_t {
 	auto solo = std::lock_guard{ acache_guard_ };
 	std::size_t res = 0;
-	if(obj_id.empty()) {
+	if(!obj) {
 		res = acache_.size();
 		acache_.clear();
 	}
-	else if(auto cached_A = acache_.find(obj_id); cached_A != acache_.end()) {
+	else if(auto cached_A = acache_.find(sp_obj_hash(obj)); cached_A != acache_.end()) {
 		acache_.erase(cached_A);
 		res = 1;
 	}

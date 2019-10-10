@@ -171,15 +171,15 @@ void py_bind_link(py::module& m) {
 	m.def("adapted_types", []() { return py_kernel().adapted_types(); },
 		"Return list of types with registered adapters ('*' denotes default adapter)"
 	);
-	m.def("drop_adapted_cache", [](const std::string& obj_id) {
-			return py_kernel().drop_adapted_cache(obj_id);
-		}, "obj_id"_a = "",
-		"Clear cached adapter for given OID (or drop all cached adapters if OID is empty)"
+	m.def("drop_adapted_cache", [](const sp_obj& obj) {
+			return py_kernel().drop_adapted_cache(obj);
+		}, "obj"_a = nullptr,
+		"Clear cached adapter for given object (or drop all cached adapters if object is None)"
 	);
-	m.def("get_cached_adapter", [](const std::string& obj_type_id) {
-			return py_kernel().get_cached_adapter(obj_type_id);
+	m.def("get_cached_adapter", [](const sp_obj& obj) {
+			return py_kernel().get_cached_adapter(obj);
 		},
-		"obj_type_id"_a, "Get cached adapter for object with given OID (if created before, otherwise None)"
+		"obj"_a, "Get cached adapter for given object (if created before, otherwise None)"
 	);
 
 	///////////////////////////////////////////////////////////////////////////////
