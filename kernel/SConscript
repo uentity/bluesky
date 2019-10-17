@@ -70,6 +70,7 @@ kernel_cpp_list = [
 	"src/tree/inode.cpp",
 	"src/tree/link.cpp",
 	"src/tree/link_actor.cpp",
+	"src/tree/link_impl.cpp",
 	"src/tree/hard_link.cpp",
 	"src/tree/sym_link.cpp",
 	"src/tree/node.cpp",

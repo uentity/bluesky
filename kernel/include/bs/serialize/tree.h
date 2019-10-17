@@ -23,19 +23,15 @@ BSS_FCN_DECL(serialize, blue_sky::tree::ilink)
 
 // hard link
 BSS_FCN_DECL(serialize, blue_sky::tree::hard_link)
-BSS_FCN_DECL(load_and_construct, blue_sky::tree::hard_link)
 
 // weak link
 BSS_FCN_DECL(serialize, blue_sky::tree::weak_link)
-BSS_FCN_DECL(load_and_construct, blue_sky::tree::weak_link)
 
 // sym link
 BSS_FCN_DECL(serialize, blue_sky::tree::sym_link)
-BSS_FCN_DECL(load_and_construct, blue_sky::tree::sym_link)
 
 // fusion link
 BSS_FCN_DECL(serialize, blue_sky::tree::fusion_link)
-BSS_FCN_DECL(load_and_construct, blue_sky::tree::fusion_link)
 
 // node
 BSS_FCN_DECL(serialize, blue_sky::tree::node)

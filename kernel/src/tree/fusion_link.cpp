@@ -12,6 +12,8 @@
 
 #include "fusion_link_actor.h"
 
+OMIT_OBJ_SERIALIZATION
+
 NAMESPACE_BEGIN(blue_sky::tree)
 
 // default destructor for fusion_iface
@@ -23,7 +25,7 @@ fusion_iface::~fusion_iface() = default;
 fusion_link::fusion_link(
 	std::string name, sp_node data, sp_fusion bridge, Flags f
 ) : // set LazyLoad flag by default
-	ilink(spawn_lactor<fusion_link_actor>( std::move(name), data, bridge, Flags(f | link::LazyLoad) ))
+	super(std::make_shared<fusion_link_impl>( std::move(name), data, bridge, Flags(f | link::LazyLoad) ))
 {}
 
 fusion_link::fusion_link(
@@ -39,9 +41,9 @@ fusion_link::fusion_link(
 			obj_type << log::end;
 }
 
-auto fusion_link::pimpl() const -> fusion_link_actor* {
-	return static_cast<fusion_link_actor*>(link::pimpl());
-}
+fusion_link::fusion_link()
+	: super(std::make_shared<fusion_link_impl>(), false)
+{}
 
 auto fusion_link::clone(bool deep) const -> sp_link {
 	auto res = std::make_shared<fusion_link>(
@@ -56,24 +58,31 @@ auto fusion_link::type_id() const -> std::string {
 	return "fusion_link";
 }
 
+auto fusion_link::pimpl() const -> fusion_link_impl* {
+	return static_cast<fusion_link_impl*>(super::pimpl());
+}
+
 auto fusion_link::populate(const std::string& child_type_id, bool wait_if_busy) const
 -> result_or_err<sp_node> {
-	return pimpl()->populate(child_type_id, wait_if_busy);
+	return actorf<result_or_errbox<sp_node>>(
+		factor_, a_flnk_populate(), child_type_id, wait_if_busy
+	);
 }
 
 auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) const -> void {
 	using result_t = result_or_errbox<sp_node>;
 
-	pimpl()->request(
-		aimpl_, pimpl()->timeout_, a_flnk_populate(), true
-	).then(
+	anon_request(
+		actor_, def_timeout(true), false,
 		[f = std::move(f), self = shared_from_this()](result_t data) {
 			f(std::move(data), std::move(self));
-		}
+		},
+		a_flnk_populate(), std::move(child_type_id), true
 	);
 }
 
 auto fusion_link::bridge() const -> sp_fusion {
+	auto guard = std::shared_lock{ pimpl()->guard_ };
 	return pimpl()->bridge();
 }
 
@@ -84,11 +93,13 @@ auto fusion_link::reset_bridge(sp_fusion new_bridge) -> void {
 auto fusion_link::propagate_handle() -> result_or_err<sp_node> {
 	// set handle of cached node object to this link instance
 	self_handle_node(pimpl()->data_);
+	auto guard = std::shared_lock{ pimpl()->guard_ };
 	return pimpl()->data() ?
 		result_or_err<sp_node>(pimpl()->data_) : tl::make_unexpected(Error::EmptyData);
 }
 
 auto fusion_link::cache() const -> sp_node {
+	auto guard = std::shared_lock{ pimpl()->guard_ };
 	return pimpl()->data_;
 }
 

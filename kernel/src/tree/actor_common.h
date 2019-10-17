@@ -38,9 +38,10 @@ CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::sp_
 NAMESPACE_BEGIN(blue_sky::tree)
 
 inline constexpr auto def_data_timeout = timespan{ std::chrono::seconds(3) };
-inline const auto nil_uid = boost::uuids::nil_uuid();
-inline const std::string nil_oid = to_string(boost::uuids::nil_uuid());
 inline const std::string nil_grp_id = "<null>";
+
+/// obtain configured timeout for queries
+BS_API auto def_timeout(bool for_data = false) -> caf::duration;
 
 /// blocking invoke actor & return response like a function
 /// [NOTE] always return `result_or_errbox<R>`
@@ -89,12 +90,12 @@ inline auto actorf(const H& handle, blue_sky::timespan timeout, Args&&... args) 
 
 /// spawn temp actor that makes specified request to `A` and pass result to callback `f`
 template<typename Actor, typename F, typename... Args>
-auto anon_request(Actor A, timespan timeout, bool high_priority, F f, Args&&... args) -> void {
+auto anon_request(Actor A, caf::duration timeout, bool high_priority, F f, Args&&... args) -> void {
 	kernel::radio::system().spawn([
 		high_priority, f = std::move(f), A = std::move(A), t = std::move(timeout),
 		args = std::make_tuple(std::forward<Args>(args)...)
 	] (caf::event_based_actor* self) mutable -> caf::behavior {
-		std::apply([self, high_priority, A = std::move(A), t = caf::duration{t}](auto&&... args) {
+		std::apply([self, high_priority, A = std::move(A), t = std::move(t)](auto&&... args) {
 			return high_priority ?
 				self->request<caf::message_priority::high>(A, t, std::forward<decltype(args)>(args)...) :
 				self->request<caf::message_priority::normal>(A, t, std::forward<decltype(args)>(args)...);

@@ -29,11 +29,15 @@ using sp_fusion = std::shared_ptr<fusion_iface>;
 /*-----------------------------------------------------------------------------
  *  Fusion link populates object children when `data_node()` or `data()` is called
  *-----------------------------------------------------------------------------*/
-class fusion_link_actor;
+struct fusion_link_impl;
+
 class BS_API fusion_link : public ilink {
 	friend class blue_sky::atomizer;
+	friend class cereal::access;
 
 public:
+	using super = ilink;
+
 	// ctors
 	fusion_link(
 		std::string name, sp_node data = nullptr,
@@ -66,8 +70,11 @@ public:
 	auto cache() const -> sp_node;
 
 private:
-	friend class fusion_link_actor;
-	auto pimpl() const -> fusion_link_actor*;
+	// don't start internal actor
+	fusion_link();
+
+	//friend struct fusion_link_impl;
+	auto pimpl() const -> fusion_link_impl*;
 
 	// bypass `data_node_ex()` call and directly set handle of contained node object
 	auto propagate_handle() -> result_or_err<sp_node> override;

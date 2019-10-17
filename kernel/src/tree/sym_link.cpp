@@ -17,24 +17,29 @@
 
 #include "link_actor.h"
 
+OMIT_OBJ_SERIALIZATION
+
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
-//  actor
+//  impl + actor
 //
-sym_link_actor::sym_link_actor(caf::actor_config& cfg, std::string name, std::string path, Flags f)
-	: super(cfg, std::move(name), f), path_(std::move(path))
+sym_link_impl::sym_link_impl(std::string name, std::string path, Flags f)
+	: super(std::move(name), f), path_(std::move(path))
 {}
 
-auto sym_link_actor::data() -> result_or_err<sp_obj> {
+sym_link_impl::sym_link_impl()
+	: super()
+{}
+
+auto sym_link_impl::data() -> result_or_err<sp_obj> {
 	//pdbg() << "sym_link::aimpl: data()" << std::endl;
-	using result_t = result_or_errbox<sp_obj>;
 
 	// cannot dereference dangling sym link
 	const auto parent = owner_.lock();
 	if(!parent) return tl::make_unexpected(error::quiet(Error::UnboundSymLink));
 	const auto src_link = deref_path(path_, parent);
 	return src_link ?
-		result_t(src_link->data_ex()) :
+		src_link->data_ex() :
 		tl::make_unexpected(error::quiet(Error::LinkExpired));
 }
 
@@ -43,16 +48,16 @@ auto sym_link_actor::data() -> result_or_err<sp_obj> {
 //
 /// ctor -- pointee is specified by string path
 sym_link::sym_link(std::string name, std::string path, Flags f)
-	: link(spawn_lactor<sym_link_actor>(std::move(name), std::move(path), f))
+	: link(std::make_shared<sym_link_impl>(std::move(name), std::move(path), f))
 {}
 /// ctor -- pointee is specified directly - absolute path will be stored
 sym_link::sym_link(std::string name, const sp_link& src, Flags f)
 	: sym_link(std::move(name), abspath(src), f)
 {}
 
-auto sym_link::pimpl() const -> sym_link_actor* {
-	return static_cast<sym_link_actor*>(link::pimpl());
-}
+sym_link::sym_link()
+	: super(std::make_shared<sym_link_impl>(), false)
+{}
 
 /// implement link's API
 sp_link sym_link::clone(bool deep) const {
@@ -62,6 +67,10 @@ sp_link sym_link::clone(bool deep) const {
 
 std::string sym_link::type_id() const {
 	return "sym_link";
+}
+
+auto sym_link::pimpl() const -> sym_link_impl* {
+	return static_cast<sym_link_impl*>(super::pimpl());
 }
 
 void sym_link::reset_owner(const sp_node& new_owner) {

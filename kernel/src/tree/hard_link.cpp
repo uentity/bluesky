@@ -17,18 +17,33 @@
 
 #include "link_actor.h"
 
+OMIT_OBJ_SERIALIZATION
+
 NAMESPACE_BEGIN(blue_sky::tree)
 
 /*-----------------------------------------------------------------------------
  *  hard_link
  *-----------------------------------------------------------------------------*/
 ///////////////////////////////////////////////////////////////////////////////
-//  actor
+//  impl
 //
-hard_link_actor::hard_link_actor(caf::actor_config& cfg, std::string name, sp_obj data, Flags f)
-	: super(cfg, std::move(name), data, f), data_(std::move(data))
+hard_link_impl::hard_link_impl(std::string name, sp_obj data, Flags f)
+	: super(std::move(name), data, f)
 {
-	if(data_) {
+	set_data(std::move(data));
+}
+
+hard_link_impl::hard_link_impl()
+	: super()
+{}
+
+auto hard_link_impl::data() -> result_or_err<sp_obj> { return data_; }
+
+auto hard_link_impl::set_data(sp_obj obj) -> void {
+	auto guard = std::unique_lock{ guard_ };
+
+	inode_ = make_inode(obj, inode_);
+	if(data_ = std::move(obj); data_) {
 		// set status silently
 		rs_reset(Req::Data, ReqReset::Always | ReqReset::Silent, ReqStatus::OK);
 		rs_reset(
@@ -38,23 +53,20 @@ hard_link_actor::hard_link_actor(caf::actor_config& cfg, std::string name, sp_ob
 	}
 }
 
-auto hard_link_actor::data() -> result_or_err<sp_obj> { return data_; }
-
-// install simple behavior
-auto hard_link_actor::make_behavior() -> behavior_type {
-	return make_simple_behavior();
+auto hard_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
+	return spawn_lactor<simple_link_actor>(std::move(limpl));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  class
 //
 hard_link::hard_link(std::string name, sp_obj data, Flags f) :
-	ilink(spawn_lactor<hard_link_actor>(std::move(name), data, f))
+	super(std::make_shared<hard_link_impl>(std::move(name), data, f))
 {}
 
-auto hard_link::pimpl() const -> hard_link_actor* {
-	return static_cast<hard_link_actor*>(ilink::pimpl());
-}
+hard_link::hard_link() :
+	super(std::make_shared<hard_link_impl>(), false)
+{}
 
 link::sp_link hard_link::clone(bool deep) const {
 	return std::make_shared<hard_link>(
@@ -68,49 +80,62 @@ std::string hard_link::type_id() const {
 	return "hard_link";
 }
 
+auto hard_link::pimpl() const -> hard_link_impl* {
+	return static_cast<hard_link_impl*>(super::pimpl());
+}
+
 /*-----------------------------------------------------------------------------
  *  weak_link
  *-----------------------------------------------------------------------------*/
 ///////////////////////////////////////////////////////////////////////////////
-//  actor
+//  impl + actor
 //
-weak_link_actor::weak_link_actor(caf::actor_config& cfg, std::string name, const sp_obj& obj, Flags f)
-	: super(cfg, std::move(name), obj, f), data_(obj)
+weak_link_impl::weak_link_impl(std::string name, const sp_obj& obj, Flags f)
+	: super(std::move(name), obj, f)
 {
-	data().map([this](const sp_obj& obj) {
-		if(obj) {
-			// set status silently
-			rs_reset(Req::Data, ReqReset::Always | ReqReset::Silent, ReqStatus::OK);
-			rs_reset(
-				Req::DataNode, ReqReset::Always | ReqReset::Silent,
-				obj->is_node() ? ReqStatus::OK : ReqStatus::Error
-			);
-		}
-	});
+	set_data(obj);
 }
 
-auto weak_link_actor::data() -> result_or_err<sp_obj> {
+weak_link_impl::weak_link_impl()
+	: super()
+{}
+
+auto weak_link_impl::data() -> result_or_err<sp_obj> {
 	using result_t = result_or_err<sp_obj>;
 	return data_.expired() ?
 		tl::make_unexpected(error::quiet(Error::LinkExpired)) :
 		result_t{ data_.lock() };
 }
 
-// install simple behavior
-auto weak_link_actor::make_behavior() -> behavior_type {
-	return make_simple_behavior();
+auto weak_link_impl::set_data(const sp_obj& obj) -> void {
+	auto guard = std::unique_lock{ guard_ };
+
+	inode_ = make_inode(obj, inode_);
+	if(data_ = obj; obj) {
+		// set status silently
+		rs_reset(Req::Data, ReqReset::Always | ReqReset::Silent, ReqStatus::OK);
+		rs_reset(
+			Req::DataNode, ReqReset::Always | ReqReset::Silent,
+			obj->is_node() ? ReqStatus::OK : ReqStatus::Error
+		);
+	}
+}
+
+auto weak_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
+	return spawn_lactor<simple_link_actor>(std::move(limpl));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  class
 //
 weak_link::weak_link(std::string name, const sp_obj& data, Flags f) :
-	ilink(spawn_lactor<weak_link_actor>(std::move(name), data, f))
+	super(std::make_shared<weak_link_impl>(std::move(name), data, f))
 {}
 
-auto weak_link::pimpl() const -> weak_link_actor* {
-	return static_cast<weak_link_actor*>(ilink::pimpl());
-}
+weak_link::weak_link() :
+	super(std::make_shared<weak_link_impl>(), false)
+{}
+
 link::sp_link weak_link::clone(bool deep) const {
 	// cannot make deep copy of object pointee
 	return deep ? nullptr : std::make_shared<weak_link>(name(), pimpl()->data_.lock(), flags());
@@ -118,6 +143,10 @@ link::sp_link weak_link::clone(bool deep) const {
 
 std::string weak_link::type_id() const {
 	return "weak_link";
+}
+
+auto weak_link::pimpl() const -> weak_link_impl* {
+	return static_cast<weak_link_impl*>(super::pimpl());
 }
 
 auto weak_link::propagate_handle() -> result_or_err<sp_node> {
