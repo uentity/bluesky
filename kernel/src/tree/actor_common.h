@@ -23,9 +23,12 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include <optional>
+
 #define OMIT_OBJ_SERIALIZATION                                                         \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::error::box)                                  \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::sp_obj)                                      \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::inodeptr)                              \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_link)                               \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_node)                               \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::sp_obj>)        \
@@ -44,32 +47,35 @@ inline const std::string nil_grp_id = "<null>";
 template<typename R, typename Actor, typename... Args>
 inline auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 	auto x = factor(std::forward<Args>(args)...);
+
+	// caf err passtrough
 	const auto x_err = [&] {
 		return tl::make_unexpected(error{
 			x.error().code(), factor.handle().home_system().render(x.error())
 		});
 	};
-
+	// try extract value
 	using x_value_t = typename decltype(x)::value_type;
+	const auto extract_value = [&](auto& res) {
+		if(!x) res.emplace(x_err());
+		if constexpr(std::is_same_v<x_value_t, caf::message>)
+			x->extract({ [&](R value) {
+				res.emplace(std::move(value));
+			} });
+		else
+			res.emplace(std::move(*x));
+		if(!res) res.emplace( tl::make_unexpected(error{ "actorf: wrong result type R specified" }) );
+	};
+
 	if constexpr(tl::detail::is_expected<R>::value) {
-		if(!x) return R{x_err()};
-		if constexpr(std::is_same_v<x_value_t, caf::message>) {
-			using T = typename R::value_type;
-			R res;
-			x->extract({ [&](T value) { res = std::move(value); } });
-			return res;
-		}
-		else return std::move(*x);
+		std::optional<R> res;
+		extract_value(res);
+		return std::move(*res);
 	}
 	else {
-		using result_t = result_or_err<R>;
-		if(!x) return result_t{x_err()};
-		if constexpr(std::is_same_v<x_value_t, caf::message>) {
-			result_t res;
-			x->extract({ [&](R value) { res = std::move(value); } });
-			return res;
-		}
-		else return result_t{ std::move(*x) };
+		std::optional<result_or_err<R>> res;
+		extract_value(res);
+		return std::move(*res);
 	}
 }
 
