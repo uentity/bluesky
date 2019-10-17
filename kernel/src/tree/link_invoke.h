@@ -63,6 +63,8 @@ private:
 
 using Req = link::Req;
 using ReqStatus = link::ReqStatus;
+using status_changed_fh = function_view< void(ReqStatus, ReqStatus) >;
+inline constexpr auto nop_status_handler = [](ReqStatus, ReqStatus) {};
 
 // helper struct that contain all status-related bits together
 struct status_handle {
@@ -77,7 +79,7 @@ struct status_handle {
 template<typename L, typename F>
 static auto link_invoke(
 	L* lnk, F f, status_handle& status, bool wait_if_busy = false,
-	function_view< void(ReqStatus, ReqStatus) > status_changed_f = [](ReqStatus, ReqStatus) {}
+	status_changed_fh status_changed_f = nop_status_handler
 ) -> decltype(f(lnk)) {
 	using ret_t = decltype(f(lnk));
 
