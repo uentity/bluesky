@@ -160,7 +160,7 @@ public:
 		//links_.get<Key_tag<K>>().erase(r.first, r.second);
 	}
 
-	auto insert(sp_link L, const InsertPolicy pol) -> insert_status<Key::ID>;
+	auto insert(sp_link L, const InsertPolicy pol, const sp_node& owner = nullptr) -> insert_status<Key::ID>;
 
 	template<Key K>
 	bool rename(iterator<K>&& pos, std::string&& new_name) {

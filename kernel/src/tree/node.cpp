@@ -216,10 +216,11 @@ range<Key::Type> node::equal_type(const std::string& type_id) const {
 //  insert
 //
 insert_status<Key::ID> node::insert(sp_link l, InsertPolicy pol) {
-	auto res = pimpl_->insert(l, pol);
+	auto self = bs_shared_this<node>();
+	auto res = pimpl_->insert(l, pol, self);
 	if(res.second) {
 		// inserted link postprocessing
-		node_actor::adjust_inserted_link(*res.first, bs_shared_this<node>());
+		node_actor::adjust_inserted_link(*res.first, self);
 	}
 	else if(enumval(pol & InsertPolicy::Merge) && res.first != end<Key::ID>()) {
 		// check if we need to deep merge given links
@@ -263,7 +264,7 @@ insert_status<Key::ID> node::insert(std::string name, sp_obj obj, InsertPolicy p
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  erase 
+//  erase
 //
 void node::erase(const std::size_t idx) {
 	auto solo = std::lock_guard{ pimpl_->links_guard_ };
@@ -513,7 +514,7 @@ BS_API void adjust_cloned_node(const sp_obj& pnode) {
 	if(pnode->is_node())
 		std::static_pointer_cast<tree::node>(pnode)->propagate_owner();
 }
-	
+
 } /* namespace detail */
 
 NAMESPACE_END(blue_sky)

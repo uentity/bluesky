@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "node_actor.h"
+#include "link_impl.h"
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/serialize/cafbind.h>
@@ -279,7 +280,46 @@ auto node_actor::stop_retranslate_from(const sp_link& L) -> void {
 ///////////////////////////////////////////////////////////////////////////////
 //  leafs insert & erase
 //
-auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key::ID> {
+auto node_actor::insert(sp_link L, const InsertPolicy pol, const sp_node& n) -> insert_status<Key::ID> {
+	// can't move persistent node from it's owner
+	if(!L || !accepts(L) || (L->flags() & Flags::Persistent && L->owner()))
+		return { end<Key::ID>(), false };
+
+	// make insertion in one single transaction
+	auto solo = std::lock_guard{ links_guard_ };
+	auto& Limpl = *L->pimpl();
+	// [NOTE] shared lock is enough to prevent parallel modification
+	// and required to allow 'reading' functions like `oid()` share a lock
+	auto Lguard = std::shared_lock{ Limpl.guard_ };
+
+	// check if we have duplicated name
+	iterator<Key::ID> dup;
+	if(enumval(pol & 3) > 0) {
+		dup = find<Key::Name, Key::ID>(Limpl.name_);
+		if(dup != end<Key::ID>() && (*dup)->id() != Limpl.id_) {
+			bool unique_found = false;
+			// first check if dup names are prohibited
+			if(enumval(pol & InsertPolicy::DenyDupNames)) return {dup, false};
+			else if(enumval(pol & InsertPolicy::RenameDup) && !(Limpl.flags_ & Flags::Persistent)) {
+				// try to auto-rename link
+				std::string new_name;
+				for(int i = 0; i < 10000; ++i) {
+					new_name = Limpl.name_ + '_' + std::to_string(i);
+					if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
+						// we've found a unique name
+						// [NOTE] rename is executed by actor in separate thread that will wait
+						// until `Lguard` is released
+						L->rename(std::move(new_name));
+						unique_found = true;
+						break;
+					}
+				}
+			}
+			// if no unique name was found - return fail
+			if(!unique_found) return {dup, false};
+		}
+	}
+
 	const auto make_result = [=](insert_status<Key::ID>&& res) {
 		if(res.second) {
 			const auto& child_L = *res.first;
@@ -291,37 +331,13 @@ auto node_actor::insert(sp_link L, const InsertPolicy pol) -> insert_status<Key:
 		return std::move(res);
 	};
 
-	// can't move persistent node from it's owner
-	if(!L || !accepts(L) || (L->flags() & Flags::Persistent && L->owner()))
-		return { end<Key::ID>(), false };
-
-	// make insertion in one single transaction
-	auto solo = std::lock_guard{ links_guard_ };
-	// check if we have duplication name
-	iterator<Key::ID> dup;
-	if(enumval(pol & 3) > 0) {
-		dup = find<Key::Name, Key::ID>(L->name());
-		if(dup != end<Key::ID>() && (*dup)->id() != L->id()) {
-			bool unique_found = false;
-			// first check if dup names are prohibited
-			if(enumval(pol & InsertPolicy::DenyDupNames)) return {dup, false};
-			else if(enumval(pol & InsertPolicy::RenameDup) && !(L->flags() & Flags::Persistent)) {
-				// try to auto-rename link
-				std::string new_name;
-				for(int i = 0; i < 10000; ++i) {
-					new_name = L->name() + '_' + std::to_string(i);
-					if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
-						// we've found a unique name
-						L->rename(std::move(new_name));
-						unique_found = true;
-						break;
-					}
-				}
-			}
-			// if no unique name was found - return fail
-			if(!unique_found) return {dup, false};
-		}
-	}
+	// sym links can return proper OID only if owner is valid
+	auto prev_owner = Limpl.owner_;
+	if(n) Limpl.owner_ = n;
+	// restore prev owner on exit
+	auto finally = scope_guard{ [&]{
+		Limpl.owner_ = prev_owner;
+	}};
 
 	// check for duplicating OID
 	auto& I = links_.get<Key_tag<Key::ID>>();
