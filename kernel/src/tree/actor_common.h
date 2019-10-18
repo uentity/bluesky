@@ -49,16 +49,17 @@ template<typename R, typename Actor, typename... Args>
 inline auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 	auto x = factor(std::forward<Args>(args)...);
 
-	// caf err passtrough
-	const auto x_err = [&] {
-		return tl::make_unexpected(error{
-			x.error().code(), factor.handle().home_system().render(x.error())
-		});
-	};
 	// try extract value
 	using x_value_t = typename decltype(x)::value_type;
 	const auto extract_value = [&](auto& res) {
-		if(!x) res.emplace(x_err());
+		// caf err passtrough
+		if(!x) {
+			res.emplace(tl::make_unexpected(error{
+				x.error().code(), factor.handle().home_system().render(x.error())
+			}));
+			return;
+		}
+
 		if constexpr(std::is_same_v<x_value_t, caf::message>)
 			x->extract({ [&](R value) {
 				res.emplace(std::move(value));
