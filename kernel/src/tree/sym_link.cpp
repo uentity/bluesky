@@ -21,7 +21,7 @@ OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
-//  impl + actor
+//  impl
 //
 sym_link_impl::sym_link_impl(std::string name, std::string path, Flags f)
 	: super(std::move(name), f), path_(std::move(path))
@@ -32,8 +32,6 @@ sym_link_impl::sym_link_impl()
 {}
 
 auto sym_link_impl::data() -> result_or_err<sp_obj> {
-	//pdbg() << "sym_link::aimpl: data()" << std::endl;
-
 	// cannot dereference dangling sym link
 	const auto parent = owner_.lock();
 	if(!parent) return tl::make_unexpected(error::quiet(Error::UnboundSymLink));
@@ -62,7 +60,7 @@ sym_link::sym_link()
 /// implement link's API
 sp_link sym_link::clone(bool deep) const {
 	// no deep copy support for symbolic link
-	return std::make_shared<sym_link>(name(), pimpl()->path_, flags());
+	return std::make_shared<sym_link>(pimpl()->name_, pimpl()->path_, flags());
 }
 
 std::string sym_link::type_id() const {
@@ -81,7 +79,8 @@ void sym_link::reset_owner(const sp_node& new_owner) {
 
 bool sym_link::check_alive() {
 	auto res = bool(deref_path(pimpl()->path_, owner()));
-	rs_reset(Req::Data, res ? ReqStatus::OK : ReqStatus::Error);
+	auto S = res ? ReqStatus::OK : ReqStatus::Error;
+	rs_reset_if_neq(Req::Data, S, S);
 	return res;
 }
 
