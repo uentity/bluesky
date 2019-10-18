@@ -112,8 +112,9 @@ auto link::rs_reset_if_eq(Req request, ReqStatus self, ReqStatus new_rs) -> ReqS
 }
 
 auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) -> ReqStatus {
-	return actorf<ReqStatus>(factor_, request, ReqReset::IfNeq, new_rs, self)
-		.value_or(ReqStatus::Error);
+	return actorf<ReqStatus>(
+		factor_, a_lnk_status(), request, ReqReset::IfNeq, new_rs, self
+	).value_or(ReqStatus::Error);
 }
 
 /*-----------------------------------------------------------------------------
@@ -121,13 +122,11 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) -> Req
  *-----------------------------------------------------------------------------*/
 // get link's object ID
 std::string link::oid() const {
-	//pimpl_->pdbg() << "link: oid()" << std::endl;
 	return actorf<std::string>(factor_, a_lnk_oid())
 		.value_or(nil_oid);
 }
 
 std::string link::obj_type_id() const {
-	//pimpl_->pdbg() << "link: obj_type_id()" << std::endl;
 	return actorf<std::string>(factor_, a_lnk_otid())
 		.value_or( type_descriptor::nil().name );
 }
