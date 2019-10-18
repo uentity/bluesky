@@ -10,13 +10,12 @@
 
 #include <bs/tree/link.h>
 #include <bs/tree/node.h>
-#include <bs/kernel/config.h>
+#include <bs/kernel/radio.h>
 
 #include "actor_common.h"
 #include "link_impl.h"
 
 #include <caf/actor_system.hpp>
-#include <caf/actor_ostream.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace tree::detail;
@@ -33,9 +32,6 @@ public:
 	using super = caf::event_based_actor;
 	using behavior_type = super::behavior_type;
 
-	// [DEBUG]
-	auto pdbg() -> caf::actor_ostream;
-
 	link_actor(caf::actor_config& cfg, sp_limpl Limpl);
 	// virtual dtor
 	virtual ~link_actor();
@@ -49,11 +45,6 @@ public:
 	inline auto handle() -> caf::actor {
 		return caf::actor_cast<caf::actor>(address());
 	}
-
-	auto rs_reset(
-		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void
-	) -> ReqStatus;
-
 
 	/// get pointer to object link is pointing to -- slow, never returns invalid (NULL) sp_obj
 	virtual auto data_ex(bool wait_if_busy = true) -> result_or_err<sp_obj>;
@@ -70,7 +61,10 @@ public:
 	// Generic impl of link's beahvior suitable for all link types
 	auto make_generic_behavior() -> behavior_type;
 
-protected:
+	auto on_exit() -> void override;
+
+	auto name() const -> const char* override;
+
 	/// raw implementation that don't manage status
 	virtual auto data_node() -> result_or_err<sp_node>;
 

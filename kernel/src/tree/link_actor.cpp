@@ -17,12 +17,37 @@
 
 #include <boost/uuid/uuid_generators.hpp>
 
+#define DEBUG_ACTOR 0
+
+#if DEBUG_ACTOR == 1
+#include <caf/actor_ostream.hpp>
+#else
+#include <fstream>
+#endif
+
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 
-// global random UUID generator for BS links
-static boost::uuids::random_generator gen;
+NAMESPACE_BEGIN()
+#if DEBUG_ACTOR == 1
+
+auto adbg(link_actor* A) -> caf::actor_ostream {
+	auto guard = std::shared_lock{A->impl.guard_};
+	return caf::aout(A) << "link " << to_string(A->impl.id_) <<
+		", name " << A->impl.name_ << ": ";
+}
+
+#else
+
+auto adbg(link_actor*) -> std::ostream& {
+	static auto ignore = std::ofstream{"/dev/null"};
+	return ignore;
+}
+
+#endif
+NAMESPACE_END()
+
 /*-----------------------------------------------------------------------------
  *  link
  *-----------------------------------------------------------------------------*/
@@ -40,7 +65,7 @@ link_actor::link_actor(caf::actor_config& cfg, sp_limpl Limpl)
 		impl.self_grp = system().groups().get_local(grp_id);
 		join(impl.self_grp);
 	}
-	pdbg() << "link joined self group " << impl.self_grp.get()->identifier() << std::endl;
+	adbg(this) << "joined self group " << impl.self_grp.get()->identifier() << std::endl;
 
 	// on exit say goodbye to self group
 	set_exit_handler([this](caf::exit_msg& er) {
@@ -48,17 +73,36 @@ link_actor::link_actor(caf::actor_config& cfg, sp_limpl Limpl)
 		default_exit_handler(this, er);
 	});
 
-	//bind_new_id();
+	// prevent termination in case some errors happens in group members
+	// for ex. if they receive unexpected messages (translators normally do)
+	set_error_handler([this](caf::error er) {
+		switch(static_cast<caf::sec>(er.code())) {
+		case caf::sec::unexpected_message :
+			break;
+		default:
+			default_error_handler(this, er);
+		}
+	});
+
+	set_default_handler(caf::drop);
 }
 
 link_actor::~link_actor() = default;
+
+auto link_actor::name() const -> const char* {
+	return "link_actor";
+}
+
+auto link_actor::on_exit() -> void {
+	adbg(this) << "dies" << std::endl;
+}
 
 auto link_actor::goodbye() -> void {
 	if(impl.self_grp) {
 		// say goodbye to self group
 		send(impl.self_grp, a_bye());
 		leave(impl.self_grp);
-		aout(this) << "link left self group " << impl.self_grp.get()->identifier() << std::endl;
+		adbg(this) << "left self group " << impl.self_grp.get()->identifier() << std::endl;
 		//	<< "\n" << kernel::tools::get_backtrace(30, 4) << std::endl;
 	}
 }
@@ -66,8 +110,8 @@ auto link_actor::goodbye() -> void {
 auto link_actor::bind_new_id() -> void {
 	// leave old group
 	auto new_id = to_string(impl.id_);
-	auto dout = aout(this);
-	dout << "link bind: ";
+	auto&& dout = adbg(this);
+	dout << "bind: ";
 	if(impl.self_grp) {
 		if(new_id == impl.self_grp.get()->identifier()) return;
 		// rebind friends to new ID
@@ -87,31 +131,9 @@ auto link_actor::bind_new_id() -> void {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  manual status management
-//
-auto link_actor::pdbg() -> caf::actor_ostream {
-	auto guard = std::shared_lock{impl.guard_};
-	return caf::aout(this) << to_string(impl.id_) << " "; // << master_->type_id() << ": ";
-}
-
-auto link_actor::rs_reset(
-	Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs
-) -> ReqStatus {
-	return impl.rs_reset(
-		request, cond, new_rs, old_rs,
-		[this](Req req, ReqStatus new_s, ReqStatus old_s) {
-			send(impl.self_grp, a_lnk_status(), a_ack(), req, new_s, old_s);
-		}
-	);
-}
-
-///////////////////////////////////////////////////////////////////////////////
 //  data & data_node
 //
 auto link_actor::data_ex(bool wait_if_busy) -> result_or_err<sp_obj> {
-	//pdbg() << "aimpl: member data_ex() status = " <<
-	//	(int)impl.status_[0].value << (int)impl.status_[1].value << std::endl;
-
 	// never returns NULL object
 	return link_invoke(
 		pimpl_.get(),
@@ -130,9 +152,6 @@ auto link_actor::data_ex(bool wait_if_busy) -> result_or_err<sp_obj> {
 }
 
 auto link_actor::data_node_ex(bool wait_if_busy) -> result_or_err<sp_node> {
-	//pdbg() << "aimpl: member data_node_ex() status = " <<
-	//	(int)impl.status_[0].value << (int)impl.status_[1].value << std::endl;
-
 	// never returns NULL node
 	return link_invoke(
 		this,
@@ -168,11 +187,14 @@ auto link_actor::make_behavior() -> behavior_type {
 
 auto link_actor::make_generic_behavior() -> behavior_type { return {
 	/// skip `bye` message (should always come from myself)
-	[](a_bye) { },
+	[this](a_bye) {
+		adbg(this) << "<- a_lnk_bye" << std::endl;
+	},
 
 	/// get id
 	[this](a_lnk_id) {
 		// ID change is very special op (only by deserialization), so don't lock
+		adbg(this) << "<- a_lnk_id: " << to_string(impl.id_) << std::endl;
 		return impl.id_;
 	},
 
@@ -184,24 +206,26 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 	/// get name
 	[this](a_lnk_name) {
 		auto guard = std::shared_lock{impl.guard_};
+		adbg(this) << "<- a_lnk_name: " << impl.name_ << std::endl;
 		return impl.name_;
 	},
 
 	/// rename
 	[this](a_lnk_rename, std::string new_name, bool silent) {
 		auto solo = std::unique_lock{ impl.guard_ };
+		adbg(this) << "<- a_lnk_rename: " << impl.name_ << " -> " << new_name <<
+			(silent ? " silent" : " loud") << std::endl;
+
 		auto old_name = impl.name_;
 		impl.name_ = std::move(new_name);
 		// send rename ack message
 		if(!silent) {
-			//pdbg() << "=> lnk_rename: = " << impl.name_ << " -> " << new_name <<
-			//	(silent ? " silent" : " loud") << std::endl;
 			send(impl.self_grp, a_lnk_rename(), a_ack(), impl.name_, std::move(old_name));
 		}
 	},
 	// rename ack
 	[this](a_lnk_rename, a_ack, std::string new_name, const std::string& old_name) {
-		//pdbg() << "=> lnk_rename ack: = " << old_name << " -> " << new_name << std::endl;
+		adbg(this) << "<- a_lnk_rename ack: " << old_name << " -> " << new_name << std::endl;
 		if(current_sender() != this) {
 			send(this, a_lnk_rename(), std::move(new_name), true);
 		}
@@ -209,14 +233,22 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 
 	// change status
 	[this](a_lnk_status, Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs) {
-		return rs_reset(req, cond, new_rs, prev_rs);
+		adbg(this) << "<- a_lnk_status: " <<
+			(req == Req::Data ? " Data " : " DataNode ") <<
+			int(prev_rs) << " -> " << int(new_rs) << std::endl;
+		return impl.rs_reset(
+			req, cond, new_rs, prev_rs,
+			[this](Req req, ReqStatus new_s, ReqStatus old_s) {
+				send(impl.self_grp, a_lnk_status(), a_ack(), req, new_s, old_s);
+			}
+		);
 	},
 
 	// [NOTE] nop for a while
-	[](a_lnk_status, a_ack, Req req, ReqStatus new_s, ReqStatus prev_s) {
-		//pdbg() << " => a_lnk_status ack: " <<
-		//	(req == Req::Data ? " Data " : " DataNode ") <<
-		//	int(prev_s) << " -> " << int(new_s) << std::endl;
+	[this](a_lnk_status, a_ack, Req req, ReqStatus new_s, ReqStatus prev_s) {
+		adbg(this) << "<- a_lnk_status ack: " <<
+			(req == Req::Data ? " Data " : " DataNode ") <<
+			int(prev_s) << " -> " << int(new_s) << std::endl;
 	},
 
 	// get oid
@@ -226,38 +258,40 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 		.map([](const sp_obj& obj) {
 			return obj->id();
 		}).value_or(nil_oid);
-		pdbg() << "=> a_lnk_oid: " << res << std::endl;
-		//pdbg() << "=> a_lnk_oid: " << (obj ? (void*)obj.value().get() : (void*)0) << " " << res << std::endl;
+		adbg(this) << "<- a_lnk_oid: " << res << std::endl;
+		//adbg(this) << "=> a_lnk_oid: " << (obj ? (void*)obj.value().get() : (void*)0) << " " << res << std::endl;
 		return res;
 	},
 
 	// get object type_id
 	[this](a_lnk_otid) -> std::string {
-		//pdbg() << "aimpl: obj type id()" << std::endl;
-		return data_ex(false)
+		//return data_ex(false)
+		auto res = data_ex(false)
 		.map([](const sp_obj& obj) {
 			return obj->type_id();
-		}).value_or(nil_oid);
+		}).value_or(type_descriptor::nil().name);
+		adbg(this) << "<- a_lnk_otid: " << res << std::endl;
+		return res;
 	},
 
 	// obtain inode
 	[this](a_lnk_inode) -> result_or_errbox<inodeptr> {
-		//pdbg() << "aimpl: inode()" << std::endl;
+		adbg(this) << "<- a_lnk_inode" << std::endl;
 		return impl.get_inode();
 	},
 
 	// default handler for `data_node` that works via `data`
 	[this](a_lnk_dnode, bool wait_if_busy) -> result_or_errbox<sp_node> {
-		//pdbg() << "aimpl: data_node() status = " <<
-		//	(int)impl.status_[0].value << (int)impl.status_[1].value << std::endl;
+		adbg(this) << "<- a_lnk_dnode, status = " <<
+			(int)impl.status_[0].value << (int)impl.status_[1].value << std::endl;
 
 		return data_node_ex(wait_if_busy);
 	},
 
 	// default `data` handler calls virtual `data()` function that by default returns nullptr
-	[this](a_lnk_data, bool wait_if_busy) -> caf::result< result_or_errbox<sp_obj> > {
-		//pdbg() << "aimpl: data() status =" <<
-		//	(int)impl.status_[0].value << (int)impl.status_[1].value << std::endl;
+	[this](a_lnk_data, bool wait_if_busy) -> result_or_errbox<sp_obj> {
+		adbg(this) << "<- a_lnk_data, status = " <<
+			(int)impl.status_[0].value << (int)impl.status_[1].value << std::endl;
 
 		return data_ex(wait_if_busy);
 	}

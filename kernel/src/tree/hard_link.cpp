@@ -50,6 +50,8 @@ auto hard_link_impl::set_data(sp_obj obj) -> void {
 			Req::DataNode, ReqReset::Always | ReqReset::Silent,
 			data_->is_node() ? ReqStatus::OK : ReqStatus::Error
 		);
+		//std::cout << "hard link " << to_string(id_) << ", name " << name_ << ": impl created " <<
+		//	(int)status_[0].value << (int)status_[1].value << std::endl;
 	}
 }
 

@@ -17,6 +17,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <caf/actor_ostream.hpp>
 #include <caf/stateful_actor.hpp>
+#include <caf/others.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
@@ -118,13 +119,15 @@ struct link_rsl_state : node_rsl_state {
 // actor that retranslate some of link's messages attaching a link's ID to them
 auto link_retranslator(caf::stateful_actor<link_rsl_state>* self, caf::group node_grp, link::id_type lid)
 -> caf::behavior {
+	// silently drop all other messages not in my character
+	self->set_default_handler(caf::drop);
+
 	// remember target node group
 	self->state.tgt_grp = std::move(node_grp);
 	// connect source
-	self->send(self, a_bind_id(), std::move(lid));
-	//self->state.src_grp = system().groups().get_local(to_string(lid));
-	//self->state.src_id = std::move(lid);
-	//self->join(self->state.src_grp);
+	self->state.src_grp = system().groups().get_local(to_string(lid));
+	self->state.src_id = std::move(lid);
+	self->join(self->state.src_grp);
 	//aout(self) << "link retranslator started: " << self->state.src_grp_id() << " -> " <<
 	//	self->state.tgt_grp_id() << std::endl;
 
@@ -132,36 +135,20 @@ auto link_retranslator(caf::stateful_actor<link_rsl_state>* self, caf::group nod
 	const auto sid = self->id();
 	system().registry().put(sid, self);
 
-	// silently drop all other messages not in my character
-	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
-		return caf::drop(self, mv);
-	});
-
 	return {
-		// rebind source group to new ID after link
-		[=](a_bind_id, link::id_type new_lid) {
-			if(to_string(new_lid) == self->state.src_grp_id()) return;
+		// quit after source
+		[=](a_bye, a_ack) {
 			self->leave(self->state.src_grp);
-			self->state.src_grp = system().groups().get_local(to_string(new_lid));
-			self->state.src_id = std::move(new_lid);
-			self->join(self->state.src_grp);
-			aout(self) << "link retranslator (re)started: " << self->state.src_grp_id() <<
-				" -> " << self->state.tgt_grp_id() << std::endl;
+			system().registry().erase(sid);
+			//aout(self) << "link retranslator quit: " << to_string(self->state.src_id) <<
+			//	" -> " << self->state.tgt_grp_id() << std::endl;
 		},
 
 		// rebind target group to new ID after node
 		[=](a_bind_id, a_ack, const std::string& new_nid) {
 			if(new_nid == self->state.tgt_grp_id() || new_nid == nil_oid) return;
-			aout(self) << "link retranslator rebound target: " << new_nid << std::endl;
+			//aout(self) << "link retranslator rebound target: " << new_nid << std::endl;
 			self->state.tgt_grp = system().groups().get_local(new_nid);
-		},
-
-		// quit after source
-		[=](a_bye, a_ack) {
-			self->leave(self->state.src_grp);
-			system().registry().erase(sid);
-			aout(self) << "link retranslator quit: " << to_string(self->state.src_id) <<
-				" -> " << self->state.tgt_grp_id() << std::endl;
 		},
 
 		// retranslate events
@@ -207,14 +194,14 @@ auto node_retranslator(caf::stateful_actor<node_rsl_state>* self, caf::group nod
 			self->leave(self->state.src_grp);
 			self->state.src_grp = system().groups().get_local(new_sid);
 			self->join(self->state.src_grp);
-			aout(self) << "node retranslator (re)started: " << new_sid <<
-				" -> " << self->state.tgt_grp_id() << std::endl;
+			//aout(self) << "node retranslator (re)started: " << new_sid <<
+			//	" -> " << self->state.tgt_grp_id() << std::endl;
 		},
 
 		// rebind target group to new ID after node
 		[=](a_bind_id, a_ack, const std::string& new_tid) {
 			if(new_tid == self->state.tgt_grp_id() || new_tid == nil_oid) return;
-			aout(self) << "node retranslator rebound target: " << new_tid << std::endl;
+			//aout(self) << "node retranslator rebound target: " << new_tid << std::endl;
 			self->state.tgt_grp = system().groups().get_local(new_tid);
 		},
 
@@ -222,8 +209,8 @@ auto node_retranslator(caf::stateful_actor<node_rsl_state>* self, caf::group nod
 		[=](a_bye, a_ack) {
 			self->leave(self->state.src_grp);
 			system().registry().erase(sid);
-			aout(self) << "node retranslator quit: " << self->state.src_grp_id() <<
-				" -> " << self->state.tgt_grp_id() << std::endl;
+			//aout(self) << "node retranslator quit: " << self->state.src_grp_id() <<
+			//	" -> " << self->state.tgt_grp_id() << std::endl;
 		},
 
 		// retranslate events
@@ -259,9 +246,10 @@ auto node_actor::retranslate_from(const sp_link& L) -> void {
 	const auto& lid = L->id();
 	axons_[lid] = {
 		system().spawn(link_retranslator, self_grp, lid).id(),
+		//-1
 		system().spawn(node_retranslator, self_grp, L->oid()).id()
 	};
-	caf::aout(this) << "*-* node: retranslating events from link " << L->name() << std::endl;
+	//caf::aout(this) << "*-* node: retranslating events from link " << L->name() << std::endl;
 }
 
 auto node_actor::stop_retranslate_from(const sp_link& L) -> void {
@@ -274,7 +262,7 @@ auto node_actor::stop_retranslate_from(const sp_link& L) -> void {
 	for(auto& ractor : { Reg.get(rs_ids.first), Reg.get(rs_ids.second) })
 		send(caf::actor_cast<caf::actor>(ractor), a_bye(), a_ack());
 	axons_.erase(L->id());
-	caf::aout(this) << "*-* node: stopped retranslating events from link " << L->name() << std::endl;
+	//caf::aout(this) << "*-* node: stopped retranslating events from link " << L->name() << std::endl;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

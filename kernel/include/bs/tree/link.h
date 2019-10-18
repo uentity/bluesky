@@ -134,9 +134,9 @@ public:
 		return data_node_ex().value_or(nullptr);
 	}
 
-	// enum core object data requests
+	/// enum object data requests
 	enum class Req { Data = 0, DataNode = 1 };
-	// states of single reuqest
+	/// states of reuqest
 	enum class ReqStatus { Void, Busy, OK, Error };
 
 	// get request status
