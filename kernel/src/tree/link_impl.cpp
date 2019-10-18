@@ -60,9 +60,10 @@ auto link_impl::rs_reset(
 	auto& S = status_[i];
 	auto guard = detail::scope_atomic_flag(S.flag);
 	const auto self = S.value;
-	if( cond == ReqReset::Always ||
-		(cond == ReqReset::IfEq && self == old_rs) ||
-		(cond == ReqReset::IfNeq && self != old_rs)
+	const auto reset_cond = cond & 3;
+	if( reset_cond == ReqReset::Always ||
+		(reset_cond == ReqReset::IfEq && self == old_rs) ||
+		(reset_cond == ReqReset::IfNeq && self != old_rs)
 	) {
 		S.value = new_rs;
 		// Data = OK will always fire (work as 'data changed' signal)
