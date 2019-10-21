@@ -146,21 +146,21 @@ auto bind_cafdict(py::handle scope, const std::string &name, Args&&... args) {
 	);
 
 	cl.def("__iter__",
-		   [](Map &m) { return make_key_iterator(m.begin(), m.end()); },
-		   keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */
+		[](Map &m) { return make_key_iterator(m.begin(), m.end()); },
+		keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */
 	);
 
 	cl.def("items",
-		   [](Map &m) { return make_iterator(m.begin(), m.end()); },
-		   keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */
+		[](Map &m) { return make_iterator(m.begin(), m.end()); },
+		keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */
 	);
 
 	cl.def("__getitem__",
 		[](Map &m, const KeyType &k) -> MappedType & {
 			auto it = m.find(k);
 			if (it == m.end())
-			  throw key_error();
-		   return it->second;
+				throw key_error();
+			return it->second;
 		},
 		return_value_policy::reference_internal // ref + keepalive
 	);

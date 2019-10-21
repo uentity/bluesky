@@ -26,17 +26,17 @@ auto py_kernel() -> kernel::detail::python_subsyst_impl& {
 	return kernel::detail::python_subsyst_impl::self();
 }
 
-auto adapt(sp_obj&& source) {
-	return py_kernel().adapt(std::move(source));
+auto adapt(sp_obj&& source, const link& L) {
+	return py_kernel().adapt(std::move(source), L);
 }
 
 template<typename T>
-auto adapt(result_or_err<T>&& source) {
-	return std::move(source).map([](T&& obj) {
+auto adapt(result_or_err<T>&& source, const link& L) {
+	return std::move(source).map([&](T&& obj) {
 		if constexpr(std::is_same_v<T, sp_obj>)
-			return py_kernel().adapt( std::move(obj) );
+			return py_kernel().adapt( std::move(obj), L );
 		else
-			return py_kernel().adapt( std::static_pointer_cast<objbase>(std::move(obj)) );
+			return py_kernel().adapt( std::static_pointer_cast<objbase>(std::move(obj)), L );
 	});
 }
 
@@ -44,7 +44,10 @@ using adapted_data_cb = std::function<void(result_or_err<py::object>, sp_clink)>
 
 auto adapt(adapted_data_cb&& f) {
 	return [f = std::move(f)](result_or_err<sp_obj> obj, sp_clink L) {
-		f(adapt(std::move(obj)), std::move(L));
+		if(L)
+			f(adapt(std::move(obj), *L), std::move(L));
+		else
+			f(tl::make_unexpected(error{ "Bad (null) link" }), std::move(L));
 	};
 }
 
@@ -105,10 +108,12 @@ void py_bind_link(py::module& m) {
 
 		// [NOTE] return adapted objects (and pass 'em to callbacks)
 		.def("data_ex",
-			[](const link& L, bool wait_if_busy) { return adapt(L.data_ex(wait_if_busy)); },
+			[](const link& L, bool wait_if_busy) {
+				return adapt(L.data_ex(wait_if_busy), L);
+			},
 			"wait_if_busy"_a = true
 		)
-		.def("data", [](const link& L){ return adapt(L.data()); })
+		.def("data", [](const link& L){ return adapt(L.data(), L); })
 		.def("data", [](const link& L, adapted_data_cb f, bool high_priority) {
 				return L.data(adapt(std::move(f)), high_priority);
 			}, "f"_a, "high_priority"_a = false
@@ -165,7 +170,9 @@ void py_bind_link(py::module& m) {
 	m.def("clear_adapters", []() { py_kernel().clear_adapters(); },
 		"Remove all adapters (including default) for BS types"
 	);
-	m.def("adapt", [](sp_obj obj) { return py_kernel().adapt(std::move(obj)); },
+	m.def("adapt", [](sp_obj source, const tree::link& L) {
+			return py_kernel().adapt(std::move(source), L);
+		}, "source"_a, "lnk"_a,
 		"Make adapter for given object"
 	);
 	m.def("adapted_types", []() { return py_kernel().adapted_types(); },

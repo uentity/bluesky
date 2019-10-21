@@ -10,11 +10,13 @@
 #include <bs/python/common.h>
 #include <bs/log.h>
 #include <bs/kernel/errors.h>
+#include <bs/tree/node.h>
 
 #include "kimpl.h"
 #include "python_subsyst_impl.h"
 #include "plugins_subsyst.h"
 
+#include <boost/uuid/uuid_io.hpp>
 #include <functional>
 
 #define WITH_KMOD \
@@ -57,8 +59,6 @@ std::string extract_root_name(const std::string& full_name) {
 
 	return pyl_name;
 }
-
-constexpr auto sp_obj_hash = std::hash<sp_obj>{};
 
 NAMESPACE_END()
 
@@ -109,7 +109,7 @@ END_WITH
 }
 
 auto python_subsyst_impl::register_adapter(std::string obj_type_id, adapter_fn f) -> void {
-	auto solo = std::lock_guard{ acache_guard_ };
+	auto solo = std::lock_guard{ guard_ };
 	if(f)
 		adapters_.insert_or_assign(std::move(obj_type_id), std::move(f));
 	else {
@@ -120,12 +120,12 @@ auto python_subsyst_impl::register_adapter(std::string obj_type_id, adapter_fn f
 }
 
 auto python_subsyst_impl::register_default_adapter(adapter_fn f) -> void {
-	auto solo = std::lock_guard{ acache_guard_ };
+	auto solo = std::lock_guard{ guard_ };
 	def_adapter_ = std::move(f);
 }
 
 auto python_subsyst_impl::clear_adapters() -> void {
-	auto solo = std::lock_guard{ acache_guard_ };
+	auto solo = std::lock_guard{ guard_ };
 	adapters_.clear();
 	def_adapter_ = nullptr;
 }
@@ -140,43 +140,87 @@ auto python_subsyst_impl::adapted_types() const -> std::vector<std::string> {
 	return res;
 }
 
-auto python_subsyst_impl::adapt(sp_obj source) -> py::object {
+auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::object {
 	if(!source) return py::none();
-	auto solo = std::lock_guard{ acache_guard_ };
+	auto solo = std::lock_guard{ guard_ };
 
-	// check if adpater already created for given object
-	const auto source_key = sp_obj_hash(source);
-	auto cached_A = acache_.find(source_key);
-	if(cached_A != acache_.end())
-		return cached_A->second;
+	// check if adapter already created for given object
+	auto slid = to_string(L.id());
+	if(auto cached_A = acache_.find(source.get()); cached_A != acache_.end()) {
+		// inc ref counter for new link
+		if(lnk2obj_.try_emplace(std::move(slid), cached_A->first).second)
+			++cached_A->second.second;
+		return cached_A->second.first;
+	}
+
+	// handler for link erased event responsible for deleting cached adapters
+	static auto on_link_erase = [](const tree::sp_node&, tree::Event, prop::propdict params) {
+		// first params elem is ID of deleted link
+		std::vector<std::string> lids;
+		if(!extract(params, "lids", lids)) return;
+
+		auto& self = python_subsyst_impl::self();
+		auto solo = std::lock_guard{ self.guard_ };
+		for(const auto& lid : lids) {
+			auto cached_L = self.lnk2obj_.find(lid);
+			if(cached_L == self.lnk2obj_.end()) continue;
+
+			// kill cache entry if ref counter reaches zero
+			if(auto cached_A = self.acache_.find(cached_L->second); cached_A != self.acache_.end()) {
+				if(--cached_A->second.second == 0)
+					self.acache_.erase(cached_A);
+			}
+			self.lnk2obj_.erase(cached_L);
+		}
+	};
 
 	// adapt or passthrough
-	const auto adapt_and_cache = [this, source_key](auto&& obj, auto&& afn) {
-		return acache_.try_emplace(
-			source_key, afn(std::move(obj))
-		).first->second;
+	const auto adapt_and_cache = [&](auto&& afn) {
+		auto* obj_ptr = source.get();
+		auto A = afn(std::move(source));
+
+		if(auto parent = L.owner(); parent) {
+			// install erased event handler
+			parent->subscribe(on_link_erase, tree::Event::LinkErased);
+			// remember link
+			lnk2obj_[std::move(slid)] = obj_ptr;
+			// cache adapter with ref counter = 1
+			return acache_.try_emplace(
+				obj_ptr, acache_value{ std::move(A), 1 }
+			).first->second.first;
+		}
+		return A;
 	};
 	auto pf = adapters_.find(source->type_id());
-	auto&& obj = std::move(source);
 	return pf != adapters_.end() ?
-		adapt_and_cache(obj, pf->second) :
-		( def_adapter_ ? adapt_and_cache(obj, def_adapter_) : py::cast(obj) );
+		adapt_and_cache(pf->second) :
+		( def_adapter_ ? adapt_and_cache(def_adapter_) : py::cast(source) );
 }
 
 auto python_subsyst_impl::get_cached_adapter(const sp_obj& obj) const -> pybind11::object {
-	if(auto cached_A = acache_.find(sp_obj_hash(obj)); cached_A != acache_.end())
-		return cached_A->second;
+	if(auto cached_A = acache_.find(obj.get()); cached_A != acache_.end())
+		return cached_A->second.first;
 	return py::none();
 }
 
 auto python_subsyst_impl::drop_adapted_cache(const sp_obj& obj) -> std::size_t {
-	auto solo = std::lock_guard{ acache_guard_ };
+	auto solo = std::lock_guard{ guard_ };
 	std::size_t res = 0;
 	if(!obj) {
 		res = acache_.size();
 		acache_.clear();
+		lnk2obj_.clear();
 	}
-	else if(auto cached_A = acache_.find(sp_obj_hash(obj)); cached_A != acache_.end()) {
+	else if(auto cached_A = acache_.find(obj.get()); cached_A != acache_.end()) {
+		// clean link -> obj ptr resolver
+		auto* obj_ptr = cached_A->first;
+		for(auto p_lnk = lnk2obj_.begin(); p_lnk != lnk2obj_.end();) {
+			if(p_lnk->second == obj_ptr)
+				p_lnk = lnk2obj_.erase(p_lnk);
+			else
+				++p_lnk;
+		}
+		// clean cached adapter
 		acache_.erase(cached_A);
 		res = 1;
 	}
