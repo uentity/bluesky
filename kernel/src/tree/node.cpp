@@ -463,15 +463,22 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 			bsout() << "*-* node: subscribed to LinkInserted event" << bs_end;
 		}
 
-		if(enumval(listen_to & Event::LinkInserted)) {
+		if(enumval(listen_to & Event::LinkErased)) {
 			res = res.or_else(
 				[self, wN = std::weak_ptr{N}](
-					a_lnk_erase, a_ack, const std::vector<std::pair<link::id_type, std::string>>& zombies
+					a_lnk_erase, a_ack, const std::vector<link::id_type>& lids, std::vector<std::string>& oids
 				) {
 					bsout() << "*-* node: fired LinkErased event" << bs_end;
+
 					auto killed = prop::propdict{};
-					for(const auto& [z_id, z_oid] : zombies)
-						killed[to_string(z_id)] = z_oid;
+					killed["oids"] = std::move(oids);
+					// convert link IDs to strings
+					std::vector<std::string> slids;
+					slids.reserve(lids.size());
+					std::for_each(
+						lids.begin(), lids.end(),
+						[&](const link::id_type& lid) { slids.push_back(to_string(lid)); }
+					);
 
 					if(auto N = wN.lock())
 						self->state.f(std::move(N), Event::LinkErased, killed);

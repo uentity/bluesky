@@ -232,10 +232,10 @@ auto node_retranslator(caf::stateful_actor<node_rsl_state>* self, caf::group nod
 			self->send(self->state.tgt_grp, a_lnk_insert(), a_ack(), lid);
 		},
 
-		[=](a_lnk_erase, a_ack, link::id_type lid) {
+		[=](a_lnk_erase, a_ack, std::vector<link::id_type> lids, std::vector<std::string> oids) {
 			//aout(self) << "retranslate: erase: node " << self->state.src_grp_id() <<
 			//	" -> node " << self->state.tgt_grp_id() << std::endl;
-			self->send(self->state.tgt_grp, a_lnk_erase(), a_ack(), lid);
+			self->send(self->state.tgt_grp, a_lnk_erase(), a_ack(), lids, oids);
 		}
 	};
 }
@@ -366,23 +366,23 @@ auto node_actor::erase_impl(iterator<Key::ID> victim) -> void {
 	auto solo = std::lock_guard{ links_guard_ };
 
 	auto& L = *victim;
-	const auto lid = L->id();
 	stop_retranslate_from(L);
 
-	// collecct pairs {link ID, obj ID} over all subtree elements
-	std::vector<std::pair<link::id_type, std::string>> victim_ids;
-	// first elem is erased link
-	victim_ids.emplace_back(lid, L->oid());
-	// then subtree goes
-	walk(L, [&victim_ids](const sp_link&, std::list<sp_link> Ns, std::vector<sp_link> Os) {
-		for(const auto& N : Ns)
-			victim_ids.emplace_back(N->id(), N->oid());
-		for(const auto& O : Os)
-			victim_ids.emplace_back(O->id(), O->oid());
+	// collect link IDs & obj IDs of all deleted subtree elements
+	// first elem is erased link itself
+	std::vector<link::id_type> lids{ L->id() };
+	std::vector<std::string> oids{ L->oid() };
+	walk(L, [&lids, &oids](const sp_link&, std::list<sp_link> Ns, std::vector<sp_link> Os) {
+		const auto dump_erased = [&](const sp_link& erl) {
+			lids.push_back(erl->id());
+			oids.push_back(erl->oid());
+		};
+		std::for_each(Ns.cbegin(), Ns.cend(), dump_erased);
+		std::for_each(Os.cbegin(), Os.cend(), dump_erased);
 	});
 
 	// send message that link erased
-	send(self_grp, a_lnk_erase(), a_ack(), victim_ids);
+	send(self_grp, a_lnk_erase(), a_ack(), lids, oids);
 	// and erase link
 	links_.get<Key_tag<Key::ID>>().erase(victim);
 }
@@ -450,7 +450,7 @@ auto node_actor::make_behavior() -> behavior_type { return {
 	// [TODO] add impl
 	[=](a_lnk_insert, a_ack, link::id_type lid) {},
 	// [TODO] add impl
-	[=](a_lnk_erase, a_ack, std::vector<std::pair<link::id_type, std::string>>) {}
+	[=](a_lnk_erase, a_ack, std::vector<link::id_type>, std::vector<std::string>) {}
 }; }
 
 NAMESPACE_END(blue_sky::tree)
