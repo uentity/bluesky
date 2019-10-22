@@ -62,7 +62,9 @@ constexpr auto sp_obj_hash = std::hash<sp_obj>{};
 
 NAMESPACE_END()
 
-python_subsyst_impl::python_subsyst_impl(void* kmod_ptr) {
+python_subsyst_impl::python_subsyst_impl(void* kmod_ptr)
+	: kmod_(nullptr)
+{
 	setup_py_kmod(kmod_ptr);
 }
 
