@@ -38,7 +38,7 @@ auto link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::acto
 
 auto link_impl::reset_owner(const sp_node& new_owner) -> void {
 	auto solo = std::unique_lock{guard_};
-	owner_ = std::move(new_owner);
+	owner_ = new_owner;
 }
 
 auto link_impl::req_status(Req request) const -> ReqStatus {

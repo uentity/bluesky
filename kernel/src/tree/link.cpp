@@ -29,12 +29,12 @@ link::~link() {
 }
 
 auto link::start_engine() -> bool {
-	//if(!actor_) {
+	if(!actor_) {
 		actor_ = pimpl_->spawn_actor(pimpl_);
 		factor_ = caf::function_view{ actor_, def_timeout(true) };
 		return true;
-	//}
-	//return false;
+	}
+	return false;
 }
 
 auto link::pimpl() const -> link_impl* {

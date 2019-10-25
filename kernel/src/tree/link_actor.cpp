@@ -17,7 +17,7 @@
 
 #include <boost/uuid/uuid_generators.hpp>
 
-#define DEBUG_ACTOR 0
+#define DEBUG_ACTOR 1
 
 #if DEBUG_ACTOR == 1
 #include <caf/actor_ostream.hpp>
@@ -33,9 +33,8 @@ NAMESPACE_BEGIN()
 #if DEBUG_ACTOR == 1
 
 auto adbg(link_actor* A) -> caf::actor_ostream {
-	auto guard = std::shared_lock{A->impl.guard_};
 	return caf::aout(A) << "link " << to_string(A->impl.id_) <<
-		", name " << A->impl.name_ << ": ";
+		", name '" << A->impl.name_ << "': ";
 }
 
 #else
@@ -51,20 +50,14 @@ NAMESPACE_END()
 /*-----------------------------------------------------------------------------
  *  link
  *-----------------------------------------------------------------------------*/
-link_actor::link_actor(caf::actor_config& cfg, sp_limpl Limpl)
+link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
 	: super(cfg), pimpl_(std::move(Limpl)), impl([this]() -> link_impl& {
 		if(!pimpl_) throw error{"link actor: bad (null) link impl passed"};
 		return *pimpl_;
 	}())
 {
 	// remember link's local group
-	if(cfg.groups->begin() != cfg.groups->end())
-		impl.self_grp = *cfg.groups->begin();
-	else {
-		auto grp_id = to_string(impl.id_);
-		impl.self_grp = system().groups().get_local(grp_id);
-		join(impl.self_grp);
-	}
+	impl.self_grp = std::move(lgrp);
 	adbg(this) << "joined self group " << impl.self_grp.get()->identifier() << std::endl;
 
 	// on exit say goodbye to self group
@@ -105,29 +98,6 @@ auto link_actor::goodbye() -> void {
 		adbg(this) << "left self group " << impl.self_grp.get()->identifier() << std::endl;
 		//	<< "\n" << kernel::tools::get_backtrace(30, 4) << std::endl;
 	}
-}
-
-auto link_actor::bind_new_id() -> void {
-	// leave old group
-	auto new_id = to_string(impl.id_);
-	auto&& dout = adbg(this);
-	dout << "bind: ";
-	if(impl.self_grp) {
-		if(new_id == impl.self_grp.get()->identifier()) return;
-		// rebind friends to new ID
-		// [NOTE] don't send bye, otherwise retranslators from this will quit
-		send(impl.self_grp, a_bind_id(), impl.id_);
-		leave(impl.self_grp);
-		dout << impl.self_grp.get()->identifier();
-	}
-	else {
-		// create self local group & join into it
-		impl.self_grp = system().groups().get_local(new_id);
-		join(impl.self_grp);
-	}
-	// say hello to everybody
-	send(impl.self_grp, a_hi());
-	dout << "-> " << new_id << std::endl;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -198,11 +168,6 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 		return impl.id_;
 	},
 
-	/// update self ID from sibling link in self group
-	[](a_bind_id, const link::id_type&) {
-		// [TODO] add impl
-	},
-
 	/// get name
 	[this](a_lnk_name) {
 		auto guard = std::shared_lock{impl.guard_};
@@ -213,8 +178,8 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 	/// rename
 	[this](a_lnk_rename, std::string new_name, bool silent) {
 		auto solo = std::unique_lock{ impl.guard_ };
-		adbg(this) << "<- a_lnk_rename: " << impl.name_ << " -> " << new_name <<
-			(silent ? " silent" : " loud") << std::endl;
+		adbg(this) << "<- a_lnk_rename " << (silent ? "silent: " : "loud: ") << impl.name_ <<
+			" -> " << new_name << std::endl;
 
 		auto old_name = impl.name_;
 		impl.name_ = std::move(new_name);

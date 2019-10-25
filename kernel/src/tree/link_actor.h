@@ -32,12 +32,10 @@ public:
 	using super = caf::event_based_actor;
 	using behavior_type = super::behavior_type;
 
-	link_actor(caf::actor_config& cfg, sp_limpl Limpl);
+	link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl);
 	// virtual dtor
 	virtual ~link_actor();
 
-	// init new self group after ID has been set
-	auto bind_new_id() -> void;
 	// cleanup code executes leaving from local group & must be called from outside
 	auto goodbye() -> void;
 
@@ -91,7 +89,7 @@ inline auto spawn_lactor(std::shared_ptr<link_impl> limpl, Ts&&... args) {
 	auto& AS = kernel::radio::system();
 	auto lgrp = AS.groups().get_local(to_string(limpl->id_));
 	return AS.spawn_in_group<Actor, Os>(
-		std::move(lgrp), std::move(limpl), std::forward<Ts>(args)...
+		lgrp, lgrp, std::move(limpl), std::forward<Ts>(args)...
 	);
 }
 
