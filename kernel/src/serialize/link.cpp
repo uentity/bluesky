@@ -108,11 +108,20 @@ BSS_FCN_EXPORT(serialize, tree::ilink)
     }                                                                \
     ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
 
+// don't lock when loading - object is not yet 'usable' and fully constructed
+#define GUARD                                       \
+[[maybe_unused]] auto guard = [&] {                 \
+    if constexpr(Archive::is_saving::value)         \
+        return std::shared_lock{t.pimpl()->guard_}; \
+    else                                            \
+        return 0;                                   \
+}();
+
 BSS_FCN_BEGIN(serialize, tree::hard_link)
+    GUARD
 	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
 
 	if constexpr(!Archive::is_loading::value) {
-		auto guard = std::shared_lock{ t.pimpl()->guard_ };
 		ar( make_nvp("data", t.pimpl()->data_) );
 	}
 	else {
@@ -131,14 +140,13 @@ BSS_FCN_EXPORT(serialize, tree::hard_link)
  *  weak_link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::weak_link)
+    GUARD
 	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
 
 	if constexpr(!Archive::is_loading::value) {
-		auto guard = std::shared_lock{ t.pimpl()->guard_ };
 		ar( make_nvp("data", t.pimpl()->data_.lock()) );
 	}
 	else {
-		// load data with deferred 2nd trial
 		auto unused = sp_obj{};
 		ar(defer_failed(
 			unused,
@@ -154,7 +162,7 @@ BSS_FCN_EXPORT(serialize, tree::weak_link)
  *  sym_link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::sym_link)
-	auto guard = std::shared_lock{ t.pimpl()->guard_ };
+    GUARD
 	ar(
 		make_nvp("linkbase", base_class<tree::link>(&t)),
 		make_nvp("path", t.pimpl()->path_)
@@ -167,6 +175,7 @@ BSS_FCN_EXPORT(serialize, tree::sym_link)
  *  fusion_link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::fusion_link)
+    GUARD
 	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
 
 	if constexpr(!Archive::is_loading::value) {
@@ -176,10 +185,7 @@ BSS_FCN_BEGIN(serialize, tree::fusion_link)
 		// load bridge with deferred trial
 		ar(defer_failed(
 			t.pimpl()->bridge_,
-			[&t](auto B){
-				auto guard = std::unique_lock{ t.pimpl()->guard_ };
-				t.pimpl()->bridge_ = std::move(B);
-			},
+			[&t](auto B) { t.pimpl()->bridge_ = std::move(B); },
 			PtrInitTrigger::SuccessAndRetry
 		));
 	}
