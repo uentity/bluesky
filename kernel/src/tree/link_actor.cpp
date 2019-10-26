@@ -17,7 +17,7 @@
 
 #include <boost/uuid/uuid_generators.hpp>
 
-#define DEBUG_ACTOR 1
+#define DEBUG_ACTOR 0
 
 #if DEBUG_ACTOR == 1
 #include <caf/actor_ostream.hpp>
@@ -111,8 +111,8 @@ auto link_actor::data_ex(bool wait_if_busy) -> result_or_err<sp_obj> {
 		impl.status_[0], wait_if_busy,
 		// send status changed message
 		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
-			auto guard = std::shared_lock{impl.guard_};
-			if(prev_v != new_v) send(impl.self_grp, a_lnk_status(), a_ack(), Req::Data, new_v, prev_v);
+			if(prev_v != new_v)
+				send<high_prio>(impl.self_grp, a_lnk_status(), a_ack(), Req::Data, new_v, prev_v);
 		} }
 	).and_then([](sp_obj&& obj) {
 		return obj ?
@@ -129,8 +129,8 @@ auto link_actor::data_node_ex(bool wait_if_busy) -> result_or_err<sp_node> {
 		impl.status_[1], wait_if_busy,
 		// send status changed message
 		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
-			auto guard = std::shared_lock{impl.guard_};
-			if(prev_v != new_v) send(impl.self_grp, a_lnk_status(), a_ack(), Req::DataNode, new_v, prev_v);
+			if(prev_v != new_v)
+				send<high_prio>(impl.self_grp, a_lnk_status(), a_ack(), Req::DataNode, new_v, prev_v);
 		} }
 	).and_then([](sp_node&& N) {
 		return N ?
@@ -147,6 +147,19 @@ auto link_actor::data_node() -> result_or_err<sp_node> {
 			tl::make_unexpected(error::quiet(Error::NotANode));
 	});
 }
+
+auto link_actor::rename(std::string new_name, bool silent) -> void {
+	auto guard = std::unique_lock{ impl.guard_ };
+	adbg(this) << "<- a_lnk_rename " << (silent ? "silent: " : "loud: ") << impl.name_ <<
+		" -> " << new_name << std::endl;
+
+	auto old_name = impl.name_;
+	impl.name_ = std::move(new_name);
+	// send rename ack message
+	if(!silent)
+		send<high_prio>(impl.self_grp, a_lnk_rename(), a_ack(), impl.name_, std::move(old_name));
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //  behavior
@@ -177,23 +190,13 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 
 	/// rename
 	[this](a_lnk_rename, std::string new_name, bool silent) {
-		auto solo = std::unique_lock{ impl.guard_ };
-		adbg(this) << "<- a_lnk_rename " << (silent ? "silent: " : "loud: ") << impl.name_ <<
-			" -> " << new_name << std::endl;
-
-		auto old_name = impl.name_;
-		impl.name_ = std::move(new_name);
-		// send rename ack message
-		if(!silent) {
-			send(impl.self_grp, a_lnk_rename(), a_ack(), impl.name_, std::move(old_name));
-		}
+		rename(std::move(new_name), silent);
 	},
 	// rename ack
 	[this](a_lnk_rename, a_ack, std::string new_name, const std::string& old_name) {
 		adbg(this) << "<- a_lnk_rename ack: " << old_name << " -> " << new_name << std::endl;
-		if(current_sender() != this) {
-			send(this, a_lnk_rename(), std::move(new_name), true);
-		}
+		if(current_sender() != this)
+			rename(std::move(new_name), true);
 	},
 
 	// change status
@@ -204,7 +207,7 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 		return impl.rs_reset(
 			req, cond, new_rs, prev_rs,
 			[this](Req req, ReqStatus new_s, ReqStatus old_s) {
-				send(impl.self_grp, a_lnk_status(), a_ack(), req, new_s, old_s);
+				send<high_prio>(impl.self_grp, a_lnk_status(), a_ack(), req, new_s, old_s);
 			}
 		);
 	},
