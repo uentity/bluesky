@@ -46,11 +46,11 @@ std::string to_string(timestamp t) {
 	// write down date and time
 	auto sys_t = C::system_clock::to_time_t(C::time_point_cast<sys_duration>(t));
 	std::string res;
-	fmt::format_to(std::back_inserter(res), "{:%F %T}", *std::localtime(&sys_t));
+	fmt::format_to(std::back_inserter(res), "{:%FT%T}", *std::localtime(&sys_t));
 	// write residual ms
 	auto residual_ms = C::duration_cast<C::milliseconds>(t - C::system_clock::from_time_t(sys_t));
 	if(residual_ms.count() > 0)
-		fmt::format_to(std::back_inserter(res), " {}", residual_ms);
+		fmt::format_to(std::back_inserter(res), ".{}", residual_ms.count());
 	return res;
 }
 
