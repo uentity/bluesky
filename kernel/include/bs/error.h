@@ -173,6 +173,16 @@ public:
 		return er ? er : eval(std::forward<Fs>(fs)...);
 	}
 
+	// same as `eval()` but also convert exceptions to errors
+	template<typename F, typename... Fs>
+	static auto eval_safe(F&& f, Fs&&... fs) noexcept -> error {
+		try {
+			return eval(std::forward<F>(f), std::forward<Fs>(fs)...);
+		}
+		catch(const std::exception& e) { return {e.what()}; }
+		catch(...) { return {}; }
+	}
+
 	/// enable stream printing facility
 	friend BS_API std::ostream& operator <<(std::ostream& os, const error& er);
 
