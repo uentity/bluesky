@@ -149,6 +149,7 @@ public:
 			// flush data and call manipulator
 			return (*op)(flush());
 		}
+		else (void)op;
 	}
 
 	// flush self to backend spdlog::logger
