@@ -96,7 +96,7 @@ constexpr T& operator^=(T& a, std::underlying_type_t<T> b) {
 ///////////////////////////////////////////////////////////////////////////////
 //  extract enum underlying type value
 //
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
+template<class T, typename = std::enable_if_t<std::is_enum<T>::value>>
 constexpr auto enumval(T a) {
 	return static_cast<std::underlying_type_t<T>>(a);
 }
