@@ -15,6 +15,7 @@ OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
+using bs_detail::shared;
 
 link::link(std::shared_ptr<link_impl> impl, bool start_actor)
 	: pimpl_(std::move(impl))
@@ -53,13 +54,13 @@ auto link::id() const -> id_type {
 
 /// obtain link's human-readable name
 auto link::name() const -> std::string {
-	auto guard = std::shared_lock{pimpl_->guard_};
+	auto guard = pimpl_->lock(shared);
 	return pimpl_->name_;
 }
 
 /// get link's container
 auto link::owner() const -> sp_node {
-	auto guard = std::shared_lock{pimpl_->guard_};
+	auto guard = pimpl_->lock(shared);
 	return pimpl_->owner_.lock();
 }
 
@@ -77,13 +78,13 @@ auto link::info() const -> result_or_err<inode> {
 }
 
 link::Flags link::flags() const {
-	auto guard = std::shared_lock{pimpl_->guard_};
+	auto guard = pimpl_->lock(shared);
 	return pimpl_->flags_;
 }
 
 void link::set_flags(Flags new_flags) {
 	// [TODO] change via messaging to actor
-	auto guard = std::unique_lock{pimpl_->guard_};
+	auto guard = pimpl_->lock();
 	pimpl_->flags_ = new_flags;
 }
 
@@ -178,30 +179,8 @@ auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 /*-----------------------------------------------------------------------------
  *  subscribers management
  *-----------------------------------------------------------------------------*/
-// event actor
-auto ev_listener_actor(
-	caf::event_based_actor* self, caf::group tgt_grp, caf::message_handler character
-) -> caf::behavior {
-	// silently drop all other messages not in my character
-	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
-		return caf::drop(self, mv);
-	});
-	// come to mummy
-	self->join(tgt_grp);
-	auto& Reg = system().registry();
-	Reg.put(self->id(), self);
-
-	// unsubscribe when parent leaves its group
-	return character.or_else(
-		[self, grp = std::move(tgt_grp), &Reg](a_bye) {
-			self->leave(grp);
-			Reg.erase(self->id());
-		}
-	);
-};
-
 auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
-	auto guard = std::shared_lock{pimpl_->guard_};
+	auto guard = pimpl_->lock(shared);
 	struct ev_state { handle_event_cb f; };
 
 	// produce event bhavior that calls passed callback with proper params
@@ -248,7 +227,6 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 }
 
 auto link::unsubscribe(std::uint64_t event_cb_id) -> void {
-	auto guard = std::shared_lock{pimpl_->guard_};
 	const auto ev_actor = system().registry().get(event_cb_id);
 	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
 	caf::anon_send(caf::actor_cast<caf::actor>(ev_actor), a_bye());

@@ -82,7 +82,6 @@ auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) c
 }
 
 auto fusion_link::bridge() const -> sp_fusion {
-	auto guard = std::shared_lock{ pimpl()->guard_ };
 	return pimpl()->bridge();
 }
 
@@ -93,13 +92,12 @@ auto fusion_link::reset_bridge(sp_fusion new_bridge) -> void {
 auto fusion_link::propagate_handle() -> result_or_err<sp_node> {
 	// set handle of cached node object to this link instance
 	self_handle_node(pimpl()->data_);
-	auto guard = std::shared_lock{ pimpl()->guard_ };
 	return pimpl()->data() ?
 		result_or_err<sp_node>(pimpl()->data_) : tl::make_unexpected(Error::EmptyData);
 }
 
 auto fusion_link::cache() const -> sp_node {
-	auto guard = std::shared_lock{ pimpl()->guard_ };
+	auto guard = pimpl()->lock(shared);
 	return pimpl()->data_;
 }
 

@@ -37,7 +37,7 @@ auto link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::acto
 }
 
 auto link_impl::reset_owner(const sp_node& new_owner) -> void {
-	auto solo = std::unique_lock{guard_};
+	auto guard = lock();
 	owner_ = new_owner;
 }
 
@@ -116,5 +116,26 @@ auto ilink::pimpl() const -> ilink_impl* {
 auto ilink_impl::get_inode() -> result_or_err<inodeptr> {
 	return inode_;
 };
+
+/*-----------------------------------------------------------------------------
+ *  misc
+ *-----------------------------------------------------------------------------*/
+auto to_string(link::Req r) -> const char* {
+	switch(r) {
+	case Req::Data : return "Data";
+	case Req::DataNode : return "DataNode";
+	default: return "unknown";
+	}
+}
+
+auto to_string(link::ReqStatus s) -> const char* {
+	switch(s) {
+	case ReqStatus::Void : return "Void";
+	case ReqStatus::Busy : return "Busy";
+	case ReqStatus::OK : return "OK";
+	case ReqStatus::Error : return "Error";
+	default: return "unknown";
+	}
+}
 
 NAMESPACE_END(blue_sky::tree)

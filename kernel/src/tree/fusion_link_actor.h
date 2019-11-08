@@ -31,6 +31,7 @@ NAMESPACE_END()
 
 // forward declare actor
 struct fusion_link_actor;
+using bs_detail::shared;
 
 /*-----------------------------------------------------------------------------
  *  fusion_link_impl
@@ -44,6 +45,7 @@ public:
 
 	using super = ilink_impl;
 	using super::owner_;
+	using super::lock;
 
 	fusion_link_impl(std::string name, sp_node data, sp_fusion bridge, Flags f)
 		: super(std::move(name), data, f), bridge_(std::move(bridge)), data_(std::move(data))
@@ -55,7 +57,7 @@ public:
 
 	// search for valid (non-null) bridge up the tree
 	auto bridge() const -> sp_fusion {
-		auto guard = std::shared_lock{ guard_ };
+		auto guard = lock(shared);
 
 		if(bridge_) return bridge_;
 		// try to look up in parent link
@@ -69,7 +71,7 @@ public:
 	}
 
 	auto reset_bridge(sp_fusion&& new_bridge) -> void {
-		auto guard = std::unique_lock{ guard_ };
+		auto guard = lock();
 		bridge_ = std::move(new_bridge);
 	}
 

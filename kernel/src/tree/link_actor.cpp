@@ -8,8 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "link_actor.h"
+#include <bs/log.h>
 #include <bs/kernel/tools.h>
-
 #include <bs/kernel/config.h>
 #include <bs/kernel/radio.h>
 #include <bs/serialize/tree.h>
@@ -28,21 +28,19 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 using namespace std::chrono_literals;
+using bs_detail::shared;
 
 NAMESPACE_BEGIN()
 #if DEBUG_ACTOR == 1
 
 auto adbg(link_actor* A) -> caf::actor_ostream {
-	return caf::aout(A) << "link " << to_string(A->impl.id_) <<
-		", name '" << A->impl.name_ << "': ";
+	return caf::aout(A) << "[L] [" << to_string(A->impl.id_) <<
+		"] [" << A->impl.name_ << "]: ";
 }
 
 #else
 
-auto adbg(link_actor*) -> std::ostream& {
-	static auto ignore = std::ofstream{"/dev/null"};
-	return ignore;
-}
+constexpr auto adbg(link_actor*) { return log::D(); }
 
 #endif
 NAMESPACE_END()
@@ -91,6 +89,7 @@ auto link_actor::on_exit() -> void {
 }
 
 auto link_actor::goodbye() -> void {
+	adbg(this) << "goodbye" << std::endl;
 	if(impl.self_grp) {
 		// say goodbye to self group
 		send(impl.self_grp, a_bye());
@@ -112,7 +111,7 @@ auto link_actor::data_ex(bool wait_if_busy) -> result_or_err<sp_obj> {
 		// send status changed message
 		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
 			if(prev_v != new_v)
-				send<high_prio>(impl.self_grp, a_lnk_status(), a_ack(), Req::Data, new_v, prev_v);
+				send<high_prio>(impl.self_grp, a_ack(), a_lnk_status(), Req::Data, new_v, prev_v);
 		} }
 	).and_then([](sp_obj&& obj) {
 		return obj ?
@@ -130,7 +129,7 @@ auto link_actor::data_node_ex(bool wait_if_busy) -> result_or_err<sp_node> {
 		// send status changed message
 		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
 			if(prev_v != new_v)
-				send<high_prio>(impl.self_grp, a_lnk_status(), a_ack(), Req::DataNode, new_v, prev_v);
+				send<high_prio>(impl.self_grp, a_ack(), a_lnk_status(), Req::DataNode, new_v, prev_v);
 		} }
 	).and_then([](sp_node&& N) {
 		return N ?
@@ -149,7 +148,7 @@ auto link_actor::data_node() -> result_or_err<sp_node> {
 }
 
 auto link_actor::rename(std::string new_name, bool silent) -> void {
-	auto guard = std::unique_lock{ impl.guard_ };
+	auto guard = impl.lock();
 	adbg(this) << "<- a_lnk_rename " << (silent ? "silent: " : "loud: ") << impl.name_ <<
 		" -> " << new_name << std::endl;
 
@@ -157,7 +156,7 @@ auto link_actor::rename(std::string new_name, bool silent) -> void {
 	impl.name_ = std::move(new_name);
 	// send rename ack message
 	if(!silent)
-		send<high_prio>(impl.self_grp, a_lnk_rename(), a_ack(), impl.name_, std::move(old_name));
+		send<high_prio>(impl.self_grp, a_ack(), a_lnk_rename(), impl.name_, std::move(old_name));
 }
 
 
@@ -183,7 +182,7 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 
 	/// get name
 	[this](a_lnk_name) {
-		auto guard = std::shared_lock{impl.guard_};
+		auto guard = impl.lock(shared);
 		adbg(this) << "<- a_lnk_name: " << impl.name_ << std::endl;
 		return impl.name_;
 	},
@@ -193,30 +192,28 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 		rename(std::move(new_name), silent);
 	},
 	// rename ack
-	[this](a_lnk_rename, a_ack, std::string new_name, const std::string& old_name) {
-		adbg(this) << "<- a_lnk_rename ack: " << old_name << " -> " << new_name << std::endl;
+	[this](a_ack, a_lnk_rename, std::string new_name, const std::string& old_name) {
+		adbg(this) << "<- a_lnk_rename ack: " << old_name << "->" << new_name << std::endl;
 		if(current_sender() != this)
 			rename(std::move(new_name), true);
 	},
 
 	// change status
 	[this](a_lnk_status, Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs) {
-		adbg(this) << "<- a_lnk_status: " <<
-			(req == Req::Data ? " Data " : " DataNode ") <<
-			int(prev_rs) << " -> " << int(new_rs) << std::endl;
+		adbg(this) << "<- a_lnk_status: " << to_string(req) << " " <<
+			to_string(prev_rs) << "->" << to_string(new_rs) << std::endl;
 		return impl.rs_reset(
 			req, cond, new_rs, prev_rs,
 			[this](Req req, ReqStatus new_s, ReqStatus old_s) {
-				send<high_prio>(impl.self_grp, a_lnk_status(), a_ack(), req, new_s, old_s);
+				send<high_prio>(impl.self_grp, a_ack(), a_lnk_status(), req, new_s, old_s);
 			}
 		);
 	},
 
 	// [NOTE] nop for a while
-	[this](a_lnk_status, a_ack, Req req, ReqStatus new_s, ReqStatus prev_s) {
-		adbg(this) << "<- a_lnk_status ack: " <<
-			(req == Req::Data ? " Data " : " DataNode ") <<
-			int(prev_s) << " -> " << int(new_s) << std::endl;
+	[this](a_ack, a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s) {
+		adbg(this) << "<- a_lnk_status ack: " << to_string(req) << " " <<
+			to_string(prev_s) << "->" << to_string(new_s) << std::endl;
 	},
 
 	// get oid
@@ -251,7 +248,7 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 	// default handler for `data_node` that works via `data`
 	[this](a_lnk_dnode, bool wait_if_busy) -> result_or_errbox<sp_node> {
 		adbg(this) << "<- a_lnk_dnode, status = " <<
-			(int)impl.status_[0].value << (int)impl.status_[1].value << std::endl;
+			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
 		return data_node_ex(wait_if_busy);
 	},
@@ -259,7 +256,7 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 	// default `data` handler calls virtual `data()` function that by default returns nullptr
 	[this](a_lnk_data, bool wait_if_busy) -> result_or_errbox<sp_obj> {
 		adbg(this) << "<- a_lnk_data, status = " <<
-			(int)impl.status_[0].value << (int)impl.status_[1].value << std::endl;
+			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
 		return data_ex(wait_if_busy);
 	}

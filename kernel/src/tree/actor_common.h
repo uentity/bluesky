@@ -20,23 +20,24 @@
 #include <caf/event_based_actor.hpp>
 #include <caf/stateful_actor.hpp>
 
-#include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
 #include <optional>
 
-#define OMIT_OBJ_SERIALIZATION                                                         \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::error::box)                                  \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::sp_obj)                                      \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::inodeptr)                              \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_link)                               \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_node)                               \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::sp_obj>)        \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::sp_link>) \
+#define OMIT_OBJ_SERIALIZATION                                                          \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::error::box)                                   \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::sp_obj)                                       \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::inodeptr)                               \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_link)                                \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_node)                                \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::sp_obj>)         \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::inodeptr>) \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::sp_link>)  \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::sp_node>)
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
+inline constexpr auto high_prio = caf::message_priority::high;
 inline constexpr auto def_data_timeout = timespan{ std::chrono::seconds(3) };
 inline const std::string nil_grp_id = "<null>";
 

@@ -12,6 +12,7 @@
 #include <bs/kernel/radio.h>
 #include <bs/detail/enumops.h>
 #include <bs/detail/function_view.h>
+#include <bs/detail/sharded_mutex.h>
 #include "link_invoke.h"
 
 #include <caf/actor.hpp>
@@ -19,9 +20,8 @@
 #include <boost/uuid/nil_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include <shared_mutex>
-
 NAMESPACE_BEGIN(blue_sky::tree)
+namespace bs_detail = blue_sky::detail;
 
 inline const auto nil_uid = boost::uuids::nil_uuid();
 inline const std::string nil_oid = to_string(nil_uid);
@@ -31,12 +31,21 @@ enum class ReqReset {
 	Silent = 4
 };
 
-class BS_HIDDEN_API link_impl {
+// for debug & print purposes
+auto to_string(link::Req) -> const char*;
+auto to_string(link::ReqStatus) -> const char*;
+
+using link_impl_mutex = std::shared_mutex;
+//using link_impl_mutex = bs_detail::noop_mutex_tag;
+
+class BS_HIDDEN_API link_impl : public bs_detail::sharded_mutex<link_impl_mutex> {
 public:
 	using Req = link::Req;
 	using ReqStatus = link::ReqStatus;
 	using id_type = link::id_type;
 	using Flags = link::Flags;
+
+	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 
 	// timeout for most queries
 	const caf::duration timeout_;
@@ -52,9 +61,6 @@ public:
 
 	// keep local link group
 	caf::group self_grp;
-
-	// sync access
-	mutable std::shared_mutex guard_;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  API

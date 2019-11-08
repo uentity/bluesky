@@ -20,6 +20,7 @@ using namespace cereal;
 using namespace blue_sky;
 using Req = blue_sky::tree::link::Req;
 using ReqStatus = blue_sky::tree::link::ReqStatus;
+using blue_sky::detail::shared;
 
 /*-----------------------------------------------------------------------------
  *  inode
@@ -94,27 +95,13 @@ BSS_FCN_EXPORT(serialize, tree::ilink)
 /*-----------------------------------------------------------------------------
  *  hard_link
  *-----------------------------------------------------------------------------*/
-#define SERIALIZE_LINK_WDATA                                         \
-    if constexpr(!Archive::is_loading::value) {                      \
-        auto guard = std::shared_lock{ t.pimpl()->guard_ };          \
-        ar( make_nvp("data", t.pimpl()->data_) );                    \
-    }                                                                \
-    else {                                                           \
-        ar(defer_failed(                                             \
-            t.pimpl()->data_,                                        \
-            [&t](auto obj) { t.pimpl()->set_data(std::move(obj)); }, \
-            PtrInitTrigger::SuccessAndRetry                          \
-        ));                                                          \
-    }                                                                \
-    ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
-
 // don't lock when loading - object is not yet 'usable' and fully constructed
-#define GUARD                                       \
-[[maybe_unused]] auto guard = [&] {                 \
-    if constexpr(Archive::is_saving::value)         \
-        return std::shared_lock{t.pimpl()->guard_}; \
-    else                                            \
-        return 0;                                   \
+#define GUARD                               \
+[[maybe_unused]] auto guard = [&] {         \
+    if constexpr(Archive::is_saving::value) \
+        return t.pimpl()->lock(shared);     \
+    else                                    \
+        return 0;                           \
 }();
 
 BSS_FCN_BEGIN(serialize, tree::hard_link)

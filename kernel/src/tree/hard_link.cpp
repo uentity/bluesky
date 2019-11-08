@@ -20,6 +20,7 @@
 OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using bs_detail::shared;
 
 /*-----------------------------------------------------------------------------
  *  hard_link
@@ -40,7 +41,7 @@ hard_link_impl::hard_link_impl()
 auto hard_link_impl::data() -> result_or_err<sp_obj> { return data_; }
 
 auto hard_link_impl::set_data(sp_obj obj) -> void {
-	auto guard = std::unique_lock{ guard_ };
+	auto guard = lock();
 
 	inode_ = make_inode(obj, inode_);
 	if(data_ = std::move(obj); data_) {
@@ -110,7 +111,7 @@ auto weak_link_impl::data() -> result_or_err<sp_obj> {
 }
 
 auto weak_link_impl::set_data(const sp_obj& obj) -> void {
-	auto guard = std::unique_lock{ guard_ };
+	auto guard = lock();
 
 	inode_ = make_inode(obj, inode_);
 	if(data_ = obj; obj) {
