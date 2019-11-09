@@ -21,8 +21,6 @@
 
 #if DEBUG_ACTOR == 1
 #include <caf/actor_ostream.hpp>
-#else
-#include <fstream>
 #endif
 
 NAMESPACE_BEGIN(blue_sky::tree)
@@ -147,6 +145,12 @@ auto link_actor::data_node() -> result_or_err<sp_node> {
 	});
 }
 
+auto link_actor::data_node_gid() -> result_or_err<std::string> {
+	return data_node_ex(false).map([](const sp_node& N) {
+		return N->gid();
+	});
+}
+
 auto link_actor::rename(std::string new_name, bool silent) -> void {
 	auto guard = impl.lock();
 	adbg(this) << "<- a_lnk_rename " << (silent ? "silent: " : "loud: ") << impl.name_ <<
@@ -259,6 +263,11 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
 		return data_ex(wait_if_busy);
+	},
+
+	[this](a_node_gid) -> result_or_errbox<std::string> {
+		adbg(this) << "<- a_node_gid" << std::endl;
+		return data_node_gid();
 	}
 }; }
 

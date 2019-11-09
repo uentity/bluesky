@@ -140,16 +140,25 @@ auto link::data_node_ex(bool wait_if_busy) const -> result_or_err<sp_node> {
 	return actorf<result_or_errbox<sp_node>>(factor_, a_lnk_dnode(), wait_if_busy);
 }
 
+auto link::data_node_gid() const -> result_or_err<std::string> {
+	return actorf<result_or_errbox<std::string>>(factor_, a_node_gid());
+}
+
+auto link::is_node() const -> bool {
+	return !data_node_gid().value_or("").empty();
+}
+
 void link::self_handle_node(const sp_node& N) {
 	if(N) N->set_handle(shared_from_this());
 }
 
 result_or_err<sp_node> link::propagate_handle() {
-	return data_node_ex()
+	return is_node() ? data_node_ex()
 	.and_then( [this](sp_node&& N) -> result_or_err<sp_node> {
 		N->set_handle(shared_from_this());
 		return std::move(N);
-	} );
+	} )
+	: tl::make_unexpected( error::quiet(Error::NotANode) );
 }
 
 /*-----------------------------------------------------------------------------

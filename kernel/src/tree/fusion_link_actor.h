@@ -133,6 +133,13 @@ struct BS_HIDDEN_API fusion_link_actor : public link_actor {
 		return populate();
 	}
 
+	// fusion link always contain a node, so directly return it's GID
+	auto data_node_gid() -> result_or_err<std::string> override {
+		if(auto obj = static_cast<fusion_link_impl&>(impl).data_; obj)
+			return obj->gid();
+		return tl::make_unexpected(error::quiet(Error::EmptyData));
+	}
+
 	auto make_behavior() -> behavior_type override {
 		auto L = static_cast<fusion_link_impl*>(pimpl_.get());
 		return caf::message_handler {

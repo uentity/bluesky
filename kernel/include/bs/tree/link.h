@@ -45,6 +45,7 @@ class BS_API link  : public std::enable_shared_from_this<link> {
 	friend class link_actor;
 	// full access for node
 	friend class node;
+	friend class node_impl;
 	friend class node_actor;
 	friend class node_impl;
 
@@ -141,13 +142,19 @@ public:
 	/// states of reuqest
 	enum class ReqStatus { Void, Busy, OK, Error };
 
-	// get request status
+	/// get request status
 	auto req_status(Req request) const -> ReqStatus;
-	// unconditional reset request status
+	/// unconditional reset request status
 	auto rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) -> ReqStatus;
-	// conditional reset request status
+	/// conditional reset request status
 	auto rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) -> ReqStatus;
 	auto rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) -> ReqStatus;
+
+	/// methods below are efficient checks that won't call `data_node()` if possible
+	/// check if pointee is a node
+	auto is_node() const -> bool;
+	/// if pointee is a node, return node's actor group ID
+	auto data_node_gid() const -> result_or_err<std::string>;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  async API

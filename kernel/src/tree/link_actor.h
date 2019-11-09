@@ -50,6 +50,9 @@ public:
 	/// return tree::node if contained object is a node -- slow, never returns invalid (NULL) sp_obj
 	virtual auto data_node_ex(bool wait_if_busy = true) -> result_or_err<sp_node>;
 
+	/// if pointee is a node, return it's actor group ID
+	virtual auto data_node_gid() -> result_or_err<std::string>;
+
 	auto rename(std::string new_name, bool silent = false) -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
