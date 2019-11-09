@@ -43,11 +43,6 @@ BSS_FCN_BEGIN(serialize, blue_sky::objbase)
 		make_nvp("id", t.id_),
 		make_nvp("is_node", t.is_node_)
 	);
-	if constexpr(Archive::is_loading::value) {
-		// if we loaded a node, it needs to rebind to new ID
-		if(t.is_node_)
-			static_cast<tree::node&>(t).pimpl_->bind_new_id(t.id_);
-	}
 BSS_FCN_END
 
 BSS_REGISTER_TYPE(blue_sky::objbase)

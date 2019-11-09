@@ -36,6 +36,7 @@ enum class Event : std::uint64_t {
 class link_actor;
 class link_impl;
 class node_actor;
+class node_impl;
 
 class BS_API link  : public std::enable_shared_from_this<link> {
 	// serialization support
@@ -45,6 +46,7 @@ class BS_API link  : public std::enable_shared_from_this<link> {
 	// full access for node
 	friend class node;
 	friend class node_actor;
+	friend class node_impl;
 
 public:
 	using id_type = boost::uuids::uuid;

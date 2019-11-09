@@ -12,46 +12,66 @@
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
 #include <bs/tree/tree.h>
+#include <bs/serialize/cafbind.h>
 
 #include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/random_generator.hpp>
 
 OMIT_OBJ_SERIALIZATION
+OMIT_ITERATORS_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
 
-NAMESPACE_BEGIN() // hidden namespace
-
-static boost::uuids::string_generator uuid_from_str;
-
-NAMESPACE_END()
+const auto uuid_from_str = boost::uuids::string_generator{};
+using EraseOpts = node_actor::EraseOpts;
 
 /*-----------------------------------------------------------------------------
  *  node
  *-----------------------------------------------------------------------------*/
-node::node(std::string custom_id)
-	: objbase(true, custom_id),
-	aimpl_(kernel::radio::system().spawn<node_actor>(id_))
+node::node(bool start_actor, std::string custom_id)
+	: objbase(true, std::move(custom_id)), pimpl_(std::make_shared<node_impl>(this))
 {
-	pimpl_ = caf::actor_cast<node_actor*>(aimpl_);
-	if(!pimpl_) throw error{ "Trying to construct tree::node with invalid actor" };
-	fimpl_ = caf::make_function_view(aimpl_, caf::duration{pimpl_->timeout_});
+	if(start_actor) start_engine();
 }
 
+node::node(std::string custom_id)
+	: node(true, std::move(custom_id))
+{}
+
 node::node(const node& src)
-	: objbase(src),
-	aimpl_(kernel::radio::system().spawn<node_actor>(id_, src.aimpl_))
+	: objbase(src), pimpl_(std::make_shared<node_impl>(*src.pimpl_, this))
 {
-	pimpl_ = caf::actor_cast<node_actor*>(aimpl_);
-	if(!pimpl_) throw error{ "Trying to copy construct tree::node with invalid actor" };
-	fimpl_ = caf::make_function_view(aimpl_, caf::duration{pimpl_->timeout_});
+	start_engine();
 }
 
 node::~node() {
-	pimpl_->goodbye();
+	// mark self as deleted for impl & actor
+	auto guard = pimpl_->lock<node_impl::Metadata>();
+	pimpl_->super_ = nullptr;
+	// then kill self actor
+	caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
 }
 
+auto node::start_engine(const std::string& gid) -> bool {
+	static auto uuid_gen = boost::uuids::random_generator{};
+	if(!actor_) {
+		// generate random UUID for actor groud if passed GID is empty
+		actor_ = pimpl_->spawn_actor(pimpl_, gid.empty() ? to_string(uuid_gen()) : gid);
+		factor_ = caf::function_view{ actor_, def_timeout(true) };
+		return true;
+	}
+	return false;
+}
+
+auto node::actor() const -> const caf::actor& { return actor_; }
+
+auto node::gid() const -> std::string { return pimpl_->gid(); }
+
 auto node::disconnect(bool deep) -> void {
+	// disconnect self
+	caf::anon_send(actor_, a_node_disconnect());
+
 	if(deep) {
 		// don't follow symlinks & lazy links
 		walk(bs_shared_this<node>(), [](const sp_node&, std::list<sp_node>& subnodes, std::vector<sp_link>&) {
@@ -59,118 +79,97 @@ auto node::disconnect(bool deep) -> void {
 				N->disconnect(false);
 		}, true, false, false);
 	}
-
-	// disconnect self
-	pimpl_->disconnect();
 }
 
-void node::propagate_owner(bool deep) {
-	auto solo = std::lock_guard{ pimpl_->links_guard_ };
-	// properly setup owner in node's leafs
-	const auto self = bs_shared_this<node>();
-	sp_node child_node;
-	for(auto& plink : pimpl_->links_) {
-		child_node = node_actor::adjust_inserted_link(plink, self);
-		if(deep && child_node)
-			child_node->propagate_owner(true);
-	}
+auto node::propagate_owner(bool deep) -> void {
+	pimpl_->propagate_owner(bs_shared_this<node>(), deep);
 }
 
-sp_link node::handle() const {
+auto node::handle() const -> sp_link {
+	auto guard = pimpl_->lock<node_impl::Metadata>(shared);
 	return pimpl_->handle_.lock();
 }
 
-bool node::accepts(const sp_link& what) const {
-	return pimpl_->accepts(what);
-}
-
-void node::accept_object_types(std::vector<std::string> allowed_types) {
-	pimpl_->allowed_otypes_ = std::move(allowed_types);
-}
-
-std::vector<std::string> node::allowed_object_types() const {
-	return pimpl_->allowed_otypes_;
-}
-
-void node::set_handle(const sp_link& handle) {
+auto node::set_handle(const sp_link& handle) -> void {
 	pimpl_->set_handle(handle);
 }
 
-//sp_link node::create_self_link(std::string name, bool force) {
-//	if(!force && !pimpl_->handle_.expired()) {
-//		return pimpl_->handle_.lock();
-//	}
-//	// create new self link
-//	auto root_lnk = std::make_shared<hard_link>(std::move(name), bs_shared_this<node>());
-//	pimpl_->set_handle(root_lnk);
-//	return root_lnk;
-//}
+auto node::accepts(const sp_link& what) const -> bool {
+	return pimpl_->accepts(what);
+}
+
+auto node::accept_object_types(std::vector<std::string> allowed_types) -> void {
+	pimpl_->accept_object_types(std::move(allowed_types));
+}
+
+auto node::allowed_object_types() const -> std::vector<std::string> {
+	auto guard = pimpl_->lock<node_impl::Metadata>(shared);
+	return pimpl_->allowed_otypes_;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //  leafs container
 //
-std::size_t node::size() const {
-	return pimpl_->links_.size();
+auto node::size() const -> std::size_t {
+	return pimpl_->size();
 }
 
-bool node::empty() const {
+auto node::empty() const -> bool {
 	return pimpl_->links_.empty();
 }
 
-iterator<Key::AnyOrder> node::begin(Key_const<Key::AnyOrder>) const {
+auto node::begin(Key_const<Key::AnyOrder>) const -> iterator<Key::AnyOrder> {
 	return pimpl_->begin<>();
 }
 
-iterator<Key::AnyOrder> node::end(Key_const<Key::AnyOrder>) const {
+auto node::end(Key_const<Key::AnyOrder>) const -> iterator<Key::AnyOrder> {
 	return pimpl_->end<>();
 }
 
-iterator<Key::ID> node::begin(Key_const<Key::ID>) const {
+auto node::begin(Key_const<Key::ID>) const -> iterator<Key::ID> {
 	return pimpl_->begin<Key::ID>();
 }
 
-iterator<Key::ID> node::end(Key_const<Key::ID>) const {
+auto node::end(Key_const<Key::ID>) const -> iterator<Key::ID> {
 	return pimpl_->end<Key::ID>();
 }
 
-iterator<Key::Name> node::begin(Key_const<Key::Name>) const {
+auto node::begin(Key_const<Key::Name>) const -> iterator<Key::Name> {
 	return pimpl_->begin<Key::Name>();
 }
 
-iterator<Key::Name> node::end(Key_const<Key::Name>) const {
+auto node::end(Key_const<Key::Name>) const -> iterator<Key::Name> {
 	return pimpl_->end<Key::Name>();
 }
 
-iterator<Key::OID> node::begin(Key_const<Key::OID>) const {
+auto node::begin(Key_const<Key::OID>) const -> iterator<Key::OID> {
 	return pimpl_->begin<Key::OID>();
 }
 
-iterator<Key::OID> node::end(Key_const<Key::OID>) const {
+auto node::end(Key_const<Key::OID>) const -> iterator<Key::OID> {
 	return pimpl_->end<Key::OID>();
 }
 
-iterator<Key::Type> node::begin(Key_const<Key::Type>) const {
+auto node::begin(Key_const<Key::Type>) const -> iterator<Key::Type> {
 	return pimpl_->begin<Key::Type>();
 }
 
-iterator<Key::Type> node::end(Key_const<Key::Type>) const {
+auto node::end(Key_const<Key::Type>) const -> iterator<Key::Type> {
 	return pimpl_->end<Key::Type>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  find
 //
-iterator<Key::AnyOrder> node::find(const std::size_t idx) const {
-	auto i = begin();
-	std::advance(i, idx);
-	return i;
+auto node::find(const std::size_t idx) const -> iterator<Key::AnyOrder> {
+	return std::next(begin(), idx);
 }
 
-iterator<Key::AnyOrder> node::find(const id_type& id) const {
+auto node::find(const id_type& id) const -> iterator<Key::AnyOrder> {
 	return pimpl_->find<Key::ID>(id);
 }
 
-iterator<Key::AnyOrder> node::find(const std::string& key, Key key_meaning) const {
+auto node::find(const std::string& key, Key key_meaning) const -> iterator<Key::AnyOrder> {
 	switch(key_meaning) {
 	case Key::ID:
 		return pimpl_->find<Key::ID>(uuid_from_str(key));
@@ -185,79 +184,64 @@ iterator<Key::AnyOrder> node::find(const std::string& key, Key key_meaning) cons
 }
 
 // ---- index
-std::size_t node::index(const id_type& lid) const {
+auto node::index(const id_type& lid) const -> std::size_t {
 	auto i = pimpl_->find<Key::ID, Key::AnyOrder>(lid);
 	return std::distance(begin<Key::AnyOrder>(), i);
 }
 
-std::size_t node::index(const iterator<Key::AnyOrder>& pos) const {
+auto node::index(const iterator<Key::AnyOrder>& pos) const -> std::size_t {
 	return std::distance(begin<Key::AnyOrder>(), pos);
 }
 
-std::size_t node::index(const std::string& key, Key key_meaning) const {
+auto node::index(const std::string& key, Key key_meaning) const -> std::size_t {
 	auto i = find(key, key_meaning);
 	return std::distance(begin<Key::AnyOrder>(), i);
 }
 
 // ---- equal_range
-range<Key::Name> node::equal_range(const std::string& link_name) const {
+auto node::equal_range(const std::string& link_name) const -> range<Key::Name> {
 	return pimpl_->equal_range<Key::Name>(link_name);
 }
 
-range<Key::OID> node::equal_range_oid(const std::string& oid) const {
+auto node::equal_range_oid(const std::string& oid) const -> range<Key::OID> {
 	return pimpl_->equal_range<Key::OID>(oid);
 }
 
-range<Key::Type> node::equal_type(const std::string& type_id) const {
+auto node::equal_type(const std::string& type_id) const -> range<Key::Type> {
 	return pimpl_->equal_range<Key::Type>(type_id);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  insert
 //
-insert_status<Key::ID> node::insert(sp_link l, InsertPolicy pol) {
-	auto self = bs_shared_this<node>();
-	auto res = pimpl_->insert(l, pol, self);
-	if(res.second) {
-		// inserted link postprocessing
-		node_actor::adjust_inserted_link(*res.first, self);
-	}
-	else if(enumval(pol & InsertPolicy::Merge) && res.first != end<Key::ID>()) {
-		// check if we need to deep merge given links
-		// go one step down the hierarchy
-		auto src_node = l->data_node();
-		auto dst_node = (*res.first)->data_node();
-		if(src_node && dst_node) {
-			// insert all links from source node into destination
-			dst_node->insert(
-				std::vector<sp_link>(src_node->begin(), src_node->end()), pol
-			);
-		}
-	}
-	return res;
+auto node::insert(sp_link l, InsertPolicy pol) -> insert_status<Key::ID> {
+	using R = insert_status<Key::ID>;
+	using AR = std::pair<std::optional<link::id_type>, bool>;
+
+	return actorf<AR>(factor_, a_lnk_insert(), std::move(l), pol)
+		.and_then([=](const AR& r) -> result_or_err<R> {
+			auto pos = r.first ? pimpl_->find<Key::ID, Key::ID>(*r.first) : pimpl_->end<Key::ID>();
+			return R{ std::move(pos), r.second };
+		})
+		.value_or(R{ pimpl_->end<Key::ID>(), false });
 }
 
-insert_status<Key::AnyOrder> node::insert(sp_link l, iterator<> pos, InsertPolicy pol) {
-	// 1. insert an element using ID index
-	auto res = insert(std::move(l), pol);
-	if(res.first != end<Key::ID>()) {
-		// 2. reposition an element in AnyOrder index
-		auto solo = std::lock_guard{ pimpl_->links_guard_ };
-		auto src = pimpl_->project<Key::ID>(res.first);
-		if(pos != src) {
-			auto& ord_idx = pimpl_->links_.get<Key_tag<Key::AnyOrder>>();
-			ord_idx.relocate(pos, src);
-			return {src, true};
-		}
-	}
-	return {pimpl_->project<Key::ID>(res.first), res.second};
+auto node::insert(sp_link l, std::size_t idx, InsertPolicy pol) -> insert_status<Key::AnyOrder> {
+	using R = insert_status<Key::AnyOrder>;
+	using AR = std::pair<std::size_t, bool>;
+
+	return actorf<AR>(factor_, a_lnk_insert(), std::move(l), idx, pol)
+		.and_then([=](const AR& r) -> result_or_err<R> {
+			return R{ std::next(begin<Key::AnyOrder>(), r.first), r.second };
+		})
+		.value_or(R{ end<Key::AnyOrder>(), false });
 }
 
-insert_status<Key::AnyOrder> node::insert(sp_link l, std::size_t idx, InsertPolicy pol) {
-	return insert(std::move(l), std::next(begin<Key::AnyOrder>(), std::min(idx, size())), pol);
+auto node::insert(sp_link l, iterator<> pos, InsertPolicy pol) -> insert_status<Key::AnyOrder> {
+	return insert(std::move(l), (size_t)std::distance(begin<Key::AnyOrder>(), pos), pol);
 }
 
-insert_status<Key::ID> node::insert(std::string name, sp_obj obj, InsertPolicy pol) {
+auto node::insert(std::string name, sp_obj obj, InsertPolicy pol) -> insert_status<Key::ID> {
 	return insert(
 		std::make_shared<hard_link>(std::move(name), std::move(obj)), pol
 	);
@@ -266,57 +250,45 @@ insert_status<Key::ID> node::insert(std::string name, sp_obj obj, InsertPolicy p
 ///////////////////////////////////////////////////////////////////////////////
 //  erase
 //
-void node::erase(const std::size_t idx) {
-	auto solo = std::lock_guard{ pimpl_->links_guard_ };
-	pimpl_->links_.get<Key_tag<Key::AnyOrder>>().erase(find(idx));
+auto node::erase(const std::size_t idx) -> size_t {
+	return actorf<size_t>(factor_, a_lnk_erase(), idx).value_or(0);
 }
 
-void node::erase(const id_type& lid) {
-	pimpl_->erase<>(lid);
+auto node::erase(const id_type& lid) -> size_t {
+	return actorf<size_t>(factor_, a_lnk_erase(), lid, EraseOpts::Normal).value_or(0);
 }
 
-void node::erase(const std::string& key, Key key_meaning) {
-	switch(key_meaning) {
-	case Key::ID:
-		pimpl_->erase<Key::ID>(uuid_from_str(key));
-		break;
-	case Key::OID:
-		pimpl_->erase<Key::OID>(key);
-		break;
-	case Key::Type:
-		pimpl_->erase<Key::Type>(key);
-		break;
-	default:
-	case Key::Name:
-		return pimpl_->erase<Key::Name>(key);
-	}
+auto node::erase(const std::string& key, Key key_meaning) -> size_t {
+	return actorf<size_t>(factor_, a_lnk_erase(), key, key_meaning).value_or(0);
 }
 
-void node::erase(const range<Key::ID>& r) {
-	pimpl_->erase<>(r);
+auto node::erase(const range<Key::ID>& r) -> size_t {
+	return actorf<size_t>(factor_, a_lnk_erase(), r.export_lids()).value_or(0);
 }
 
-void node::erase(const range<Key::Name>& r) {
-	pimpl_->erase<Key::Name>(r);
+auto node::erase(const range<Key::Name>& r) -> size_t {
+	return actorf<size_t>(factor_, a_lnk_erase(), r.export_lids()).value_or(0);
 }
 
-void node::erase(const range<Key::OID>& r) {
-	pimpl_->erase<Key::OID>(r);
+auto node::erase(const range<Key::OID>& r) -> size_t {
+	return actorf<size_t>(factor_, a_lnk_erase(), r.export_lids()).value_or(0);
 }
 
-void node::clear() {
-	auto solo = std::lock_guard{ pimpl_->links_guard_ };
-	pimpl_->links_.clear();
+auto node::clear() -> void {
+	caf::anon_send(
+		actor_, a_lnk_erase(),
+		range<Key::ID>{ begin<Key::ID>(), end<Key::ID>() }.export_lids()
+	);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  deep_search
 //
-sp_link node::deep_search(const id_type& id) const {
+auto node::deep_search(const id_type& id) const -> sp_link {
 	return pimpl_->deep_search<>(id);
 }
 
-sp_link node::deep_search(const std::string& key, Key key_meaning) const {
+auto node::deep_search(const std::string& key, Key key_meaning) const -> sp_link {
 	switch(key_meaning) {
 	case Key::ID:
 		return pimpl_->deep_search<Key::ID>(uuid_from_str(key));
@@ -333,38 +305,38 @@ sp_link node::deep_search(const std::string& key, Key key_meaning) const {
 ///////////////////////////////////////////////////////////////////////////////
 //  keys
 //
-std::vector<Key_type<Key::ID>> node::keys(Key_const<Key::ID>) const {
+auto node::keys(Key_const<Key::ID>) const -> std::vector<Key_type<Key::ID>> {
 	return pimpl_->keys<Key::ID>();
 }
 
-std::vector<Key_type<Key::Name>> node::keys(Key_const<Key::Name>) const {
+auto node::keys(Key_const<Key::Name>) const -> std::vector<Key_type<Key::Name>> {
 	return pimpl_->keys<Key::Name>();
 }
 
-std::vector<Key_type<Key::OID>> node::keys(Key_const<Key::OID>) const {
+auto node::keys(Key_const<Key::OID>) const -> std::vector<Key_type<Key::OID>> {
 	return pimpl_->keys<Key::OID>();
 }
 
-std::vector<Key_type<Key::Type>> node::keys(Key_const<Key::Type>) const {
+auto node::keys(Key_const<Key::Type>) const -> std::vector<Key_type<Key::Type>> {
 	return pimpl_->keys<Key::Type>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  rename
 //
-bool node::rename(iterator<Key::AnyOrder> pos, std::string new_name) {
+auto node::rename(iterator<Key::AnyOrder> pos, std::string new_name) -> bool {
 	return pimpl_->rename<Key::AnyOrder>(std::move(pos), std::move(new_name));
 }
 
-bool node::rename(const std::size_t idx, std::string new_name) {
+auto node::rename(const std::size_t idx, std::string new_name) -> bool {
 	return rename(find(idx), std::move(new_name));
 }
 
-bool node::rename(const id_type& lid, std::string new_name) {
+auto node::rename(const id_type& lid, std::string new_name) -> bool {
 	return pimpl_->rename<Key::ID>(lid, std::move(new_name)) > 0;
 }
 
-std::size_t node::rename(const std::string& key, std::string new_name, Key key_meaning, bool all) {
+auto node::rename(const std::string& key, std::string new_name, Key key_meaning, bool all) -> std::size_t {
 	switch(key_meaning) {
 	default:
 	case Key::ID:
@@ -378,26 +350,22 @@ std::size_t node::rename(const std::string& key, std::string new_name, Key key_m
 	}
 }
 
-auto node::on_rename(const id_type& renamed_id) const -> void {
-	pimpl_->on_rename(renamed_id);
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 //  project
 //
-iterator<Key::AnyOrder> node::project(iterator<Key::ID> src) const {
+auto node::project(iterator<Key::ID> src) const -> iterator<Key::AnyOrder> {
 	return pimpl_->project<Key::ID>(std::move(src));
 }
 
-iterator<Key::AnyOrder> node::project(iterator<Key::Name> src) const {
+auto node::project(iterator<Key::Name> src) const -> iterator<Key::AnyOrder> {
 	return pimpl_->project<Key::Name>(std::move(src));
 }
 
-iterator<Key::AnyOrder> node::project(iterator<Key::OID> src) const {
+auto node::project(iterator<Key::OID> src) const -> iterator<Key::AnyOrder> {
 	return pimpl_->project<Key::OID>(std::move(src));
 }
 
-iterator<Key::AnyOrder> node::project(iterator<Key::Type> src) const {
+auto node::project(iterator<Key::Type> src) const -> iterator<Key::AnyOrder> {
 	return pimpl_->project<Key::Type>(std::move(src));
 }
 
@@ -416,7 +384,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 		if(enumval(listen_to & Event::LinkRenamed)) {
 			res = res.or_else(
 				[self, wN = std::weak_ptr{N}] (
-					a_lnk_rename, a_ack, const link::id_type& lid, std::string new_name, std::string old_name
+					a_ack, a_lnk_rename, const link::id_type& lid, std::string new_name, std::string old_name
 				) {
 					bsout() << "*-* node: fired LinkRenamed event" << bs_end;
 					if(auto N = wN.lock())
@@ -433,7 +401,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 		if(enumval(listen_to & Event::LinkStatusChanged)) {
 			res = res.or_else(
 				[self, wN = std::weak_ptr{N}](
-					a_lnk_status, a_ack, link::id_type lid, Req req, ReqStatus new_s, ReqStatus prev_s
+					a_ack, a_lnk_status, link::id_type lid, Req req, ReqStatus new_s, ReqStatus prev_s
 				) {
 					bsout() << "*-* node: fired LinkStatusChanged event" << bs_end;
 					if(auto N = wN.lock())
@@ -451,12 +419,25 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 		if(enumval(listen_to & Event::LinkInserted)) {
 			res = res.or_else(
 				[self, wN = std::weak_ptr{N}](
-					a_lnk_insert, a_ack, link::id_type lid
+					a_ack, a_lnk_insert, link::id_type lid, std::size_t pos, InsertPolicy pol
 				) {
 					bsout() << "*-* node: fired LinkInserted event" << bs_end;
 					if(auto N = wN.lock())
 						self->state.f(std::move(N), Event::LinkInserted, {
-							{"link_id", to_string(lid)}
+							{"link_id", to_string(lid)},
+							{"pos", (prop::integer)pos}
+						});
+				},
+
+				[self, wN = std::weak_ptr{N}](
+					a_ack, a_lnk_insert, link::id_type lid, std::size_t to_idx, std::size_t from_idx
+				) {
+					bsout() << "*-* node: fired LinkInserted event" << bs_end;
+					if(auto N = wN.lock())
+						self->state.f(std::move(N), Event::LinkInserted, {
+							{"link_id", to_string(lid)},
+							{"to_idx", (prop::integer)to_idx},
+							{"from_idx", (prop::integer)from_idx}
 						});
 				}
 			);
@@ -469,19 +450,19 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 					a_lnk_erase, a_ack, const std::vector<link::id_type>& lids, std::vector<std::string>& oids
 				) {
 					bsout() << "*-* node: fired LinkErased event" << bs_end;
+					auto N = wN.lock();
+					if(!N) return;
 
 					auto killed = prop::propdict{};
 					killed["oids"] = std::move(oids);
 					// convert link IDs to strings
-					std::vector<std::string> slids;
-					slids.reserve(lids.size());
-					std::for_each(
-						lids.begin(), lids.end(),
-						[&](const link::id_type& lid) { slids.push_back(to_string(lid)); }
+					std::vector<std::string> slids(lids.size());
+					std::transform(
+						lids.begin(), lids.end(), slids.begin(),
+						[](const link::id_type& lid) { return to_string(lid); }
 					);
 
-					if(auto N = wN.lock())
-						self->state.f(std::move(N), Event::LinkErased, killed);
+					self->state.f(std::move(N), Event::LinkErased, killed);
 				}
 			);
 			bsout() << "*-* node: subscribed to LinkErased event" << bs_end;
@@ -502,7 +483,7 @@ auto node::unsubscribe(std::uint64_t event_cb_id) -> void {
 	auto& AS = kernel::radio::system();
 	const auto ev_actor = AS.registry().get(event_cb_id);
 	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
-	pimpl_->send(caf::actor_cast<caf::actor>(ev_actor), a_bye());
+	caf::anon_send(caf::actor_cast<caf::actor>(ev_actor), a_bye());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

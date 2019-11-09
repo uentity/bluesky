@@ -27,7 +27,9 @@ NAMESPACE_BEGIN(blue_sky::tree)
 // global alias to shorten typing
 namespace mi = boost::multi_index;
 
+class node_impl;
 class node_actor;
+
 class BS_API node : public objbase {
 public:
 	using id_type = link::id_type;
@@ -114,8 +116,19 @@ public:
 		range_t(range_t&&) = default;
 		range_t(const base_t& rhs) : base_t(rhs) {}
 
-		Iterator begin() const { return this->first; }
-		Iterator end() const { return this->second; }
+		auto begin() const { return this->first; }
+		auto end() const { return this->second; }
+
+		auto export_lids() const -> std::vector<link::id_type> {
+			auto sz = std::distance(begin(), end());
+			if(sz <= 0) return {};
+			auto res = std::vector<link::id_type>((size_t)sz);
+			std::transform(
+				begin(), end(), res.begin(),
+				[](const auto& x) { return x->id(); }
+			);
+			return res;
+		}
 	};
 	template<Key K = Key::ID> using range = range_t<iterator<K>>;
 	template<Key K = Key::ID> using const_range = range_t<const_iterator<K>>;
@@ -156,7 +169,7 @@ public:
 	/// find link by given key with specified treatment
 	iterator<Key::AnyOrder> find(const std::string& key, Key key_meaning = Key::ID) const;
 
-	/// returns link pointer instead of iterator
+	/// returns link instead of iterator
 	template<Key K>
 	sp_link search(const Key_type<K>& k) const {
 		auto i = find(k);
@@ -205,22 +218,23 @@ public:
 		for(auto& L : links) {
 			static_assert(
 				std::is_base_of<link, std::decay_t<decltype(*L)>>::value,
-				"Links container should contain pointers to `tree::link` objects!"
+				"Links container should contain shared pointers to `tree::link` objects"
 			);
 			insert(std::move(L), pol);
 		}
 	}
 
 	/// leafs removal
-	void erase(const std::size_t idx);
-	void erase(const id_type& link_id);
+	/// return removed elemsnt count
+	size_t erase(const std::size_t idx);
+	size_t erase(const id_type& link_id);
 	/// erase leaf adressed by string key with specified treatment
-	void erase(const std::string& key, Key key_meaning);
+	size_t erase(const std::string& key, Key key_meaning);
 
-	void erase(const range<Key::AnyOrder>& r);
-	void erase(const range<Key::ID>& r);
-	void erase(const range<Key::Name>& r);
-	void erase(const range<Key::OID>& r);
+	size_t erase(const range<Key::AnyOrder>& r);
+	size_t erase(const range<Key::ID>& r);
+	size_t erase(const range<Key::Name>& r);
+	size_t erase(const range<Key::OID>& r);
 
 	template<Key K>
 	void erase(iterator<K> pos) {
@@ -279,6 +293,11 @@ public:
 	/// if deep is true, correct owners in all subtree
 	void propagate_owner(bool deep = false);
 
+	/// obtain node's actor
+	auto actor() const -> const caf::actor&;
+	/// obtain node's group ID
+	auto gid() const -> std::string;
+
 	/// ctor - creates hard self link with given name
 	node(std::string custom_id = "");
 	// copy ctor makes deep copy of contained links
@@ -288,18 +307,25 @@ public:
 
 private:
 	friend class blue_sky::atomizer;
+	friend class cereal::access;
 	friend class link;
 
-	// PIMPL
+	friend class node_impl;
 	friend class node_actor;
-	// strong ref to link's actor
-	caf::actor aimpl_;
-	node_actor* pimpl_;
-	// make blocking request + get link actor response as single function call
-	mutable caf::function_view<caf::actor> fimpl_;
+	// PIMPL
+	std::shared_ptr<node_impl> pimpl_;
+	// strong ref to node's actor
+	caf::actor actor_;
+	// make blocking requests as function call
+	mutable caf::function_view<caf::actor> factor_;
 
 	// set node's handle
 	void set_handle(const sp_link& handle);
+
+	/// accept link impl and optionally start internal actor
+	node(bool start_actor, std::string custom_oid = "");
+	/// maually start internal actor (if not started already)
+	auto start_engine(const std::string& gid = "") -> bool;
 
 	/// Implementation details
 	iterator<Key::ID> begin(Key_const<Key::ID>) const;
@@ -318,8 +344,6 @@ private:
 	std::vector<Key_type<Key::Name>> keys(Key_const<Key::Name>) const;
 	std::vector<Key_type<Key::OID>> keys(Key_const<Key::OID>) const;
 	std::vector<Key_type<Key::Type>> keys(Key_const<Key::Type>) const;
-
-	auto on_rename(const id_type& renamed_lnk) const -> void;
 
 	BS_TYPE_DECL
 };

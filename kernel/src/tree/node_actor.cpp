@@ -12,42 +12,96 @@
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/serialize/cafbind.h>
+#include <bs/serialize/tree.h>
 
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <caf/actor_ostream.hpp>
 #include <caf/stateful_actor.hpp>
 #include <caf/others.hpp>
+#include <cereal/types/optional.hpp>
+
+#define DEBUG_ACTOR 0
+
+#if DEBUG_ACTOR == 1
+#include <caf/actor_ostream.hpp>
+#endif
+
+OMIT_ITERATORS_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using namespace kernel::radio;
+using namespace std::chrono_literals;
 
-node_actor::node_actor(caf::actor_config& cfg, const std::string& id, timespan data_timeout)
-	: super(cfg), timeout_(data_timeout)
-{
-	bind_new_id(id);
-}
+NAMESPACE_BEGIN()
+#if DEBUG_ACTOR == 1
 
-// implement shallow links copy ctor
-node_actor::node_actor(caf::actor_config& cfg, const std::string& id, caf::actor src_a)
-	: node_actor(cfg, id)
-{
-	auto src = caf::actor_cast<node_actor*>(src_a);
-	if(!src) throw error{"Bad source passed to node_actor copy constructor"};
-
-	timeout_ = src->timeout_;
-	allowed_otypes_ = src->allowed_otypes_;
-	for(const auto& plink : src->links_.get<Key_tag<Key::AnyOrder>>()) {
-		// non-deep clone can result in unconditional moving nodes from source
-		insert(plink->clone(true), InsertPolicy::AllowDupNames);
+template<typename Actor>
+auto adbg(Actor* A, const std::string& nid = {}) -> caf::actor_ostream {
+	auto res = caf::aout(A);
+	if constexpr(std::is_same_v<Actor, node_actor>) {
+		res << "[N] ";
+		if(auto pgrp = A->impl.self_grp.get())
+			res << "[" << A->impl.self_grp.get()->identifier() << "]";
+		else
+			res << "[null grp]";
+		res <<  ": ";
 	}
-	// [NOTE] links are in invalid state (no owner set) now
-	// correct this by manually calling `node::propagate_owner()` after copy is constructed
+	else if(!nid.empty() && nid.front() != '"') {
+		res << "[N] [" << nid << "]: ";
+	}
+	return res;
 }
+
+#else
+
+template<typename Actor>
+constexpr auto adbg(const Actor*, const std::string& = {}) { return log::D(); }
+
+#endif
+NAMESPACE_END()
+
+static boost::uuids::string_generator uuid_from_str;
+
+/*-----------------------------------------------------------------------------
+ *  node_actor
+ *-----------------------------------------------------------------------------*/
+node_actor::node_actor(caf::actor_config& cfg, caf::group ngrp, sp_nimpl Nimpl)
+	: super(cfg), pimpl_(std::move(Nimpl)), impl([this]() -> node_impl& {
+		if(!pimpl_) throw error{"node actor: bad (null) node impl passed"};
+		return *pimpl_;
+	}())
+{
+	// remember link's local group
+	impl.self_grp = std::move(ngrp);
+
+	// on exit say goodbye to self group
+	set_exit_handler([this](caf::exit_msg& er) {
+		goodbye();
+		default_exit_handler(this, er);
+	});
+
+	// prevent termination in case some errors happens in group members
+	// for ex. if they receive unexpected messages (translators normally do)
+	set_error_handler([this](caf::error er) {
+		switch(static_cast<caf::sec>(er.code())) {
+		case caf::sec::unexpected_message :
+			break;
+		default:
+			default_error_handler(this, er);
+		}
+	});
+
+	set_default_handler(caf::drop);
+}
+
+node_actor::~node_actor() = default;
 
 auto node_actor::goodbye() -> void {
-	if(self_grp) {
-		send(self_grp, a_bye());
-		leave(self_grp);
+	adbg(this) << "goodbye" << std::endl;
+	if(impl.self_grp) {
+		send(impl.self_grp, a_bye());
+		leave(impl.self_grp);
 	}
 
 	// unload retranslators from leafs
@@ -55,44 +109,23 @@ auto node_actor::goodbye() -> void {
 }
 
 auto node_actor::disconnect() -> void {
-	//auto solo = std::lock_guard{ links_guard_ };
 	//for(const auto& L : links_)
 	//	stop_retranslate_from(L);
 
 	auto& Reg = system().registry();
+	auto guard = std::unique_lock{ guard_ };
 	for(auto& [lid, rs] : axons_) {
-		for(auto& ractor : { Reg.get(rs.first), Reg.get(rs.second) })
-			send(caf::actor_cast<caf::actor>(ractor), a_bye(), a_ack());
+		// stop link retranslator
+		send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(rs.first)), a_bye());
+		// and subnode
+		if(rs.second)
+			send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(*rs.second)), a_bye());
 	}
-	auto solo = std::lock_guard{ links_guard_ };
 	axons_.clear();
 }
 
-auto node_actor::bind_new_id(const std::string& new_id) -> void {
-	// leave old group
-	if(self_grp) {
-		if(new_id == self_grp.get()->identifier()) return;
-		// rebind friends to new ID
-		// [NOTE] don't send bye, otherwise retranslators from this will quit
-		send(self_grp, a_bind_id(), new_id);
-		leave(self_grp);
-		//aout(this) << "node: rebind from " << self_grp.get()->identifier() <<
-		//	" to " << new_id << std::endl;
-	}
-	//else {
-	//	aout(this) << "node: join self group " << new_id << std::endl;
-	//}
-
-	// create self local group & join into it
-	self_grp = system().groups().get_local(new_id);
-	join(self_grp);
-
-	// rebind retranslators to new group
-	auto& Reg = system().registry();
-	for(const auto& [lid, rsl_ids] : axons_) {
-		for(auto& ractor : { Reg.get(rsl_ids.first), Reg.get(rsl_ids.second) })
-			send(caf::actor_cast<caf::actor>(ractor), a_bind_id(), a_ack(), new_id); // a_ack to rebing target
-	}
+auto node_actor::name() const -> const char* {
+	return "node_actor";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -119,49 +152,49 @@ struct link_rsl_state : node_rsl_state {
 // actor that retranslate some of link's messages attaching a link's ID to them
 auto link_retranslator(caf::stateful_actor<link_rsl_state>* self, caf::group node_grp, link::id_type lid)
 -> caf::behavior {
-	// silently drop all other messages not in my character
-	self->set_default_handler(caf::drop);
-
 	// remember target node group
 	self->state.tgt_grp = std::move(node_grp);
 	// connect source
+	//auto lid = L->id();
 	self->state.src_grp = system().groups().get_local(to_string(lid));
 	self->state.src_id = std::move(lid);
 	self->join(self->state.src_grp);
-	//aout(self) << "link retranslator started: " << self->state.src_grp_id() << " -> " <<
-	//	self->state.tgt_grp_id() << std::endl;
+
+	auto sdbg = [=](const std::string& msg_name = {}) {
+		auto res = adbg(self, self->state.tgt_grp_id()) << "<- [L] [" << self->state.src_grp_id() << "] ";
+		//auto res = caf::aout(self) << self->state.tgt_grp_id() << " <- ";
+		if(!msg_name.empty())
+			res << '{' << msg_name << "} ";
+		return res;
+	};
+	sdbg() << "retranslator started" << std::endl;
 
 	// register self
 	const auto sid = self->id();
 	system().registry().put(sid, self);
 
+	// silently drop all other messages not in my character
+	self->set_default_handler(caf::drop);
+
 	return {
 		// quit after source
-		[=](a_bye, a_ack) {
+		[=](a_bye) {
 			self->leave(self->state.src_grp);
 			system().registry().erase(sid);
-			//aout(self) << "link retranslator quit: " << to_string(self->state.src_id) <<
-			//	" -> " << self->state.tgt_grp_id() << std::endl;
-		},
-
-		// rebind target group to new ID after node
-		[=](a_bind_id, a_ack, const std::string& new_nid) {
-			if(new_nid == self->state.tgt_grp_id() || new_nid == nil_oid) return;
-			//aout(self) << "link retranslator rebound target: " << new_nid << std::endl;
-			self->state.tgt_grp = system().groups().get_local(new_nid);
+			sdbg() << "retranslator quit" << std::endl;
 		},
 
 		// retranslate events
-		[=](a_lnk_rename, a_ack, const std::string& new_name, const std::string& old_name) {
-			//aout(self) << "retranslate: rename: link " << to_string(self->state.src_id) <<
-			//	" -> node " << self->state.tgt_grp_id() << std::endl;
-			self->send(self->state.tgt_grp, a_lnk_rename(), a_ack(), self->state.src_id, new_name, old_name);
+		[=](a_ack, a_lnk_rename, const std::string& new_name, const std::string& old_name) {
+			sdbg("rename") << old_name << " -> " << new_name << std::endl;
+			self->send<high_prio>(
+				self->state.tgt_grp, a_ack(), a_lnk_rename(), self->state.src_id, new_name, old_name
+			);
 		},
 
-		[=](a_lnk_status, a_ack, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			//aout(self) << "retranslate: status: link " << to_string(self->state.src_id) <<
-			//	" -> node " << self->state.tgt_grp_id() << std::endl;
-			self->send(self->state.tgt_grp, a_lnk_status(), a_ack(), self->state.src_id, req, new_s, prev_s);
+		[=](a_ack, a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s) {
+			sdbg("status") << to_string(req) << ": " << to_string(prev_s) << " -> " << to_string(new_s);
+			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_lnk_status(), self->state.src_id, req, new_s, prev_s);
 		}
 	};
 }
@@ -171,71 +204,59 @@ auto node_retranslator(caf::stateful_actor<node_rsl_state>* self, caf::group nod
 -> caf::behavior {
 	// remember target node group
 	self->state.tgt_grp = std::move(node_grp);
-	// connect source
-	self->send(self, a_bind_id(), std::move(subnode_id));
-	//self->state.src_grp = system().groups().get_local(subnode_id);
-	//self->join(self->state.src_grp);
-	//aout(self) << "node retranslator started: " << subnode_id << " -> " <<
-	//	self->state.tgt_grp_id() << std::endl;
+	// join subnode group
+	self->state.src_grp = system().groups().get_local(subnode_id);
+	self->join(self->state.src_grp);
+
+	auto sdbg = [=](const std::string& msg_name = {}) {
+		auto res = adbg(self, self->state.tgt_grp_id()) << "<- [N] [" << self->state.src_grp_id() << "] ";
+		//auto res = caf::aout(self) << self->state.tgt_grp_id() << " <- ";
+		if(!msg_name.empty())
+			res << '{' << msg_name << "} ";
+		return res;
+	};
+	sdbg() << "retranslator started" << std::endl;
 
 	// register self
 	const auto sid = self->id();
 	system().registry().put(sid, self);
 
 	// silently drop all other messages not in my character
-	self->set_default_handler([](caf::scheduled_actor* self, caf::message_view& mv) {
-		return caf::drop(self, mv);
-	});
+	self->set_default_handler(caf::drop);
 
 	return {
-		// follow source node and rebind source group after it
-		[=](a_bind_id, const std::string& new_sid) {
-			if(new_sid == self->state.src_grp_id() || new_sid == nil_oid) return;
-			self->leave(self->state.src_grp);
-			self->state.src_grp = system().groups().get_local(new_sid);
-			self->join(self->state.src_grp);
-			//aout(self) << "node retranslator (re)started: " << new_sid <<
-			//	" -> " << self->state.tgt_grp_id() << std::endl;
-		},
-
-		// rebind target group to new ID after node
-		[=](a_bind_id, a_ack, const std::string& new_tid) {
-			if(new_tid == self->state.tgt_grp_id() || new_tid == nil_oid) return;
-			//aout(self) << "node retranslator rebound target: " << new_tid << std::endl;
-			self->state.tgt_grp = system().groups().get_local(new_tid);
-		},
-
 		// quit following source
-		[=](a_bye, a_ack) {
+		[=](a_bye) {
 			self->leave(self->state.src_grp);
 			system().registry().erase(sid);
-			//aout(self) << "node retranslator quit: " << self->state.src_grp_id() <<
-			//	" -> " << self->state.tgt_grp_id() << std::endl;
+			sdbg() << "retranslator quit" << std::endl;
 		},
 
 		// retranslate events
-		[=](a_lnk_rename, a_ack, link::id_type lid, const std::string& new_name, const std::string& old_name) {
-			//aout(self) << "retranslate: rename: node " << self->state.src_grp_id() <<
-			//	" -> node " << self->state.tgt_grp_id() << std::endl;
-			self->send(self->state.tgt_grp, a_lnk_rename(), a_ack(), lid, new_name, old_name);
+		[=](a_ack, a_lnk_rename, link::id_type lid, std::string new_name, std::string old_name) {
+			sdbg("rename") << old_name << " -> " << new_name << std::endl;
+			self->send<high_prio>(
+				self->state.tgt_grp, a_ack(), a_lnk_rename(), lid, std::move(new_name), std::move(old_name)
+			);
 		},
 
-		[=](a_lnk_status, a_ack, link::id_type lid, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			//aout(self) << "retranslate: status: node " << self->state.src_grp_id() <<
-			//	" -> node " << self->state.tgt_grp_id() << std::endl;
-			self->send(self->state.tgt_grp, a_lnk_status(), a_ack(), lid, req, new_s, prev_s);
+		[=](a_ack, a_lnk_status, link::id_type lid, Req req, ReqStatus new_s, ReqStatus prev_s) {
+			sdbg("status") << to_string(req) << ": " << to_string(prev_s) << " -> " << to_string(new_s);
+			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_lnk_status(), lid, req, new_s, prev_s);
 		},
 
-		[=](a_lnk_insert, a_ack, link::id_type lid) {
-			//aout(self) << "retranslate: insert: node " << self->state.src_grp_id() <<
-			//	" -> node " << self->state.tgt_grp_id() << std::endl;
-			self->send(self->state.tgt_grp, a_lnk_insert(), a_ack(), lid);
+		[=](a_ack, a_lnk_insert, link::id_type lid, std::size_t pos, InsertPolicy pol) {
+			sdbg("insert") << to_string(lid) << " in pos " << pos << std::endl;
+			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_lnk_insert(), lid, pos, pol);
+		},
+		[=](a_ack, a_lnk_insert, link::id_type lid, std::size_t to_idx, std::size_t from_idx) {
+			sdbg("insert move") << to_string(lid) << " pos " << from_idx << " -> " << to_idx << std::endl;
+			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_lnk_insert(), lid, to_idx, from_idx);
 		},
 
-		[=](a_lnk_erase, a_ack, std::vector<link::id_type> lids, std::vector<std::string> oids) {
-			//aout(self) << "retranslate: erase: node " << self->state.src_grp_id() <<
-			//	" -> node " << self->state.tgt_grp_id() << std::endl;
-			self->send(self->state.tgt_grp, a_lnk_erase(), a_ack(), lids, oids);
+		[=](a_ack, a_lnk_erase, std::vector<link::id_type> lids, std::vector<std::string> oids) {
+			sdbg("erase") << (lids.empty() ? "" : to_string(lids[0])) << std::endl;
+			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_lnk_erase(), lids, oids);
 		}
 	};
 }
@@ -244,129 +265,94 @@ NAMESPACE_END()
 
 auto node_actor::retranslate_from(const sp_link& L) -> void {
 	const auto& lid = L->id();
-	axons_[lid] = {
-		system().spawn(link_retranslator, self_grp, lid).id(),
-		//-1
-		system().spawn(node_retranslator, self_grp, L->oid()).id()
-	};
-	//caf::aout(this) << "*-* node: retranslating events from link " << L->name() << std::endl;
+	auto& AS = system();
+	auto guard = std::unique_lock{ guard_ };
+	// spawn link retranslator first
+	auto axon = axon_t{ AS.spawn(link_retranslator, impl.self_grp, lid).id(), {} };
+	// and node (if pointee is a node)
+	L->data_node_gid().map([&](std::string gid) {
+		axon.second = AS.spawn(node_retranslator, impl.self_grp, std::move(gid)).id();
+	});
+	axons_[lid] = std::move(axon);
+	//adbg(this) << "*-* node: retranslating events from link " << L->name() << std::endl;
 }
 
 auto node_actor::stop_retranslate_from(const sp_link& L) -> void {
+	auto guard = std::unique_lock{ guard_ };
+
 	auto prs = axons_.find(L->id());
 	if(prs == axons_.end()) return;
-	auto& rs_ids = prs->second;
+	auto& rs = prs->second;
 	auto& Reg = system().registry();
 
-	// stop link & subnode retranslators
-	for(auto& ractor : { Reg.get(rs_ids.first), Reg.get(rs_ids.second) })
-		send(caf::actor_cast<caf::actor>(ractor), a_bye(), a_ack());
-	axons_.erase(L->id());
-	//caf::aout(this) << "*-* node: stopped retranslating events from link " << L->name() << std::endl;
+	// stop link retranslator
+	send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(rs.first)), a_bye());
+	// and subnode
+	if(rs.second)
+		send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(*rs.second)), a_bye());
+	axons_.erase(prs);
+	//adbg(this) << "*-* node: stopped retranslating events from link " << L->name() << std::endl;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  leafs insert & erase
 //
-auto node_actor::insert(sp_link L, const InsertPolicy pol, const sp_node& n) -> insert_status<Key::ID> {
-	// can't move persistent node from it's owner
-	if(!L || !accepts(L) || (L->flags() & Flags::Persistent && L->owner()))
-		return { end<Key::ID>(), false };
+auto node_actor::insert(
+	sp_link L, const InsertPolicy pol, bool silent
+) -> insert_status<Key::ID> {
+	adbg(this) << "{a_lnk_insert}" << (silent ? " silent: " : ": ") <<
+		to_string(L->id()) << std::endl;
 
-	// make insertion in one single transaction
-	auto solo = std::lock_guard{ links_guard_ };
-	auto& Limpl = *L->pimpl();
-	// [NOTE] shared lock is enough to prevent parallel modification
-	// and required to allow 'reading' functions like `oid()` share a lock
-	auto Lguard = std::shared_lock{ Limpl.guard_ };
-
-	// check if we have duplicated name
-	iterator<Key::ID> dup;
-	if(enumval(pol & 3) > 0) {
-		dup = find<Key::Name, Key::ID>(Limpl.name_);
-		if(dup != end<Key::ID>() && (*dup)->id() != Limpl.id_) {
-			bool unique_found = false;
-			// first check if dup names are prohibited
-			if(enumval(pol & InsertPolicy::DenyDupNames)) return {dup, false};
-			else if(enumval(pol & InsertPolicy::RenameDup) && !(Limpl.flags_ & Flags::Persistent)) {
-				// try to auto-rename link
-				std::string new_name;
-				for(int i = 0; i < 10000; ++i) {
-					new_name = Limpl.name_ + '_' + std::to_string(i);
-					if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
-						// we've found a unique name
-						// [NOTE] rename is executed by actor in separate thread that will wait
-						// until `Lguard` is released
-						L->rename(std::move(new_name));
-						unique_found = true;
-						break;
-					}
-				}
-			}
-			// if no unique name was found - return fail
-			if(!unique_found) return {dup, false};
-		}
-	}
-
-	const auto make_result = [=](insert_status<Key::ID>&& res) {
-		if(res.second) {
-			const auto& child_L = *res.first;
-			// create link exevents retranlator
-			retranslate_from(child_L);
-			// send message that link inserted
-			send(self_grp, a_lnk_insert(), a_ack(), child_L->id());
-		}
-		return std::move(res);
-	};
-
-	// sym links can return proper OID only if owner is valid
-	auto prev_owner = Limpl.owner_;
-	if(n) Limpl.owner_ = n;
-	// restore prev owner on exit
-	auto finally = scope_guard{ [&]{
-		Limpl.owner_ = prev_owner;
-	}};
-
-	// check for duplicating OID
-	auto& I = links_.get<Key_tag<Key::ID>>();
-	if( enumval(pol & (InsertPolicy::DenyDupOID | InsertPolicy::ReplaceDupOID)) ) {
-		dup = find<Key::OID, Key::ID>(L->oid());
-		if(dup != end<Key::ID>()) {
-			bool is_inserted = false;
-			if(enumval(pol & InsertPolicy::ReplaceDupOID))
-				is_inserted = I.replace(dup, std::move(L));
-			return make_result({ dup, is_inserted });
-		}
-	}
-	// try to insert given link
-	return make_result(I.insert(std::move(L)));
+	return impl.insert(std::move(L), pol, [=](const sp_link& child_L) {
+		// create link exevents retranlator
+		retranslate_from(child_L);
+		// send message that link inserted (with position)
+		if(!silent) send<high_prio>(
+			impl.self_grp, a_ack(), a_lnk_insert(),
+			child_L->id(), (size_t)std::distance(impl.begin(), impl.find<Key::ID>(child_L->id())), pol
+		);
+	});
 }
 
-// postprocessing of just inserted link
-// if link points to node, return it
-auto node_actor::adjust_inserted_link(const sp_link& lnk, const sp_node& n) -> sp_node {
-	// sanity
-	if(!lnk) return nullptr;
+auto node_actor::insert(
+	sp_link L, std::size_t to_idx, const InsertPolicy pol, bool silent
+) -> std::pair<size_t, bool> {
+	// 1. insert an element using ID index
+	// [NOTE] silent insert, send message later below
+	auto res = insert(std::move(L), pol, true);
 
-	// change link's owner
-	// [NOTE] for sym links it's important to set new owner early
-	// otherwise, `data()` will return null and statuses will become Error
-	auto prev_owner = lnk->owner();
-	if(prev_owner != n) {
-		if(prev_owner) prev_owner->erase(lnk->id());
-		lnk->reset_owner(n);
+	// 2. reposition an element in AnyOrder index
+	auto guard = pimpl_->lock();
+	if(res.first != impl.end<Key::ID>()) {
+		auto from = impl.project<Key::ID>(res.first);
+		to_idx = std::min(to_idx, impl.size());
+		auto to = std::next(impl.begin(), to_idx);
+		if(to != from)
+			pimpl_->links_.get<Key_tag<Key::AnyOrder>>().relocate(to, from);
+
+		// detect move and send proper message
+		auto lid = (*res.first)->id();
+		if(!silent) {
+			if(res.second) // normal insert
+				send<high_prio>(
+					impl.self_grp, a_ack(), a_lnk_insert(), std::move(lid), to_idx, pol
+				);
+			else if(to != from) // move
+				send<high_prio>(
+					impl.self_grp, a_ack(), a_lnk_insert(), std::move(lid), to_idx,
+					(size_t)std::distance(impl.begin(), from)
+				);
+		}
+		return { std::distance(impl.begin(), to), res.second };
 	}
-
-	// if we're inserting a node, relink it to ensure a single hard link exists
-	return lnk->propagate_handle().value_or(nullptr);
+	return { impl.size(), res.second };
 }
 
-auto node_actor::erase_impl(iterator<Key::ID> victim) -> void {
-	if(victim == end<Key::ID>()) return;
-	auto solo = std::lock_guard{ links_guard_ };
 
-	auto& L = *victim;
-	stop_retranslate_from(L);
+NAMESPACE_BEGIN()
+
+auto on_erase(const sp_link& L, node_actor& self) {
+	self.stop_retranslate_from(L);
 
 	// collect link IDs & obj IDs of all deleted subtree elements
 	// first elem is erased link itself
@@ -382,75 +368,145 @@ auto node_actor::erase_impl(iterator<Key::ID> victim) -> void {
 	});
 
 	// send message that link erased
-	send(self_grp, a_lnk_erase(), a_ack(), lids, oids);
-	// and erase link
-	links_.get<Key_tag<Key::ID>>().erase(victim);
+	self.send<high_prio>(self.impl.self_grp, a_ack(), a_lnk_erase(), lids, oids);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-//  misc
-//
-auto node_actor::accepts(const sp_link& what) const -> bool {
-	if(!allowed_otypes_.size()) return true;
-	const auto& what_type = what->obj_type_id();
-	for(const auto& otype : allowed_otypes_) {
-		if(what_type == otype) return true;
+NAMESPACE_END()
+
+auto node_actor::erase(const link::id_type& victim, EraseOpts opts) -> size_t {
+	const auto ppf = [=](const sp_link& L) { on_erase(L, *this); };
+	return impl.erase<Key::ID>(
+		victim,
+		enumval(opts & EraseOpts::Silent) ? node_impl::noop_postroc_f : function_view{ ppf },
+		bool(enumval(opts & EraseOpts::DontResetOwner))
+	);
+}
+
+auto node_actor::erase(std::size_t idx) -> size_t {
+	return impl.erase<Key::AnyOrder>(
+		idx, [=](const sp_link& L) { on_erase(L, *this); }
+	);
+}
+
+auto node_actor::erase(const std::string& key, Key key_meaning) -> size_t {
+	const auto ppf = [=](const sp_link& L) { on_erase(L, *this); };
+	switch(key_meaning) {
+	case Key::ID:
+		return impl.erase<Key::ID>(uuid_from_str(key), ppf);
+	case Key::OID:
+		return impl.erase<Key::OID>(key, ppf);
+	case Key::Type:
+		return impl.erase<Key::Type>(key, ppf);
+	default:
+	case Key::Name:
+		return impl.erase<Key::Name>(key, ppf);
 	}
-	return false;
-}
-
-auto node_actor::set_handle(const sp_link& new_handle) -> void {
-	// remove node from existing owner if it differs from owner of new handle
-	if(const auto old_handle = handle_.lock()) {
-		const auto owner = old_handle->owner();
-		if(owner && (!new_handle || owner != new_handle->owner()))
-			owner->erase(old_handle->id());
-	}
-
-	// set new handle link
-	handle_ = new_handle;
-}
-
-void node_actor::on_rename(const Key_type<Key::ID>& key) {
-	auto solo = std::lock_guard{ links_guard_ };
-
-	// find target link by it's ID
-	auto& I = links_.get<Key_tag<Key::ID>>();
-	auto pos = I.find(key);
-	// invoke replace as most safe & easy choice
-	if(pos != I.end())
-		I.replace(pos, *pos);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  behavior
 //
 auto node_actor::make_behavior() -> behavior_type { return {
-	/// skip `id bind` & `bye` (should always come from myself)
-	[](a_bind_id, const std::string&) {},
+	/// skip `bye` (should always come from myself)
 	[=](a_bye) {},
 
-	// handle link rename
-	[=](a_lnk_rename, a_ack, link::id_type lid, const std::string&, const std::string&) {
-		on_rename(lid);
+	[=](a_node_gid) -> std::string {
+		return impl.gid();
 	},
 
-	[=](a_lnk_status, a_ack, const link::id_type& lid, Req, ReqStatus new_s, ReqStatus) {
-		// rebind source of subnode retranslator
+	[=](a_lnk_find, const link::id_type& lid) -> sp_link {
+		if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>())
+			return *p;
+		return nullptr;
+	},
+
+	// handle link rename
+	[=](a_ack, a_lnk_rename, link::id_type lid, const std::string&, const std::string&) {
+		adbg(this) << "{a_lnk_rename}" << std::endl;
+		impl.refresh(lid);
+	},
+
+	// track link status
+	[=](a_ack, a_lnk_status, const link::id_type& lid, Req req, ReqStatus new_s, ReqStatus) {
+		// refresh link if new data arrived
 		if(new_s == ReqStatus::OK) {
-			if(auto L = find<Key::ID>(lid); L != links_.end()) {
-				auto subn_rsl = system().registry().get(axons_[lid].second);
-				// no `a_ack` to rebind source
-				send(caf::actor_cast<caf::actor>(subn_rsl), a_bind_id(), (*L)->oid());
-				//caf::aout(this) << "try to rebind node retranslator..." << std::endl;
+			impl.refresh(lid);
+		}
+	},
+
+	// insert new link
+	[=](a_lnk_insert, sp_link L, InsertPolicy pol) {
+		using OptLID = std::optional<link::id_type>;
+		using R = std::pair<OptLID, bool>;
+
+		//return R{ {}, false };
+		auto res = insert(std::move(L), pol);
+		return R{
+			res.first != impl.end<Key::ID>() ? OptLID{(*res.first)->id()} : OptLID{},
+			res.second
+		};
+	},
+
+	// insert into specified position
+	[=](a_lnk_insert, sp_link L, std::size_t idx, InsertPolicy pol) {
+		adbg(this) << "{a_lnk_insert}" << std::endl;
+		return insert(std::move(L), idx, pol);
+	},
+
+	// insert bunch of links
+	[=](a_lnk_insert, std::vector<sp_link> Ls, InsertPolicy pol) {
+		size_t cnt = 0;
+		for(auto& L : Ls) {
+			if(insert(std::move(L), pol).second) ++cnt;
+		}
+		return cnt;
+	},
+
+	// ack on insert - reflect insert from sibling node actor
+	[=](a_ack, a_lnk_insert, link::id_type lid, size_t pos, InsertPolicy pol) {
+		adbg(this) << "{a_lnk_insert ack}" << std::endl;
+		if(auto S = current_sender(); S != this) {
+			request(caf::actor_cast<caf::actor>(S), impl.timeout_, a_lnk_find(), std::move(lid))
+			.then([=](sp_link L) {
+				// [NOTE] silent insert
+				insert(std::move(L), pos, pol, true);
+			});
+		}
+	},
+	// ack on move
+	[=](a_ack, a_lnk_insert, link::id_type lid, size_t to, size_t from) {
+		if(auto S = current_sender(); S != this) {
+			if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>()) {
+				insert(*p, to, InsertPolicy::AllowDupNames, true);
 			}
 		}
 	},
 
-	// [TODO] add impl
-	[=](a_lnk_insert, a_ack, link::id_type lid) {},
-	// [TODO] add impl
-	[=](a_lnk_erase, a_ack, std::vector<link::id_type>, std::vector<std::string>) {}
+	// erase link by ID with specified options
+	[=](a_lnk_erase, const link::id_type& lid, EraseOpts opts) {
+		return erase(lid, opts);
+	},
+	// all other erase overloads do normal erase
+	[=](a_lnk_erase, std::size_t idx) {
+		return erase(idx);
+	},
+	[=](a_lnk_erase, const std::string& key, Key key_meaning) {
+		return erase(key, key_meaning);
+	},
+	// erase bunch of links
+	[=](a_lnk_erase, const std::vector<link::id_type>& lids) {
+		size_t cnt = 0;
+		for(const auto& lid : lids)
+			cnt += erase(lid);
+		return cnt;
+	},
+
+	// ack on erase - reflect erase from sibling node actor
+	[=](a_ack, a_lnk_erase, const std::vector<link::id_type>& lids, const std::vector<std::string>&) {
+		if(auto S = current_sender(); S != this && !lids.empty()) {
+			erase(lids.front(), EraseOpts::Silent);
+		}
+	}
 }; }
 
 NAMESPACE_END(blue_sky::tree)

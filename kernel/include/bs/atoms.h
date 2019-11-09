@@ -16,8 +16,6 @@ namespace blue_sky {
 using a_hi = caf::atom_constant<caf::atom("bs hi")>;
 // used to inform others that I'm quit
 using a_bye = caf::atom_constant<caf::atom("bs bye")>;
-// signals that link or node ID changed
-using a_bind_id = caf::atom_constant<caf::atom("bs bind id")>;
 // used as 'acquired` tag
 using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 
@@ -33,11 +31,16 @@ using a_lnk_name = caf::atom_constant<caf::atom("tl name")>;
 using a_lnk_rename = caf::atom_constant<caf::atom("tl rename")>;
 using a_lnk_insert = caf::atom_constant<caf::atom("tl insert")>;
 using a_lnk_erase = caf::atom_constant<caf::atom("tl erase")>;
+using a_lnk_find = caf::atom_constant<caf::atom("tl find")>;
 
 using a_lnk_status = caf::atom_constant<caf::atom("tl status")>;
 using a_lnk_oid = caf::atom_constant<caf::atom("tl oid")>;
 using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
 using a_lnk_inode = caf::atom_constant<caf::atom("tl inode")>;
+
+// query node's actor group ID
+using a_node_gid = caf::atom_constant<caf::atom("tn gid")>;
+using a_node_disconnect = caf::atom_constant<caf::atom("tn unplug")>;
 
 } /* namespace blue_sky */
 

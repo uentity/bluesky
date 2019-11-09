@@ -35,6 +35,7 @@ BSS_FCN_DECL(serialize, blue_sky::tree::fusion_link)
 
 // node
 BSS_FCN_DECL(serialize, blue_sky::tree::node)
+BSS_FCN_DECL(load_and_construct, blue_sky::tree::node)
 
 BSS_FORCE_DYNAMIC_INIT(link)
 BSS_FORCE_DYNAMIC_INIT(node)
