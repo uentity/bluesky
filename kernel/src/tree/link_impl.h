@@ -147,7 +147,11 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 	sym_link_impl();
 	sym_link_impl(std::string name, std::string path, Flags f);
 
+	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
+
 	auto data() -> result_or_err<sp_obj> override;
+
+	auto pointee() const -> result_or_err<sp_link>;
 };
 
 NAMESPACE_END(blue_sky::tree)

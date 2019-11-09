@@ -11,6 +11,7 @@
 #include <bs/tree/tree.h>
 #include <bs/tree/errors.h>
 #include <bs/kernel/config.h>
+#include <bs/kernel/tools.h>
 
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
@@ -21,8 +22,25 @@ OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
-//  impl
+//  actor + impl
 //
+
+// actor
+struct sym_link_actor : public link_actor {
+	using super = link_actor;
+
+	using super::super;
+
+	// forward call to pointed link
+	auto data_node_gid() -> result_or_err<std::string> override {
+		auto& sympl = static_cast<sym_link_impl&>(impl);
+		return sympl.pointee().and_then([](const sp_link& src_link) {
+			return src_link->data_node_gid();
+		});
+	}
+};
+
+// impl
 sym_link_impl::sym_link_impl(std::string name, std::string path, Flags f)
 	: super(std::move(name), f), path_(std::move(path))
 {}
@@ -31,14 +49,32 @@ sym_link_impl::sym_link_impl()
 	: super()
 {}
 
-auto sym_link_impl::data() -> result_or_err<sp_obj> {
-	// cannot dereference dangling sym link
+auto sym_link_impl::pointee() const -> result_or_err<sp_link> {
 	const auto parent = owner_.lock();
-	if(!parent) return tl::make_unexpected(error::quiet(Error::UnboundSymLink));
-	const auto src_link = deref_path(path_, parent);
-	return src_link ?
-		src_link->data_ex() :
-		tl::make_unexpected(error::quiet(Error::LinkExpired));
+	if(!parent) return tl::make_unexpected( error::quiet(Error::UnboundSymLink) );
+
+	sp_link src_link;
+	if(auto er = error::eval_safe([&] { src_link = deref_path(path_, parent); }); er)
+		return tl::make_unexpected(std::move(er));
+	else if(src_link)
+		return src_link;
+	return tl::make_unexpected( error::quiet(Error::LinkExpired) );
+}
+
+auto sym_link_impl::data() -> result_or_err<sp_obj> {
+	auto res = pointee().and_then([](const sp_link& src_link) {
+		return src_link->data_ex();
+	});
+	if(!res) {
+		auto& er = res.error();
+		std::cout << "*** " << to_string(id_) << ' ' << er.what() << std::endl;
+		//std::cout << kernel::tools::get_backtrace(20) << std::endl;
+	}
+	return res;
+}
+
+auto sym_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
+	return spawn_lactor<sym_link_actor>(std::move(limpl));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
