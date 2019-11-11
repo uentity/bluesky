@@ -331,16 +331,30 @@ struct tree_fs_output::impl {
 			res.emplace_back( error::unpack(std::move(er_box)) );
 
 		// reset state on exit
-		auto finally = scope_guard{ [&S, this]{
-			S.nstarted_ = 0;
-			S.nfinished_ = 0;
-			S.er_stack_.clear();
-			has_wait_deferred_ = false;
-		}};
+		// [NOTE] disabled -- must do it manually
+		//auto finally = scope_guard{ [&S, this]{
+		//	S.nstarted_ = 0;
+		//	S.nfinished_ = 0;
+		//	S.er_stack_.clear();
+		//	has_wait_deferred_ = false;
+		//}};
 
+		auto tnow = make_timestamp();
+		// checks if number of finished actors == number of started
+		const auto wait_pred = [&S]{ return S.nfinished_ == S.nstarted_; };
+		bool wait_res = true;
 		std::unique_lock guard{ S.running_mtx_ };
-		if(!S.running_cv_.wait_for( guard, how_long, [&S]{ return S.nfinished_ == S.nstarted_; }))
-			res.emplace_back("Timeout waiting for Tree FS save to complete");
+		if(how_long == timespan::max())
+			S.running_cv_.wait(guard, wait_pred);
+		else
+			wait_res = S.running_cv_.wait_for( guard, how_long, wait_pred);
+
+		// if predicate didn't met, return timeout error
+		if(!wait_res)
+			res.emplace_back(fmt::format(
+				"Timeout waiting for Tree FS save to complete (waited for {})",
+				to_string(make_timestamp() - tnow)
+			));
 		return res;
 	}
 

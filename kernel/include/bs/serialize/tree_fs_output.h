@@ -45,7 +45,7 @@ public:
 	auto will_serialize_node(objbase const* obj) -> bool;
 
 	auto save_object(const objbase& obj) -> error;
-	auto wait_objects_saved(timespan how_long = std::chrono::seconds(30)) const
+	auto wait_objects_saved(timespan how_long = timespan::max()) const
 	-> std::vector<error>;
 
 	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter*;
