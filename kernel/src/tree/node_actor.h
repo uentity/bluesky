@@ -11,12 +11,12 @@
 #include <bs/tree/node.h>
 #include <bs/kernel/radio.h>
 #include <bs/detail/enumops.h>
+#include <bs/detail/sharded_mutex.h>
 
 #include "actor_common.h"
 #include "node_impl.h"
 
 #include <set>
-#include <shared_mutex>
 #include <unordered_map>
 #include <optional>
 
@@ -54,7 +54,7 @@ using InsertPolicy = node::InsertPolicy;
 /*-----------------------------------------------------------------------------
  *  node_actor
  *-----------------------------------------------------------------------------*/
-class BS_HIDDEN_API node_actor : public caf::event_based_actor {
+class BS_HIDDEN_API node_actor : public caf::event_based_actor, bs_detail::sharded_mutex<std::mutex> {
 public:
 	friend struct access_node_actor;
 	using super = caf::event_based_actor;
@@ -65,7 +65,6 @@ public:
 	// map links to retranslator actors
 	using axon_t = std::pair<std::uint64_t, std::optional<std::uint64_t>>;
 	std::unordered_map<link::id_type, axon_t> axons_;
-	mutable std::shared_mutex guard_;
 
 	node_actor(caf::actor_config& cfg, caf::group ngrp, sp_nimpl Nimpl);
 	virtual ~node_actor();

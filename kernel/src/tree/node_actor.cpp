@@ -113,7 +113,7 @@ auto node_actor::disconnect() -> void {
 	//	stop_retranslate_from(L);
 
 	auto& Reg = system().registry();
-	auto guard = std::unique_lock{ guard_ };
+	auto guard = lock();
 	for(auto& [lid, rs] : axons_) {
 		// stop link retranslator
 		send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(rs.first)), a_bye());
@@ -266,7 +266,8 @@ NAMESPACE_END()
 auto node_actor::retranslate_from(const sp_link& L) -> void {
 	const auto& lid = L->id();
 	auto& AS = system();
-	auto guard = std::unique_lock{ guard_ };
+	auto guard = lock();
+
 	// spawn link retranslator first
 	auto axon = axon_t{ AS.spawn(link_retranslator, impl.self_grp, lid).id(), {} };
 	// and node (if pointee is a node)
@@ -278,7 +279,7 @@ auto node_actor::retranslate_from(const sp_link& L) -> void {
 }
 
 auto node_actor::stop_retranslate_from(const sp_link& L) -> void {
-	auto guard = std::unique_lock{ guard_ };
+	auto guard = lock();
 
 	auto prs = axons_.find(L->id());
 	if(prs == axons_.end()) return;
