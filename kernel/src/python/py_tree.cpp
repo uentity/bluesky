@@ -136,7 +136,8 @@ void py_bind_tree(py::module& m) {
 		.value("Binary", TreeArchive::Binary)
 		.value("FS", TreeArchive::FS)
 	;
-	m.def("save_tree", &save_tree, "root"_a, "filename"_a, "ar"_a = TreeArchive::Text);
+	m.def("save_tree", &save_tree,
+		"root"_a, "filename"_a, "ar"_a = TreeArchive::Text, "max_wait"_a = timespan::max());
 	m.def("load_tree", &load_tree, "filename"_a, "ar"_a = TreeArchive::Text);
 }
 

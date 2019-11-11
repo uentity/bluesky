@@ -104,12 +104,20 @@ NAMESPACE_BEGIN(tree)
 /*-----------------------------------------------------------------------------
  *  tree save/load impl
  *-----------------------------------------------------------------------------*/
-auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar) -> error {
+auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar, timespan max_wait) -> error {
 	if(ar == TreeArchive::FS) {
 		auto ar = tree_fs_output(filename);
 		ar(root);
-		ar.serializeDeferments();
-		return success();
+		auto errs = ar.wait_objects_saved(max_wait);
+		// collect all errors happened
+		std::string reduced_er;
+		for(const auto& er : errs) {
+			if(er) {
+				if(!reduced_er.empty()) reduced_er += '\n';
+				reduced_er += er.what();
+			}
+		}
+		return reduced_er.empty() ? success() : error::quiet(reduced_er);
 	}
 	// open file for writing
 	std::ofstream fs(
