@@ -34,7 +34,7 @@ public:
 	// retrive stream for archive's head (if any)
 	auto head() -> result_or_err<cereal::JSONInputArchive*>;
 
-	auto begin_node(const tree::node& N) -> error;
+	auto begin_node() -> error;
 	auto end_node(const tree::node& N) -> error;
 	auto will_serialize_node(objbase const* obj) const -> bool;
 
@@ -111,8 +111,18 @@ private:
 	std::unique_ptr<impl> pimpl_;
 };
 
+// make prologue/epilogue for different possible node load impl
+// either 1st or 2nd set will be called
+// 1. without `load_and_construct`
 BS_API auto prologue(tree_fs_input& ar, tree::node const& N) -> void;
 BS_API auto epilogue(tree_fs_input& ar, tree::node const& N) -> void;
+// 2. via `load_and construct`
+BS_API auto prologue(
+	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const& N
+) -> void;
+BS_API auto epilogue(
+	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const& N
+) -> void;
 
 NAMESPACE_END(blue_sky)
 
@@ -127,7 +137,6 @@ inline auto load(blue_sky::tree_fs_input& ar, NameValuePair<T>& t) -> void {
 		jar->setNextName(t.name);
 		ar(t.value);
 	});
-
 }
 
 template<typename T, traits::EnableIf<std::is_arithmetic<T>::value> = traits::sfinae>

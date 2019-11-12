@@ -155,9 +155,11 @@ struct tree_fs_input::impl {
 		else return united_err_msg;
 	}
 
-	auto begin_node(tree_fs_input& ar, const tree::node& N) -> error {
+	auto begin_node(tree_fs_input& ar) -> error {
+		// node reference is ONLY used for template matching
+		static constexpr tree::node* sentinel = nullptr;
 		return error::eval(
-			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); },
+			[&]{ return head().map( [&](auto* ar) { prologue(*ar, *sentinel); }); },
 			[&]{ return enter_root(); }
 		);
 	}
@@ -237,8 +239,8 @@ auto tree_fs_input::head() -> result_or_err<cereal::JSONInputArchive*> {
 	return pimpl_->head();
 }
 
-auto tree_fs_input::begin_node(const tree::node& N) -> error {
-	return pimpl_->begin_node(*this, N);
+auto tree_fs_input::begin_node() -> error {
+	return pimpl_->begin_node(*this);
 }
 
 auto tree_fs_input::end_node(const tree::node& N) -> error {
@@ -264,12 +266,24 @@ auto tree_fs_input::will_serialize_node(objbase const* obj) const -> bool {
 ///////////////////////////////////////////////////////////////////////////////
 //  prologue, epilogue
 //
-auto prologue(tree_fs_input& ar, tree::node const& N) -> void {
-	ar.begin_node(N);
+auto prologue(tree_fs_input& ar, tree::node const&) -> void {
+	ar.begin_node();
 }
 
 auto epilogue(tree_fs_input& ar, tree::node const& N) -> void {
 	ar.end_node(N);
+}
+
+auto prologue(
+	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const&
+) -> void {
+	ar.begin_node();
+}
+
+auto epilogue(
+	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const& N
+) -> void {
+	ar.end_node( *const_cast<cereal::construct<tree::node>&>(N.construct).ptr() );
 }
 
 NAMESPACE_END(blue_sky)
