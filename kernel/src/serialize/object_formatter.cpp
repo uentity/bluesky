@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/serialize/object_formatter.h>
-#include <bs/type_descriptor.h>
+#include <bs/objbase.h>
 #include <bs/kernel/misc.h>
 
 #include <boost/uuid/random_generator.hpp>
@@ -19,39 +19,6 @@
 #include <mutex>
 
 NAMESPACE_BEGIN(blue_sky)
-
-/*-----------------------------------------------------------------------------
- *  object_formatter
- *-----------------------------------------------------------------------------*/
-object_formatter::object_formatter(
-	std::string fmt_name, object_saver_fn saver, object_loader_fn loader, bool stores_node_
-) : base_t{std::move(saver), std::move(loader)}, name(std::move(fmt_name)), stores_node(stores_node_)
-{}
-
-auto object_formatter::save(
-	const objbase& obj, std::string obj_fname, std::string_view fmt_name
-) const -> error {
-	return first(obj, std::move(obj_fname), fmt_name);
-}
-
-auto object_formatter::load(
-	objbase& obj, std::string obj_fname, std::string_view fmt_name
-) const -> error {
-	return second(obj, std::move(obj_fname), fmt_name);
-}
-
-// compare formatters by name
-auto operator<(const object_formatter& lhs, const object_formatter& rhs) {
-	return lhs.name < rhs.name;
-}
-// ... and with arbitrary string key
-auto operator<(const object_formatter& lhs, std::string_view rhs) {
-	return lhs.name < rhs;
-}
-auto operator<(std::string_view lhs, const object_formatter& rhs) {
-	return lhs < rhs.name;
-}
-
 NAMESPACE_BEGIN()
 
 /*-----------------------------------------------------------------------------
@@ -62,6 +29,9 @@ struct fmaster {
 	// [NOTE] type_id is stored as string view!
 	using fmt_storage_t = std::map< std::string_view, std::set<object_formatter, std::less<>>, std::less<> >;
 	fmt_storage_t fmt_storage;
+
+	using registry_t = std::map<const objbase*, std::string_view>;
+	registry_t registry;
 
 	// sync access to storage above
 	std::mutex fmt_guard;
@@ -127,6 +97,30 @@ struct fmaster {
 		}
 		return nullptr;
 	}
+
+	auto register_formatter(const objbase& obj, std::string_view fmt_name) -> bool {
+		if(auto frm = get_formatter(obj.bs_resolve_type().name, fmt_name)) {
+			auto solo = std::lock_guard{ fmt_guard };
+			registry[&obj] = frm->name;
+			return true;
+		}
+		return false;
+	}
+
+	auto deregister_formatter(const objbase& obj) -> bool {
+		if(auto r = registry.find(&obj); r != registry.end()) {
+			auto solo = std::lock_guard{ fmt_guard };
+			registry.erase(r);
+			return true;
+		}
+		return false;
+	}
+
+	auto get_obj_formatter(const objbase* obj) -> object_formatter* {
+		if(auto r = registry.find(obj); r != registry.end())
+			return get_formatter(obj->bs_resolve_type().name, r->second);
+		return nullptr;
+	}
 };
 
 NAMESPACE_END()
@@ -154,6 +148,48 @@ auto list_installed_formatters(std::string_view obj_type_id) -> std::vector<std:
 
 auto get_formatter(std::string_view obj_type_id, std::string_view fmt_name) -> object_formatter* {
 	return FM.get_formatter(obj_type_id, fmt_name);
+}
+
+auto get_obj_formatter(const objbase* obj) -> object_formatter* {
+	return FM.get_obj_formatter(obj);
+}
+
+/*-----------------------------------------------------------------------------
+ *  object_formatter
+ *-----------------------------------------------------------------------------*/
+object_formatter::object_formatter(
+	std::string fmt_name, object_saver_fn saver, object_loader_fn loader, bool stores_node_
+) : base_t{std::move(saver), std::move(loader)}, name(std::move(fmt_name)), stores_node(stores_node_)
+{}
+
+// compare formatters by name
+auto operator<(const object_formatter& lhs, const object_formatter& rhs) {
+	return lhs.name < rhs.name;
+}
+// ... and with arbitrary string key
+auto operator<(const object_formatter& lhs, std::string_view rhs) {
+	return lhs.name < rhs;
+}
+auto operator<(std::string_view lhs, const object_formatter& rhs) {
+	return lhs < rhs.name;
+}
+
+auto object_formatter::save(
+	const objbase& obj, std::string obj_fname, std::string_view fmt_name
+) const -> error {
+	FM.register_formatter(obj, name);
+	auto res = error::eval_safe([&]{ first(obj, std::move(obj_fname), fmt_name); });
+	FM.deregister_formatter(obj);
+	return res;
+}
+
+auto object_formatter::load(
+	objbase& obj, std::string obj_fname, std::string_view fmt_name
+) const -> error {
+	FM.register_formatter(obj, name);
+	auto res = error::eval_safe([&]{ second(obj, std::move(obj_fname), fmt_name); });
+	FM.deregister_formatter(obj);
+	return res;
 }
 
 NAMESPACE_END(blue_sky)

@@ -36,7 +36,6 @@ public:
 
 	auto begin_node() -> error;
 	auto end_node(const tree::node& N) -> error;
-	auto will_serialize_node(objbase const* obj) const -> bool;
 
 	auto load_object(objbase& obj) -> error;
 

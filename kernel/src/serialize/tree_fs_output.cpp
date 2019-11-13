@@ -202,9 +202,12 @@ struct tree_fs_output::impl {
 		ar(cereal::make_nvp("fmt", obj_fmt));
 		fmt_ok = true;
 
-		if(auto er = enter_root()) return er;
-		if(objects_path_.empty())
-			if(auto er = enter_dir(root_path_ / objects_dname_, objects_path_)) return er;
+		if(auto er = error::eval(
+			[&]{ return enter_root(); },
+			[&]{ return objects_path_.empty() ?
+				enter_dir(root_path_ / objects_dname_, objects_path_) : perfect;
+			}
+		)) return er;
 
 		auto obj_path = objects_path_ / obj.id();
 		obj_path += std::string(".") + obj_fmt;
@@ -215,7 +218,7 @@ struct tree_fs_output::impl {
 
 		// if object is node and formatter don't store leafs, then save 'em explicitly
 		if(obj.is_node() && !F->stores_node)
-			ar(static_cast<const tree::node&>(obj));
+			ar(cereal::make_nvp( "node", static_cast<const tree::node&>(obj) ));
 
 		// and actually save object data to file
 		auto abs_obj_path = fs::absolute(obj_path, file_er_);
@@ -420,12 +423,6 @@ auto tree_fs_output::saveBinaryValue(const void* data, size_t size, const char* 
 	head().map([=](cereal::JSONOutputArchive* jar) {
 		jar->saveBinaryValue(data, size, name);
 	});
-}
-
-auto tree_fs_output::will_serialize_node(objbase const* obj) -> bool {
-	if(auto pfmt = get_active_formatter(obj->bs_type().name); obj->is_node() && pfmt)
-		return pfmt->stores_node;
-	return true;
 }
 
 auto tree_fs_output::get_active_formatter(std::string_view obj_type_id) -> object_formatter* {

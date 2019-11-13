@@ -205,17 +205,20 @@ struct tree_fs_input::impl {
 
 		// if object is node and formatter don't store leafs, then load 'em explicitly
 		if(obj.is_node() && !F->stores_node)
-			ar(static_cast<tree::node&>(obj));
+			ar(cereal::make_nvp( "node", static_cast<tree::node&>(obj) ));
 
 		// read object data from specified file
-		if(auto er = enter_root()) return er;
-		if(objects_path_.empty())
-			if(auto er = enter_dir(root_path_ / objects_dname_, objects_path_)) return er;
+		if(auto er = error::eval(
+			[&]{ return enter_root(); },
+			[&]{ return objects_path_.empty() ?
+				enter_dir(root_path_ / objects_dname_, objects_path_) : perfect;
+			}
+		)) return er;
 
 		auto obj_path = objects_path_ / obj_filename;
 		auto abs_obj_path = fs::absolute(obj_path, file_er_);
 		if(file_er_) return make_error();
-		return F->second(obj, obj_path.string(), obj_frm_);
+		return F->load(obj, obj_path.string(), obj_frm_);
 	}
 
 	std::string root_fname_, root_dname_, objects_dname_, obj_frm_;
@@ -255,12 +258,6 @@ auto tree_fs_input::loadBinaryValue(void* data, size_t size, const char* name) -
 	head().map([=](auto* jar) {
 		jar->loadBinaryValue(data, size, name);
 	});
-}
-
-auto tree_fs_input::will_serialize_node(objbase const* obj) const -> bool {
-	if(auto pfmt = get_formatter(obj->bs_type().name, pimpl_->obj_frm_); obj->is_node() && pfmt)
-		return pfmt->stores_node;
-	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

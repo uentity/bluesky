@@ -42,7 +42,6 @@ public:
 
 	auto begin_node(const tree::node& N) -> error;
 	auto end_node(const tree::node& N) -> error;
-	auto will_serialize_node(objbase const* obj) -> bool;
 
 	auto save_object(const objbase& obj) -> error;
 	auto wait_objects_saved(timespan how_long = timespan::max()) const

@@ -23,7 +23,7 @@ using object_loader_fn = std::function<
 	error (objbase& obj, std::string obj_fname, std::string_view fmt_name)
 >;
 
-struct BS_API object_formatter : std::pair<object_saver_fn, object_loader_fn> {
+struct BS_API object_formatter : private std::pair<object_saver_fn, object_loader_fn> {
 	using base_t = std::pair<object_saver_fn, object_loader_fn>;
 
 	const std::string name;
@@ -45,6 +45,7 @@ BS_API auto formatter_installed(std::string_view obj_type_id, std::string_view f
 BS_API auto list_installed_formatters(std::string_view obj_type_id) -> std::vector<std::string>;
 
 BS_API auto get_formatter(std::string_view obj_type_id, std::string_view fmt_name) -> object_formatter*;
+BS_API auto get_obj_formatter(const objbase* obj) -> object_formatter*;
 
 NAMESPACE_BEGIN(detail)
 

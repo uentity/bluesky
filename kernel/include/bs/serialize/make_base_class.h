@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "../common.h"
+#include "object_formatter.h"
 #include <cereal/types/base_class.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -30,18 +30,24 @@ NAMESPACE_END(detail)
 
 template<typename Base, typename Derived, typename Archive>
 inline auto make_base_class(Archive& ar, Derived const* derived) {
-	if constexpr(std::is_same_v<Base, tree::node> && detail::custom_node_serialization_v<Archive>) {
-		// ask if an Archive has custom node serialization for this object
-		return cereal::base_class<Base>(ar.will_serialize_node(derived) ? nullptr : derived);
+	if constexpr(std::is_same_v<Base, tree::node>) {
+		// get registered formatter for given object
+		bool stores_node = false;
+		if(auto frm = get_obj_formatter(static_cast<objbase const*>(derived)))
+			stores_node = frm->stores_node;
+		return cereal::base_class<Base>(stores_node ? derived : nullptr);
 	}
 	return cereal::base_class<Base>(derived);
 }
 
 template<typename Base, typename Derived, typename Archive>
 inline auto make_virtual_base_class(Archive& ar, Derived const* derived) {
-	if constexpr(std::is_same_v<Base, tree::node> && detail::custom_node_serialization_v<Archive>) {
-		// ask if an Archive has custom node serialization for this object
-		return cereal::virtual_base_class<Base>(ar.will_serialize_node(derived) ? nullptr : derived);
+	if constexpr(std::is_same_v<Base, tree::node>) {
+		// get registered formatter for given object
+		bool stores_node = false;
+		if(auto frm = get_obj_formatter(static_cast<objbase const*>(derived)))
+			stores_node = frm->stores_node;
+		return cereal::virtual_base_class<Base>(stores_node ? derived : nullptr);
 	}
 	return cereal::virtual_base_class<Base>(derived);
 }
