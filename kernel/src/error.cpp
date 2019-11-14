@@ -1,6 +1,6 @@
 /// @file
 /// @author uentity
-/// @date 18.08.2016	
+/// @date 18.08.2016
 /// @brief Contains implimentations of BlueSky exceptions
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
@@ -21,7 +21,6 @@
 #include <cstring>
 #include <unordered_map>
 #include <mutex>
-#include <iostream>
 
 using namespace std;
 
@@ -57,10 +56,20 @@ struct cat_registry {
 		cat_dict[cat->name()] = cat;
 	}
 
+	auto lookup_sys_category(std::string_view name) const -> std::error_category const* {
+		static std::error_category const* syscats[] = {
+			&std::system_category(), &std::generic_category(), &std::iostream_category()
+		};
+
+		for(auto cat : syscats) { if(cat->name() == name) return cat; }
+		return nullptr;
+	}
+
 	auto lookup_category(std::string_view name) const -> std::error_category const* {
 		if(auto pcat = cat_dict.find(name); pcat != cat_dict.end())
 			return pcat->second;
-		return nullptr;
+		else
+			return lookup_sys_category(name);
 	}
 
 	auto make_error_code(int ec, std::string_view cat_name) -> std::error_code {
@@ -86,8 +95,7 @@ std::error_code make_error_code(Error e) {
 		}
 
 		std::string message(int ec) const override {
-			// in any case we should just substitute custom error message
-			return "";
+			return "Generic blue-sky error";
 		}
 	};
 
@@ -98,7 +106,7 @@ std::error_code make_error_code(Error e) {
  *  error implementation
  *-----------------------------------------------------------------------------*/
 error::error(IsQuiet quiet, std::string message, std::error_code ec)
-	: runtime_error([ec_msg = ec.message(), msg = std::move(message)] {
+	: runtime_error([ec_msg = ec.message(), msg = std::move(message)]() mutable {
 		auto res = std::move(ec_msg);
 		if(!msg.empty()) {
 			res += res.empty() ? "|> " : " |> ";
@@ -124,6 +132,10 @@ error::error(IsQuiet quiet, int ec, std::string_view cat_name)
 	)
 {}
 
+error::error(IsQuiet quiet, const std::system_error& er)
+	: runtime_error(er.what()), code(er.code())
+{}
+
 // [NOTE] unpacking is always quiet
 error::error(IsQuiet quiet, box b) : error(IsQuiet::Yes, std::move(b.message), b.ec, b.domain) {}
 
@@ -143,8 +155,10 @@ const char* error::domain() const noexcept {
 }
 
 const char* error::message() const noexcept {
+	if(ECR.lookup_sys_category(domain()))
+		return what();
 	// custom message is tail part delimited by semicolon and space
-	if(auto pos = strstr(what(), "|>"); pos)
+	else if(auto pos = strstr(what(), "|>"); pos)
 		return pos + 3;
 	return "";
 }
@@ -158,7 +172,7 @@ bool error::ok() const {
 BS_API std::string to_string(const error& er) {
 	std::string s = fmt::format("[{}] [{}] {}", er.domain(), er.code.value(), er.what());
 #if defined(_DEBUG) && !defined(_MSC_VER)
-	if(!er.ok()) s += kernel::tools::get_backtrace(20, 4);
+	if(!er.ok()) s += kernel::tools::get_backtrace(16, 4);
 #endif
 	return s;
 }
