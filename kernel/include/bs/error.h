@@ -179,6 +179,7 @@ public:
 		try {
 			return eval(std::forward<F>(f), std::forward<Fs>(fs)...);
 		}
+		catch(const std::system_error& e) { return {e}; }
 		catch(const std::exception& e) { return {e.what()}; }
 		catch(...) { return {}; }
 	}
@@ -198,6 +199,8 @@ private:
 	explicit error(IsQuiet, std::string message, int err_code, std::string_view cat_name = "");
 	/// construct from int error code and possible registered category name
 	explicit error(IsQuiet, int err_code, std::string_view cat_name = "");
+	// construct from system_error that already carries error code
+	explicit error(IsQuiet, const std::system_error& er);
 	/// unpacking error from box is always quiet
 	explicit error(IsQuiet, box b);
 };
