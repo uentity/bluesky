@@ -18,6 +18,14 @@
 #define BS_REGISTER_ERROR_ENUM(E) \
 namespace std { template<> struct is_error_code_enum< E > : true_type {}; }
 
+#define EVAL if(auto er = ::blue_sky::error::eval(
+#define EVAL_SAFE if(auto er = ::blue_sky::error::eval_safe(
+#define RETURN_EVAL_ERR )) return er;
+
+#define SCOPE_EVAL if(auto er = ::blue_sky::error::eval([&] {
+#define SCOPE_EVAL_SAFE if(auto er = ::blue_sky::error::eval_safe([&] {
+#define RETURN_SCOPE_ERR })) return er;
+
 /*-----------------------------------------------------------------------------
  *  define default error codes: OK and not OK
  *-----------------------------------------------------------------------------*/
