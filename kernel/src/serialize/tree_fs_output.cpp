@@ -49,8 +49,9 @@ struct tree_fs_output::impl {
 	{
 		// try convert root filename to absolute
 		auto root_path = fs::path(root_fname_);
-		auto abs_root = fs::absolute(root_path, file_er_);
-		if(!file_er_) {
+		auto abs_root = fs::path{};
+		auto er = error::eval_safe([&]{ abs_root = fs::absolute(root_path); });
+		if(!er) {
 			// extract root dir from absolute filename
 			root_dname_ = abs_root.parent_path().string();
 			root_fname_ = abs_root.filename().string();
@@ -62,32 +63,23 @@ struct tree_fs_output::impl {
 		}
 		else {
 			// best we can do
-			root_dname_ = fs::current_path(file_er_).string();
+			error::eval_safe([&]{ root_dname_ = fs::current_path().string(); });
 		}
 	}
-
-	auto make_error(error&& cust_er = perfect) -> error {
-		return file_er_ ?
-			error{cust_er ? cust_er.what() : "", file_er_} :
-			std::move(cust_er);
-	};
 
 	// if entering `src_path` is successfull, set `tar_path` to src_path
 	// if `tar_path` is nonempty, return success immediately
 	template<typename Path>
 	auto enter_dir(Path src_path, fs::path& tar_path) -> error {
 		auto path = fs::path(std::move(src_path));
-		if(path.empty()) return error{"Cannot save tree to empty path"};
+		if(path.empty()) return error{"Cannot enter empty path"};
 
-		// create folders along specified path if not created yet
-		file_er_.clear();
-		if(!fs::exists(path, file_er_) && !file_er_)
-			fs::create_directories(path, file_er_);
-		if(file_er_) return make_error();
-
-		// check that path is a directory
-		if(!fs::is_directory(path, file_er_))
-			return make_error("Tree path is not a directory");
+		if(auto er = error::eval_safe(
+			// create folders along specified path if not created yet
+			[&]{ if(!fs::exists(path)) fs::create_directories(path); },
+			// check that path is a directory
+			[&]{ return fs::is_directory(path) ? perfect : error{"Tree path is not a directory"}; }
+		); er) return er;
 
 		tar_path = std::move(path);
 		return perfect;
@@ -144,7 +136,7 @@ struct tree_fs_output::impl {
 	}
 
 	auto begin_node(const tree::node& N) -> error {
-		return error::eval(
+		return error::eval_safe(
 			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); },
 			[&]{ return enter_root(); },
 			[&]{ return enter_dir(cur_path_ / N.id(), cur_path_); }
@@ -153,7 +145,7 @@ struct tree_fs_output::impl {
 
 	auto end_node(const tree::node& N) -> error {
 		if(cur_path_.empty() || cur_path_ == root_path_) return {"No node saving were started"};
-		return error::eval(
+		return error::eval_safe(
 			// write down node's metadata nessessary to load it later
 			[&]{ return head().map( [&](auto* ar) {
 				// node directory
@@ -202,7 +194,7 @@ struct tree_fs_output::impl {
 		ar(cereal::make_nvp("fmt", obj_fmt));
 		fmt_ok = true;
 
-		if(auto er = error::eval(
+		if(auto er = error::eval_safe(
 			[&]{ return enter_root(); },
 			[&]{ return objects_path_.empty() ?
 				enter_dir(root_path_ / objects_dname_, objects_path_) : perfect;
@@ -221,8 +213,10 @@ struct tree_fs_output::impl {
 			ar(cereal::make_nvp( "node", static_cast<const tree::node&>(obj) ));
 
 		// and actually save object data to file
-		auto abs_obj_path = fs::absolute(obj_path, file_er_);
-		if(file_er_) return make_error();
+		fs::path abs_obj_path;
+		if(auto er = error::eval_safe(
+			[&]{ abs_obj_path = fs::absolute(obj_path); }
+		)) return er;
 
 		// spawn object save actor
 		auto A = kernel::radio::system().spawn(async_saver, F, manager_);
@@ -365,7 +359,6 @@ struct tree_fs_output::impl {
 	//  data
 	//
 	std::string root_fname_, objects_dname_, root_dname_;
-	std::error_code file_er_;
 	fs::path root_path_, cur_path_, objects_path_;
 
 	std::list<std::ofstream> necks_;

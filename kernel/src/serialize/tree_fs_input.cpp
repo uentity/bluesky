@@ -37,8 +37,9 @@ struct tree_fs_input::impl {
 	{
 		// try convert root filename to absolute
 		auto root_path = fs::path(root_fname_);
-		auto abs_root = fs::absolute(root_path, file_er_);
-		if(!file_er_) {
+		auto abs_root = fs::path{};
+		auto er = error::eval_safe([&]{ abs_root = fs::absolute(root_path); });
+		if(!er) {
 			// extract root dir from absolute filename
 			root_dname_ = abs_root.parent_path().string();
 			root_fname_ = abs_root.filename().string();
@@ -50,15 +51,9 @@ struct tree_fs_input::impl {
 		}
 		else {
 			// best we can do
-			root_dname_ = fs::current_path(file_er_).string();
+			error::eval_safe([&]{ root_dname_ = fs::current_path().string(); });
 		}
 	}
-
-	auto make_error(error&& cust_er = perfect) -> error {
-		return file_er_ ?
-			error{cust_er ? cust_er.what() : "", file_er_} :
-			std::move(cust_er);
-	};
 
 	// if entering `src_path` is successfull, set `tar_path` to src_path
 	// if `tar_path` is nonempty, return success immediately
@@ -67,14 +62,12 @@ struct tree_fs_input::impl {
 		auto path = fs::path(std::move(src_path));
 		if(path.empty()) return error{"Cannot load tree from empty path"};
 
-		// check that path exists
-		file_er_.clear();
-		if(!fs::exists(path, file_er_))
-			return make_error("Specified directory does not exist");
-
-		// check that path is a directory
-		if(!fs::is_directory(path, file_er_))
-			return make_error("Tree path is not a directory");
+		EVAL
+			// check that path exists
+			[&]{ return fs::exists(path) ? perfect : error{"Specified directory does not exist"}; },
+			// check that path is a directory
+			[&]{ return fs::is_directory(path) ? perfect : error{"Tree path is not a directory"}; }
+		RETURN_EVAL_ERR
 
 		tar_path = std::move(path);
 		return perfect;
@@ -120,35 +113,35 @@ struct tree_fs_input::impl {
 	auto load_node(tree_fs_input& ar, tree::node& N, const std::vector<std::string>& leafs_order) -> error {
 		// loaded node in most cases will be empty (leafs are serialized to individual files)
 		// fill leafs by scanning directory and loading link files
-		file_er_.clear();
 		using Options = fs::directory_options;
-		auto Niter = fs::directory_iterator(cur_path_, Options::skip_permission_denied, file_er_);
-		if(file_er_) return make_error();
+		auto Niter = fs::directory_iterator{};
+		SCOPE_EVAL_SAFE
+			Niter = fs::directory_iterator(cur_path_, Options::skip_permission_denied);
+		RETURN_SCOPE_ERR
 
 		std::string united_err_msg;
-		auto dump_error = [&](auto& ex) {
+		auto push_error = [&](auto& er) {
+			if(er.ok()) return;
 			if(!united_err_msg.empty()) united_err_msg += " | ";
-			united_err_msg += ex.what();
+			united_err_msg += er.what();
 		};
+
 		for(auto& f : Niter) {
 			// skip directories
-			if(fs::is_directory(f, file_er_)) continue;
+			if(error::eval_safe([&]{ return !fs::is_directory(f); })) continue;
 
 			// try load file as a link
-			try {
-				if(auto er = add_head(f)) {
-					dump_error(er);
-					continue;
-				}
-				auto finally = detail::scope_guard{[this]{ pop_head(); }};
+			auto er = error::eval_safe(
+				[&] { add_head(f); },
+				[&] {
+					auto finally = detail::scope_guard{[this]{ pop_head(); }};
 
-				tree::sp_link L;
-				ar(L);
-				N.insert(std::move(L));
-			}
-			catch(cereal::Exception& ex) {
-				dump_error(ex);
-			}
+					tree::sp_link L;
+					ar(L);
+					N.insert(std::move(L));
+				}
+			);
+			push_error(er);
 		}
 
 		if(united_err_msg.empty()) return perfect;
@@ -158,20 +151,20 @@ struct tree_fs_input::impl {
 	auto begin_node(tree_fs_input& ar) -> error {
 		// node reference is ONLY used for template matching
 		static constexpr tree::node* sentinel = nullptr;
-		return error::eval(
+		return error::eval_safe(
 			[&]{ return head().map( [&](auto* ar) { prologue(*ar, *sentinel); }); },
 			[&]{ return enter_root(); }
 		);
 	}
 
 	auto end_node(tree_fs_input& ar, tree::node& N) -> error {
-		if(cur_path_.empty()) return {"No node loading were started"};
+		if(cur_path_.empty()) return {"Node loading wasn't started"};
 
 		std::string node_dir;
 		std::vector<std::string> leafs_order;
-		return error::eval(
+		return error::eval_safe(
 			// read node's metadata
-			[&]{ return head().map( [&](auto* ar){
+			[&]{ return head().map( [&](auto* ar) {
 				(*ar)(cereal::make_nvp("node_dir", node_dir));
 				(*ar)(cereal::make_nvp("leafs_order", leafs_order));
 				// we finished reading node
@@ -182,7 +175,7 @@ struct tree_fs_input::impl {
 			// load leafs
 			[&]{ return load_node(ar, N, leafs_order); },
 			// enter parent dir
-			[&] { return enter_dir(cur_path_.parent_path(), cur_path_); }
+			[&]{ return enter_dir(cur_path_.parent_path(), cur_path_); }
 		);
 	}
 
@@ -194,13 +187,13 @@ struct tree_fs_input::impl {
 		auto finally = scope_guard{ [&]{ epilogue(*cur_head.value(), obj); } };
 
 		// read object format & filename
-		std::string obj_filename;
-		ar(cereal::make_nvp("fmt", obj_frm_), cereal::make_nvp("filename", obj_filename));
+		std::string obj_filename, obj_frm;
+		ar(cereal::make_nvp("fmt", obj_frm), cereal::make_nvp("filename", obj_filename));
 
 		// obtain formatter
-		auto F = get_formatter(obj.type_id(), obj_frm_);
+		auto F = get_formatter(obj.type_id(), obj_frm);
 		if(!F) return { fmt::format(
-			"Cannot load '{}' - missing formatter '{}'", obj.type_id(), obj_frm_
+			"Cannot load '{}' - missing formatter '{}'", obj.type_id(), obj_frm
 		) };
 
 		// if object is node and formatter don't store leafs, then load 'em explicitly
@@ -208,21 +201,22 @@ struct tree_fs_input::impl {
 			ar(cereal::make_nvp( "node", static_cast<tree::node&>(obj) ));
 
 		// read object data from specified file
-		if(auto er = error::eval(
+		EVAL
 			[&]{ return enter_root(); },
 			[&]{ return objects_path_.empty() ?
 				enter_dir(root_path_ / objects_dname_, objects_path_) : perfect;
 			}
-		)) return er;
+		RETURN_EVAL_ERR
 
 		auto obj_path = objects_path_ / obj_filename;
-		auto abs_obj_path = fs::absolute(obj_path, file_er_);
-		if(file_er_) return make_error();
-		return F->load(obj, obj_path.string(), obj_frm_);
+		auto abs_obj_path = fs::path{};
+		SCOPE_EVAL_SAFE
+			abs_obj_path = fs::absolute(obj_path);
+		RETURN_SCOPE_ERR
+		return F->load(obj, obj_path.string(), obj_frm);
 	}
 
-	std::string root_fname_, root_dname_, objects_dname_, obj_frm_;
-	std::error_code file_er_;
+	std::string root_fname_, root_dname_, objects_dname_;
 	fs::path root_path_, cur_path_, objects_path_;
 
 	std::list<std::ifstream> necks_;
