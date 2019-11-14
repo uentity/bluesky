@@ -95,7 +95,7 @@ std::error_code make_error_code(Error e) {
 		}
 
 		std::string message(int ec) const override {
-			return "Generic blue-sky error";
+			return "";
 		}
 	};
 

@@ -161,6 +161,11 @@ public:
 				std::invoke<F>(std::forward<F>(ff));
 				return success_tag{};
 			}
+			else if constexpr(std::is_convertible_v<f_result, bool>) {
+				// convert `false` to quiet error
+				return std::invoke<F>(std::forward<F>(ff)) ?
+					success_tag{} : quiet(Error::Happened);
+			}
 			else if constexpr(tl::detail::is_expected<f_result>::value) {
 				static_assert(
 					std::is_same_v<typename f_result::error_type, error>,
