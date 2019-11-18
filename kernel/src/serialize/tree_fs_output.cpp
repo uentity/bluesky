@@ -17,6 +17,7 @@
 #include <bs/tree/node.h>
 #include <bs/log.h>
 #include <bs/kernel/radio.h>
+#include "../tree/actor_common.h"
 
 #include <cereal/types/vector.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -33,6 +34,7 @@ namespace fs = std::filesystem;
 
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::sp_cobj)
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::error::box)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(std::vector<blue_sky::error::box>)
 
 template<typename T> struct TD;
 
@@ -151,7 +153,7 @@ struct tree_fs_output::impl {
 				// node directory
 				(*ar)(cereal::make_nvp("node_dir", N.id()));
 
-				// cusstom leafs order
+				// custom leafs order
 				std::vector<std::string> leafs_order;
 				leafs_order.reserve(N.size());
 				for(const auto& L : N)
@@ -265,8 +267,10 @@ struct tree_fs_output::impl {
 		caf::reacts_to< sp_cobj, std::string > // invoke save
 	>;
 
+	using errb_vector = std::vector<error::box>;
 	using savers_manager_t = caf::typed_actor<
-		caf::reacts_to< error::box > // store error from saver and increment finished counter
+		caf::reacts_to< error::box >,
+		caf::replies_to< int >::with< std::vector<error::box> >
 	>;
 
 	// saver
@@ -283,13 +287,10 @@ struct tree_fs_output::impl {
 	// savers manager
 	struct manager_state {
 		// errors collection
-		std::vector<error::box> er_stack_;
-		std::mutex er_sync_;
+		errb_vector er_stack_;
+		caf::response_promise boxed_errs;
 		// track running savers
-		size_t nstarted_ = 0;
-		std::atomic<size_t> nfinished_ = 0;
-		std::mutex running_mtx_;
-		std::condition_variable running_cv_;
+		size_t nstarted_ = 0, nfinished_ = 0;
 	};
 
 	using savers_manager_ptr = typename savers_manager_t::stateful_pointer<manager_state>;
@@ -298,60 +299,48 @@ struct tree_fs_output::impl {
 
 		savers_manager(caf::actor_config& cfg) : savers_manager_t::stateful_base<manager_state>(cfg) {}
 
-		behavior_type make_behavior() override {
-			return {
-				[this](error::box er) {
-					{
-						auto solo = std::lock_guard{ state.er_sync_ };
-						state.er_stack_.push_back(std::move(er));
-					}
-					// dec counter
-					finished();
-				},
-			};
+		auto cut_save_errors() {
+			auto finally = scope_guard{[=]{ state.er_stack_.clear(); }};
+			return std::move(state.er_stack_);
 		}
 
-		void finished() {
-			std::unique_lock guard{ state.running_mtx_ };
-			if(++state.nfinished_ == state.nstarted_)
-				state.running_cv_.notify_all();
+		auto make_behavior() -> behavior_type override {
+			return {
+				// store error from finished saver, deliver errors stack when save is done
+				[this](error::box er) {
+					if(er.ec) state.er_stack_.push_back(std::move(er));
+					if(++state.nfinished_ == state.nstarted_)
+						state.boxed_errs.deliver(cut_save_errors());
+				},
+
+				// 
+				[this](int) -> caf::result<errb_vector> {
+					if(state.nfinished_ == state.nstarted_)
+						return cut_save_errors();
+					else {
+						state.boxed_errs = make_response_promise<errb_vector>();
+						return state.boxed_errs;
+					}
+				}
+			};
 		}
 	};
 
 	auto wait_objects_saved(timespan how_long) -> std::vector<error> {
-		auto pm = caf::actor_cast<savers_manager_ptr>(manager_);
-		auto& S = pm->state;
-		//auto res = std::move(S.er_stack_);
-		// unpack error boxes -> result vector of errors
+		auto fmanager = caf::make_function_view(
+			manager_, how_long == infinite ? caf::infinite : caf::duration{how_long}
+		);
 		auto res = std::vector<error>{};
-		for(auto& er_box : S.er_stack_)
-			res.emplace_back( error::unpack(std::move(er_box)) );
 
-		// reset state on exit
-		// [NOTE] disabled -- must do it manually
-		//auto finally = scope_guard{ [&S, this]{
-		//	S.nstarted_ = 0;
-		//	S.nfinished_ = 0;
-		//	S.er_stack_.clear();
-		//	has_wait_deferred_ = false;
-		//}};
-
-		auto tnow = make_timestamp();
-		// checks if number of finished actors == number of started
-		const auto wait_pred = [&S]{ return S.nfinished_ == S.nstarted_; };
-		bool wait_res = true;
-		std::unique_lock guard{ S.running_mtx_ };
-		if(how_long == timespan::max())
-			S.running_cv_.wait(guard, wait_pred);
+		auto boxed_res = tree::actorf<std::vector<error::box>>(fmanager, 0);
+		if(boxed_res) {
+			auto& boxed_errs = *boxed_res;
+			res.reserve(boxed_errs.size());
+			for(auto& er_box : boxed_errs)
+				res.push_back( error::unpack(std::move(er_box)) );
+		}
 		else
-			wait_res = S.running_cv_.wait_for( guard, how_long, wait_pred);
-
-		// if predicate didn't met, return timeout error
-		if(!wait_res)
-			res.emplace_back(fmt::format(
-				"Timeout waiting for Tree FS save to complete (waited for {})",
-				to_string(make_timestamp() - tnow)
-			));
+			res.push_back(std::move(boxed_res.error()));
 		return res;
 	}
 
