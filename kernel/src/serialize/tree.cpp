@@ -8,123 +8,64 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/log.h>
-#include "../tree/node_actor.h"
+#include <bs/atoms.h>
+#include <bs/kernel/radio.h>
 #include <bs/serialize/serialize.h>
 #include <bs/serialize/tree.h>
+#include "../tree/actor_common.h"
 
-#include <fstream>
-#include <cereal/types/vector.hpp>
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::on_serialized_f)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::sp_link)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::error::box)
 
-NAMESPACE_BEGIN(blue_sky)
-using namespace cereal;
-using namespace tree;
-using blue_sky::detail::shared;
-
+NAMESPACE_BEGIN(blue_sky::tree)
+using namespace kernel::radio;
 /*-----------------------------------------------------------------------------
- *  node::node_impl
+ *  tree serialization actor impl
  *-----------------------------------------------------------------------------*/
-namespace {
-// proxy leafs view to serialize 'em as separate block or 'unit'
-struct leafs_view {
-	node_impl& N;
-
-	leafs_view(const node_impl& N_) : N(const_cast<node_impl&>(N_)) {}
-
-	template<typename Archive>
-	auto save(Archive& ar) const -> void {
-		ar(make_size_tag(N.links_.size()));
-		// save links in custom index order
-		const auto& any_order = N.links_.get<Key_tag<Key::AnyOrder>>();
-		for(const auto& leaf : any_order)
-			ar(leaf);
-	}
-
-	template<typename Archive>
-	auto load(Archive& ar) -> void {
-		std::size_t sz;
-		ar(make_size_tag(sz));
-		// load links in custom index order
-		auto& any_order = N.links_.get<Key_tag<Key::AnyOrder>>();
-		for(std::size_t i = 0; i < sz; ++i) {
-			sp_link leaf;
-			ar(leaf);
-			//N.insert(std::move(leaf));
-			any_order.insert(any_order.end(), std::move(leaf));
-		}
-	}
-};
-
-} // eof hidden namespace
-
-BSS_FCN_INL_BEGIN(serialize, node_impl)
-	[[maybe_unused]] auto guard = [&] {
-		if constexpr(Archive::is_saving::value)
-			return t.lock(shared);
-		else // don't lock when loading - object is not yet 'usable' and fully constructed
-			return 0;
-	}();
-
-	ar(
-		make_nvp("allowed_otypes", t.allowed_otypes_),
-		make_nvp("leafs", leafs_view(t))
-	);
-BSS_FCN_INL_END(save, node_impl)
-
-/*-----------------------------------------------------------------------------
- *  node
- *-----------------------------------------------------------------------------*/
-BSS_FCN_BEGIN(serialize, node)
-	ar(
-		make_nvp("objbase", base_class<objbase>(&t)),
-		make_nvp("node_impl", *t.pimpl_)
-	);
-	// save actor group's ID
-	if constexpr(Archive::is_saving::value) {
-		const auto& ngrp = t.pimpl_->self_grp;
-		ar(make_nvp("gid", ngrp ? ngrp.get()->identifier() : ""));
-	}
-BSS_FCN_END
-
-BSS_FCN_BEGIN(load_and_construct, node)
-	construct(false);
-	auto& t = *construct.ptr();
-	::cereal::serialize(ar, t, version);
-	// start actor (load group ID first)
-	std::string gid;
-	ar(make_nvp("gid", gid));
-	t.start_engine(gid);
-	// correct owner of all loaded links
-	t.propagate_owner();
-BSS_FCN_END
-
-BSS_FCN_EXPORT(serialize, node)
-BSS_FCN_EXPORT(load_and_construct, node)
-
-NAMESPACE_BEGIN(tree)
-/*-----------------------------------------------------------------------------
- *  tree save/load impl
- *-----------------------------------------------------------------------------*/
-auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar, timespan max_wait) -> error {
-	if(ar == TreeArchive::FS) {
+NAMESPACE_BEGIN()
+///////////////////////////////////////////////////////////////////////////////
+//  Tree FS archive
+//
+auto save_fs(const sp_link& root, const std::string& filename) -> error::box {
+	// collect all errors happened
+	auto errs = std::vector<error>{};
+	if(auto er = error::eval_safe([&] {
 		auto ar = tree_fs_output(filename);
 		ar(root);
-		auto errs = ar.wait_objects_saved(max_wait);
-		// collect all errors happened
-		std::string reduced_er;
-		for(const auto& er : errs) {
-			if(er) {
-				if(!reduced_er.empty()) reduced_er += '\n';
-				reduced_er += er.what();
-			}
+		errs = ar.wait_objects_saved(infinite);
+	}))
+		errs.push_back(er);
+
+	std::string reduced_er;
+	for(const auto& er : errs) {
+		if(er) {
+			if(!reduced_er.empty()) reduced_er += '\n';
+			reduced_er += er.what();
 		}
-		return reduced_er.empty() ? success() : error::quiet(reduced_er);
 	}
+	return reduced_er.empty() ? success() : error::quiet(reduced_er);
+}
+
+auto load_fs(sp_link& root, const std::string& filename) -> error::box {
+	return error::eval_safe([&] {
+		auto ar = tree_fs_input(filename);
+		ar(root);
+		ar.serializeDeferments();
+	});
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  generic archives
+//
+auto save_generic(const sp_link& root, const std::string& filename, TreeArchive ar) -> error::box {
+return error::eval_safe([&]() -> error {
 	// open file for writing
 	std::ofstream fs(
 		filename,
 		std::ios::out | std::ios::trunc | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode())
 	);
-	if(!fs) return error(std::string("Cannot create file {}") + filename);
+	fs.exceptions(fs.failbit | fs.badbit);
 
 	// dump link to JSON archive
 	if(ar == TreeArchive::Binary) {
@@ -135,41 +76,140 @@ auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar,
 		cereal::JSONOutputArchive ja(fs);
 		ja(root);
 	}
-	return success();
-}
+	return perfect;
+}); }
 
-auto load_tree(const std::string& filename, TreeArchive ar) -> result_or_err<sp_link> {
-	sp_link res;
-	if(ar == TreeArchive::FS) {
-		auto ar = tree_fs_input(filename);
-		ar(res);
-		ar.serializeDeferments();
-		return res;
-	}
-
+auto load_generic(sp_link& root, const std::string& filename, TreeArchive ar) -> error::box {
+return error::eval_safe([&]() -> error {
 	// open file for reading
 	std::ifstream fs(
 		filename,
 		std::ios::in | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode())
 	);
-	if(!fs) return tl::make_unexpected(error(std::string("Cannot create file {}") + filename));
+	fs.exceptions(fs.failbit | fs.badbit);
 
 	// load link from JSON archive
 	if(ar == TreeArchive::Binary) {
 		cereal::PortableBinaryInputArchive ja(fs);
-		ja(res);
+		ja(root);
 	}
 	else {
 		cereal::JSONInputArchive ja(fs);
-		ja(res);
+		ja(root);
 	}
-	return res;
+	return perfect;
+}); }
+
+///////////////////////////////////////////////////////////////////////////////
+//  serial ator impl
+//
+struct serial_state {
+	error::box er;
+	caf::response_promise erp;
+	bool finished = false;
+};
+
+enum class Serial { Save, Load };
+
+template<Serial Mode>
+static auto serial_actor(
+	caf::stateful_actor<serial_state>* self, sp_link root, std::string filename, TreeArchive ar,
+	on_serialized_f cb
+) -> caf::behavior {
+	// start main work
+	self->send(self, a_hi());
+
+	return {
+		[self, ar, r = std::move(root), filename = std::move(filename), cb = std::move(cb)](a_hi) mutable {
+			auto& S = self->state;
+			// launch work
+			if constexpr(Mode == Serial::Save)
+				S.er = ar == TreeArchive::FS ? save_fs(r, filename) : save_generic(r, filename, ar);
+			else
+				S.er = ar == TreeArchive::FS ? load_fs(r, filename) : load_generic(r, filename, ar);
+			self->state.finished = true;
+			// invoke callback
+			// [NOTE] it's essential to invoke callback BEFORE error is delivered
+			if(cb) cb(std::move(r), error::unpack(S.er));
+			// deliver error
+			S.erp.deliver(std::move(S.er));
+		},
+		
+		[self](a_ack) -> caf::result<error::box> {
+			auto& S = self->state;
+			if(S.finished)
+				return S.er;
+			else {
+				S.erp = self->make_response_promise<error::box>();
+				return S.erp;
+			}
+		}
+	};
 }
 
-NAMESPACE_END(tree)
-NAMESPACE_END(blue_sky)
+NAMESPACE_END()
 
-BSS_REGISTER_TYPE(blue_sky::tree::node)
+/*-----------------------------------------------------------------------------
+ *  tree save impl
+ *-----------------------------------------------------------------------------*/
+auto save_tree(sp_link root, std::string filename, TreeArchive ar, timespan wait_for) -> error {
+	// launch worker in detached actor
+	auto Af = caf::make_function_view(
+		system().spawn<caf::spawn_options::detach_flag> (
+			serial_actor<Serial::Save>, std::move(root), std::move(filename), ar, on_serialized_f{}
+		),
+		wait_for == infinite ? caf::infinite : caf::duration{wait_for}
+	);
+	// wait for result
+	if(auto res = actorf<error::box>(Af, a_ack()); res)
+		return error::unpack(res.value());
+	else
+		return std::move(res.error());
+}
 
-BSS_REGISTER_DYNAMIC_INIT(node)
+BS_API auto save_tree(
+	on_serialized_f cb, sp_link root, std::string filename, TreeArchive ar
+) -> void {
+	// [NOTE] spawn save in detached actor to prevent starvation
+	system().spawn<caf::spawn_options::detach_flag> (
+		serial_actor<Serial::Save>, std::move(root), std::move(filename), ar, std::move(cb)
+	);
+}
 
+/*-----------------------------------------------------------------------------
+ *  tree load impl
+ *-----------------------------------------------------------------------------*/
+auto load_tree(std::string filename, TreeArchive ar) -> result_or_err<sp_link> {
+	// launch worker in detached actor
+	sp_link root;
+	auto Af = caf::make_function_view(
+		system().spawn<caf::spawn_options::detach_flag> (
+			serial_actor<Serial::Load>, root, std::move(filename), ar,
+			// pass callback that passes deserialized root from actor into this context
+			[&](sp_link res, error) { root = std::move(res); }
+		),
+		caf::infinite
+	);
+	// wait for result
+	error::box res_erb;
+	if(auto res = actorf<error::box>(Af, a_ack()); res)
+		res_erb = std::move(res.value());
+	else
+		res_erb = res.error();
+
+	if(auto res_er = error::unpack(std::move(res_erb)))
+		return tl::make_unexpected(std::move(res_er));
+	else
+		return root;
+}
+
+auto load_tree(
+	on_serialized_f cb, std::string filename, TreeArchive ar
+) -> void {
+	// [NOTE] spawn save in detached actor to prevent starvation
+	system().spawn<caf::spawn_options::detach_flag> (
+		serial_actor<Serial::Load>, sp_link{}, std::move(filename), ar, std::move(cb)
+	);
+}
+
+NAMESPACE_END(blue_sky::tree)

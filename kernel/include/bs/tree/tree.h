@@ -116,14 +116,26 @@ BS_API auto make_root_link(
 //  Tree save/load to JSON or binary archive
 //
 enum class TreeArchive { Text, Binary, FS };
-BS_API auto save_tree(
-	const sp_link& root, const std::string& filename, TreeArchive ar = TreeArchive::Text,
-	timespan max_wait = timespan::max()
-) -> error;
+using on_serialized_f = std::function<void(sp_link, error)>;
 
-BS_API auto
-	load_tree(const std::string& filename, TreeArchive ar = TreeArchive::Text)
--> result_or_err<sp_link>;
+BS_API auto save_tree(
+	sp_link root, std::string filename,
+	TreeArchive ar = TreeArchive::FS, timespan wait_for = infinite
+) -> error;
+// async save
+BS_API auto save_tree(
+	on_serialized_f callback, sp_link root, std::string filename,
+	TreeArchive ar = TreeArchive::FS
+) -> void;
+
+BS_API auto load_tree(
+	std::string filename, TreeArchive ar = TreeArchive::FS
+) -> result_or_err<sp_link>;
+// async load
+BS_API auto load_tree(
+	on_serialized_f callback, std::string filename,
+	TreeArchive ar = TreeArchive::FS
+) -> void;
 
 NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
 

@@ -136,9 +136,14 @@ void py_bind_tree(py::module& m) {
 		.value("Binary", TreeArchive::Binary)
 		.value("FS", TreeArchive::FS)
 	;
-	m.def("save_tree", &save_tree,
-		"root"_a, "filename"_a, "ar"_a = TreeArchive::Text, "max_wait"_a = timespan::max());
-	m.def("load_tree", &load_tree, "filename"_a, "ar"_a = TreeArchive::Text);
+	m.def("save_tree", py::overload_cast<sp_link, std::string, TreeArchive, timespan>(&save_tree),
+		"root"_a, "filename"_a, "ar"_a = TreeArchive::FS, "wait_for"_a = infinite);
+	m.def("save_tree", py::overload_cast<on_serialized_f, sp_link, std::string, TreeArchive>(&save_tree),
+		"callback"_a, "root"_a, "filename"_a, "ar"_a = TreeArchive::FS);
+	m.def("load_tree", py::overload_cast<std::string, TreeArchive>(&load_tree),
+		"filename"_a, "ar"_a = TreeArchive::FS);
+	m.def("load_tree", py::overload_cast<on_serialized_f, std::string, TreeArchive>(&load_tree),
+		"callback"_a, "filename"_a, "ar"_a = TreeArchive::FS);
 }
 
 NAMESPACE_END(blue_sky::python)
