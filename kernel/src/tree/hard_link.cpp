@@ -20,8 +20,6 @@
 OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
-using bs_detail::shared;
-
 /*-----------------------------------------------------------------------------
  *  hard_link
  *-----------------------------------------------------------------------------*/
@@ -41,14 +39,11 @@ hard_link_impl::hard_link_impl()
 auto hard_link_impl::data() -> result_or_err<sp_obj> { return data_; }
 
 auto hard_link_impl::set_data(sp_obj obj) -> void {
-	auto guard = lock();
-
 	inode_ = make_inode(obj, inode_);
 	if(data_ = std::move(obj); data_) {
-		// set status silently
-		rs_reset(Req::Data, ReqReset::Always | ReqReset::Silent, ReqStatus::OK);
+		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK);
 		rs_reset(
-			Req::DataNode, ReqReset::Always | ReqReset::Silent,
+			Req::DataNode, ReqReset::Always,
 			data_->is_node() ? ReqStatus::OK : ReqStatus::Error
 		);
 		//std::cout << "hard link " << to_string(id_) << ", name " << name_ << ": impl created " <<
@@ -57,7 +52,7 @@ auto hard_link_impl::set_data(sp_obj obj) -> void {
 }
 
 auto hard_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
-	return spawn_lactor<simple_link_actor>(std::move(limpl));
+	return spawn_lactor<fast_link_actor>(std::move(limpl));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -111,21 +106,19 @@ auto weak_link_impl::data() -> result_or_err<sp_obj> {
 }
 
 auto weak_link_impl::set_data(const sp_obj& obj) -> void {
-	auto guard = lock();
-
 	inode_ = make_inode(obj, inode_);
 	if(data_ = obj; obj) {
 		// set status silently
-		rs_reset(Req::Data, ReqReset::Always | ReqReset::Silent, ReqStatus::OK);
+		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK);
 		rs_reset(
-			Req::DataNode, ReqReset::Always | ReqReset::Silent,
+			Req::DataNode, ReqReset::Always,
 			obj->is_node() ? ReqStatus::OK : ReqStatus::Error
 		);
 	}
 }
 
 auto weak_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
-	return spawn_lactor<simple_link_actor>(std::move(limpl));
+	return spawn_lactor<fast_link_actor>(std::move(limpl));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

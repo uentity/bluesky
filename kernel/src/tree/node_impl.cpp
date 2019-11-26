@@ -82,7 +82,7 @@ auto node_impl::propagate_owner(sp_node self, bool deep) -> void {
 }
 
 auto node_impl::size() const -> std::size_t {
-	auto guard = lock<Links>(shared);
+	//auto guard = lock<Links>(shared);
 	return links_.size();
 }
 
@@ -98,7 +98,7 @@ auto node_impl::insert(
 
 	auto& Limpl = *L->pimpl();
 	// [NOTE] shared lock is enough to prevent parallel modification
-	// and required to allow 'reading' functions like oid or find share a lock
+	// and required to allow 'reading' functions like `oid` or `find` share a lock
 	auto Lguard = Limpl.lock(shared);
 	auto guard = lock<Links>();
 
@@ -233,7 +233,7 @@ auto node_impl::refresh(const link::id_type& lid) -> void {
 }
 
 auto node_impl::accepts(const sp_link& what) const -> bool {
-	auto guard = lock<Metadata>(shared);
+	//auto guard = lock<Metadata>(shared);
 
 	if(!allowed_otypes_.size()) return true;
 	const auto& what_type = what->obj_type_id();

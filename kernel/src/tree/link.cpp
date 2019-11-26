@@ -11,6 +11,9 @@
 #include <bs/kernel/radio.h>
 #include "link_actor.h"
 
+#include <bs/serialize/tree.h>
+#include <bs/serialize/cafbind.h>
+
 OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
@@ -48,14 +51,16 @@ auto link::actor() const -> const caf::actor& {
 
 /// access link's unique ID
 auto link::id() const -> id_type {
-	// ID change is very special op (only by deserialization), so don't lock
+	// ID cannot change
 	return pimpl_->id_;
 }
 
-/// obtain link's human-readable name
-auto link::name() const -> std::string {
-	auto guard = pimpl_->lock(shared);
-	return pimpl_->name_;
+auto link::rename(std::string new_name) -> void {
+	caf::anon_send(actor_, a_lnk_rename(), std::move(new_name), false);
+}
+
+auto link::rename_silent(std::string new_name) -> void {
+	caf::anon_send(actor_, a_lnk_rename(), std::move(new_name), true);
 }
 
 /// get link's container
@@ -78,22 +83,13 @@ auto link::info() const -> result_or_err<inode> {
 }
 
 link::Flags link::flags() const {
-	auto guard = pimpl_->lock(shared);
-	return pimpl_->flags_;
+	return actorf<Flags>(factor_, a_lnk_flags()).value_or(Flags::Plain);
+	//return pimpl_->flags_;
 }
 
 void link::set_flags(Flags new_flags) {
-	// [TODO] change via messaging to actor
-	auto guard = pimpl_->lock();
-	pimpl_->flags_ = new_flags;
-}
-
-auto link::rename(std::string new_name) -> void {
-	caf::anon_send(actor_, a_lnk_rename(), std::move(new_name), false);
-}
-
-auto link::rename_silent(std::string new_name) -> void {
-	caf::anon_send(actor_, a_lnk_rename(), std::move(new_name), true);
+	caf::anon_send(actor_, a_lnk_flags(), new_flags);
+	//pimpl_->flags_ = new_flags;
 }
 
 auto link::req_status(Req request) const -> ReqStatus {
@@ -121,15 +117,27 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) -> Req
 /*-----------------------------------------------------------------------------
  *  sync API
  *-----------------------------------------------------------------------------*/
+/// obtain link's human-readable name
+auto link::name() const -> std::string {
+	return actorf<std::string>(factor_, a_lnk_name()).value_or("");
+	//return pimpl_->name_;
+}
+
 // get link's object ID
 std::string link::oid() const {
 	return actorf<std::string>(factor_, a_lnk_oid())
 		.value_or(nil_oid);
+	//return pimpl_->data()
+	//	.map([](const sp_obj& obj) { return obj ? obj->id() : nil_oid; })
+	//	.value_or(nil_oid);
 }
 
 std::string link::obj_type_id() const {
 	return actorf<std::string>(factor_, a_lnk_otid())
 		.value_or( type_descriptor::nil().name );
+	//return pimpl_->data()
+	//	.map([](const sp_obj& obj) { return obj ? obj->type_id() : type_descriptor::nil().name; })
+	//	.value_or(type_descriptor::nil().name);
 }
 
 auto link::data_ex(bool wait_if_busy) const -> result_or_err<sp_obj> {
@@ -189,7 +197,6 @@ auto link::data_node(process_data_cb f, bool high_priority) const -> void {
  *  subscribers management
  *-----------------------------------------------------------------------------*/
 auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
-	auto guard = pimpl_->lock(shared);
 	struct ev_state { handle_event_cb f; };
 
 	// produce event bhavior that calls passed callback with proper params

@@ -9,10 +9,7 @@
 
 #include <bs/log.h>
 #include <bs/kernel/types_factory.h>
-
 #include "fusion_link_actor.h"
-
-OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
@@ -82,23 +79,22 @@ auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) c
 }
 
 auto fusion_link::bridge() const -> sp_fusion {
-	return pimpl()->bridge();
+	return actorf<sp_fusion>(factor_, a_flnk_bridge()).value_or(nullptr);
 }
 
 auto fusion_link::reset_bridge(sp_fusion new_bridge) -> void {
-	pimpl()->reset_bridge(std::move(new_bridge));
+	caf::anon_send(actor(), a_flnk_bridge(), std::move(new_bridge));
 }
 
 auto fusion_link::propagate_handle() -> result_or_err<sp_node> {
 	// set handle of cached node object to this link instance
+	auto D = cache();
 	self_handle_node(pimpl()->data_);
-	return pimpl()->data() ?
-		result_or_err<sp_node>(pimpl()->data_) : tl::make_unexpected(Error::EmptyData);
+	return D ? result_or_err<sp_node>(std::move(D)) : tl::make_unexpected(Error::EmptyData);
 }
 
 auto fusion_link::cache() const -> sp_node {
-	auto guard = pimpl()->lock(shared);
-	return pimpl()->data_;
+	return actorf<sp_node>(factor_, a_lnk_dcache()).value_or(nullptr);
 }
 
 NAMESPACE_END(blue_sky::tree)

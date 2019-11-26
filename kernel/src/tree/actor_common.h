@@ -44,6 +44,8 @@ inline const std::string nil_grp_id = "<null>";
 /// obtain configured timeout for queries
 BS_API auto def_timeout(bool for_data = false) -> caf::duration;
 
+BS_API auto forward_caf_error(const caf::error& er) -> error;
+
 /// blocking invoke actor & return response like a function
 /// [NOTE] always return `result_or_errbox<R>`
 template<typename R, typename Actor, typename... Args>
@@ -55,9 +57,7 @@ inline auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 	const auto extract_value = [&](auto& res) {
 		// caf err passtrough
 		if(!x) {
-			res.emplace(tl::make_unexpected(error{
-				x.error().code(), factor.handle().home_system().render(x.error())
-			}));
+			res.emplace(tl::make_unexpected( forward_caf_error(x.error()) ));
 			return;
 		}
 
@@ -91,9 +91,23 @@ inline auto actorf(const H& handle, blue_sky::timespan timeout, Args&&... args) 
 }
 
 /// spawn temp actor that makes specified request to `A` and pass result to callback `f`
-template<typename Actor, typename F, typename... Args>
+//template<caf::spawn_options Os = caf::no_spawn_options, typename Actor, typename F, typename... Args>
+//auto anon_request(Actor A, caf::duration timeout, bool high_priority, F f, Args&&... args) -> void {
+//	kernel::radio::system().spawn<Os>([f = std::move(f)] (
+//		caf::event_based_actor* self, Actor A, caf::duration t, bool high_priority, Args&&... a_args
+//	) mutable -> caf::behavior {
+//		auto req = high_priority ?
+//			self->request<caf::message_priority::high>(A, t, std::forward<Args>(a_args)...) :
+//			self->request<caf::message_priority::normal>(A, t, std::forward<Args>(a_args)...);
+//		req.then(std::move(f));
+//
+//		return {};
+//	}, std::move(A), timeout, high_priority, std::forward<Args>(args)...);
+//}
+
+template<caf::spawn_options Os = caf::no_spawn_options, typename Actor, typename F, typename... Args>
 auto anon_request(Actor A, caf::duration timeout, bool high_priority, F f, Args&&... args) -> void {
-	kernel::radio::system().spawn([
+	kernel::radio::system().spawn<Os>([
 		high_priority, f = std::move(f), A = std::move(A), t = std::move(timeout),
 		args = std::make_tuple(std::forward<Args>(args)...)
 	] (caf::event_based_actor* self) mutable -> caf::behavior {

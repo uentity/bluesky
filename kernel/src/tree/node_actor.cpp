@@ -323,7 +323,7 @@ auto node_actor::insert(
 	auto res = insert(std::move(L), pol, true);
 
 	// 2. reposition an element in AnyOrder index
-	auto guard = pimpl_->lock();
+	auto guard = pimpl_->lock<node_impl::Links>();
 	if(res.first != impl.end<Key::ID>()) {
 		auto from = impl.project<Key::ID>(res.first);
 		to_idx = std::min(to_idx, impl.size());

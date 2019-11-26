@@ -165,8 +165,7 @@ public:
 	// [NOTE] does lock
 	template<Key K>
 	auto keys() const -> std::vector<Key_type<K>> {
-		auto guard = lock<Links>(shared);
-		DBGLLOCK
+		//auto guard = lock<Links>(shared);
 
 		auto kex = Key_tag<K>();
 		auto res = std::vector<Key_type<K>>(links_.size());
@@ -200,7 +199,6 @@ public:
 		bool dont_reset_owner = false
 	) -> size_t {
 		auto guard = lock<Links>();
-		DBGLLOCK
 
 		size_t res = 0;
 		for(auto x = r.begin(); x != r.end();) {
@@ -227,7 +225,6 @@ public:
 	template<Key K>
 	bool rename(iterator<K>&& pos, std::string&& new_name) {
 		auto guard = lock<Links>();
-		DBGLLOCK
 
 		if(pos == end<K>()) return false;
 		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
@@ -238,7 +235,6 @@ public:
 	template<Key K>
 	std::size_t rename(const Key_type<K>& key, const std::string& new_name, bool all = false) {
 		auto guard = lock<Links>();
-		DBGLLOCK
 
 		auto matched_items = equal_range<K>(key);
 		auto& storage = links_.get<Key_tag<K>>();

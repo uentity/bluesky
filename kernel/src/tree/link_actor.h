@@ -23,6 +23,11 @@ using namespace tree::detail;
 using id_type = link::id_type;
 using Flags = link::Flags;
 
+enum class ReqOpts {
+	WaitIfBusy = 0, ErrorIfBusy = 1, ErrorIfNOK = 2, Detached = 4, DirectInvoke = 8,
+	HasDataCache = 16
+};
+
 /*-----------------------------------------------------------------------------
  *  link_actor
  *-----------------------------------------------------------------------------*/
@@ -44,47 +49,48 @@ public:
 		return caf::actor_cast<caf::actor>(address());
 	}
 
-	/// get pointer to object link is pointing to -- slow, never returns invalid (NULL) sp_obj
-	virtual auto data_ex(bool wait_if_busy = true) -> result_or_err<sp_obj>;
+	/// get pointer to object link is pointing to, never returns invalid (NULL) sp_obj
+	using obj_processor_f = std::function<  void(result_or_errbox<sp_obj>) >;
+	virtual auto data_ex(obj_processor_f cb, ReqOpts opts) -> void;
 
-	/// return tree::node if contained object is a node -- slow, never returns invalid (NULL) sp_obj
-	virtual auto data_node_ex(bool wait_if_busy = true) -> result_or_err<sp_node>;
-
-	/// if pointee is a node, return it's actor group ID
-	virtual auto data_node_gid() -> result_or_err<std::string>;
+	/// return tree::node if contained object is a node, never returns invalid (NULL) sp_obj
+	using node_processor_f = std::function< void(result_or_errbox<sp_node>) >;
+	virtual auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void;
 
 	auto rename(std::string new_name, bool silent = false) -> void;
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  behavior
-	//
-	// returns generic behavior
+	// returns generic link behavior
 	auto make_behavior() -> behavior_type override;
-
-	// Generic impl of link's beahvior suitable for all link types
-	auto make_generic_behavior() -> behavior_type;
 
 	auto on_exit() -> void override;
 
 	auto name() const -> const char* override;
-
-	/// raw implementation that don't manage status
-	virtual auto data_node() -> result_or_err<sp_node>;
 
 	// holds reference to link impl
 	sp_limpl pimpl_;
 	link_impl& impl;
 };
 
-/// installs behavior suitable for links that:
-/// 1) contains direct ptr to object (data)
-/// 2) access to object's data & node is fast, s.t. we don't need to manage req status
-struct BS_HIDDEN_API simple_link_actor : public link_actor {
+/// assumes that link contains cache for object's data
+/// and if status is OK, it directly returns cached value
+struct BS_HIDDEN_API cached_link_actor : public link_actor {
 	using super = link_actor;
 	using super::super;
 
-	auto data_ex(bool wait_if_busy = true) -> result_or_err<sp_obj> override;
-	auto data_node_ex(bool wait_if_busy = true) -> result_or_err<sp_node> override;
+	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
+	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override;
+};
+
+/// 1) contains direct ptr to object (data)
+/// 2) access to object's data & node is always fast, s.t. we don't need to manage req status
+struct BS_HIDDEN_API fast_link_actor : public link_actor {
+	using super = link_actor;
+	using super::super;
+
+	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
+	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override;
+
+	auto make_behavior() -> behavior_type override;
 };
 
 // helper for generating `link_impl::spawn_actor()` implementations
@@ -99,3 +105,5 @@ inline auto spawn_lactor(std::shared_ptr<link_impl> limpl, Ts&&... args) {
 }
 
 NAMESPACE_END(blue_sky::tree)
+
+BS_ALLOW_ENUMOPS(blue_sky::tree::ReqOpts)

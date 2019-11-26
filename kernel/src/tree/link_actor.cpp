@@ -12,6 +12,7 @@
 #include <bs/kernel/tools.h>
 #include <bs/kernel/config.h>
 #include <bs/kernel/radio.h>
+
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
@@ -97,62 +98,7 @@ auto link_actor::goodbye() -> void {
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
-//  data & data_node
-//
-auto link_actor::data_ex(bool wait_if_busy) -> result_or_err<sp_obj> {
-	// never returns NULL object
-	return link_invoke(
-		pimpl_.get(),
-		[](link_impl* limpl) { return limpl->data(); },
-		impl.status_[0], wait_if_busy,
-		// send status changed message
-		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
-			if(prev_v != new_v)
-				send<high_prio>(impl.self_grp, a_ack(), a_lnk_status(), Req::Data, new_v, prev_v);
-		} }
-	).and_then([](sp_obj&& obj) {
-		return obj ?
-			result_or_err<sp_obj>(std::move(obj)) :
-			tl::make_unexpected(error::quiet(Error::EmptyData));
-	});
-}
-
-auto link_actor::data_node_ex(bool wait_if_busy) -> result_or_err<sp_node> {
-	// never returns NULL node
-	return link_invoke(
-		this,
-		[](link_actor* lnk) { return lnk->data_node(); },
-		impl.status_[1], wait_if_busy,
-		// send status changed message
-		function_view{ [this](ReqStatus new_v, ReqStatus prev_v) {
-			if(prev_v != new_v)
-				send<high_prio>(impl.self_grp, a_ack(), a_lnk_status(), Req::DataNode, new_v, prev_v);
-		} }
-	).and_then([](sp_node&& N) {
-		return N ?
-			result_or_err<sp_node>(std::move(N)) :
-			tl::make_unexpected(error::quiet(Error::EmptyData));
-	});
-}
-
-auto link_actor::data_node() -> result_or_err<sp_node> {
-	return data_ex().and_then([](sp_obj&& obj) {
-		// don't check if obj is nullptr, because data_ex() never returns NULL
-		return obj->is_node() ?
-			result_or_err<sp_node>(std::static_pointer_cast<tree::node>(std::move(obj))) :
-			tl::make_unexpected(error::quiet(Error::NotANode));
-	});
-}
-
-auto link_actor::data_node_gid() -> result_or_err<std::string> {
-	return data_node_ex(false).map([](const sp_node& N) {
-		return N->gid();
-	});
-}
-
 auto link_actor::rename(std::string new_name, bool silent) -> void {
-	auto guard = impl.lock();
 	adbg(this) << "<- a_lnk_rename " << (silent ? "silent: " : "loud: ") << impl.name_ <<
 		" -> " << new_name << std::endl;
 
@@ -167,11 +113,7 @@ auto link_actor::rename(std::string new_name, bool silent) -> void {
 ///////////////////////////////////////////////////////////////////////////////
 //  behavior
 //
-auto link_actor::make_behavior() -> behavior_type {
-	return make_generic_behavior();
-}
-
-auto link_actor::make_generic_behavior() -> behavior_type { return {
+auto link_actor::make_behavior() -> behavior_type { return {
 	/// skip `bye` message (should always come from myself)
 	[this](a_bye) {
 		adbg(this) << "<- a_lnk_bye" << std::endl;
@@ -179,14 +121,12 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 
 	/// get id
 	[this](a_lnk_id) {
-		// ID change is very special op (only by deserialization), so don't lock
 		adbg(this) << "<- a_lnk_id: " << to_string(impl.id_) << std::endl;
 		return impl.id_;
 	},
 
 	/// get name
 	[this](a_lnk_name) {
-		auto guard = impl.lock(shared);
 		adbg(this) << "<- a_lnk_name: " << impl.name_ << std::endl;
 		return impl.name_;
 	},
@@ -202,6 +142,9 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 			rename(std::move(new_name), true);
 	},
 
+	// get status
+	[this](a_lnk_status, Req req) { return pimpl_->req_status(req); },
+
 	// change status
 	[this](a_lnk_status, Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs) {
 		adbg(this) << "<- a_lnk_status: " << to_string(req) << " " <<
@@ -214,77 +157,130 @@ auto link_actor::make_generic_behavior() -> behavior_type { return {
 		);
 	},
 
-	// [NOTE] nop for a while
 	[this](a_ack, a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s) {
 		adbg(this) << "<- a_lnk_status ack: " << to_string(req) << " " <<
 			to_string(prev_s) << "->" << to_string(new_s) << std::endl;
 	},
 
+	// get/set flags
+	[this](a_lnk_flags) { return pimpl_->flags_; },
+	[this](a_lnk_flags, Flags f) { pimpl_->flags_ = f; },
+
 	// get oid
 	[this](a_lnk_oid) -> std::string {
-		//auto obj = data_ex(false);
-		auto res = data_ex(false)
-		.map([](const sp_obj& obj) {
-			return obj->id();
-		}).value_or(nil_oid);
-		adbg(this) << "<- a_lnk_oid: " << res << std::endl;
-		//adbg(this) << "=> a_lnk_oid: " << (obj ? (void*)obj.value().get() : (void*)0) << " " << res << std::endl;
+		// [NOTE] assume that if status is OK then getting data is fast (data is cached)
+		auto res = std::string{};
+		data_ex(
+			[&](result_or_errbox<sp_obj> obj) mutable {
+				res = obj ? obj.value()->id() : nil_oid;
+				adbg(this) << "<- a_lnk_oid: " << res << std::endl;
+			},
+			ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke
+		);
 		return res;
 	},
 
 	// get object type_id
 	[this](a_lnk_otid) -> std::string {
-		//return data_ex(false)
-		auto res = data_ex(false)
-		.map([](const sp_obj& obj) {
-			return obj->type_id();
-		}).value_or(type_descriptor::nil().name);
-		adbg(this) << "<- a_lnk_otid: " << res << std::endl;
+		// [NOTE] assume that if status is OK then getting data is fast (data is cached)
+		auto res = std::string{};
+		//auto tstart = make_timestamp();
+		data_ex(
+			[&](result_or_errbox<sp_obj> obj) mutable {
+				res = obj ? obj.value()->type_id() : type_descriptor::nil().name;
+				adbg(this) << "<- a_lnk_otid: " << res << std::endl;
+			},
+			ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke
+		);
+		return res;
+	},
+
+	// get node's group ID
+	[this](a_node_gid) -> result_or_errbox<std::string> {
+		adbg(this) << "<- a_node_gid" << std::endl;
+		auto res = result_or_err<std::string>{};
+		data_node_ex(
+			[&](result_or_errbox<sp_node> N) {
+				N.map([&](const sp_node& N) {
+					res = N->gid();
+				});
+			},
+			ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke
+		);
 		return res;
 	},
 
 	// obtain inode
+	// [NOTE] assume it's a fast call, override behaviour where needed (sym_link for ex)
 	[this](a_lnk_inode) -> result_or_errbox<inodeptr> {
 		adbg(this) << "<- a_lnk_inode" << std::endl;
 		return impl.get_inode();
 	},
 
-	// default handler for `data_node` that works via `data`
-	[this](a_lnk_dnode, bool wait_if_busy) -> result_or_errbox<sp_node> {
-		adbg(this) << "<- a_lnk_dnode, status = " <<
-			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
-
-		return data_node_ex(wait_if_busy);
-	},
-
-	// default `data` handler calls virtual `data()` function that by default returns nullptr
-	[this](a_lnk_data, bool wait_if_busy) -> result_or_errbox<sp_obj> {
+	[this](a_lnk_data, bool wait_if_busy) -> caf::result< result_or_errbox<sp_obj> > {
 		adbg(this) << "<- a_lnk_data, status = " <<
 			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
-		return data_ex(wait_if_busy);
+		auto res = make_response_promise< result_or_errbox<sp_obj> >();
+		data_ex(
+			[=](result_or_errbox<sp_obj> obj) mutable { res.deliver(std::move(obj)); },
+			(wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy) //| ReqOpts::Detached
+		);
+		return res;
 	},
 
-	[this](a_node_gid) -> result_or_errbox<std::string> {
-		adbg(this) << "<- a_node_gid" << std::endl;
-		return data_node_gid();
-	}
+	// default handler for `data_node` that works via `data`
+	[this](a_lnk_dnode, bool wait_if_busy) -> caf::result< result_or_errbox<sp_node> > {
+		adbg(this) << "<- a_lnk_dnode, status = " <<
+			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
+
+		auto res = make_response_promise< result_or_errbox<sp_node> >();
+		data_node_ex(
+			[=](result_or_errbox<sp_node> N) mutable { res.deliver(std::move(N)); },
+			(wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy) //| ReqOpts::Detached
+		);
+		return res;
+	},
 }; }
 
-///////////////////////////////////////////////////////////////////////////////
-//  simple_link_actor
-//
-auto simple_link_actor::data_ex(bool wait_if_busy) -> result_or_err<sp_obj> {
-	return impl.data()
-	.and_then([](sp_obj&& obj) {
-		return obj ?
-			result_or_err<sp_obj>(std::move(obj)) :
-			tl::make_unexpected(error::quiet(Error::EmptyData));
-	});
-}
+/*-----------------------------------------------------------------------------
+ *  fast_link_actor
+ *-----------------------------------------------------------------------------*/
+// for fast link we can assume that requests are invoked directly
+// => override slow API to exclude extra delivery messages
+auto fast_link_actor::make_behavior() -> behavior_type {
+	return caf::message_handler({
+		// obtain inode
+		[this](a_lnk_inode) -> result_or_errbox<inodeptr> {
+			adbg(this) << "<- a_lnk_inode" << std::endl;
 
-auto simple_link_actor::data_node_ex(bool wait_if_busy) -> result_or_err<sp_node> {
-	return data_node();
+			return impl.get_inode();
+		},
+
+		[this](a_lnk_data, bool) -> result_or_errbox<sp_obj> {
+			adbg(this) << "<- a_lnk_data, status = " <<
+				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
+
+			auto res = result_or_errbox<sp_obj>{};
+			data_ex(
+				[&](result_or_errbox<sp_obj> obj) { res = std::move(obj); },
+				ReqOpts::WaitIfBusy
+			);
+			return res;
+		},
+
+		[this](a_lnk_dnode, bool) -> result_or_errbox<sp_node> {
+			adbg(this) << "<- a_lnk_dnode, status = " <<
+				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
+
+			auto res = result_or_errbox<sp_node>();
+			data_node_ex(
+				[&](result_or_errbox<sp_node> N) { res = std::move(N); },
+				ReqOpts::WaitIfBusy
+			);
+			return res;
+		},
+	}).or_else(super::make_behavior());
 }
 
 /*-----------------------------------------------------------------------------
@@ -297,6 +293,10 @@ auto def_timeout(bool for_data) -> caf::duration {
 		get_or( config(), "radio.data-timeout", def_data_timeout ) :
 		get_or( config(), "radio.timeout", timespan{100ms} )
 	};
+}
+
+auto forward_caf_error(const caf::error& er) -> error {
+	return error{er.code(), system().render(er)};
 }
 
 NAMESPACE_END(blue_sky::tree)

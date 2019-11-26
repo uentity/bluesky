@@ -76,12 +76,15 @@ struct status_handle {
 
 // Invoke `f(lnk)` and properly set status depending on result
 // [NOTE] `status_changed_f` is not called when rasing/dropping Busy status
-template<typename L, typename F>
+template<typename F>
 static auto link_invoke(
-	L* lnk, F f, status_handle& status, bool wait_if_busy = false,
+	F&& f, status_handle& status, bool wait_if_busy = false,
 	status_changed_fh status_changed_f = nop_status_handler
-) -> decltype(f(lnk)) {
-	using ret_t = decltype(f(lnk));
+) -> decltype(auto) {
+	using R = std::invoke_result_t<F>;
+	using ret_t = std::conditional_t< tl::detail::is_expected<R>::value,
+		  result_or_err<typename R::value_type>, tl::expected<R, error>
+	>;
 
 	// make scoped atomic flag and raise it immediately
 	auto status_flag = scope_atomic_flag(status.flag);
@@ -91,7 +94,7 @@ static auto link_invoke(
 	// 1. check Busy state: return error or wait until we can capture the flag in non-Busy state
 	// [NOTE] flag is in raised state here
 	while(status.value == ReqStatus::Busy) {
-		if(!wait_if_busy) return tl::make_unexpected(error::quiet(Error::LinkBusy));
+		if(!wait_if_busy) return ret_t{ error::quiet(Error::LinkBusy) };
 		status_flag.drop();
 		const std::lock_guard<std::mutex> wait(status.busy_wait);
 		status_flag.raise();
@@ -100,6 +103,9 @@ static auto link_invoke(
 
 	// setup result processing functor
 	auto prev_status = status.value;
+	// placeholder for return value
+	ret_t res;
+
 	const auto set_status =
 	[&status, &status_flag, &busy_waiting, prev_status, status_changed_f](ret_t&& res) {
 		// set flag depending on result
@@ -125,7 +131,7 @@ static auto link_invoke(
 	};
 
 	// 2. invoke link::f
-	try {
+	auto er = error::eval_safe([&] {
 		// set Busy status (if status is OK, then we don't lock busy mutex)
 		if(status.value == ReqStatus::Void || status.value == ReqStatus::Error) {
 			status.value = ReqStatus::Busy;
@@ -135,18 +141,11 @@ static auto link_invoke(
 
 		// release status flag before possibly long operation
 		status_flag.drop();
-		// invoke operation, set status and return result
-		return set_status(f(lnk));
-	}
-	catch(const error& e) {
-		return set_status( tl::make_unexpected(e) );
-	}
-	catch(const std::exception& e) {
-		return set_status( tl::make_unexpected(e.what()) );
-	}
-	catch(...) {
-		return set_status( tl::make_unexpected(error()) );
-	}
+		// invoke operation and capture return value
+		res = std::invoke(std::forward<F>(f));
+	});
+	if(er) res = tl::make_unexpected(std::move(er));
+	return set_status(std::move(res));
 }
 
 NAMESPACE_END(blue_sky::tree::detail)

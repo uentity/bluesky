@@ -11,10 +11,10 @@
 #include <bs/tree/fusion.h>
 #include <bs/tree/node.h>
 #include <bs/tree/errors.h>
-#include "link_actor.h"
+#include "request_impl.h"
 
-#include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
+OMIT_OBJ_SERIALIZATION
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::sp_fusion)
 
 NAMESPACE_BEGIN(blue_sky::tree)
 NAMESPACE_BEGIN()
@@ -57,8 +57,6 @@ public:
 
 	// search for valid (non-null) bridge up the tree
 	auto bridge() const -> sp_fusion {
-		auto guard = lock(shared);
-
 		if(bridge_) return bridge_;
 		// try to look up in parent link
 		if(auto parent = owner_.lock()) {
@@ -71,7 +69,6 @@ public:
 	}
 
 	auto reset_bridge(sp_fusion&& new_bridge) -> void {
-		auto guard = lock();
 		bridge_ = std::move(new_bridge);
 	}
 
@@ -88,6 +85,23 @@ public:
 		return tl::make_unexpected(error{Error::NoFusionBridge});
 	}
 
+	// implement populate with specified child type
+	auto populate(const std::string& child_type_id = "", bool wait_if_busy = true)
+	-> result_or_err<sp_node> {
+		// assume that if `child_type_id` is nonepmty,
+		// then we should force `populate()` regardless of status
+		if(child_type_id.empty() && req_status(Req::DataNode) == ReqStatus::OK)
+			return data_;
+		if(const auto B = bridge()) {
+			auto err = B->populate(data_, child_type_id);
+			if(err.code == obj_fully_loaded)
+				rs_reset(Req::Data, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
+			return err.ok() ?
+				result_or_err<sp_node>(data_) : tl::make_unexpected(std::move(err));
+		}
+		return tl::make_unexpected(Error::NoFusionBridge);
+	}
+
 	inline auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor override;
 };
 
@@ -99,55 +113,48 @@ struct BS_HIDDEN_API fusion_link_actor : public link_actor {
 
 	using super::super;
 
-	// implement populate with specified child type
-	auto populate(const std::string& child_type_id = "", bool wait_if_busy = true)
-	-> result_or_err<sp_node> {
-		const auto populate_impl = [&child_type_id](fusion_link_impl* L) -> result_or_err<sp_node> {
-			// assume that if `child_type_id` is nonepmty,
-			// then we should force `populate()` regardless of status
-			if(child_type_id.empty() && L->req_status(Req::DataNode) == ReqStatus::OK)
-				return L->data_;
-			if(const auto B = L->bridge()) {
-				auto err = B->populate(L->data_, child_type_id);
-				if(err.code == obj_fully_loaded)
-					L->rs_reset(Req::Data, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
-				return err.ok() ?
-					result_or_err<sp_node>(L->data_) : tl::make_unexpected(std::move(err));
-			}
-			return tl::make_unexpected(Error::NoFusionBridge);
-		};
-
-		return detail::link_invoke(
-			static_cast<fusion_link_impl*>(pimpl_.get()),
-			[&populate_impl](fusion_link_impl* L) { return populate_impl(L); },
-			impl.status_[1], wait_if_busy,
-			// send status changed message
-			function_view{ [this](ReqStatus prev_v, ReqStatus new_v) {
-				if(prev_v != new_v) send(impl.self_grp, a_lnk_status(), a_ack(), new_v, prev_v);
-			} }
+	// both Data & DataNode executes with `HasDataCache` flag set
+	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override {
+		request_impl(
+			*this, Req::Data, opts | ReqOpts::HasDataCache | ReqOpts::Detached,
+			[Limpl = pimpl_] { return std::static_pointer_cast<fusion_link_impl>(Limpl)->populate(); },
+			std::move(cb)
 		);
 	}
 
 	// `data_node` just calls `populate`
-	auto data_node() -> result_or_err<sp_node> override {
-		return populate();
-	}
-
-	// fusion link always contain a node, so directly return it's GID
-	auto data_node_gid() -> result_or_err<std::string> override {
-		if(auto obj = static_cast<fusion_link_impl&>(impl).data_; obj)
-			return obj->gid();
-		return tl::make_unexpected(error::quiet(Error::EmptyData));
+	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override {
+		request_impl(
+			*this, Req::DataNode, opts | ReqOpts::HasDataCache | ReqOpts::Detached,
+			[Limpl = pimpl_] { return std::static_pointer_cast<fusion_link_impl>(Limpl)->populate(); },
+			std::move(cb)
+		);
 	}
 
 	auto make_behavior() -> behavior_type override {
 		auto L = static_cast<fusion_link_impl*>(pimpl_.get());
 		return caf::message_handler {
 			// add handler to invoke populate with specified child type
-			[this](a_flnk_populate, const std::string& child_type_id, bool wait_if_busy)
-			-> result_or_errbox<sp_node> {
-				return populate(child_type_id, wait_if_busy);
+			[this](a_flnk_populate, std::string child_type_id, bool wait_if_busy)
+			-> caf::result< result_or_errbox<sp_node> > {
+				auto res = make_response_promise< result_or_errbox<sp_node> >();
+				request_impl(
+					*this, Req::DataNode,
+					ReqOpts::Detached | ReqOpts::HasDataCache |
+						(wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
+					[Limpl = pimpl_, cti = std::move(child_type_id)] {
+						return std::static_pointer_cast<fusion_link_impl>(Limpl)->populate(cti);
+					},
+					[=](result_or_errbox<sp_node> N) mutable { res.deliver(std::move(N)); }
+				);
+				return res;
 			},
+
+			[L](a_flnk_bridge) { return L->bridge(); },
+			[L](a_flnk_bridge, sp_fusion new_bridge) { L->reset_bridge(std::move(new_bridge)); },
+
+			// direct return cached data
+			[L](a_lnk_dcache) { return L->data_; },
 
 			// easier obj ID & object type id retrival
 			[L](a_lnk_otid) {
@@ -155,6 +162,13 @@ struct BS_HIDDEN_API fusion_link_actor : public link_actor {
 			},
 			[L](a_lnk_oid) {
 				return L->data_ ? L->data_->id() : nil_oid;
+			},
+
+			// fusion link always contain a node, so directly return it's GID
+			[L](a_node_gid) -> result_or_errbox<std::string> {
+				using R = result_or_errbox<std::string>;
+				return L->data_ ? R{L->data_->gid()} : tl::make_unexpected(error::quiet(Error::EmptyData));
+				//return L->data_ ? R{ L->data_->gid() } : R{ tl::unexpect, error::quiet(Error::EmptyData) };
 			}
 		}.or_else(super::make_behavior());
 	}

@@ -21,10 +21,12 @@ using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 
 // async invoke `link::data()`
 using a_lnk_data = caf::atom_constant<caf::atom("tl data")>;
+using a_lnk_dcache = caf::atom_constant<caf::atom("tl dcache")>;
 // async invoke `link::data_node()`
 using a_lnk_dnode = caf::atom_constant<caf::atom("tl dnode")>;
 // async invoke `fusion_link::populate()`
 using a_flnk_populate = caf::atom_constant<caf::atom("tfl pull")>;
+using a_flnk_bridge = caf::atom_constant<caf::atom("tfl bridge")>;
 
 using a_lnk_id = caf::atom_constant<caf::atom("tl id")>;
 using a_lnk_name = caf::atom_constant<caf::atom("tl name")>;
@@ -37,6 +39,7 @@ using a_lnk_status = caf::atom_constant<caf::atom("tl status")>;
 using a_lnk_oid = caf::atom_constant<caf::atom("tl oid")>;
 using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
 using a_lnk_inode = caf::atom_constant<caf::atom("tl inode")>;
+using a_lnk_flags = caf::atom_constant<caf::atom("tl flags")>;
 
 // query node's actor group ID
 using a_node_gid = caf::atom_constant<caf::atom("tn gid")>;

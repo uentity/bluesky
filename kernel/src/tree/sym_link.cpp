@@ -31,12 +31,72 @@ struct sym_link_actor : public link_actor {
 
 	using super::super;
 
-	// forward call to pointed link
-	auto data_node_gid() -> result_or_err<std::string> override {
-		auto& sympl = static_cast<sym_link_impl&>(impl);
-		return sympl.pointee().and_then([](const sp_link& src_link) {
-			return src_link->data_node_gid();
-		});
+	auto pointee() const -> result_or_err<sp_link> {
+		return static_cast<sym_link_impl&>(impl).pointee();
+	}
+
+	//// make data request via source link
+	//auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override {
+	//	pointee().and_then([&](const sp_link& src_link) {
+	//		if(enumval(opts & ReqOpts::DirectInvoke))
+	//			cb(src_link->data_ex());
+	//		else
+	//			caf::anon_send(src_link->actor(), a_lnk_data(), std::move(cb), opts);
+	//	});
+	//}
+
+	//auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override {
+	//	pointee().and_then([&](const sp_link& src_link) {
+	//		if(enumval(opts & ReqOpts::DirectInvoke))
+	//			cb(src_link->data_node_ex());
+	//		else
+	//			caf::anon_send(src_link->actor(), a_lnk_dnode(), std::move(cb), opts);
+	//	});
+	//}
+
+	template<typename R, typename... Args>
+	auto delegate_source(Args&&... args)
+	-> std::enable_if_t<tl::detail::is_expected<R>::value, caf::response_promise> {
+		auto res = make_response_promise<R>();
+		if(auto p = pointee())
+			res.delegate(p.value()->actor(), std::forward<Args>(args)...);
+		else
+			res.deliver(R{ tl::unexpect, p.error() });
+		return res;
+	}
+
+	template<typename R, typename... Args>
+	auto delegate_source(R errval, Args&&... args)
+	-> std::enable_if_t<!tl::detail::is_expected<R>::value, caf::response_promise> {
+		auto res = make_response_promise<R>();
+		if(auto p = pointee())
+			res.delegate(p.value()->actor(), std::forward<Args>(args)...);
+		else
+			res.deliver(std::move(errval));
+		return res;
+	}
+
+	// delegate name, OID, etc requests to source link
+	auto make_behavior() -> caf::behavior override {
+		return caf::message_handler({
+
+			[this](a_lnk_oid) -> caf::result<std::string> {
+				return delegate_source<std::string>(type_descriptor::nil().name, a_lnk_oid());
+			},
+
+			[this](a_lnk_otid) -> caf::result<std::string> {
+				return delegate_source<std::string>(type_descriptor::nil().name, a_lnk_otid());
+			},
+
+			[this](a_node_gid) -> caf::result< result_or_errbox<std::string> > {
+				return delegate_source< result_or_errbox<std::string> >(a_node_gid());
+			},
+
+			[this](a_lnk_inode) -> caf::result< result_or_errbox<inodeptr> > {
+				return delegate_source< result_or_errbox<std::string> >(a_lnk_inode());
+			},
+
+		}).or_else(super::make_behavior());
 	}
 };
 
@@ -65,11 +125,13 @@ auto sym_link_impl::data() -> result_or_err<sp_obj> {
 	auto res = pointee().and_then([](const sp_link& src_link) {
 		return src_link->data_ex();
 	});
+#if defined(_DEBUG)
 	if(!res) {
 		auto& er = res.error();
-		std::cout << "*** " << to_string(id_) << ' ' << er.what() << std::endl;
-		//std::cout << kernel::tools::get_backtrace(20) << std::endl;
+		std::cout << ">>> " << to_string(id_) << ' ' << er.what() << std::endl;
+		//std::cout << kernel::tools::get_backtrace(16) << std::endl;
 	}
+#endif
 	return res;
 }
 

@@ -27,8 +27,7 @@ inline const auto nil_uid = boost::uuids::nil_uuid();
 inline const std::string nil_oid = to_string(nil_uid);
 
 enum class ReqReset {
-	Always = 0, IfEq = 1, IfNeq = 2,
-	Silent = 4
+	Always = 0, IfEq = 1, IfNeq = 2
 };
 
 // for debug & print purposes
@@ -157,4 +156,3 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 NAMESPACE_END(blue_sky::tree)
 
 BS_ALLOW_ENUMOPS(blue_sky::tree::ReqReset)
-

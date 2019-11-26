@@ -67,10 +67,7 @@ auto link_impl::rs_reset(
 	) {
 		S.value = new_rs;
 		// Data = OK will always fire (work as 'data changed' signal)
-		if(
-			!bool(cond & ReqReset::Silent) &&
-			(new_rs != self || (request == Req::Data && new_rs == ReqStatus::OK))
-		)
+		if(new_rs != self || (request == Req::Data && new_rs == ReqStatus::OK))
 			on_rs_changed(request, new_rs, self);
 	}
 	return self;
