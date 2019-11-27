@@ -50,11 +50,11 @@ auto node_impl::spawn_actor(std::shared_ptr<node_impl> nimpl, const std::string&
 }
 
 auto node_impl::gid() const -> std::string {
+	// `self_grp` cannot change after being set
 	return self_grp ? self_grp.get()->identifier() : "";
 }
 
 auto node_impl::super() const -> sp_node {
-	//auto guard = lock<Metadata>(shared);
 	return super_ ? super_->bs_shared_this<node>() : nullptr;
 }
 
@@ -71,18 +71,16 @@ auto node_impl::set_handle(const sp_link& new_handle) -> void {
 	handle_ = new_handle;
 }
 
-auto node_impl::propagate_owner(sp_node self, bool deep) -> void {
-	//auto guard = lock<Links>(shared);
+auto node_impl::propagate_owner(bool deep) -> void {
 	// properly setup owner in node's leafs
 	for(auto& plink : links_) {
-		auto child_node = adjust_inserted_link(plink, self);
+		auto child_node = adjust_inserted_link(plink, super());
 		if(deep && child_node)
 			child_node->propagate_owner(true);
 	}
 }
 
 auto node_impl::size() const -> std::size_t {
-	//auto guard = lock<Links>(shared);
 	return links_.size();
 }
 
@@ -97,10 +95,7 @@ auto node_impl::insert(
 		return { end<Key::ID>(), false };
 
 	auto& Limpl = *L->pimpl();
-	// [NOTE] shared lock is enough to prevent parallel modification
-	// and required to allow 'reading' functions like `oid` or `find` share a lock
 	auto Lguard = Limpl.lock(shared);
-	auto guard = lock<Links>();
 
 	// check if we have duplicated name
 	iterator<Key::ID> dup;
@@ -132,9 +127,6 @@ auto node_impl::insert(
 
 	// capture link's prev owner to restore it later if needed
 	const auto make_result = [&, prev_owner = Limpl.owner_.lock()](insert_status<Key::ID>&& res) {
-		// release locks first
-		if(guard) guard.unlock();
-
 		// work with link's original owner depending on if insert happened or not
 		auto& res_L = *res.first;
 		if(res.second) {
@@ -220,11 +212,8 @@ auto node_impl::erase_impl(
 //  misc
 //
 auto node_impl::refresh(const link::id_type& lid) -> void {
-	auto guard = lock<Links>();
-
 	// find target link by it's ID
 	auto& I = links_.get<Key_tag<Key::ID>>();
-	// among all keys, only link's name can be changed
 	if(auto pos = I.find(lid); pos != I.end()) {
 		//auto& NI = links_.get<Key_tag<Key::Name>>();
 		//NI.modify(project<Key::ID, Key::Name>(pos), [](auto& L) { return L->name(); });
@@ -233,8 +222,6 @@ auto node_impl::refresh(const link::id_type& lid) -> void {
 }
 
 auto node_impl::accepts(const sp_link& what) const -> bool {
-	//auto guard = lock<Metadata>(shared);
-
 	if(!allowed_otypes_.size()) return true;
 	const auto& what_type = what->obj_type_id();
 	for(const auto& otype : allowed_otypes_) {

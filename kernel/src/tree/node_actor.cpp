@@ -113,7 +113,6 @@ auto node_actor::disconnect() -> void {
 	//	stop_retranslate_from(L);
 
 	auto& Reg = system().registry();
-	auto guard = lock();
 	for(auto& [lid, rs] : axons_) {
 		// stop link retranslator
 		send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(rs.first)), a_bye());
@@ -266,7 +265,6 @@ NAMESPACE_END()
 auto node_actor::retranslate_from(const sp_link& L) -> void {
 	const auto& lid = L->id();
 	auto& AS = system();
-	auto guard = lock();
 
 	// spawn link retranslator first
 	auto axon = axon_t{ AS.spawn(link_retranslator, impl.self_grp, lid).id(), {} };
@@ -279,8 +277,6 @@ auto node_actor::retranslate_from(const sp_link& L) -> void {
 }
 
 auto node_actor::stop_retranslate_from(const sp_link& L) -> void {
-	auto guard = lock();
-
 	auto prs = axons_.find(L->id());
 	if(prs == axons_.end()) return;
 	auto& rs = prs->second;
@@ -323,7 +319,6 @@ auto node_actor::insert(
 	auto res = insert(std::move(L), pol, true);
 
 	// 2. reposition an element in AnyOrder index
-	auto guard = pimpl_->lock<node_impl::Links>();
 	if(res.first != impl.end<Key::ID>()) {
 		auto from = impl.project<Key::ID>(res.first);
 		to_idx = std::min(to_idx, impl.size());
@@ -414,6 +409,15 @@ auto node_actor::make_behavior() -> behavior_type { return {
 	[=](a_node_gid) -> std::string {
 		return impl.gid();
 	},
+
+	// propagate owner
+	[=](a_node_propagate_owner, bool deep) { impl.propagate_owner(deep); },
+
+	// get handle
+	[=](a_node_handle) { return impl.handle_; },
+
+	// get size
+	[=](a_node_size) { return impl.size(); },
 
 	[=](a_lnk_find, const link::id_type& lid) -> sp_link {
 		if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>())

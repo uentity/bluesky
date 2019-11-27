@@ -54,7 +54,7 @@ using InsertPolicy = node::InsertPolicy;
 /*-----------------------------------------------------------------------------
  *  node_actor
  *-----------------------------------------------------------------------------*/
-class BS_HIDDEN_API node_actor : public caf::event_based_actor, bs_detail::sharded_mutex<std::mutex> {
+class BS_HIDDEN_API node_actor : public caf::event_based_actor {
 public:
 	friend struct access_node_actor;
 	using super = caf::event_based_actor;

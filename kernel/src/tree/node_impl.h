@@ -24,8 +24,6 @@
 
 #include <boost/uuid/uuid_hash.hpp>
 
-#define DBGLLOCK bsout() << "Links locked in {}" << __func__ << bs_end;
-
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 namespace bs_detail = blue_sky::detail;
@@ -162,11 +160,8 @@ public:
 			return links_.project<Key_tag<R>>(std::move(pos));
 	}
 
-	// [NOTE] does lock
 	template<Key K>
 	auto keys() const -> std::vector<Key_type<K>> {
-		//auto guard = lock<Links>(shared);
-
 		auto kex = Key_tag<K>();
 		auto res = std::vector<Key_type<K>>(links_.size());
 		std::transform(
@@ -198,8 +193,6 @@ public:
 		const range<K>& r, leaf_postproc_fn ppf = noop_postroc_f,
 		bool dont_reset_owner = false
 	) -> size_t {
-		auto guard = lock<Links>();
-
 		size_t res = 0;
 		for(auto x = r.begin(); x != r.end();) {
 			if constexpr(K == Key::ID)
@@ -224,8 +217,6 @@ public:
 	//
 	template<Key K>
 	bool rename(iterator<K>&& pos, std::string&& new_name) {
-		auto guard = lock<Links>();
-
 		if(pos == end<K>()) return false;
 		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
 			l->rename(std::move(name));
@@ -234,8 +225,6 @@ public:
 
 	template<Key K>
 	std::size_t rename(const Key_type<K>& key, const std::string& new_name, bool all = false) {
-		auto guard = lock<Links>();
-
 		auto matched_items = equal_range<K>(key);
 		auto& storage = links_.get<Key_tag<K>>();
 		auto renamer = [&new_name](sp_link& l) {
@@ -261,7 +250,7 @@ public:
 
 	void set_handle(const sp_link& new_handle);
 
-	auto propagate_owner(sp_node self, bool deep) -> void;
+	auto propagate_owner(bool deep) -> void;
 
 	// postprocessing of just inserted link
 	// if link points to node, return it
@@ -275,7 +264,6 @@ public:
 private:
 	node* super_;
 
-	// [NOTE] expects external lock
 	auto erase_impl(
 		iterator<Key::ID> key, leaf_postproc_fn ppf = noop_postroc_f,
 		bool dont_reset_owner = false

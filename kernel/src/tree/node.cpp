@@ -47,7 +47,6 @@ node::node(const node& src)
 
 node::~node() {
 	// mark self as deleted for impl & actor
-	auto guard = pimpl_->lock<node_impl::Metadata>();
 	pimpl_->super_ = nullptr;
 	// then kill self actor
 	caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
@@ -82,7 +81,7 @@ auto node::disconnect(bool deep) -> void {
 }
 
 auto node::propagate_owner(bool deep) -> void {
-	pimpl_->propagate_owner(bs_shared_this<node>(), deep);
+	caf::anon_send(actor_, a_node_propagate_owner(), deep);
 }
 
 auto node::handle() const -> sp_link {

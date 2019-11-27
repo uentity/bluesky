@@ -44,6 +44,9 @@ using a_lnk_flags = caf::atom_constant<caf::atom("tl flags")>;
 // query node's actor group ID
 using a_node_gid = caf::atom_constant<caf::atom("tn gid")>;
 using a_node_disconnect = caf::atom_constant<caf::atom("tn unplug")>;
+using a_node_propagate_owner = caf::atom_constant<caf::atom("tn powner")>;
+using a_node_handle = caf::atom_constant<caf::atom("tn handle")>;
+using a_node_size = caf::atom_constant<caf::atom("tn size")>;
 
 } /* namespace blue_sky */
 
