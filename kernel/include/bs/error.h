@@ -155,15 +155,18 @@ public:
 		// otherwise raise static assertion
 		using f_result = std::invoke_result_t<F>;
 		const auto eval_f = [](auto&& ff) -> error {
-			if constexpr(std::is_same_v<f_result, error>)
-				return std::invoke<F>(std::forward<F>(ff));
+			if constexpr(
+				std::is_same_v<f_result, error> || std::is_same_v<f_result, success_tag> ||
+				std::is_error_code_enum_v<f_result>
+			)
+				return std::invoke(std::forward<F>(ff));
 			else if constexpr(std::is_same_v<f_result, void>) {
-				std::invoke<F>(std::forward<F>(ff));
+				std::invoke(std::forward<F>(ff));
 				return success_tag{};
 			}
 			else if constexpr(std::is_convertible_v<f_result, bool>) {
 				// convert `false` to quiet error
-				return std::invoke<F>(std::forward<F>(ff)) ?
+				return std::invoke(std::forward<F>(ff)) ?
 					success_tag{} : quiet(Error::Happened);
 			}
 			else if constexpr(tl::detail::is_expected<f_result>::value) {
@@ -172,7 +175,7 @@ public:
 					"Returned expected must contain error as second type"
 				);
 				// [NOTE] x.value is ignored!
-				auto x = std::invoke<F>(std::forward<F>(ff));
+				auto x = std::invoke(std::forward<F>(ff));
 				return x ? success_tag{} : x.error();
 			}
 			else
