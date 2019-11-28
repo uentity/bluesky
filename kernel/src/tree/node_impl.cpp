@@ -13,6 +13,7 @@
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/detail/tuple_utils.h>
+#include <bs/serialize/cafbind.h>
 
 #include <boost/uuid/uuid_io.hpp>
 

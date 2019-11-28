@@ -15,6 +15,8 @@
 #include <bs/tree/node.h>
 
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/string_generator.hpp>
+
 #include <cereal/types/vector.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -27,6 +29,8 @@
 
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
+
+const auto uuid_from_str = boost::uuids::string_generator{};
 
 ///////////////////////////////////////////////////////////////////////////////
 //  tree_fs_input::impl
@@ -183,18 +187,25 @@ struct tree_fs_input::impl {
 				},
 				[&] { // restore custom leafs order
 					using namespace tree;
+					if(N.size() < 2 || leafs_order.size() < 2) return;
 
-					// make current order of link IDs
+					// convert string uids to UUIDs
+					auto wanted_order = std::vector<link::id_type>(leafs_order.size());
+					std::transform(
+						leafs_order.cbegin(), leafs_order.cend(), wanted_order.begin(),
+						[](const auto& s_uid) { return uuid_from_str(s_uid); }
+					);
+
+					// extract current order of link IDs
 					auto res_order = std::vector<link::id_type>();
 					res_order.reserve(N.size());
 					for(auto i = N.begin(), end = N.end(); i != end; ++i)
 						res_order.push_back((*i)->id());
 
 					// sort according to passed `leafs_order`
-					const auto lo_begin = leafs_order.begin(), lo_end = leafs_order.end();
+					const auto lo_begin = wanted_order.begin(), lo_end = wanted_order.end();
 					std::sort(res_order.begin(), res_order.end(), [&](auto i1, auto i2) {
-						return std::find(lo_begin, lo_end, to_string(i1)) <
-							std::find(lo_begin, lo_end, to_string(i2));
+						return std::find(lo_begin, lo_end, i1) < std::find(lo_begin, lo_end, i2);
 					});
 					// apply custom order
 					N.rearrange(std::move(res_order));
