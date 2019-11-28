@@ -70,18 +70,19 @@ struct tree_fs_output::impl {
 	}
 
 	// if entering `src_path` is successfull, set `tar_path` to src_path
-	// if `tar_path` is nonempty, return success immediately
+	// if `tar_path` already equals `src_path` return success
 	template<typename Path>
 	auto enter_dir(Path src_path, fs::path& tar_path) -> error {
 		auto path = fs::path(std::move(src_path));
+		//if(path == tar_path) return perfect;
 		if(path.empty()) return error{"Cannot enter empty path"};
 
-		if(auto er = error::eval_safe(
+		EVAL_SAFE
 			// create folders along specified path if not created yet
 			[&]{ if(!fs::exists(path)) fs::create_directories(path); },
 			// check that path is a directory
 			[&]{ return fs::is_directory(path) ? perfect : error{"Tree path is not a directory"}; }
-		); er) return er;
+		RETURN_EVAL_ERR
 
 		tar_path = std::move(path);
 		return perfect;
@@ -95,14 +96,19 @@ struct tree_fs_output::impl {
 	}
 
 	auto add_head(const fs::path& head_path) -> error {
-		auto flags = std::ios::out | std::ios::trunc;
-		if(auto neck = std::ofstream(head_path, flags)) {
-			necks_.emplace_back(std::move(neck));
-			heads_.emplace_back(necks_.back());
-			return perfect;
+	return error::eval_safe(
+		// enter parent dir
+		[&] { return enter_dir(head_path.parent_path(), cur_path_); },
+		// open head file
+		[&] {
+			if(auto neck = std::ofstream(head_path, std::ios::out | std::ios::trunc)) {
+				necks_.push_back(std::move(neck));
+				heads_.emplace_back(necks_.back());
+				return success();
+			}
+			return error{ fmt::format("Can't open file '{}' for writing", head_path) };
 		}
-		else return { fmt::format("Cannot open file '{}' for writing", head_path.string()) };
-	}
+	); }
 
 	auto pop_head() -> void {
 		if(!heads_.empty()) {
@@ -113,13 +119,13 @@ struct tree_fs_output::impl {
 
 	auto head() -> result_or_err<cereal::JSONOutputArchive*> {
 		if(heads_.empty()) {
-			if(auto er = enter_root()) return tl::make_unexpected(std::move(er));
-			if(auto er = add_head(fs::path(root_path_) / root_fname_))
-				return tl::make_unexpected(std::move(er));
-			else {
-				// write objects directory
-				heads_.back()( cereal::make_nvp("objects_dir", objects_dname_) );
-			}
+			if(auto er = error::eval_safe(
+				[&] { return enter_root(); },
+				[&] { return add_head(fs::path(root_path_) / root_fname_); },
+				[&] { // write objects directory
+					heads_.back()( cereal::make_nvp("objects_dir", objects_dname_) );
+				}
+			)) return tl::make_unexpected(std::move(er));
 		}
 		return &heads_.back();
 	}
@@ -141,7 +147,9 @@ struct tree_fs_output::impl {
 		return error::eval_safe(
 			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); },
 			[&]{ return enter_root(); },
-			[&]{ return enter_dir(cur_path_ / N.id(), cur_path_); }
+			// [NOTE] delay enter node's dit util first head is added
+			// this prevents creation of empty dirs (for nodes without leafs)
+			[&]{ cur_path_ /= N.gid(); }
 		);
 	}
 
@@ -151,7 +159,7 @@ struct tree_fs_output::impl {
 			// write down node's metadata nessessary to load it later
 			[&]{ return head().map( [&](auto* ar) {
 				// node directory
-				(*ar)(cereal::make_nvp("node_dir", N.id()));
+				(*ar)(cereal::make_nvp("node_dir", N.gid()));
 
 				// custom leafs order
 				std::vector<std::string> leafs_order;
@@ -420,19 +428,19 @@ auto tree_fs_output::select_active_formatter(std::string_view obj_type_id, std::
 //
 
 auto prologue(tree_fs_output& ar, tree::sp_link const& L) -> void {
-	ar.begin_link(L);
+	if(auto er = ar.begin_link(L)) throw er;
 }
 
 auto epilogue(tree_fs_output& ar, tree::sp_link const&) -> void {
-	ar.end_link();
+	if(auto er = ar.end_link()) throw er;
 }
 
 auto prologue(tree_fs_output& ar, tree::node const& N) -> void {
-	ar.begin_node(N);
+	if(auto er = ar.begin_node(N)) throw er;
 }
 
 auto epilogue(tree_fs_output& ar, tree::node const& N) -> void {
-	ar.end_node(N);
+	if(auto er = ar.end_node(N)) throw er;
 }
 
 NAMESPACE_END(blue_sky)
