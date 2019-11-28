@@ -28,6 +28,8 @@ public:
 	using id_type = boost::uuids::uuid;
 	using sp_link = std::shared_ptr<link>;
 	using sp_clink = std::shared_ptr<const link>;
+	using link_ptr = object_ptr<link>;
+	using clink_ptr = object_ptr<const link>;
 
 	/// virtual dtor
 	virtual ~link();
@@ -190,6 +192,8 @@ private:
 };
 using sp_link = link::sp_link;
 using sp_clink = link::sp_clink;
+using link_ptr = link::link_ptr;
+using clink_ptr = link::clink_ptr;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  link with bundled inode
