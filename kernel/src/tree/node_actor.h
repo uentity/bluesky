@@ -56,7 +56,6 @@ using InsertPolicy = node::InsertPolicy;
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API node_actor : public caf::event_based_actor {
 public:
-	friend struct access_node_actor;
 	using super = caf::event_based_actor;
 
 	// holds reference to node impl

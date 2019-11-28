@@ -19,6 +19,7 @@
 
 OMIT_OBJ_SERIALIZATION
 OMIT_ITERATORS_SERIALIZATION
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(std::vector<blue_sky::tree::node::id_type>)
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
@@ -366,6 +367,17 @@ auto node::project(iterator<Key::OID> src) const -> iterator<Key::AnyOrder> {
 
 auto node::project(iterator<Key::Type> src) const -> iterator<Key::AnyOrder> {
 	return pimpl_->project<Key::Type>(std::move(src));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  rearrrange
+//
+auto node::rearrange(std::vector<id_type> new_order) -> void {
+	caf::anon_send(actor(), a_node_rearrange(), std::move(new_order));
+}
+
+auto node::rearrange(std::vector<std::size_t> new_order) -> void {
+	caf::anon_send(actor(), a_node_rearrange(), std::move(new_order));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

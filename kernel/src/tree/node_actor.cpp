@@ -28,6 +28,7 @@
 #endif
 
 OMIT_ITERATORS_SERIALIZATION
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(std::vector<blue_sky::tree::node::id_type>)
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
@@ -511,7 +512,15 @@ auto node_actor::make_behavior() -> behavior_type { return {
 		if(auto S = current_sender(); S != this && !lids.empty()) {
 			erase(lids.front(), EraseOpts::Silent);
 		}
-	}
+	},
+
+	// apply custom order
+	[=](a_node_rearrange, const std::vector<std::size_t>& new_order) {
+		impl.rearrange<Key::AnyOrder>(new_order);
+	},
+	[=](a_node_rearrange, const std::vector<node::id_type>& new_order) {
+		impl.rearrange<Key::ID>(new_order);
+	},
 }; }
 
 NAMESPACE_END(blue_sky::tree)

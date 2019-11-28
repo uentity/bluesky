@@ -10,13 +10,8 @@
 
 #include <bs/log.h>
 #include <bs/tree/node.h>
-#include <bs/kernel/radio.h>
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
-
-#include <bs/serialize/cafbind.h>
-
-#include <caf/actor.hpp>
 
 #include <set>
 #include <unordered_map>
@@ -25,7 +20,6 @@
 #include <boost/uuid/uuid_hash.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-using namespace kernel::radio;
 namespace bs_detail = blue_sky::detail;
 
 using links_container = node::links_container;
@@ -45,18 +39,17 @@ using InsertPolicy = node::InsertPolicy;
 
 using bs_detail::shared;
 
-/*-----------------------------------------------------------------------------
- *  node_actor
- *-----------------------------------------------------------------------------*/
 using node_impl_mutex = std::shared_mutex;
 //using node_impl_mutex = bs_detail::noop_mutex_tag;
 
+/*-----------------------------------------------------------------------------
+ *  node_impl
+ *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API node_impl : public bs_detail::sharded_same_mutex<node_impl_mutex, 2> {
 	struct metadata_tag {};
 	struct full_tag {};
 
 public:
-	friend struct access_node_actor;
 	friend class node;
 
 	// lock granularity
@@ -241,6 +234,20 @@ public:
 
 	// update node indexes to match current link content
 	auto refresh(const link::id_type& lid) -> void;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  rearrange
+	//
+	template<Key K>
+	auto rearrange(const std::vector<Key_type<K>>& new_order) {
+		// convert vector of keys into vector of iterators
+		std::vector<std::reference_wrapper<const sp_link>> i_order;
+		i_order.reserve(new_order.size());
+		for(const auto& k : new_order)
+			i_order.push_back(std::ref(*find<K>(k)));
+		// apply order
+		links_.get<Key_tag<Key::AnyOrder>>().rearrange(i_order.begin());
+	}
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  misc

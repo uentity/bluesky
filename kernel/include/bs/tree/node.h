@@ -265,6 +265,10 @@ public:
 	iterator<Key::AnyOrder> project(iterator<Key::OID>) const;
 	iterator<Key::AnyOrder> project(iterator<Key::Type>) const;
 
+	/// apply custom order
+	auto rearrange(std::vector<id_type> new_order) -> void;
+	auto rearrange(std::vector<std::size_t> new_order) -> void;
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  track node events
 	//
@@ -308,10 +312,11 @@ public:
 private:
 	friend class blue_sky::atomizer;
 	friend class cereal::access;
-	friend class link;
 
+	friend class link;
 	friend class node_impl;
 	friend class node_actor;
+
 	// PIMPL
 	std::shared_ptr<node_impl> pimpl_;
 	// strong ref to node's actor
@@ -350,6 +355,8 @@ private:
 // handy aliases
 using sp_node = std::shared_ptr<node>;
 using sp_cnode = std::shared_ptr<const node>;
+using node_ptr = object_ptr<node>;
+using cnode_ptr = object_ptr<const node>;
 
 NAMESPACE_END(blue_sky::tree)
 
