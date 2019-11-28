@@ -14,6 +14,7 @@
 #include <bs/serialize/tree.h>
 #include <bs/tree/node.h>
 
+#include <boost/uuid/uuid_io.hpp>
 #include <cereal/types/vector.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -24,9 +25,9 @@
 #include <fstream>
 #include <list>
 
+NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
 
-NAMESPACE_BEGIN(blue_sky)
 ///////////////////////////////////////////////////////////////////////////////
 //  tree_fs_input::impl
 //
@@ -60,9 +61,10 @@ struct tree_fs_input::impl {
 	template<typename Path>
 	auto enter_dir(Path src_path, fs::path& tar_path) -> error {
 		auto path = fs::path(std::move(src_path));
+		//if(path == tar_path) return perfect;
 		if(path.empty()) return error{"Cannot load tree from empty path"};
 
-		EVAL
+		EVAL_SAFE
 			// check that path exists
 			[&]{ return fs::exists(path) ? perfect : error{"Specified directory does not exist"}; },
 			// check that path is a directory
@@ -81,13 +83,19 @@ struct tree_fs_input::impl {
 	}
 
 	auto add_head(const fs::path& head_path) -> error {
-		if(auto neck = std::ifstream(head_path, std::ios::in)) {
-			necks_.emplace_back(std::move(neck));
-			heads_.emplace_back(necks_.back());
-			return perfect;
+	return error::eval_safe(
+		// enter parent dir
+		[&] { return enter_dir(head_path.parent_path(), cur_path_); },
+		// open head file
+		[&] {
+			if(auto neck = std::ifstream(head_path, std::ios::in)) {
+				necks_.push_back(std::move(neck));
+				heads_.emplace_back(necks_.back());
+				return success();
+			}
+			return error{ fmt::format("Can't open file '{}' for reading", head_path) };
 		}
-		else return { fmt::format("Cannot open file '{}' for reading", head_path.string()) };
-	}
+	); }
 
 	auto pop_head() -> void {
 		if(!heads_.empty()) {
@@ -100,52 +108,13 @@ struct tree_fs_input::impl {
 		if(heads_.empty()) {
 			if(auto er = error::eval(
 				[&]{ return enter_root(); },
-				[&]{ return add_head(fs::path(root_path_) / root_fname_); }
-			))
-				return tl::make_unexpected(std::move(er));
-
-			// read objects directory
-			heads_.back()( cereal::make_nvp("objects_dir", objects_dname_) );
+				[&]{ return add_head(root_path_ / root_fname_); },
+				[&] { // read objects directory
+					heads_.back()( cereal::make_nvp("objects_dir", objects_dname_) );
+				}
+			)) return tl::make_unexpected(std::move(er));
 		}
 		return &heads_.back();
-	}
-
-	auto load_node(tree_fs_input& ar, tree::node& N, const std::vector<std::string>& leafs_order) -> error {
-		// loaded node in most cases will be empty (leafs are serialized to individual files)
-		// fill leafs by scanning directory and loading link files
-		using Options = fs::directory_options;
-		auto Niter = fs::directory_iterator{};
-		SCOPE_EVAL_SAFE
-			Niter = fs::directory_iterator(cur_path_, Options::skip_permission_denied);
-		RETURN_SCOPE_ERR
-
-		std::string united_err_msg;
-		auto push_error = [&](auto& er) {
-			if(er.ok()) return;
-			if(!united_err_msg.empty()) united_err_msg += " | ";
-			united_err_msg += er.what();
-		};
-
-		for(auto& f : Niter) {
-			// skip directories
-			if(error::eval_safe([&]{ return !fs::is_directory(f); })) continue;
-
-			// try load file as a link
-			auto er = error::eval_safe(
-				[&] { add_head(f); },
-				[&] {
-					auto finally = detail::scope_guard{[this]{ pop_head(); }};
-
-					tree::sp_link L;
-					ar(L);
-					N.insert(std::move(L));
-				}
-			);
-			push_error(er);
-		}
-
-		if(united_err_msg.empty()) return perfect;
-		else return united_err_msg;
 	}
 
 	auto begin_node(tree_fs_input& ar) -> error {
@@ -160,6 +129,11 @@ struct tree_fs_input::impl {
 	auto end_node(tree_fs_input& ar, tree::node& N) -> error {
 		if(cur_path_.empty()) return {"Node loading wasn't started"};
 
+		// always return to parent dir after node is loaded
+		auto finally = scope_guard{[=, p = cur_path_] {
+			if(auto er = enter_dir(p, cur_path_)) throw er;
+		}};
+
 		std::string node_dir;
 		std::vector<std::string> leafs_order;
 		return error::eval_safe(
@@ -173,10 +147,63 @@ struct tree_fs_input::impl {
 			// enter node's directory
 			[&]{ return enter_dir(cur_path_ / node_dir, cur_path_); },
 			// load leafs
-			[&]{ return load_node(ar, N, leafs_order); },
-			// enter parent dir
-			[&]{ return enter_dir(cur_path_.parent_path(), cur_path_); }
+			[&]{ return load_node(ar, N, leafs_order); }
 		);
+	}
+
+	auto load_node(tree_fs_input& ar, tree::node& N, const std::vector<std::string>& leafs_order) -> error {
+		// loaded node in most cases will be empty (leafs are serialized to individual files)
+		// fill leafs by scanning directory and loading link files
+		using Options = fs::directory_options;
+		auto Niter = fs::directory_iterator{};
+		SCOPE_EVAL_SAFE
+			Niter = fs::directory_iterator(cur_path_, Options::skip_permission_denied);
+		RETURN_SCOPE_ERR
+
+		std::string united_err_msg;
+		auto push_error = [&](auto er) {
+			if(er.ok()) return;
+			if(!united_err_msg.empty()) united_err_msg += " | ";
+			united_err_msg += er.what();
+		};
+
+		for(auto& f : Niter) {
+			// skip directories
+			if(error::eval_safe([&]{ return !fs::is_directory(f); })) continue;
+
+			// try load file as a link
+			push_error(error::eval_safe(
+				[&] { add_head(f); },
+				[&] {
+					auto finally = detail::scope_guard{[this]{ pop_head(); }};
+
+					tree::sp_link L;
+					ar(L);
+					N.insert(std::move(L));
+				},
+				[&] { // restore custom leafs order
+					using namespace tree;
+
+					// make current order of link IDs
+					auto res_order = std::vector<link::id_type>();
+					res_order.reserve(N.size());
+					for(auto i = N.begin(), end = N.end(); i != end; ++i)
+						res_order.push_back((*i)->id());
+
+					// sort according to passed `leafs_order`
+					const auto lo_begin = leafs_order.begin(), lo_end = leafs_order.end();
+					std::sort(res_order.begin(), res_order.end(), [&](auto i1, auto i2) {
+						return std::find(lo_begin, lo_end, to_string(i1)) <
+							std::find(lo_begin, lo_end, to_string(i2));
+					});
+					// apply custom order
+					N.rearrange(std::move(res_order));
+				}
+			));
+		}
+
+		if(united_err_msg.empty()) return perfect;
+		else return united_err_msg;
 	}
 
 	auto load_object(tree_fs_input& ar, objbase& obj) -> error {
@@ -213,7 +240,7 @@ struct tree_fs_input::impl {
 		SCOPE_EVAL_SAFE
 			abs_obj_path = fs::absolute(obj_path);
 		RETURN_SCOPE_ERR
-		return F->load(obj, obj_path.string(), obj_frm);
+		return F->load(obj, abs_obj_path.string(), obj_frm);
 	}
 
 	std::string root_fname_, root_dname_, objects_dname_;
@@ -258,23 +285,23 @@ auto tree_fs_input::loadBinaryValue(void* data, size_t size, const char* name) -
 //  prologue, epilogue
 //
 auto prologue(tree_fs_input& ar, tree::node const&) -> void {
-	ar.begin_node();
+	if(auto er = ar.begin_node()) throw er;
 }
 
 auto epilogue(tree_fs_input& ar, tree::node const& N) -> void {
-	ar.end_node(N);
+	if(auto er = ar.end_node(N)) throw er;
 }
 
 auto prologue(
 	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const&
 ) -> void {
-	ar.begin_node();
+	if(auto er = ar.begin_node()) throw er;
 }
 
 auto epilogue(
 	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const& N
 ) -> void {
-	ar.end_node( *const_cast<cereal::construct<tree::node>&>(N.construct).ptr() );
+	if(auto er = ar.end_node( *const_cast<cereal::construct<tree::node>&>(N.construct).ptr() )) throw er;
 }
 
 NAMESPACE_END(blue_sky)
