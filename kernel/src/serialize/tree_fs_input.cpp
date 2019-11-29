@@ -26,9 +26,12 @@
 #include <filesystem>
 #include <fstream>
 #include <list>
+#include <algorithm>
+//#include <execution>
 
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
+using NodeLoad = tree_fs_input::NodeLoad;
 
 const auto uuid_from_str = boost::uuids::string_generator{};
 
@@ -37,8 +40,8 @@ const auto uuid_from_str = boost::uuids::string_generator{};
 //
 struct tree_fs_input::impl {
 
-	impl(std::string root_fname) :
-		root_fname_(std::move(root_fname))
+	impl(std::string root_fname, NodeLoad mode) :
+		mode_(mode), root_fname_(std::move(root_fname))
 	{
 		// try convert root filename to absolute
 		auto root_path = fs::path(root_fname_);
@@ -70,9 +73,15 @@ struct tree_fs_input::impl {
 
 		EVAL_SAFE
 			// check that path exists
-			[&]{ return fs::exists(path) ? perfect : error{"Specified directory does not exist"}; },
+			[&]{
+				return fs::exists(path) ?
+					perfect : error{ fmt::format("Can't enter {}: does not exist", path) };
+			},
 			// check that path is a directory
-			[&]{ return fs::is_directory(path) ? perfect : error{"Tree path is not a directory"}; }
+			[&]{
+				return fs::is_directory(path) ?
+					perfect : error{ fmt::format("Can't enter {}: not a directory", path) };
+			}
 		RETURN_EVAL_ERR
 
 		tar_path = std::move(path);
@@ -89,7 +98,8 @@ struct tree_fs_input::impl {
 	auto add_head(const fs::path& head_path) -> error {
 	return error::eval_safe(
 		// enter parent dir
-		[&] { return enter_dir(head_path.parent_path(), cur_path_); },
+		// [NOTE] - disabled, because in all usage conditions we already entered parent dir
+		//[&] { return enter_dir(head_path.parent_path(), cur_path_); },
 		// open head file
 		[&] {
 			if(auto neck = std::ifstream(head_path, std::ios::in)) {
@@ -148,21 +158,20 @@ struct tree_fs_input::impl {
 				// we finished reading node
 				epilogue(*ar, N);
 			}); },
-			// enter node's directory
-			[&]{ return enter_dir(cur_path_ / node_dir, cur_path_); },
 			// load leafs
-			[&]{ return load_node(ar, N, leafs_order); }
+			[&]{ return load_node(ar, N, std::move(node_dir), std::move(leafs_order)); }
 		);
 	}
 
-	auto load_node(tree_fs_input& ar, tree::node& N, const std::vector<std::string>& leafs_order) -> error {
-		// loaded node in most cases will be empty (leafs are serialized to individual files)
-		// fill leafs by scanning directory and loading link files
+	auto load_node(
+		tree_fs_input& ar, tree::node& N, std::string node_dir, std::vector<std::string> leafs_order
+	) -> error {
 		using Options = fs::directory_options;
-		auto Niter = fs::directory_iterator{};
-		SCOPE_EVAL_SAFE
-			Niter = fs::directory_iterator(cur_path_, Options::skip_permission_denied);
-		RETURN_SCOPE_ERR
+
+		// skip empty dirs in normal mode
+		if(mode_ == NodeLoad::Normal && leafs_order.empty()) return perfect;
+		// enter node's dir
+		if(auto er = enter_dir(cur_path_ / node_dir, cur_path_)) return er;
 
 		std::string united_err_msg;
 		auto push_error = [&](auto er) {
@@ -171,47 +180,102 @@ struct tree_fs_input::impl {
 			united_err_msg += er.what();
 		};
 
-		for(auto& f : Niter) {
-			// skip directories
-			if(error::eval_safe([&]{ return !fs::is_directory(f); })) continue;
+		// fill leafs by scanning directory and loading link files
+		const auto normal_load = [&] { std::for_each(
+			leafs_order.begin(), leafs_order.end(),
+			[&](auto& f) {
+				push_error(error::eval_safe(
+					[&] { add_head(cur_path_ / std::move(f)); },
+					[&] {
+						auto finally = detail::scope_guard{[this]{ pop_head(); }};
+						tree::sp_link L;
+						ar(L);
+						N.insert(std::move(L));
+					}
+				));
+			}
+		); };
 
-			// try load file as a link
-			push_error(error::eval_safe(
-				[&] { add_head(f); },
-				[&] {
-					auto finally = detail::scope_guard{[this]{ pop_head(); }};
+		const auto recover_load = [&] {
+			// setup node iterator
+			auto Niter = fs::directory_iterator{};
+			if(auto er = error::eval_safe([&] {
+				Niter = fs::directory_iterator(cur_path_, Options::skip_permission_denied);
+			})) {
+				push_error(std::move(er));
+				return;
+			}
 
-					tree::sp_link L;
-					ar(L);
-					N.insert(std::move(L));
-				},
-				[&] { // restore custom leafs order
-					using namespace tree;
-					if(N.size() < 2 || leafs_order.size() < 2) return;
+			// read links
+			for(auto& f : Niter) {
+				// skip directories
+				if(error::eval_safe([&]{ return !fs::is_directory(f); })) continue;
 
-					// convert string uids to UUIDs
-					auto wanted_order = std::vector<link::id_type>(leafs_order.size());
-					std::transform(
-						leafs_order.cbegin(), leafs_order.cend(), wanted_order.begin(),
-						[](const auto& s_uid) { return uuid_from_str(s_uid); }
-					);
+				// try load file as a link
+				push_error(error::eval_safe(
+					[&] { add_head(f); },
+					[&] {
+						auto finally = detail::scope_guard{[this]{ pop_head(); }};
 
-					// extract current order of link IDs
-					auto res_order = std::vector<link::id_type>();
-					res_order.reserve(N.size());
-					for(auto i = N.begin(), end = N.end(); i != end; ++i)
-						res_order.push_back((*i)->id());
+						tree::sp_link L;
+						ar(L);
+						N.insert(std::move(L));
+					}
+				));
+			}
 
-					// sort according to passed `leafs_order`
-					const auto lo_begin = wanted_order.begin(), lo_end = wanted_order.end();
-					std::sort(res_order.begin(), res_order.end(), [&](auto i1, auto i2) {
-						return std::find(lo_begin, lo_end, i1) < std::find(lo_begin, lo_end, i2);
-					});
-					// apply custom order
-					N.rearrange(std::move(res_order));
-				}
-			));
-		}
+			// [NOTE] implementation with parallel STL
+			//std::for_each(
+			//	std::execution::par, begin(Niter), end(Niter),
+			//	[&](auto& f) {
+			//		// skip directories
+			//		if(error::eval_safe([&]{ return !fs::is_directory(f); })) return;
+
+			//		// try load file as a link
+			//		push_error(error::eval_safe(
+			//			[&] { add_head(f); },
+			//			[&] {
+			//				auto finally = detail::scope_guard{[this]{ pop_head(); }};
+
+			//				tree::sp_link L;
+			//				ar(L);
+			//				N.insert(std::move(L));
+			//			}
+			//		));
+			//	}
+			//);
+
+			// restore links order
+			using namespace tree;
+			if(N.size() < 2 || leafs_order.size() < 2) return;
+
+			// convert string uids to UUIDs
+			auto wanted_order = std::vector<link::id_type>(leafs_order.size());
+			std::transform(
+				leafs_order.cbegin(), leafs_order.cend(), wanted_order.begin(),
+				[](const auto& s_uid) { return uuid_from_str(s_uid); }
+			);
+
+			// extract current order of link IDs
+			auto res_order = std::vector<link::id_type>();
+			res_order.reserve(N.size());
+			for(auto i = N.begin(), end = N.end(); i != end; ++i)
+				res_order.push_back((*i)->id());
+
+			// sort according to passed `leafs_order`
+			const auto lo_begin = wanted_order.begin(), lo_end = wanted_order.end();
+			std::sort(res_order.begin(), res_order.end(), [&](auto i1, auto i2) {
+				return std::find(lo_begin, lo_end, i1) < std::find(lo_begin, lo_end, i2);
+			});
+			// apply custom order
+			N.rearrange(std::move(res_order));
+		};
+
+		// invoke laod
+		if(mode_ == NodeLoad::Normal)
+			normal_load();
+		else
+			recover_load();
 
 		if(united_err_msg.empty()) return perfect;
 		else return united_err_msg;
@@ -254,6 +318,7 @@ struct tree_fs_input::impl {
 		return F->load(obj, abs_obj_path.string(), obj_frm);
 	}
 
+	NodeLoad mode_;
 	std::string root_fname_, root_dname_, objects_dname_;
 	fs::path root_path_, cur_path_, objects_path_;
 
@@ -264,8 +329,8 @@ struct tree_fs_input::impl {
 ///////////////////////////////////////////////////////////////////////////////
 //  input archive
 //
-tree_fs_input::tree_fs_input(std::string root_fname)
-	: Base(this), pimpl_{ std::make_unique<impl>(std::move(root_fname)) }
+tree_fs_input::tree_fs_input(std::string root_fname, NodeLoad mode)
+	: Base(this), pimpl_{ std::make_unique<impl>(std::move(root_fname), mode) }
 {}
 
 tree_fs_input::~tree_fs_input() = default;
@@ -296,23 +361,23 @@ auto tree_fs_input::loadBinaryValue(void* data, size_t size, const char* name) -
 //  prologue, epilogue
 //
 auto prologue(tree_fs_input& ar, tree::node const&) -> void {
-	if(auto er = ar.begin_node()) throw er;
+	ar.begin_node();
 }
 
 auto epilogue(tree_fs_input& ar, tree::node const& N) -> void {
-	if(auto er = ar.end_node(N)) throw er;
+	ar.end_node(N);
 }
 
 auto prologue(
 	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const&
 ) -> void {
-	if(auto er = ar.begin_node()) throw er;
+	ar.begin_node();
 }
 
 auto epilogue(
 	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const& N
 ) -> void {
-	if(auto er = ar.end_node( *const_cast<cereal::construct<tree::node>&>(N.construct).ptr() )) throw er;
+	ar.end_node( *const_cast<cereal::construct<tree::node>&>(N.construct).ptr() );
 }
 
 NAMESPACE_END(blue_sky)

@@ -28,7 +28,12 @@ public:
 	static constexpr auto always_emit_class_version = true;
 	static constexpr auto custom_node_serialization = true;
 
-	tree_fs_input(std::string root_fname);
+	// 'Normal' - node is reconstructed exactly from leafs stored with it's handle link.
+	// 'Recover' - for any node N all link files found inside N's directory
+	// will be loaded into N.
+	enum class NodeLoad { Normal, Recover };
+
+	tree_fs_input(std::string root_fname, NodeLoad mode = NodeLoad::Normal);
 	~tree_fs_input();
 
 	// retrive stream for archive's head (if any)
