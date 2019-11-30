@@ -113,8 +113,6 @@ auto node_impl::insert(
 					new_name = Limpl.name_ + '_' + std::to_string(i);
 					if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
 						// we've found a unique name
-						// [NOTE] rename is executed by actor in separate thread that will wait
-						// until `Lguard` is released
 						L->rename(std::move(new_name));
 						unique_found = true;
 						break;
@@ -131,11 +129,11 @@ auto node_impl::insert(
 		// work with link's original owner depending on if insert happened or not
 		auto& res_L = *res.first;
 		if(res.second) {
-			if(prev_owner && prev_owner != res_L->owner()) {
+			if(prev_owner && prev_owner != res_L->owner())
 				// [NOTE] on successfull insertion valid owner is already set
 				caf::anon_send(prev_owner->actor(), a_lnk_erase(), res_L->id(), EraseOpts::DontResetOwner);
-				res_L->propagate_handle();
-			}
+			// set handle if link contains node
+			res_L->propagate_handle();
 			// invoke postprocessing of just inserted link
 			ppf(res_L);
 		}
