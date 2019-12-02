@@ -13,6 +13,7 @@
 #include <bs/log.h>
 #include <bs/kernel/tools.h>
 #include <bs/kernel/misc.h>
+#include <bs/kernel/radio.h>
 
 #include <fmt/format.h>
 #include <boost/uuid/random_generator.hpp>
@@ -208,5 +209,12 @@ error::box::box(const error& er) {
 error::box::box(int ec_, std::string message_, std::string domain_)
 	: ec(ec_), message(std::move(message_)), domain(std::move(domain_))
 {}
+
+///////////////////////////////////////////////////////////////////////////////
+//  CAF errors passthrough
+//
+auto forward_caf_error(const caf::error& er) -> error {
+	return error{er.code(), kernel::radio::system().render(er)};
+}
 
 NAMESPACE_END(blue_sky)

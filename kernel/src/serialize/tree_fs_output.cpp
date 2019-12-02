@@ -340,7 +340,7 @@ struct tree_fs_output::impl {
 		);
 		auto res = std::vector<error>{};
 
-		auto boxed_res = tree::actorf<std::vector<error::box>>(fmanager, 0);
+		auto boxed_res = actorf<std::vector<error::box>>(fmanager, 0);
 		if(boxed_res) {
 			auto& boxed_errs = *boxed_res;
 			res.reserve(boxed_errs.size());

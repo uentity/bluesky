@@ -295,8 +295,4 @@ auto def_timeout(bool for_data) -> caf::duration {
 	};
 }
 
-auto forward_caf_error(const caf::error& er) -> error {
-	return error{er.code(), system().render(er)};
-}
-
 NAMESPACE_END(blue_sky::tree)
