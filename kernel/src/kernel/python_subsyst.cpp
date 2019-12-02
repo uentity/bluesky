@@ -156,16 +156,12 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 	}
 
 	// handler for link erased event responsible for deleting cached adapters
-	static auto on_link_erase = [](const tree::sp_node&, tree::Event, prop::propdict params) {
-		// first params elem is ID of deleted link
-		std::vector<std::string> lids;
-		if(!extract(params, "lids", lids)) return;
-
+	static auto on_link_delete = [](tree::sp_clink, tree::Event, prop::propdict params) {
 		auto& self = python_subsyst_impl::self();
 		auto solo = std::lock_guard{ self.guard_ };
-		for(const auto& lid : lids) {
-			auto cached_L = self.lnk2obj_.find(lid);
-			if(cached_L == self.lnk2obj_.end()) continue;
+		if(const auto* lid = prop::get_if<std::string>(&params, "lid")) {
+			auto cached_L = self.lnk2obj_.find(*lid);
+			if(cached_L == self.lnk2obj_.end()) return;
 
 			// kill cache entry if ref counter reaches zero
 			if(auto cached_A = self.acache_.find(cached_L->second); cached_A != self.acache_.end()) {
@@ -179,19 +175,15 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 	// adapt or passthrough
 	const auto adapt_and_cache = [&](auto&& afn) {
 		auto* obj_ptr = source.get();
-		auto A = afn(std::move(source));
 
-		if(auto parent = L.owner(); parent) {
-			// install erased event handler
-			parent->subscribe(on_link_erase, tree::Event::LinkErased);
-			// remember link
-			lnk2obj_[std::move(slid)] = obj_ptr;
-			// cache adapter with ref counter = 1
-			return acache_.try_emplace(
-				obj_ptr, acache_value{ std::move(A), 1 }
-			).first->second.first;
-		}
-		return A;
+		// install erased event handler
+		L.subscribe(on_link_delete, tree::Event::LinkDeleted);
+		// remember link
+		lnk2obj_[std::move(slid)] = obj_ptr;
+		// cache adapter with ref counter = 1
+		return acache_.try_emplace(
+			obj_ptr, acache_value{ afn(std::move(source)), 1 }
+		).first->second.first;
 	};
 	auto pf = adapters_.find(source->type_id());
 	return pf != adapters_.end() ?
