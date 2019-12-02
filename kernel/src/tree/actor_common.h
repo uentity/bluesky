@@ -136,12 +136,23 @@ auto ev_listener_actor(
 	Reg.put(self->id(), self);
 
 	// unsubscribe when parent leaves its group
-	return make_character(self).or_else(
-		[self, grp = std::move(tgt_grp), &Reg](a_bye) {
+	auto C = make_character(self);
+	return caf::message_handler{
+		[self, grp = std::move(tgt_grp), &Reg, C](a_bye) mutable {
 			self->leave(grp);
 			Reg.erase(self->id());
+			// invoke custom handler from character
+			auto bye_msg = caf::make_message(a_bye());
+			C(bye_msg);
 		}
-	);
+	}.or_else(std::move(C));
+
+	//return make_character(self).or_else(
+	//	[self, grp = std::move(tgt_grp), &Reg](a_bye) {
+	//		self->leave(grp);
+	//		Reg.erase(self->id());
+	//	}
+	//);
 }
 
 NAMESPACE_END(blue_sky::tree)
