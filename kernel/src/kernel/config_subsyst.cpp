@@ -11,6 +11,7 @@
 #include "config_subsyst.h"
 
 #include <caf/config_option_adder.hpp>
+#include <caf/parser_state.hpp>
 #include <caf/detail/ini_consumer.hpp>
 #include <caf/detail/parser/read_ini.hpp>
 #include <caf/detail/parser/read_string.hpp>
@@ -60,45 +61,30 @@ bool operator!=(ini_iter iter, ini_sentinel) {
 	return !iter.ini->fail();
 }
 
-auto extract_config_file_path(string_list& args) -> std::string {
-	static constexpr const char needle[] = "--bs-config-file=";
-	auto last = args.end();
-	auto i = std::find_if(args.begin(), last, [](const std::string& arg) {
-			return arg.compare(0, sizeof(needle) - 1, needle) == 0;
-			});
-	if (i == last)
+auto extract_config_file_path(caf::config_option_set& opts, caf::settings& S, string_list& args)
+-> std::string {
+	auto ptr = opts.qualified_name_lookup("global.config-file");
+	CAF_ASSERT(ptr != nullptr);
+	string_list::iterator i;
+	string_view path;
+	std::tie(i, path) = find_by_long_name(*ptr, args.begin(), args.end());
+	// [TODO] add CAF errors processing
+	if(i == args.end())
 		return "";
-	auto arg_begin = i->begin() + sizeof(needle);
-	auto arg_end = i->end();
-	if (arg_begin == arg_end) {
-		// Missing value.
-		// TODO: print warning?
+		//return none;
+	if(path.empty()) {
+		args.erase(i);
 		return "";
+		//return make_error(pec::missing_argument, std::string{*i});
 	}
-
-	std::string new_conf;
-	if (*arg_begin == '"') {
-		caf::detail::parser::state<std::string::const_iterator> res;
-		res.i = arg_begin;
-		res.e = arg_end;
-		struct consumer {
-			std::string result;
-			void value(std::string&& x) {
-				result = std::move(x);
-			}
-		};
-		consumer f;
-		caf::detail::parser::read_string(res, f);
-		if (res.code == pec::success)
-			new_conf = std::move(f.result);
-		// TODO: else print warning?
-	} else {
-		// We support unescaped strings for convenience on the CLI.
-		new_conf = std::string(arg_begin, arg_end);
+	if(auto evalue = ptr->parse(path); evalue) {
+		put(S, "config-file", *evalue);
+		ptr->store(*evalue);
+		return caf::get<std::string>(*evalue);
 	}
-
-	args.erase(i);
-	return new_conf;
+	return "";
+	//return std::move(evalue.error());
+	//return none;
 }
 
 NAMESPACE_END() // eof hidden ns
@@ -115,6 +101,7 @@ config_subsyst::config_subsyst() {
 		.add<bool>("help,h?", "print help and exit")
 		.add<bool>("long-help", "print all help options and exit")
 		.add<bool>("dump-config", "print configuration in INI format and exit")
+		.add<std::string>("config-file", "BS config file path")
 	;
 	opt_group{confopt_, "path"}
 		.add<std::string>("kernel", "Path to blue-sky kernel library")
@@ -170,7 +157,7 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 		std::copy(conf_path_.begin(), conf_path_.end(), std::back_inserter(ini2parse));
 	// then custom configs passed from CLI and `ini_fname` - overrides predefined
 	for(auto& p : std::array<std::string, 2>{
-		extract_config_file_path(args), std::move(ini_fname)
+		extract_config_file_path(confopt_, confdata_, args), std::move(ini_fname)
 	}) {
 		if( !p.empty() && std::find(conf_path_.begin(), conf_path_.end(), p) == conf_path_.end() )
 			ini2parse.emplace_back(std::move(p));
@@ -188,8 +175,7 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 			bool status = false;
 			if ((status = ini.good())) {
 				caf::detail::ini_consumer consumer{confopt_, confdata_};
-				caf::detail::parser::state<ini_iter, ini_sentinel> res;
-				res.i = ini_iter{&ini};
+				caf::parser_state<ini_iter, ini_sentinel> res{ini_iter{&ini}};
 				caf::detail::parser::read_ini(res, consumer);
 				if (res.i != res.e) {
 					status = false;

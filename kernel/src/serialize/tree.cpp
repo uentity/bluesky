@@ -49,7 +49,7 @@ auto save_fs(const sp_link& root, const std::string& filename) -> error::box {
 
 auto load_fs(sp_link& root, const std::string& filename) -> error::box {
 	return error::eval_safe([&] {
-		auto ar = tree_fs_input(filename);
+		auto ar = tree_fs_input(filename, tree_fs_input::NodeLoad::Normal);
 		ar(root);
 		ar.serializeDeferments();
 	});
@@ -141,7 +141,8 @@ static auto serial_actor(
 				return S.er;
 			else {
 				S.erp = self->make_response_promise<error::box>();
-				return S.erp;
+				// [NOTE] `const_cast` to overcome compile error in CAF `result` too greedy constructor
+				return const_cast<const caf::response_promise&>(S.erp);
 			}
 		}
 	};
@@ -153,6 +154,8 @@ NAMESPACE_END()
  *  tree save impl
  *-----------------------------------------------------------------------------*/
 auto save_tree(sp_link root, std::string filename, TreeArchive ar, timespan wait_for) -> error {
+	bsout() << "*** save_tree with {} timeout" <<
+		(wait_for == infinite ? "infinite" : to_string(wait_for)) << bs_end;
 	// launch worker in detached actor
 	auto Af = caf::make_function_view(
 		system().spawn<caf::spawn_options::detach_flag> (
