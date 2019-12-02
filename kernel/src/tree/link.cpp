@@ -196,7 +196,7 @@ auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 /*-----------------------------------------------------------------------------
  *  subscribers management
  *-----------------------------------------------------------------------------*/
-auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
+auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t {
 	struct ev_state { handle_event_cb f; };
 
 	// produce event bhavior that calls passed callback with proper params
@@ -233,6 +233,13 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 				}
 			);
 
+		if(enumval(listen_to & Event::LinkDeleted))
+			res = res.or_else(
+				[self, lid = L->id()](a_bye) {
+					self->state.f(sp_link{}, Event::LinkDeleted, {{ "lid", to_string(lid) }});
+				}
+			);
+
 		return res;
 	};
 
@@ -242,7 +249,7 @@ auto link::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 	return baby.id();
 }
 
-auto link::unsubscribe(std::uint64_t event_cb_id) -> void {
+auto link::unsubscribe(std::uint64_t event_cb_id) const -> void {
 	const auto ev_actor = system().registry().get(event_cb_id);
 	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
 	caf::anon_send(caf::actor_cast<caf::actor>(ev_actor), a_bye());

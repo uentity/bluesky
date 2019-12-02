@@ -30,6 +30,7 @@ enum class Event : std::uint64_t {
 	LinkStatusChanged = 2,
 	LinkInserted = 4,
 	LinkErased = 8,
+	LinkDeleted = 16,
 	All = std::uint64_t(-1)
 };
 
@@ -170,11 +171,11 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  track link events
 	//
-	using handle_event_cb = std::function< void(sp_link, Event, prop::propdict) >;
+	using handle_event_cb = std::function< void(sp_clink, Event, prop::propdict) >;
 
 	/// returns ID of suscriber that is required for unsubscribe
-	auto subscribe(handle_event_cb f, Event listen_to = Event::All) -> std::uint64_t;
-	auto unsubscribe(std::uint64_t event_cb_id) -> void;
+	auto subscribe(handle_event_cb f, Event listen_to = Event::All) const -> std::uint64_t;
+	auto unsubscribe(std::uint64_t event_cb_id) const -> void;
 
 protected:
 	/// accept link impl and optionally start internal actor
