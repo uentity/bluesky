@@ -209,7 +209,7 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 		if(enumval(listen_to & Event::LinkRenamed))
 			res = res.or_else(
 				[self, wL = std::weak_ptr{L}] (
-					a_lnk_rename, a_ack, std::string new_name, std::string old_name
+					a_ack, a_lnk_rename, std::string new_name, std::string old_name
 				) {
 					if(auto lnk = wL.lock())
 						self->state.f(std::move(lnk), Event::LinkRenamed, {
@@ -222,7 +222,7 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 		if(enumval(listen_to & Event::LinkStatusChanged))
 			res = res.or_else(
 				[self, wL = std::weak_ptr{L}] (
-					a_lnk_status, a_ack, Req request, ReqStatus new_v, ReqStatus prev_v
+					a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v
 				) {
 					if(auto lnk = wL.lock())
 						self->state.f(std::move(lnk), Event::LinkStatusChanged, {

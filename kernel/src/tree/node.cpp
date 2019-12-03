@@ -458,7 +458,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 		if(enumval(listen_to & Event::LinkErased)) {
 			res = res.or_else(
 				[self, wN = std::weak_ptr{N}](
-					a_lnk_erase, a_ack, const std::vector<link::id_type>& lids, std::vector<std::string>& oids
+					a_ack, a_lnk_erase, const std::vector<link::id_type>& lids, std::vector<std::string>& oids
 				) {
 					bsout() << "*-* node: fired LinkErased event" << bs_end;
 					auto N = wN.lock();
