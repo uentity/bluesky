@@ -214,9 +214,11 @@ auto node_impl::refresh(const link::id_type& lid) -> void {
 	// find target link by it's ID
 	auto& I = links_.get<Key_tag<Key::ID>>();
 	if(auto pos = I.find(lid); pos != I.end()) {
-		//auto& NI = links_.get<Key_tag<Key::Name>>();
-		//NI.modify(project<Key::ID, Key::Name>(pos), [](auto& L) { return L->name(); });
-		I.replace(pos, *pos);
+		constexpr auto touch = [](auto&&) {};
+		// refresh each index in cycle
+		links_.get<Key_tag<Key::Name>>().modify_key( project<Key::ID, Key::Name>(pos), touch );
+		links_.get<Key_tag<Key::OID> >().modify_key( project<Key::ID, Key::OID>(pos),  touch );
+		links_.get<Key_tag<Key::Type>>().modify_key( project<Key::ID, Key::Type>(pos), touch );
 	}
 }
 
