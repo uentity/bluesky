@@ -176,18 +176,19 @@ struct tree_fs_output::impl {
 	}
 
 	auto save_object(tree_fs_output& ar, const objbase& obj) -> error {
+	return error::eval_safe([&]() -> error {
 		// open node
 		auto cur_head = head();
 		if(!cur_head) return cur_head.error();
 		prologue(*cur_head.value(), obj);
 
-		std::string obj_fmt, obj_filename;
+		std::string obj_fmt, obj_filename = "<error>";
 		bool fmt_ok = false, filename_ok = false;
 
 		auto finally = scope_guard{ [&]{
 			// if error happened we still need to write values
 			if(!fmt_ok) ar(cereal::make_nvp("fmt", obj_fmt));
-			if(!filename_ok) cereal::make_nvp("filename", obj_filename);
+			if(!filename_ok) ar(cereal::make_nvp("filename", obj_filename));
 			// ... and close node
 			epilogue(*cur_head.value(), obj);
 		} };
@@ -204,30 +205,47 @@ struct tree_fs_output::impl {
 		ar(cereal::make_nvp("fmt", obj_fmt));
 		fmt_ok = true;
 
-		if(auto er = error::eval_safe(
+		// if object is node and formatter don't store leafs, then save 'em explicitly
+		auto is_node = obj.is_node();
+		if(is_node && !F->stores_node)
+			ar(cereal::make_nvp( "node", static_cast<const tree::node&>(obj) ));
+
+		// enter objects directory
+		EVAL
 			[&]{ return enter_root(); },
 			[&]{ return objects_path_.empty() ?
 				enter_dir(root_path_ / objects_dname_, objects_path_) : perfect;
 			}
-		)) return er;
+		RETURN_EVAL_ERR
 
-		auto obj_path = objects_path_ / obj.id();
-		obj_path += std::string(".") + obj_fmt;
-		obj_filename = obj_path.filename().string();
+		// generate unique object filename from it's ID
+		const auto find_free_filename = [&](const auto& start_fname, const auto& fmt_ext) {
+			auto res_fname = start_fname;
+			res_fname += fmt_ext;
+			bool res_exists = false;
+			for(int i = 0; (res_exists = fs::exists(res_fname)) && i < 100000; ++i) {
+				res_fname = start_fname;
+				res_fname += "_" + std::to_string(i) + fmt_ext;
+			}
+			if(res_exists)
+				throw error{fmt::format("Cannot find non-existent filename for {}", start_fname)};
+			return res_fname;
+		};
+
 		// write down object filename
+		auto obj_path = find_free_filename(
+			is_node ?
+				objects_path_ / static_cast<const tree::node&>(obj).gid() :
+				objects_path_ / obj.id(),
+			std::string(".") + obj_fmt
+		);
+		obj_filename = obj_path.filename().generic_u8string();
 		ar(cereal::make_nvp("filename", obj_filename));
 		filename_ok = true;
 
-		// if object is node and formatter don't store leafs, then save 'em explicitly
-		if(obj.is_node() && !F->stores_node)
-			ar(cereal::make_nvp( "node", static_cast<const tree::node&>(obj) ));
+		auto abs_obj_path = fs::absolute(obj_path);
 
 		// and actually save object data to file
-		fs::path abs_obj_path;
-		if(auto er = error::eval_safe(
-			[&]{ abs_obj_path = fs::absolute(obj_path); }
-		)) return er;
-
 		// spawn object save actor
 		auto A = kernel::radio::system().spawn(async_saver, F, manager_);
 		auto pm = caf::actor_cast<savers_manager_ptr>(manager_);
@@ -239,9 +257,9 @@ struct tree_fs_output::impl {
 		// inc started counter
 		++pm->state.nstarted_;
 		// post invoke save mesage
-		pm->send(A, obj.shared_from_this(), abs_obj_path.string());
+		pm->send(A, obj.shared_from_this(), abs_obj_path.generic_u8string());
 		return perfect;
-	}
+	}); }
 
 	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter* {
 		if(auto paf = active_fmt_.find(obj_type_id); paf != active_fmt_.end())
