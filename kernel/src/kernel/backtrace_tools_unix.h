@@ -17,7 +17,7 @@
 #include <sstream>
 #include <cstdio>
 #include <cstdlib>
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 
 namespace {
 
@@ -29,13 +29,28 @@ char** sys_get_backtrace_names(void *const *backtrace_, int size_) {
 	return backtrace_symbols (backtrace_, size_);
 }
 
+std::string exec(const std::string& cmd) {
+	std::array<char, 128> buffer;
+	std::string result;
+	std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+	if (!pipe) {
+		throw std::runtime_error("popen() failed!");
+	}
+	while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+		result += buffer.data();
+	}
+	if(!result.empty() && result[result.length() - 1] == '\n')
+		result.erase(result.length() - 1);
+	return result;
+}
+
 #if 1
 std::vector<std::string> sys_demangled_backtrace_names(void** callstack, char** symbollist, int size, int skip = 1) {
 	// result strings will go here
 	std::vector<std::string> res;
 
 	// allocate string which will be filled with the demangled function name
-	size_t funcnamesize = 1024;
+	size_t funcnamesize = 512;
 	char* funcname = (char*)malloc(funcnamesize);
 
 	// iterate over the returned symbol lines. skip the first, it is the
@@ -64,22 +79,25 @@ std::vector<std::string> sys_demangled_backtrace_names(void** callstack, char** 
 			// mangled name is now in [begin_name, begin_offset) and caller
 			// offset in [begin_offset, end_offset). now apply
 			// __cxa_demangle():
-
 			int status;
 			char* ret = abi::__cxa_demangle(begin_name, funcname, &funcnamesize, &status);
-			if (status == 0) {
-				funcname = ret; // use possibly realloc()-ed string
-				res.emplace_back(fmt::format("{} : {} +{}", symbollist[i], funcname, begin_offset));
-			}
-			else {
-				// demangling failed. Output function name as a C function with
-				// no arguments.
-				res.emplace_back(fmt::format("{} : {} +{}", symbollist[i], begin_name, begin_offset));
+			if(status == 0) begin_name = ret; // use possibly realloc()-ed string
+
+			// print possibly demangled backtrace line
+			res.push_back(fmt::format("{: <3} {} : {} +{}", i, symbollist[i], begin_name, begin_offset));
+			// add source line info
+			// [NOTE] `DL_info` is required to obtain module start address and calc symbol offset
+			// for `addr2line`
+			Dl_info info;
+			if(dladdr(callstack[i], &info)) {
+				res.push_back("    => " + exec(
+					fmt::format("addr2line -i -p -e {} {:p}", symbollist[i], (void*)((char*)callstack[i] - (char*)info.dli_fbase))
+				));
 			}
 		}
 		else {
 			// couldn't parse the line? print the whole line.
-			res.emplace_back(symbollist[i]);
+			res.push_back(fmt::format("{: <3} : {}", i, symbollist[i]));
 		}
 	}
 
@@ -89,6 +107,7 @@ std::vector<std::string> sys_demangled_backtrace_names(void** callstack, char** 
 }
 
 #else
+
 std::vector<std::string> sys_demangled_backtrace_names(void** callstack, char** symbols, int nFrames, int skip = 1) {
 	// result strings will go here
 	std::vector<std::string> res;

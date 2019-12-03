@@ -11,6 +11,7 @@
 #include <bs/propdict.h>
 #include <bs/python/property.h>
 #include <bs/python/map.h>
+#include "../kernel/python_subsyst_impl.h"
 
 #include <ostream>
 #include <iostream>
@@ -55,6 +56,16 @@ type_v test_type_v(const type_v& v) {
 		cout << v[i].name << ' ';
 	cout << endl;
 	return v;
+}
+
+auto pyinfinte() -> py::object {
+	static auto value = [] {
+		// get 'bs.infinite' value
+		auto km = *static_cast<py::module*>(kernel::detail::python_subsyst_impl::self().py_kmod());
+		return km.attr("infinite");
+	}();
+
+	return value;
 }
 
 // exporting function
@@ -146,6 +157,11 @@ void py_bind_common(py::module& m) {
 	// opaque bindings of propbooks
 	bind_reach_map<prop::propbook_s>(m, "propbook_s", py::module_local(false));
 	bind_reach_map<prop::propbook_i>(m, "propbook_i", py::module_local(false));
+
+	// add marker for infinite timespan
+	auto dtm = py::module::import("datetime");
+	auto py_dt = dtm.attr("timedelta");
+	m.attr("infinite") = py_dt.attr("max");
 }
 
 NAMESPACE_END(python)

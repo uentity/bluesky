@@ -72,6 +72,12 @@ constexpr decltype(auto) make_tape_elem(
 //
 template< level_enum Level, typename... Args >
 struct log_tape {
+private:
+	template<typename A1 = void, typename... As>
+	static constexpr bool head_is_log =
+		std::is_same_v<std::remove_reference_t<A1>, bs_log>;
+
+public:
 	using tape_tuple_t = std::tuple<Args...>;
 
 	// perfect forwarding ctor for underlying tuple
@@ -138,9 +144,12 @@ struct log_tape {
 	}
 
 	// overload for manipulators
-	constexpr bs_log& operator <<(manip_t op) const {
-		// flush data and call manipulator
-		return (*op)(flush());
+	constexpr decltype(auto) operator <<(manip_t op) const {
+		if constexpr(head_is_log<Args...>) {
+			// flush data and call manipulator
+			return (*op)(flush());
+		}
+		else (void)op;
 	}
 
 	// flush self to backend spdlog::logger
@@ -362,4 +371,11 @@ BS_API log::bs_log& bserr();
 #define bs_end ::blue_sky::log::end
 
 } /* namespace blue_sky */
+
+namespace std {
+
+// provide convenience overlaods for aout; implemented in logging.cpp
+BS_API blue_sky::log::bs_log& endl(blue_sky::log::bs_log& o);
+
+} // namespace std
 

@@ -378,6 +378,36 @@
     <ClInclude Include="kernel\src\kernel\python_subsyst_impl.h">
       <Filter>Файлы исходного кода\kernel</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\archives.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\formatter_tools.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\make_base_class.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\object_formatter.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\propdict.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\serialize_decl.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\to_string.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\tree_fs_archive.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\tree_fs_input.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\tree_fs_output.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -547,6 +577,15 @@
     </ClCompile>
     <ClCompile Include="kernel\src\kernel\python_subsyst.cpp">
       <Filter>Файлы исходного кода\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\object_formatter.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\tree_fs_input.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\tree_fs_output.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

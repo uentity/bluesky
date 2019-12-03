@@ -8,11 +8,16 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "serialize.h"
+#include "serialize_decl.h"
+#include "to_string.h"
+#include "base_types.h"
+
+#include <cereal/archives/portable_binary.hpp>
+#include <boost/interprocess/streams/vectorstream.hpp>
+
 #include <caf/sec.hpp>
 #include <caf/detail/scope_guard.hpp>
 #include <caf/detail/stringification_inspector.hpp>
-#include <boost/interprocess/streams/vectorstream.hpp>
 
 namespace caf {
 /*-----------------------------------------------------------------------------
@@ -26,8 +31,8 @@ namespace caf {
 template<typename Inspector, typename T>
 std::enable_if_t<
 	Inspector::reads_state &&
-		!std::is_same<Inspector, caf::detail::stringification_inspector>::value &&
-		!std::is_scalar<std::decay_t<T>>::value &&
+		!std::is_same_v<Inspector, caf::detail::stringification_inspector> &&
+		!std::is_scalar_v<std::decay_t<T>> &&
 		cereal::traits::is_output_serializable<T, cereal::PortableBinaryOutputArchive>::value,
 	typename Inspector::result_type
 >
@@ -48,8 +53,8 @@ inspect(Inspector& f, T& x) {
 template<typename Inspector, typename T>
 std::enable_if_t<
 	Inspector::writes_state &&
-		!std::is_scalar<std::decay_t<T>>::value &&
-		!std::is_same<Inspector, caf::detail::stringification_inspector>::value &&
+		!std::is_scalar_v<std::decay_t<T>> &&
+		!std::is_same_v<Inspector, caf::detail::stringification_inspector> &&
 		cereal::traits::is_input_serializable<T, cereal::PortableBinaryInputArchive>::value,
 	typename Inspector::result_type
 >
@@ -70,22 +75,11 @@ inspect(Inspector& f, T& x) {
 	return f.apply_raw(x_data.size()*sizeof(char), x_data.data());
 }
 
-// to string conversion via JSON archive
+/// to string conversion via JSON archive
 template<typename T>
-std::enable_if_t<
-	!std::is_scalar<std::decay_t<T>>::value &&
-		cereal::traits::is_output_serializable<T, cereal::JSONOutputArchive>::value,
-	std::string
->
-to_string(const T& x) {
-	std::ostringstream ss;
-	{
-		cereal::JSONOutputArchive A(ss);
-		A(x);
-	}
-	return ss.str();
+auto to_string(const T& t)
+-> std::enable_if_t< sizeof(decltype(::blue_sky::to_string(std::declval<T>()))) != 0, std::string > {
+	return blue_sky::to_string(t);
 }
 
 } // eof caf namespace
-
-

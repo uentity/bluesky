@@ -198,7 +198,7 @@ public:
 	/// [NOTE] container elements will be moved from passed container!
 	template<
 		typename C,
-		typename = std::enable_if_t<is_container<C>::value>
+		typename = std::enable_if_t<meta::is_container_v<C>>
 	>
 	void insert(C&& links, InsertPolicy pol = InsertPolicy::AllowDupNames) {
 		for(auto& L : links) {

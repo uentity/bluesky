@@ -108,7 +108,7 @@ BS_API auto make_root_link(
 ///////////////////////////////////////////////////////////////////////////////
 //  Tree save/load to JSON or binary archive
 //
-enum class TreeArchive { Text, Binary };
+enum class TreeArchive { Text, Binary, FS };
 BS_API auto
 	save_tree(const sp_link& root, const std::string& filename, TreeArchive ar = TreeArchive::Text)
 -> error;

@@ -306,6 +306,45 @@
     <ClInclude Include="kernel\include\bs\meta.h">
       <Filter>Заголовочные файлы\bs</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\archives.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\boost_optional.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\eigen.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\formatter_tools.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\make_base_class.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\object_formatter.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\propdict.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\serialize_decl.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\tensor.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\to_string.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\tree_fs_archive.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\tree_fs_input.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\tree_fs_output.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -433,6 +472,18 @@
     </ClCompile>
     <ClCompile Include="kernel\src\timetypes.cpp">
       <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\object_formatter.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\python.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\tree_fs_input.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\tree_fs_output.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

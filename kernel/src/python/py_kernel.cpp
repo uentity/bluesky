@@ -87,7 +87,7 @@ void bind_any_array(py::module& m, const char* type_name) {
 		}, py::return_value_policy::reference_internal)
 
 		.def("__setitem__", [](any_array_t& A, const key_type& k, std::any value) {
-			if(!any_array_t::trait::insert(A, k, std::move(value)))
+			if(!any_array_t::trait::insert(A, k, std::move(value)).second)
 				throw py::key_error("Cannot insert element with key = " + fmt::format("{}", k));
 		})
 
@@ -223,8 +223,8 @@ auto bind_config_api(py::module& m) -> void {
 
 auto bind_misc_api(py::module& m) {
 	m.def("last_error", &kernel::last_error);
-	m.def("pert_str_any_array", &kernel::pert_str_any_array, py::return_value_policy::reference);
-	m.def("pert_idx_any_array", &kernel::pert_idx_any_array, py::return_value_policy::reference);
+	m.def("str_key_storage", &kernel::str_key_storage, py::return_value_policy::reference);
+	m.def("idx_key_storage", &kernel::idx_key_storage, py::return_value_policy::reference);
 
 	m.def("init", &kernel::init, "Call this manually in the very beginning of main()");
 	m.def("shutdown", &kernel::shutdown, "Call this manually before program ends (before exit from main)");

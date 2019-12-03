@@ -63,3 +63,12 @@ bs_log& tracel(bs_log& l) {
 
 } /* namespace blue_sky */
 
+namespace std {
+
+// provide convenience overlaods for aout; implemented in logging.cpp
+blue_sky::log::bs_log& endl(blue_sky::log::bs_log& o) {
+	return o;
+}
+
+} // namespace std
+

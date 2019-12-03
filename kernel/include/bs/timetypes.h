@@ -18,10 +18,13 @@ namespace blue_sky {
 using timespan = caf::timespan;
 using timestamp = caf::timestamp;
 
+/// denote infinite duration
+inline constexpr auto infinite = timespan::max();
+
+/// get now timestamp from sys clock
 BS_API timestamp make_timestamp();
 
 /// formatting support
-// [NOTE] accept by value, because objects are small
 BS_API std::string to_string(timespan t);
 BS_API std::string to_string(timestamp t);
 BS_API std::ostream& operator <<(std::ostream& os, timestamp t);

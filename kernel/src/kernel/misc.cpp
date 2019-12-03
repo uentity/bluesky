@@ -67,12 +67,16 @@ auto last_error() -> std::string {
 	return last_system_message();
 }
 
-auto pert_str_any_array(const std::string& key) -> str_any_array& {
-	return KIMPL.pert_str_any_array(key);
+auto str_key_storage(const std::string& key) -> str_any_array& {
+	auto& kimpl = KIMPL;
+	auto solo = std::lock_guard{ kimpl.sync_storage_ };
+	return kimpl.str_key_storage(key);
 }
 
-auto pert_idx_any_array(const std::string& key) -> idx_any_array& {
-	return KIMPL.pert_idx_any_array(key);
+auto idx_key_storage(const std::string& key) -> idx_any_array& {
+	auto& kimpl = KIMPL;
+	auto solo = std::lock_guard{ kimpl.sync_storage_ };
+	return kimpl.idx_key_storage(key);
 }
 
 NAMESPACE_END(blue_sky::kernel)

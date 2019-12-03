@@ -9,6 +9,8 @@
 #pragma once
 
 #include "property.h"
+#include "detail/is_container.h"
+
 #include <map>
 #include <iterator>
 
@@ -56,18 +58,6 @@ public:
 			key_type(key), std::forward<Value>(def_val)
 		).first->second);
 	}
-	//template<typename Value>
-	//Value& ss(key_type&& key, Value&& def_val = Value()) {
-	//	return get<Value>(try_emplace(
-	//		std::move(key), std::forward<Value>(def_val)
-	//	).first->second);
-	//}
-	//template<typename Value>
-	//Value& ss(const key_type& key, Value&& def_val = Value()) {
-	//	return get<Value>(try_emplace(
-	//		key, std::forward<Value>(def_val)
-	//	).first->second);
-	//}
 
 	// non-modifying (const) subscripting behaves like `std::vector` and don't check if key exists!
 	// for checked search use `extract()` or `get()` functions family
@@ -116,25 +106,31 @@ public:
 		return res;
 	}
 
-	// assign from map of key-value pairs
-	// does check if key already exists in array
-	// if not -- inserts new element
-	template<class Map>
-	propdict& operator =(Map&& rhs) {
+	// merge data from any map-like container
+	// if key already exists in propdict - replace value, if not -- insert new element
+	template<typename Map>
+	auto merge_props(Map&& rhs) -> propdict& {
+		using PureMap = std::remove_reference_t<Map>;
+		static_assert(meta::is_map_v<PureMap>, "Passed container is not map-like");
 		static_assert(
-			std::is_convertible_v<typename std::remove_reference_t<Map>::key_type, key_type>,
+			std::is_convertible_v<typename PureMap::key_type, key_type>,
 			"Source map should have string keys"
 		);
 
-		std::for_each(rhs.begin(), rhs.end(), [this](auto& src_val) {
+		std::for_each(std::begin(rhs), std::end(rhs),[this, hint = std::begin(*this)](auto& src_val) mutable {
 			if constexpr(std::is_lvalue_reference_v<Map>)
-				insert_or_assign(src_val.first, src_val.second);
+				hint = insert_or_assign(hint, src_val.first, src_val.second);
 			else
-				insert_or_assign(src_val.first, std::move(src_val.second));
+				hint = insert_or_assign(hint, src_val.first, std::move(src_val.second));
 		});
 		return *this;
 	}
 
+	// assign via merge from map-like container, but not from propdict
+	template<typename Map>
+	auto operator =(Map&& rhs) -> std::enable_if_t<!std::is_same_v<std::decay_t<Map>, propdict>, propdict&> {
+		return merge_props(std::forward<Map>(rhs));
+	}
 };
 
 ///  formatting support
@@ -147,7 +143,7 @@ constexpr decltype(auto) get(U&& pdict, std::string_view key) {
 	if(pval != std::forward<U>(pdict).end())
 		return get<T>(pval->second);
 	using namespace std::literals;
-	throw std::out_of_range("No property with name '"s.append(key.data(), key.size()).c_str());
+	throw std::out_of_range("No property with name '"s.append(key.data(), key.size()).append("'").c_str());
 }
 
 template<typename T, typename U>

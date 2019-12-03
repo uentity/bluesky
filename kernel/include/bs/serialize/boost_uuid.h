@@ -8,8 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "serialize.h"
-#include <cereal/types/common.hpp>
+#include "serialize_decl.h"
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/string_generator.hpp>
@@ -28,7 +27,7 @@ struct atomizer::save<boost::uuids::uuid> {
 	// for text archives print text repr of UUID
 	template<typename Archive>
 	static auto go(Archive& ar, uuid_t const& t) -> std::enable_if_t<is_text<Archive>::value> {
-		ar(cereal::make_nvp("textid", boost::uuids::to_string(t)));
+		ar(cereal::make_nvp("data", boost::uuids::to_string(t)));
 	}
 
 	// for all other archives output as array
@@ -53,7 +52,7 @@ struct atomizer::load<boost::uuids::uuid> {
 		static boost::uuids::string_generator uuid_from_str;
 
 		std::string text_uuid;
-		ar(cereal::make_nvp("textid", text_uuid));
+		ar(cereal::make_nvp("data", text_uuid));
 		t = uuid_from_str(text_uuid);
 	}
 

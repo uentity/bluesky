@@ -25,6 +25,8 @@
 #include <bs/python/expected.h>
 #include <bs/python/object_ptr.h>
 
+#include "timetypes.h"
+
 typedef void (*bs_init_py_fn)(void*);
 
 /*-----------------------------------------------------------------------------
@@ -70,13 +72,12 @@ BSPY_EXPORT_DEF_((T<T_spec_tup>))
 namespace pybind11::detail { struct any_cast_extra { using type = type_list<__VA_ARGS__>; }; }
 
 NAMESPACE_BEGIN(blue_sky::python)
-
 namespace py = pybind11;
 using namespace pybind11::literals;
 
 // *-----------------------------------------------------------------------------
 // *  trampoline class for bindings for BS objects
-// *-----------------------------------------------------------------------------*/
+// *-----------------------------------------------------------------------------
 template<typename Object = objbase>
 class py_object : public Object {
 public:

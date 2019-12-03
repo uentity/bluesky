@@ -28,6 +28,8 @@ public:
 	using id_type = boost::uuids::uuid;
 	using sp_link = std::shared_ptr<link>;
 	using sp_clink = std::shared_ptr<const link>;
+	using link_ptr = object_ptr<link>;
+	using clink_ptr = object_ptr<const link>;
 
 	/// virtual dtor
 	virtual ~link();
@@ -73,7 +75,7 @@ public:
 	/// if `deep` flag is set, then clone pointed object as well
 	virtual auto clone(bool deep = false) const -> sp_link = 0;
 
-	/// create root link to node with handle preset to returned link
+	/// create root link to node with and set it as node's handle
 	template<typename Link, typename... Args>
 	static auto make_root(Args&&... args) -> std::shared_ptr<Link> {
 		if(auto lnk = std::make_shared<Link>(std::forward<Args>(args)...)) {
@@ -96,7 +98,6 @@ public:
 	virtual auto obj_type_id() const -> std::string;
 
 	/// get pointer to object link is pointing to -- slow, never returns invalid (NULL) sp_obj
-	/// NOTE: returned pointer can be null
 	auto data_ex(bool wait_if_busy = true) const -> result_or_err<sp_obj>;
 	/// simple data accessor that returns nullptr on error
 	auto data() const -> sp_obj {
@@ -191,6 +192,8 @@ private:
 };
 using sp_link = link::sp_link;
 using sp_clink = link::sp_clink;
+using link_ptr = link::link_ptr;
+using clink_ptr = link::clink_ptr;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  link with bundled inode
@@ -231,8 +234,6 @@ protected:
 
 private:
 	auto data_impl() const -> result_or_err<sp_obj> override;
-
-	//result_or_err<sp_node> data_node_impl() const override;
 };
 
 /*-----------------------------------------------------------------------------
@@ -255,6 +256,8 @@ private:
 	std::weak_ptr<objbase> data_;
 
 	auto data_impl() const -> result_or_err<sp_obj> override;
+
+	auto propagate_handle() -> result_or_err<sp_node> override;
 };
 
 /*-----------------------------------------------------------------------------
@@ -276,8 +279,8 @@ public:
 	auto type_id() const -> std::string override;
 
 	/// additional sym link API
-	/// check is pointed link is alive
-	auto is_alive() const -> bool;
+	/// check is pointed link is alive, sets Data status to proper state
+	auto check_alive() -> bool;
 
 	/// return stored pointee path
 	auto src_path(bool human_readable = false) const -> std::string;
