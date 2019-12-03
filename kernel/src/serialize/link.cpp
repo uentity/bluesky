@@ -105,9 +105,7 @@ BSS_FCN_EXPORT(serialize, tree::ilink)
 }();
 
 BSS_FCN_BEGIN(serialize, tree::hard_link)
-    GUARD
-	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
-
+	//GUARD
 	if constexpr(!Archive::is_loading::value) {
 		ar( make_nvp("data", t.pimpl()->data_) );
 	}
@@ -119,6 +117,8 @@ BSS_FCN_BEGIN(serialize, tree::hard_link)
 			PtrInitTrigger::SuccessAndRetry
 		));
 	}
+
+	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::hard_link)
@@ -127,9 +127,7 @@ BSS_FCN_EXPORT(serialize, tree::hard_link)
  *  weak_link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::weak_link)
-    GUARD
-	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
-
+	//GUARD
 	if constexpr(!Archive::is_loading::value) {
 		ar( make_nvp("data", t.pimpl()->data_.lock()) );
 	}
@@ -141,6 +139,8 @@ BSS_FCN_BEGIN(serialize, tree::weak_link)
 			PtrInitTrigger::SuccessAndRetry
 		));
 	}
+
+	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::weak_link)
@@ -149,10 +149,10 @@ BSS_FCN_EXPORT(serialize, tree::weak_link)
  *  sym_link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::sym_link)
-    GUARD
+	//GUARD
 	ar(
-		make_nvp("linkbase", base_class<tree::link>(&t)),
-		make_nvp("path", t.pimpl()->path_)
+		make_nvp("path", t.pimpl()->path_),
+		make_nvp("linkbase", base_class<tree::link>(&t))
 	);
 BSS_FCN_END
 
@@ -162,9 +162,7 @@ BSS_FCN_EXPORT(serialize, tree::sym_link)
  *  fusion_link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::fusion_link)
-    GUARD
-	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
-
+	//GUARD
 	if constexpr(!Archive::is_loading::value) {
 		ar( make_nvp("bridge", t.pimpl()->bridge_) );
 	}
@@ -176,6 +174,8 @@ BSS_FCN_BEGIN(serialize, tree::fusion_link)
 			PtrInitTrigger::SuccessAndRetry
 		));
 	}
+
+	ar( make_nvp("linkbase", base_class<tree::ilink>(&t)) );
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::fusion_link)
