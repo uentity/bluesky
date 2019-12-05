@@ -102,6 +102,10 @@ void py_bind_link(py::module& m) {
 		.value("All", Event::All)
 	;
 
+	// async tag
+	py::class_<launch_async_t>(m, "launch_async_t");
+	m.attr("launch_async") = launch_async;
+
 	// link base class
 	link_pyface
 		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link")
@@ -123,6 +127,15 @@ void py_bind_link(py::module& m) {
 		.def("data_node", py::overload_cast<>(&link::data_node, py::const_))
 		.def("data_node", py::overload_cast<link::process_data_cb, bool>(&link::data_node, py::const_),
 			"f"_a, "high_priority"_a = false
+		)
+
+		// [NOTE] export only async overload, because otherwise Python will hang when moving
+		// callback into actor
+		.def("modify_data",
+			[](const link& L, link::modificator_f m, bool silent) {
+				L.modify_data(launch_async, std::move(m), silent);
+			},
+			"m"_a, "silent"_a = false
 		)
 
 		.def("type_id", &link::type_id)

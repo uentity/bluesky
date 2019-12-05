@@ -15,6 +15,7 @@
 #include <bs/serialize/cafbind.h>
 
 OMIT_OBJ_SERIALIZATION
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::link::modificator_f)
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
@@ -146,6 +147,14 @@ auto link::data_ex(bool wait_if_busy) const -> result_or_err<sp_obj> {
 
 auto link::data_node_ex(bool wait_if_busy) const -> result_or_err<sp_node> {
 	return actorf<result_or_errbox<sp_node>>(factor_, a_lnk_dnode(), wait_if_busy);
+}
+
+auto link::modify_data(modificator_f m, bool silent) const -> error {
+	auto res = actorf<error::box>(factor_, a_apply(), std::move(m), silent);
+	return res ? error::unpack(res.value()) : res.error();
+}
+auto link::modify_data(launch_async_t, modificator_f m, bool silent) const -> void {
+	caf::anon_send(actor(), a_apply(), std::move(m), silent);
 }
 
 auto link::data_node_gid() const -> result_or_err<std::string> {

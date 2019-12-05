@@ -22,9 +22,7 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-/*-----------------------------------------------------------------------------
- *  base class of all links
- *-----------------------------------------------------------------------------*/
+// denote possible tree events
 enum class Event : std::uint64_t {
 	LinkRenamed = 1,
 	LinkStatusChanged = 2,
@@ -34,11 +32,18 @@ enum class Event : std::uint64_t {
 	All = std::uint64_t(-1)
 };
 
+// denote that we don't want to wait until invoke result is available
+struct launch_async_t {};
+inline constexpr auto launch_async = launch_async_t{};
+
 class link_actor;
 class link_impl;
 class node_actor;
 class node_impl;
 
+/*-----------------------------------------------------------------------------
+ *  base class of all links
+ *-----------------------------------------------------------------------------*/
 class BS_API link  : public std::enable_shared_from_this<link> {
 	// serialization support
 	friend class blue_sky::atomizer;
@@ -139,6 +144,11 @@ public:
 	auto data_node() const -> sp_node {
 		return data_node_ex().value_or(nullptr);
 	}
+
+	/// make pointee data modification atomically
+	using modificator_f = std::function< error(sp_obj) >;
+	auto modify_data(modificator_f m, bool silent = false) const -> error;
+	auto modify_data(launch_async_t, modificator_f m, bool silent = false) const -> void;
 
 	/// enum object data requests
 	enum class Req { Data = 0, DataNode = 1 };

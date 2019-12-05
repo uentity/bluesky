@@ -81,9 +81,11 @@ public:
 	auto req_status(Req request) const -> ReqStatus;
 
 	using on_rs_changed_fn = function_view< void(Req, ReqStatus /*new*/, ReqStatus /*old*/) >;
+	static constexpr auto on_rs_changed_noop = [](Req, ReqStatus, ReqStatus) {};
+
 	auto rs_reset(
 		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void,
-		on_rs_changed_fn on_rs_changed = [](Req, ReqStatus, ReqStatus) {}
+		on_rs_changed_fn on_rs_changed = on_rs_changed_noop
 	) -> ReqStatus;
 
 	auto reset_owner(const sp_node& new_owner) -> void;

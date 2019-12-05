@@ -18,6 +18,8 @@ using a_hi = caf::atom_constant<caf::atom("bs hi")>;
 using a_bye = caf::atom_constant<caf::atom("bs bye")>;
 // used as 'acquired` tag
 using a_ack = caf::atom_constant<caf::atom("bs ack")>;
+// used to invoke some processing over an object/actor
+using a_apply = caf::atom_constant<caf::atom("bs apply")>;
 
 // async invoke `link::data()`
 using a_lnk_data = caf::atom_constant<caf::atom("tl data")>;

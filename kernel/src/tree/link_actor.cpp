@@ -18,6 +18,8 @@
 
 #include <boost/uuid/uuid_generators.hpp>
 
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::link::modificator_f)
+
 #define DEBUG_ACTOR 0
 
 #if DEBUG_ACTOR == 1
@@ -241,6 +243,32 @@ auto link_actor::make_behavior() -> behavior_type { return {
 		);
 		return res;
 	},
+
+	// apply modifier function on pointee
+	// set `Data` status depending on error returned from modifier
+	[this](a_apply, link::modificator_f m, bool silent) mutable -> caf::result<error::box> {
+		auto res = make_response_promise();
+
+		request(caf::actor{this}, caf::duration{def_timeout(true)}, a_lnk_data(), true)
+		.then([=, m = std::move(m)](result_or_errbox<sp_obj> obj) mutable {
+			// invoke modificator
+			auto er = obj ?
+				error::eval_safe( [&]{ return m(std::move(obj.value())); } ) :
+				error::unpack(obj.error());
+			// set status
+			pimpl_->rs_reset(
+				Req::Data, ReqReset::Always, er.ok() ? ReqStatus::OK : ReqStatus::Error, ReqStatus::Void,
+				silent ?
+					function_view{ link_impl::on_rs_changed_noop } :
+					[=](Req req, ReqStatus new_s, ReqStatus old_s) {
+						send<high_prio>(impl.self_grp, a_ack(), a_lnk_status(), req, new_s, old_s);
+					}
+			);
+			// deliver error back to callee
+			res.deliver(er.pack());
+		});
+		return const_cast<const caf::response_promise&>(res);
+	},
 }; }
 
 /*-----------------------------------------------------------------------------
@@ -258,27 +286,42 @@ auto fast_link_actor::make_behavior() -> behavior_type {
 		},
 
 		[this](a_lnk_data, bool) -> result_or_errbox<sp_obj> {
-			adbg(this) << "<- a_lnk_data, status = " <<
+			adbg(this) << "<- a_lnk_data fast, status = " <<
 				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
-			auto res = result_or_errbox<sp_obj>{};
-			data_ex(
-				[&](result_or_errbox<sp_obj> obj) { res = std::move(obj); },
-				ReqOpts::WaitIfBusy
-			);
-			return res;
+			return pimpl_->data().and_then([](auto&& obj) {
+				return obj ?
+					result_or_errbox<sp_obj>{ std::move(obj) } :
+					tl::make_unexpected(error::quiet(Error::EmptyData));
+			});
+
+			//auto res = result_or_errbox<sp_obj>{};
+			//data_ex(
+			//	[&](result_or_errbox<sp_obj> obj) { res = std::move(obj); },
+			//	ReqOpts::WaitIfBusy
+			//);
+			//return res;
 		},
 
 		[this](a_lnk_dnode, bool) -> result_or_errbox<sp_node> {
-			adbg(this) << "<- a_lnk_dnode, status = " <<
+			adbg(this) << "<- a_lnk_dnode fast, status = " <<
 				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
-			auto res = result_or_errbox<sp_node>();
-			data_node_ex(
-				[&](result_or_errbox<sp_node> N) { res = std::move(N); },
-				ReqOpts::WaitIfBusy
-			);
-			return res;
+			return pimpl_->data().and_then([](auto&& obj) {
+				return obj ?
+					( obj->is_node() ?
+						result_or_err<sp_node>(std::static_pointer_cast<tree::node>(std::move(obj))) :
+						tl::make_unexpected(error::quiet(Error::NotANode))
+					) :
+					tl::make_unexpected(error::quiet(Error::EmptyData));
+			});
+
+			//auto res = result_or_errbox<sp_node>();
+			//data_node_ex(
+			//	[&](result_or_errbox<sp_node> N) { res = std::move(N); },
+			//	ReqOpts::WaitIfBusy
+			//);
+			//return res;
 		},
 	}).or_else(super::make_behavior());
 }
