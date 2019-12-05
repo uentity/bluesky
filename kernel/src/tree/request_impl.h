@@ -85,7 +85,7 @@ auto request_impl(
 
 		// spawn worker
 		auto worker_actor = enumval(opts & ReqOpts::Detached) ?
-			system().spawn<caf::spawn_options::detach_flag>(std::move(worker)) :
+			system().spawn<caf::detached>(std::move(worker)) :
 			system().spawn(std::move(worker));
 
 		// make request and invoke result processor
