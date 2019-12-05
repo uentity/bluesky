@@ -108,6 +108,10 @@ void py_bind_error(py::module& m) {
 		.def_property_readonly("message", &error::message, "Get custom part of message passed to constructor")
 	;
 	py::implicitly_convertible<Error, error>();
+	py::implicitly_convertible<tree::Error, error>();
+
+	// add 'perfect' constant
+	m.attr("perfect") = error{ perfect };
 }
 
 NAMESPACE_END(blue_sky::python)

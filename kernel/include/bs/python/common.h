@@ -63,6 +63,7 @@ BSPY_EXPORT_DEF_((T<T_spec_tup>))
         auto err_class = (pybind11::class_<std::error_code>)kmod->attr("error_code"); \
         err_ctor.execute(err_class);                                                  \
         pybind11::implicitly_convertible<E, std::error_code>();                       \
+        pybind11::implicitly_convertible<E, blue_sky::error>();                       \
     }                                                                                 \
 }();
 
