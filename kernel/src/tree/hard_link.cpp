@@ -44,7 +44,7 @@ auto hard_link_impl::set_data(sp_obj obj) -> void {
 		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK);
 		rs_reset(
 			Req::DataNode, ReqReset::Always,
-			data_->is_node() ? ReqStatus::OK : ReqStatus::Error
+			data_->is_node() ? ReqStatus::OK : ReqStatus::Void
 		);
 		//std::cout << "hard link " << to_string(id_) << ", name " << name_ << ": impl created " <<
 		//	(int)status_[0].value << (int)status_[1].value << std::endl;
@@ -112,7 +112,7 @@ auto weak_link_impl::set_data(const sp_obj& obj) -> void {
 		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK);
 		rs_reset(
 			Req::DataNode, ReqReset::Always,
-			obj->is_node() ? ReqStatus::OK : ReqStatus::Error
+			obj->is_node() ? ReqStatus::OK : ReqStatus::Void
 		);
 	}
 }
