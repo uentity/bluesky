@@ -26,9 +26,7 @@ namespace bs_detail = blue_sky::detail;
 inline const auto nil_uid = boost::uuids::nil_uuid();
 inline const std::string nil_oid = to_string(nil_uid);
 
-enum class ReqReset {
-	Always = 0, IfEq = 1, IfNeq = 2
-};
+using ReqReset = link::ReqReset;
 
 // for debug & print purposes
 auto to_string(link::Req) -> const char*;

@@ -46,10 +46,6 @@ auto link::pimpl() const -> link_impl* {
 	return pimpl_.get();
 }
 
-auto link::actor() const -> const caf::actor& {
-	return actor_;
-}
-
 /// access link's unique ID
 auto link::id() const -> id_type {
 	// ID cannot change

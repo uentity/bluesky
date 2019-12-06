@@ -83,7 +83,7 @@ auto fusion_link::bridge() const -> sp_fusion {
 }
 
 auto fusion_link::reset_bridge(sp_fusion new_bridge) -> void {
-	caf::anon_send(actor(), a_flnk_bridge(), std::move(new_bridge));
+	caf::anon_send(actor(*this), a_flnk_bridge(), std::move(new_bridge));
 }
 
 auto fusion_link::propagate_handle() -> result_or_err<sp_node> {

@@ -38,6 +38,15 @@ class BS_API fusion_link : public ilink {
 public:
 	using super = ilink;
 
+	using actor_type = cached_link_actor_type::extend<
+		// populate pointee with given children types
+		caf::replies_to<a_flnk_populate, std::string, bool>::with<result_or_errbox<sp_node>>,
+		// get link's bridge
+		caf::replies_to<a_flnk_bridge>::with<result_or_errbox<sp_fusion>>,
+		// set link's bridge
+		caf::reacts_to<a_flnk_bridge, sp_fusion>
+	>;
+
 	// ctors
 	fusion_link(
 		std::string name, sp_node data = nullptr,

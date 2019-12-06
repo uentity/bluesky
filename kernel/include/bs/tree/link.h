@@ -6,8 +6,9 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
+
+#include "../atoms.h"
 #include "../error.h"
 #include "../objbase.h"
 #include "../detail/enumops.h"
@@ -62,6 +63,66 @@ public:
 	using link_ptr = object_ptr<link>;
 	using clink_ptr = object_ptr<const link>;
 
+	/// object data requests
+	enum class Req { Data = 0, DataNode = 1 };
+	/// states of reuqest
+	enum class ReqStatus { Void, Busy, OK, Error };
+	/// request status reset conditions
+	enum class ReqReset {
+		Always = 0, IfEq = 1, IfNeq = 2
+	};
+
+	/// flags reflect link properties and state
+	enum Flags {
+		Plain = 0,
+		Persistent = 1,
+		Disabled = 2,
+		LazyLoad = 4
+	};
+
+	using modificator_f = std::function< error(sp_obj) >;
+
+	using actor_type = caf::typed_actor<
+        // terminate actor
+		caf::reacts_to<a_bye>,
+        // get link ID
+		caf::replies_to<a_lnk_id>::with<id_type>,
+        // get pointee OID
+		caf::replies_to<a_lnk_oid>::with<std::string>,
+        // get pointee type ID
+		caf::replies_to<a_lnk_otid>::with<std::string>,
+        // get pointee node group ID
+		caf::replies_to<a_node_gid>::with<std::string>,
+
+        // get link name
+		caf::replies_to<a_lnk_name>::with<std::string>,
+        // rename link
+		caf::reacts_to<a_lnk_rename, std::string, bool>,
+        // ack rename
+		caf::reacts_to<a_ack, a_lnk_name, std::string, std::string>,
+
+        // get request status
+		caf::replies_to<a_lnk_status, Req>::with<ReqStatus>,
+        // reset request status
+		caf::replies_to<a_lnk_status, Req, ReqReset, ReqStatus, ReqStatus>::with<ReqStatus>,
+        // request status change ack
+		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>,
+
+        // get link flags
+		caf::replies_to<a_lnk_flags>::with<Flags>,
+        // set link flags
+		caf::reacts_to<a_lnk_flags, Flags>,
+
+        // get inode
+		caf::replies_to<a_lnk_inode>::with<result_or_errbox<inodeptr>>,
+        // get data
+		caf::replies_to<a_lnk_data, bool>::with<result_or_errbox<sp_obj>>,
+        // get data node
+		caf::replies_to<a_lnk_dnode, bool>::with<result_or_errbox<sp_node>>,
+        // modify data
+		caf::replies_to<a_apply, modificator_f, bool>::with<result_or_errbox<sp_node>>
+	>;
+
 	virtual ~link();
 
 	/// because we cannot make explicit copies of link
@@ -102,13 +163,6 @@ public:
 	/// get link's container
 	auto owner() const -> sp_node;
 
-	/// flags reflect link properties and state
-	enum Flags {
-		Plain = 0,
-		Persistent = 1,
-		Disabled = 2,
-		LazyLoad = 4
-	};
 	auto flags() const -> Flags;
 	auto set_flags(Flags new_flags) -> void;
 
@@ -119,7 +173,15 @@ public:
 	auto info() const -> result_or_err<inode>;
 
 	// return link's actor handle
-	auto actor() const -> const caf::actor&;
+	template<typename ActorType = actor_type>
+	auto actor() const {
+		return caf::actor_cast<ActorType>(actor_);
+	}
+	// extract actor type from link
+	template<typename Link>
+	static auto actor(const Link& L) {
+		return L.template actor<typename Link::actor_type>();
+	}
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  sync API
@@ -146,14 +208,8 @@ public:
 	}
 
 	/// make pointee data modification atomically
-	using modificator_f = std::function< error(sp_obj) >;
 	auto modify_data(modificator_f m, bool silent = false) const -> error;
 	auto modify_data(launch_async_t, modificator_f m, bool silent = false) const -> void;
-
-	/// enum object data requests
-	enum class Req { Data = 0, DataNode = 1 };
-	/// states of reuqest
-	enum class ReqStatus { Void, Busy, OK, Error };
 
 	/// get request status
 	auto req_status(Req request) const -> ReqStatus;
@@ -234,6 +290,11 @@ using sp_clink = link::sp_clink;
 using link_ptr = link::link_ptr;
 using clink_ptr = link::clink_ptr;
 
+using cached_link_actor_type = link::actor_type::extend<
+	// get data cache
+	caf::replies_to<a_lnk_dcache>::with<sp_obj>
+>;
+
 ///////////////////////////////////////////////////////////////////////////////
 //  link with bundled inode
 //
@@ -259,6 +320,7 @@ class BS_API hard_link : public ilink {
 
 public:
 	using super = ilink;
+	using actor_type = cached_link_actor_type;
 
 	/// ctor -- additionaly accepts a pointer to object
 	hard_link(std::string name, sp_obj data, Flags f = Plain);
@@ -286,6 +348,7 @@ class BS_API weak_link : public ilink {
 
 public:
 	using super = ilink;
+	using actor_type = cached_link_actor_type;
 
 	/// ctor -- additionaly accepts a pointer to object
 	weak_link(std::string name, const sp_obj& data, Flags f = Plain);

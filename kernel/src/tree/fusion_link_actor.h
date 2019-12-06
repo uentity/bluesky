@@ -17,18 +17,6 @@ OMIT_OBJ_SERIALIZATION
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::sp_fusion)
 
 NAMESPACE_BEGIN(blue_sky::tree)
-NAMESPACE_BEGIN()
-
-// treat Error::OKOK status as object is fully loaded by fusion_iface
-static const auto obj_fully_loaded = make_error_code(Error::OKOK);
-
-// actor type for async API
-using flink_actor_t = caf::typed_actor<
-	caf::reacts_to<a_flnk_populate, sp_clink, link::process_data_cb, std::string>
->;
-
-NAMESPACE_END()
-
 // forward declare actor
 struct fusion_link_actor;
 using bs_detail::shared;
@@ -38,6 +26,8 @@ using bs_detail::shared;
  *-----------------------------------------------------------------------------*/
 struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 public:
+	// treat Error::OKOK status as object is fully loaded by fusion_iface
+	inline static const auto obj_fully_loaded = make_error_code(Error::OKOK);
 	// bridge
 	sp_fusion bridge_;
 	// contained object
@@ -110,7 +100,6 @@ public:
  *-----------------------------------------------------------------------------*/
 struct BS_HIDDEN_API fusion_link_actor : public link_actor {
 	using super = link_actor;
-
 	using super::super;
 
 	// both Data & DataNode executes with `HasDataCache` flag set
