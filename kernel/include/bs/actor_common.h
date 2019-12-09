@@ -12,6 +12,7 @@
 #include <bs/timetypes.h>
 #include <bs/error.h>
 #include <bs/kernel/radio.h>
+#include <bs/detail/tuple_utils.h>
 
 #include <caf/fwd.hpp>
 #include <caf/function_view.hpp>
@@ -20,6 +21,18 @@
 #include <optional>
 
 NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(detail)
+
+template<typename T>
+constexpr auto cast_timeout(T t) {
+	if constexpr(std::is_same_v<T, timespan>)
+		return t != infinite ? caf::duration{t} : caf::infinite;
+	else
+		return t;
+}
+
+NAMESPACE_END(detail)
+
 /// tag value for high priority messages
 inline constexpr auto high_prio = caf::message_priority::high;
 
@@ -28,11 +41,10 @@ BS_API auto forward_caf_error(const caf::error& er) -> error;
 /// @brief blocking invoke actor & return response like a function
 /// @return always return `result_or_errbox<R>`
 template<typename R, typename Actor, typename... Args>
-inline auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
+auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 	auto x = factor(std::forward<Args>(args)...);
 
-	// try extract value
-	using x_value_t = typename decltype(x)::value_type;
+	using T = typename decltype(x)::value_type;
 	const auto extract_value = [&](auto& res) {
 		// caf err passtrough
 		if(!x) {
@@ -40,8 +52,8 @@ inline auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 			return;
 		}
 
-		if constexpr(std::is_same_v<x_value_t, caf::message>)
-			x->extract({ [&](R value) {
+		if constexpr(std::is_same_v<T, caf::message>)
+			x->extract({ [&](R& value) {
 				res.emplace(std::move(value));
 			} });
 		else
@@ -62,11 +74,29 @@ inline auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 }
 
 /// constructs function_view inside from passed handle & timeout
-template<typename R, typename H, typename... Args>
-inline auto actorf(const H& handle, blue_sky::timespan timeout, Args&&... args) {
+template<typename R, typename Actor, typename T, typename... Args>
+auto actorf(const Actor& tgt, T timeout, Args&&... args) {
 	return actorf<R>(
-		caf::make_function_view(handle, caf::duration{timeout}), std::forward<Args>(args)...
+		caf::make_function_view(tgt, detail::cast_timeout(timeout)), std::forward<Args>(args)...
 	);
+}
+
+/// operates on passed `scoped_actor` instead of function view
+template<typename R, typename Actor, typename T, typename... Args>
+auto actorf(const caf::scoped_actor& caller, const Actor& tgt, T timeout, Args&&... args) {
+	auto res = [] {
+		if constexpr(tl::detail::is_expected<R>::value)
+			return std::optional<R>{};
+		else
+			return std::optional<result_or_err<R>>{};
+	}();
+
+	caller->request(tgt, detail::cast_timeout(timeout), std::forward<Args>(args)...)
+	.receive(
+		[&](R& value) { res.emplace(std::move(value)); },
+		[&](const caf::error& er) { res.emplace(tl::make_unexpected(forward_caf_error(er))); }
+	);
+	return std::move(*res);
 }
 
 /// @brief spawn temp actor that makes specified request to `A` and pass result to callback `f`
@@ -87,17 +117,4 @@ auto anon_request(Actor A, caf::duration timeout, bool high_priority, F f, Args&
 	});
 }
 
-//template<caf::spawn_options Os = caf::no_spawn_options, typename Actor, typename F, typename... Args>
-//auto anon_request(Actor A, caf::duration timeout, bool high_priority, F f, Args&&... args) -> void {
-//	kernel::radio::system().spawn<Os>([f = std::move(f)] (
-//		caf::event_based_actor* self, Actor A, caf::duration t, bool high_priority, Args&&... a_args
-//	) mutable -> caf::behavior {
-//		auto req = high_priority ?
-//			self->request<caf::message_priority::high>(A, t, std::forward<Args>(a_args)...) :
-//			self->request<caf::message_priority::normal>(A, t, std::forward<Args>(a_args)...);
-//		req.then(std::move(f));
-//
-//		return {};
-//	}, std::move(A), timeout, high_priority, std::forward<Args>(args)...);
-//}
 NAMESPACE_END(blue_sky)
