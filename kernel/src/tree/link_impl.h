@@ -9,13 +9,12 @@
 #pragma once
 
 #include <bs/tree/link.h>
+#include <bs/actor_common.h>
 #include <bs/kernel/radio.h>
 #include <bs/detail/enumops.h>
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
 #include "link_invoke.h"
-
-#include <caf/actor.hpp>
 
 #include <boost/uuid/nil_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -44,27 +43,40 @@ public:
 
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 
-	// timeout for most queries
-	const caf::duration timeout_;
-
 	id_type id_;
 	std::string name_;
 	Flags flags_;
+
+	// timeout for most queries
+	const caf::duration timeout;
+	// scoped actor for requests
+	caf::scoped_actor factor;
+
+	// keep local link group
+	caf::group self_grp;
 
 	/// owner node
 	std::weak_ptr<tree::node> owner_;
 	/// status of operations
 	mutable tree::detail::status_handle status_[2];
 
-	// keep local link group
-	caf::group self_grp;
+	link_impl();
+	link_impl(std::string name, Flags f);
+	virtual ~link_impl();
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  API
 	//
-	link_impl();
-	link_impl(std::string name, Flags f);
-	virtual ~link_impl();
+	// make request to given link L
+	template<typename R, typename Link, typename... Args>
+	auto actorf(const Link& L, Args&&... args) {
+		return blue_sky::actorf<R>(factor, Link::actor(L), timeout, std::forward<Args>(args)...);
+	}
+	// same as above but with configurable timeout
+	template<typename R, typename Link, typename... Args>
+	auto actorf(const Link& L, timespan timeout, Args&&... args) {
+		return blue_sky::actorf<R>(factor, Link::actor(L), timeout, std::forward<Args>(args)...);
+	}
 
 	// spawn actor corresponding to this impl type
 	virtual auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor;

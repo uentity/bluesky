@@ -23,7 +23,8 @@ static boost::uuids::random_generator idgen;
  *  link_impl
  *-----------------------------------------------------------------------------*/
 link_impl::link_impl(std::string name, Flags f)
-	: timeout_(def_timeout()), id_(idgen()), name_(std::move(name)), flags_(f)
+	: id_(idgen()), name_(std::move(name)), flags_(f),
+	timeout(def_timeout(true)), factor(kernel::radio::system())
 {}
 
 link_impl::link_impl()

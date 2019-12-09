@@ -143,7 +143,7 @@ struct BS_HIDDEN_API fusion_link_actor : public link_actor {
 			[L](a_flnk_bridge, sp_fusion new_bridge) { L->reset_bridge(std::move(new_bridge)); },
 
 			// direct return cached data
-			[L](a_lnk_dcache) { return L->data_; },
+			[L](a_lnk_dcache) -> sp_obj { return L->data_; },
 
 			// easier obj ID & object type id retrival
 			[L](a_lnk_otid) {

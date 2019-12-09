@@ -61,8 +61,8 @@ auto fusion_link::pimpl() const -> fusion_link_impl* {
 
 auto fusion_link::populate(const std::string& child_type_id, bool wait_if_busy) const
 -> result_or_err<sp_node> {
-	return actorf<result_or_errbox<sp_node>>(
-		factor_, a_flnk_populate(), child_type_id, wait_if_busy
+	return pimpl()->actorf<result_or_errbox<sp_node>>(
+		*this, a_flnk_populate(), child_type_id, wait_if_busy
 	);
 }
 
@@ -79,7 +79,9 @@ auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) c
 }
 
 auto fusion_link::bridge() const -> sp_fusion {
-	return actorf<sp_fusion>(factor_, a_flnk_bridge()).value_or(nullptr);
+	return pimpl()->actorf<result_or_errbox<sp_fusion>>(
+		*this, a_flnk_bridge()
+	).value_or(nullptr);
 }
 
 auto fusion_link::reset_bridge(sp_fusion new_bridge) -> void {
@@ -94,7 +96,9 @@ auto fusion_link::propagate_handle() -> result_or_err<sp_node> {
 }
 
 auto fusion_link::cache() const -> sp_node {
-	return actorf<sp_node>(factor_, a_lnk_dcache()).value_or(nullptr);
+	return std::static_pointer_cast<tree::node>(
+		pimpl()->actorf<sp_obj>(*this, a_lnk_dcache()).value_or(nullptr)
+	);
 }
 
 NAMESPACE_END(blue_sky::tree)

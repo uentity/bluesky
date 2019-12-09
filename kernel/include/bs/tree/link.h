@@ -19,7 +19,7 @@
 #include <cereal/access.hpp>
 
 #include <caf/actor.hpp>
-#include <caf/function_view.hpp>
+#include <caf/typed_actor.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
@@ -37,9 +37,7 @@ enum class Event : std::uint64_t {
 struct launch_async_t {};
 inline constexpr auto launch_async = launch_async_t{};
 
-class link_actor;
 class link_impl;
-class node_actor;
 class node_impl;
 
 /*-----------------------------------------------------------------------------
@@ -48,15 +46,16 @@ class node_impl;
 class BS_API link  : public std::enable_shared_from_this<link> {
 	// serialization support
 	friend class blue_sky::atomizer;
+	// my private impl
 	friend class link_impl;
-	friend class link_actor;
 	// full access for node
 	friend class node;
 	friend class node_impl;
-	friend class node_actor;
-	friend class node_impl;
 
 public:
+	///////////////////////////////////////////////////////////////////////////////
+	//  static types, enumes, typed actor interface for link
+	//
 	using id_type = boost::uuids::uuid;
 	using sp_link = std::shared_ptr<link>;
 	using sp_clink = std::shared_ptr<const link>;
@@ -82,6 +81,7 @@ public:
 
 	using modificator_f = std::function< error(sp_obj) >;
 
+	/// Interface of link actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
         // terminate actor
 		caf::reacts_to<a_bye>,
@@ -92,14 +92,14 @@ public:
         // get pointee type ID
 		caf::replies_to<a_lnk_otid>::with<std::string>,
         // get pointee node group ID
-		caf::replies_to<a_node_gid>::with<std::string>,
+		caf::replies_to<a_node_gid>::with<result_or_errbox<std::string>>,
 
         // get link name
 		caf::replies_to<a_lnk_name>::with<std::string>,
         // rename link
 		caf::reacts_to<a_lnk_rename, std::string, bool>,
         // ack rename
-		caf::reacts_to<a_ack, a_lnk_name, std::string, std::string>,
+		caf::reacts_to<a_ack, a_lnk_rename, std::string, std::string>,
 
         // get request status
 		caf::replies_to<a_lnk_status, Req>::with<ReqStatus>,
@@ -120,27 +120,18 @@ public:
         // get data node
 		caf::replies_to<a_lnk_dnode, bool>::with<result_or_errbox<sp_node>>,
         // modify data
-		caf::replies_to<a_apply, modificator_f, bool>::with<result_or_errbox<sp_node>>
+		caf::replies_to<a_apply, modificator_f, bool>::with<error::box>
 	>;
 
-	virtual ~link();
-
-	/// because we cannot make explicit copies of link
-	/// we need a dedicated function to make links clones
-	/// if `deep` flag is set, then clone pointed object as well
-	virtual auto clone(bool deep = false) const -> sp_link = 0;
-
-	/// query what kind of link is this
-	virtual auto type_id() const -> std::string = 0;
-
-	/// create root link to node with and set it as node's handle
-	template<typename Link, typename... Args>
-	static auto make_root(Args&&... args) -> std::shared_ptr<Link> {
-		if(auto lnk = std::make_shared<Link>(std::forward<Args>(args)...)) {
-			static_cast<link*>(lnk.get())->propagate_handle();
-			return lnk;
-		}
-		return nullptr;
+	// return link's actor handle
+	template<typename ActorType = actor_type>
+	auto actor() const {
+		return caf::actor_cast<ActorType>(actor_);
+	}
+	// extract actor type from link
+	template<typename Link>
+	static auto actor(const Link& L) {
+		return L.template actor<typename Link::actor_type>();
 	}
 
 	/// provide shared pointers casted to derived type
@@ -153,6 +144,32 @@ public:
 	decltype(auto) bs_shared_this() {
 		return std::static_pointer_cast< Derived, link >(this->shared_from_this());
 	}
+
+	virtual ~link();
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  Generate
+	//
+	/// because we cannot make explicit copies of link
+	/// we need a dedicated function to make links clones
+	/// if `deep` flag is set, then clone pointed object as well
+	virtual auto clone(bool deep = false) const -> sp_link = 0;
+
+	/// create root link to node with and set it as node's handle
+	template<typename Link, typename... Args>
+	static auto make_root(Args&&... args) -> std::shared_ptr<Link> {
+		if(auto lnk = std::make_shared<Link>(std::forward<Args>(args)...)) {
+			static_cast<link*>(lnk.get())->propagate_handle();
+			return lnk;
+		}
+		return nullptr;
+	}
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  Always fast API
+	//
+	/// query what kind of link is this
+	virtual auto type_id() const -> std::string = 0;
 
 	/// access link's unique ID
 	auto id() const -> id_type;
@@ -171,27 +188,29 @@ public:
 
 	/// inspect object's inode
 	auto info() const -> result_or_err<inode>;
-
-	// return link's actor handle
-	template<typename ActorType = actor_type>
-	auto actor() const {
-		return caf::actor_cast<ActorType>(actor_);
-	}
-	// extract actor type from link
-	template<typename Link>
-	static auto actor(const Link& L) {
-		return L.template actor<typename Link::actor_type>();
-	}
-
-	///////////////////////////////////////////////////////////////////////////////
-	//  sync API
-	//
 	/// get link's object ID -- fast, can return empty string
 	auto oid() const -> std::string;
 
 	/// get link's object type ID -- fast, can return nil type ID
 	auto obj_type_id() const -> std::string;
 
+	/// get request status
+	auto req_status(Req request) const -> ReqStatus;
+	/// unconditional reset request status
+	auto rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) -> ReqStatus;
+	/// conditional reset request status
+	auto rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) -> ReqStatus;
+	auto rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) -> ReqStatus;
+
+	/// methods below are efficient checks that won't call `data_node()` if possible
+	/// check if pointee is a node
+	auto is_node() const -> bool;
+	/// if pointee is a node, return node's actor group ID
+	auto data_node_gid() const -> result_or_err<std::string>;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  Pointee data API
+	//
 	/// get pointer to object link is pointing to -- slow, never returns invalid (NULL) sp_obj
 	auto data_ex(bool wait_if_busy = true) const -> result_or_err<sp_obj>;
 	/// simple data accessor that returns nullptr on error
@@ -211,22 +230,8 @@ public:
 	auto modify_data(modificator_f m, bool silent = false) const -> error;
 	auto modify_data(launch_async_t, modificator_f m, bool silent = false) const -> void;
 
-	/// get request status
-	auto req_status(Req request) const -> ReqStatus;
-	/// unconditional reset request status
-	auto rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) -> ReqStatus;
-	/// conditional reset request status
-	auto rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) -> ReqStatus;
-	auto rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) -> ReqStatus;
-
-	/// methods below are efficient checks that won't call `data_node()` if possible
-	/// check if pointee is a node
-	auto is_node() const -> bool;
-	/// if pointee is a node, return node's actor group ID
-	auto data_node_gid() const -> result_or_err<std::string>;
-
 	///////////////////////////////////////////////////////////////////////////////
-	//  async API
+	//  Async API
 	//
 	/// obtain data in async manner passing it to callback
 	using process_data_cb = std::function<void(result_or_err<sp_obj>, sp_clink)>;
@@ -235,7 +240,7 @@ public:
 	auto data_node(process_data_cb f, bool high_priority = false) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  track link events
+	//  Subscribe to link events
 	//
 	using handle_event_cb = std::function< void(sp_clink, Event, prop::propdict) >;
 
@@ -272,13 +277,8 @@ protected:
 	// get access to link's impl for derived links
 	auto pimpl() const -> link_impl*;
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  data
-	//
-	// strong ref to link's actor
+	// strong ref to internal typeless link's actor
 	caf::actor actor_;
-	// make blocking request + get link actor response as single function call
-	mutable caf::function_view<caf::actor> factor_;
 
 private:
 	// string ref to link's impl

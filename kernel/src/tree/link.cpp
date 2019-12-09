@@ -30,13 +30,12 @@ link::link(std::shared_ptr<link_impl> impl, bool start_actor)
 
 link::~link() {
 	//caf::anon_send(actor_, a_bye());
-	caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
+	caf::anon_send_exit(actor(*this), caf::exit_reason::user_shutdown);
 }
 
 auto link::start_engine() -> bool {
 	if(!actor_) {
 		actor_ = pimpl_->spawn_actor(pimpl_);
-		factor_ = caf::function_view{ actor_, def_timeout(true) };
 		return true;
 	}
 	return false;
@@ -53,11 +52,11 @@ auto link::id() const -> id_type {
 }
 
 auto link::rename(std::string new_name) -> void {
-	caf::anon_send(actor_, a_lnk_rename(), std::move(new_name), false);
+	caf::anon_send(actor(*this), a_lnk_rename(), std::move(new_name), false);
 }
 
 auto link::rename_silent(std::string new_name) -> void {
-	caf::anon_send(actor_, a_lnk_rename(), std::move(new_name), true);
+	caf::anon_send(actor(*this), a_lnk_rename(), std::move(new_name), true);
 }
 
 /// get link's container
@@ -71,7 +70,7 @@ void link::reset_owner(const sp_node& new_owner) {
 }
 
 auto link::info() const -> result_or_err<inode> {
-	return actorf<inodeptr>(factor_, a_lnk_inode())
+	return pimpl_->actorf<result_or_errbox<inodeptr>>(*this, a_lnk_inode())
 	.and_then([](const inodeptr& i) {
 		return i ?
 			result_or_err<inode>(*i) :
@@ -80,12 +79,11 @@ auto link::info() const -> result_or_err<inode> {
 }
 
 link::Flags link::flags() const {
-	return actorf<Flags>(factor_, a_lnk_flags()).value_or(Flags::Plain);
-	//return pimpl_->flags_;
+	return pimpl_->actorf<Flags>(*this, a_lnk_flags()).value_or(Flags::Plain);
 }
 
 void link::set_flags(Flags new_flags) {
-	caf::anon_send(actor_, a_lnk_flags(), new_flags);
+	caf::anon_send(actor(*this), a_lnk_flags(), new_flags);
 	//pimpl_->flags_ = new_flags;
 }
 
@@ -94,20 +92,20 @@ auto link::req_status(Req request) const -> ReqStatus {
 }
 
 auto link::rs_reset(Req request, ReqStatus new_rs) -> ReqStatus {
-	return actorf<ReqStatus>(
-		factor_, a_lnk_status(), request, ReqReset::Always, new_rs, ReqStatus::Void
+	return pimpl_->actorf<ReqStatus>(
+		*this, a_lnk_status(), request, ReqReset::Always, new_rs, ReqStatus::Void
 	).value_or(ReqStatus::Error);
 }
 
 auto link::rs_reset_if_eq(Req request, ReqStatus self, ReqStatus new_rs) -> ReqStatus {
-	return actorf<ReqStatus>(
-		factor_, a_lnk_status(), request, ReqReset::IfEq, new_rs, self
+	return pimpl_->actorf<ReqStatus>(
+		*this, a_lnk_status(), request, ReqReset::IfEq, new_rs, self
 	).value_or(ReqStatus::Error);
 }
 
 auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) -> ReqStatus {
-	return actorf<ReqStatus>(
-		factor_, a_lnk_status(), request, ReqReset::IfNeq, new_rs, self
+	return pimpl_->actorf<ReqStatus>(
+		*this, a_lnk_status(), request, ReqReset::IfNeq, new_rs, self
 	).value_or(ReqStatus::Error);
 }
 
@@ -116,13 +114,13 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) -> Req
  *-----------------------------------------------------------------------------*/
 /// obtain link's human-readable name
 auto link::name() const -> std::string {
-	return actorf<std::string>(factor_, a_lnk_name()).value_or("");
+	return pimpl_->actorf<std::string>(*this, a_lnk_name()).value_or("");
 	//return pimpl_->name_;
 }
 
 // get link's object ID
 std::string link::oid() const {
-	return actorf<std::string>(factor_, a_lnk_oid())
+	return pimpl_->actorf<std::string>(*this, a_lnk_oid())
 		.value_or(nil_oid);
 	//return pimpl_->data()
 	//	.map([](const sp_obj& obj) { return obj ? obj->id() : nil_oid; })
@@ -130,7 +128,7 @@ std::string link::oid() const {
 }
 
 std::string link::obj_type_id() const {
-	return actorf<std::string>(factor_, a_lnk_otid())
+	return pimpl_->actorf<std::string>(*this, a_lnk_otid())
 		.value_or( type_descriptor::nil().name );
 	//return pimpl_->data()
 	//	.map([](const sp_obj& obj) { return obj ? obj->type_id() : type_descriptor::nil().name; })
@@ -138,15 +136,15 @@ std::string link::obj_type_id() const {
 }
 
 auto link::data_ex(bool wait_if_busy) const -> result_or_err<sp_obj> {
-	return actorf<result_or_errbox<sp_obj>>(factor_, a_lnk_data(), wait_if_busy);
+	return pimpl_->actorf<result_or_errbox<sp_obj>>(*this, a_lnk_data(), wait_if_busy);
 }
 
 auto link::data_node_ex(bool wait_if_busy) const -> result_or_err<sp_node> {
-	return actorf<result_or_errbox<sp_node>>(factor_, a_lnk_dnode(), wait_if_busy);
+	return pimpl_->actorf<result_or_errbox<sp_node>>(*this, a_lnk_dnode(), wait_if_busy);
 }
 
 auto link::modify_data(modificator_f m, bool silent) const -> error {
-	auto res = actorf<error::box>(factor_, a_apply(), std::move(m), silent);
+	auto res = pimpl_->actorf<error::box>(*this, a_apply(), std::move(m), silent);
 	return res ? error::unpack(res.value()) : res.error();
 }
 auto link::modify_data(launch_async_t, modificator_f m, bool silent) const -> void {
@@ -154,7 +152,7 @@ auto link::modify_data(launch_async_t, modificator_f m, bool silent) const -> vo
 }
 
 auto link::data_node_gid() const -> result_or_err<std::string> {
-	return actorf<result_or_errbox<std::string>>(factor_, a_node_gid());
+	return pimpl_->actorf<result_or_errbox<std::string>>(*this, a_node_gid());
 }
 
 auto link::is_node() const -> bool {
@@ -180,7 +178,7 @@ result_or_err<sp_node> link::propagate_handle() {
 
 auto link::data(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
-		actor_, def_timeout(true), high_priority,
+		actor(*this), def_timeout(true), high_priority,
 		[f = std::move(f), self = shared_from_this()](result_or_errbox<sp_obj> eobj) {
 			f(std::move(eobj), std::move(self));
 		},
@@ -190,8 +188,8 @@ auto link::data(process_data_cb f, bool high_priority) const -> void {
 
 auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
-		actor_, def_timeout(true), high_priority,
-		[f = std::move(f), self = shared_from_this()](result_or_errbox<sp_obj> eobj) {
+		actor(*this), def_timeout(true), high_priority,
+		[f = std::move(f), self = shared_from_this()](result_or_errbox<sp_node> eobj) {
 			f(std::move(eobj), std::move(self));
 		},
 		a_lnk_dnode(), true
