@@ -91,6 +91,13 @@ auto bind_reach_map(py::handle scope, std::string const &name, Args&&... args) {
 		return pval != m.end() ? py::cast(pval->second) : std::move(def_value);
 	}, "key"_a, "default"_a = py::none());
 
+	cl.def(py::self == py::self);
+	cl.def(py::self != py::self);
+	cl.def(py::self < py::self);
+	cl.def(py::self <= py::self);
+	cl.def(py::self > py::self);
+	cl.def(py::self >= py::self);
+
 	// make Python dictionary implicitly convertible to Map
 	py::implicitly_convertible<py::dict, Map>();
 	return cl;
