@@ -50,6 +50,7 @@ using Flags = link::Flags;
 using Req = link::Req;
 using ReqStatus = link::ReqStatus;
 using InsertPolicy = node::InsertPolicy;
+using EraseOpts = node::EraseOpts;
 
 /*-----------------------------------------------------------------------------
  *  node_actor
@@ -82,7 +83,6 @@ public:
 		sp_link L, std::size_t idx, const InsertPolicy pol, bool silent = false
 	) -> std::pair<size_t, bool>;
 
-	enum EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
 	auto erase(const link::id_type& key, EraseOpts opts = EraseOpts::Normal) -> size_t;
 	auto erase(std::size_t idx) -> size_t;
 	auto erase(const std::string& key, Key key_meaning = Key::Name) -> size_t;
@@ -105,5 +105,3 @@ inline auto spawn_nactor(std::shared_ptr<node_impl> nimpl, const std::string& gi
 }
 
 NAMESPACE_END(blue_sky::tree)
-
-BS_ALLOW_ENUMOPS(blue_sky::tree::node_actor::EraseOpts)

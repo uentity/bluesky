@@ -16,9 +16,11 @@
 
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
-#include <caf/actor_ostream.hpp>
+
+//#include <caf/actor_ostream.hpp>
 #include <caf/stateful_actor.hpp>
 #include <caf/others.hpp>
+
 #include <cereal/types/optional.hpp>
 
 #define DEBUG_ACTOR 0
@@ -185,10 +187,11 @@ auto link_retranslator(caf::stateful_actor<link_rsl_state>* self, caf::group nod
 		},
 
 		// retranslate events
-		[=](a_ack, a_lnk_rename, const std::string& new_name, const std::string& old_name) {
+		[=](a_ack, a_lnk_rename, std::string new_name, std::string old_name) {
 			sdbg("rename") << old_name << " -> " << new_name << std::endl;
 			self->send<high_prio>(
-				self->state.tgt_grp, a_ack(), a_lnk_rename(), self->state.src_id, new_name, old_name
+				self->state.tgt_grp, a_ack(), a_lnk_rename(), self->state.src_id,
+				std::move(new_name), std::move(old_name)
 			);
 		},
 
@@ -403,124 +406,132 @@ auto node_actor::erase(const std::string& key, Key key_meaning) -> size_t {
 ///////////////////////////////////////////////////////////////////////////////
 //  behavior
 //
-auto node_actor::make_behavior() -> behavior_type { return {
-	/// skip `bye` (should always come from myself)
-	[=](a_bye) {},
+auto node_actor::make_behavior() -> behavior_type {
+	using typed_behavior = typename node_impl::actor_type::behavior_type;
 
-	[=](a_node_gid) -> std::string {
-		return impl.gid();
-	},
+	return typed_behavior{
+		// 0.
+		[=](a_node_gid) -> std::string {
+			return impl.gid();
+		},
 
-	// propagate owner
-	[=](a_node_propagate_owner, bool deep) { impl.propagate_owner(deep); },
+		// 0, skip `bye` (should always come from myself)
+		[=](a_bye) {},
 
-	// get handle
-	[=](a_node_handle) { return impl.handle_; },
 
-	// get size
-	[=](a_node_size) { return impl.size(); },
+		// 2. propagate owner
+		[=](a_node_propagate_owner, bool deep) { impl.propagate_owner(deep); },
 
-	[=](a_lnk_find, const link::id_type& lid) -> sp_link {
-		if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>())
-			return *p;
-		return nullptr;
-	},
+		// 3. get handle
+		[=](a_node_handle) { return impl.handle_.lock(); },
 
-	// handle link rename
-	[=](a_ack, a_lnk_rename, link::id_type lid, const std::string&, const std::string&) {
-		adbg(this) << "{a_lnk_rename}" << std::endl;
-		impl.refresh(lid);
-	},
+		// 4. get size
+		[=](a_node_size) { return impl.size(); },
 
-	// track link status
-	[=](a_ack, a_lnk_status, const link::id_type& lid, Req req, ReqStatus new_s, ReqStatus) {
-		// refresh link if new data arrived
-		if(new_s == ReqStatus::OK) {
+		// 5.
+		[=](a_lnk_find, const link::id_type& lid) -> sp_link {
+			if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>())
+				return *p;
+			return nullptr;
+		},
+
+		// 6. handle link rename
+		[=](a_ack, a_lnk_rename, link::id_type lid, const std::string&, const std::string&) {
+			adbg(this) << "{a_lnk_rename}" << std::endl;
 			impl.refresh(lid);
-		}
-	},
+		},
 
-	// insert new link
-	[=](a_lnk_insert, sp_link L, InsertPolicy pol) {
-		using OptLID = std::optional<link::id_type>;
-		using R = std::pair<OptLID, bool>;
-
-		//return R{ {}, false };
-		auto res = insert(std::move(L), pol);
-		return R{
-			res.first != impl.end<Key::ID>() ? OptLID{(*res.first)->id()} : OptLID{},
-			res.second
-		};
-	},
-
-	// insert into specified position
-	[=](a_lnk_insert, sp_link L, std::size_t idx, InsertPolicy pol) {
-		adbg(this) << "{a_lnk_insert}" << std::endl;
-		return insert(std::move(L), idx, pol);
-	},
-
-	// insert bunch of links
-	[=](a_lnk_insert, std::vector<sp_link> Ls, InsertPolicy pol) {
-		size_t cnt = 0;
-		for(auto& L : Ls) {
-			if(insert(std::move(L), pol).second) ++cnt;
-		}
-		return cnt;
-	},
-
-	// ack on insert - reflect insert from sibling node actor
-	[=](a_ack, a_lnk_insert, link::id_type lid, size_t pos, InsertPolicy pol) {
-		adbg(this) << "{a_lnk_insert ack}" << std::endl;
-		if(auto S = current_sender(); S != this) {
-			request(caf::actor_cast<caf::actor>(S), impl.timeout_, a_lnk_find(), std::move(lid))
-			.then([=](sp_link L) {
-				// [NOTE] silent insert
-				insert(std::move(L), pos, pol, true);
-			});
-		}
-	},
-	// ack on move
-	[=](a_ack, a_lnk_insert, link::id_type lid, size_t to, size_t from) {
-		if(auto S = current_sender(); S != this) {
-			if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>()) {
-				insert(*p, to, InsertPolicy::AllowDupNames, true);
+		// 7. track link status
+		[=](a_ack, a_lnk_status, const link::id_type& lid, Req req, ReqStatus new_s, ReqStatus) {
+			// refresh link if new data arrived
+			if(new_s == ReqStatus::OK) {
+				impl.refresh(lid);
 			}
-		}
-	},
+		},
 
-	// erase link by ID with specified options
-	[=](a_lnk_erase, const link::id_type& lid, EraseOpts opts) {
-		return erase(lid, opts);
-	},
-	// all other erase overloads do normal erase
-	[=](a_lnk_erase, std::size_t idx) {
-		return erase(idx);
-	},
-	[=](a_lnk_erase, const std::string& key, Key key_meaning) {
-		return erase(key, key_meaning);
-	},
-	// erase bunch of links
-	[=](a_lnk_erase, const std::vector<link::id_type>& lids) {
-		size_t cnt = 0;
-		for(const auto& lid : lids)
-			cnt += erase(lid);
-		return cnt;
-	},
+		// 8. insert new link
+		[=](a_lnk_insert, sp_link L, InsertPolicy pol) -> node::actor_insert_status {
+			adbg(this) << "{a_lnk_insert}" << std::endl;
+			auto res = insert(std::move(L), pol);
+			return {
+				res.first != impl.end<Key::ID>() ?
+					std::distance(impl.begin<Key::AnyOrder>(), impl.project<Key::ID>(res.first)) :
+					std::optional<size_t>{},
+				res.second
+			};
+		},
 
-	// ack on erase - reflect erase from sibling node actor
-	[=](a_ack, a_lnk_erase, const std::vector<link::id_type>& lids, const std::vector<std::string>&) {
-		if(auto S = current_sender(); S != this && !lids.empty()) {
-			erase(lids.front(), EraseOpts::Silent);
-		}
-	},
+		// 9. insert into specified position
+		[=](a_lnk_insert, sp_link L, std::size_t idx, InsertPolicy pol) -> node::actor_insert_status {
+			adbg(this) << "{a_lnk_insert}" << std::endl;
+			return insert(std::move(L), idx, pol);
+		},
 
-	// apply custom order
-	[=](a_node_rearrange, const std::vector<std::size_t>& new_order) {
-		impl.rearrange<Key::AnyOrder>(new_order);
-	},
-	[=](a_node_rearrange, const std::vector<node::id_type>& new_order) {
-		impl.rearrange<Key::ID>(new_order);
-	},
-}; }
+		// 10. insert bunch of links
+		[=](a_lnk_insert, std::vector<sp_link> Ls, InsertPolicy pol) {
+			size_t cnt = 0;
+			for(auto& L : Ls) {
+				if(insert(std::move(L), pol).second) ++cnt;
+			}
+			return cnt;
+		},
+
+		// 11. ack on insert - reflect insert from sibling node actor
+		[=](a_ack, a_lnk_insert, link::id_type lid, size_t pos, InsertPolicy pol) {
+			adbg(this) << "{a_lnk_insert ack}" << std::endl;
+			if(auto S = current_sender(); S != this) {
+				request(caf::actor_cast<caf::actor>(S), impl.timeout, a_lnk_find(), std::move(lid))
+				.then([=](sp_link L) {
+					// [NOTE] silent insert
+					insert(std::move(L), pos, pol, true);
+				});
+			}
+		},
+		// 12. ack on move
+		[=](a_ack, a_lnk_insert, link::id_type lid, size_t to, size_t from) {
+			if(auto S = current_sender(); S != this) {
+				if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>()) {
+					insert(*p, to, InsertPolicy::AllowDupNames, true);
+				}
+			}
+		},
+
+		// 13. erase link by ID with specified options
+		[=](a_lnk_erase, const link::id_type& lid, EraseOpts opts) -> std::size_t {
+			return erase(lid, opts);
+		},
+		// 14. all other erase overloads do normal erase
+		[=](a_lnk_erase, std::size_t idx) {
+			return erase(idx);
+		},
+		// 15.
+		[=](a_lnk_erase, const std::string& key, Key key_meaning) {
+			return erase(key, key_meaning);
+		},
+		// 16. erase bunch of links
+		[=](a_lnk_erase, const std::vector<link::id_type>& lids) {
+			size_t cnt = 0;
+			for(const auto& lid : lids)
+				cnt += erase(lid);
+			return cnt;
+		},
+
+		// 17. ack on erase - reflect erase from sibling node actor
+		[=](a_ack, a_lnk_erase, const std::vector<link::id_type>& lids, const std::vector<std::string>&) {
+			if(auto S = current_sender(); S != this && !lids.empty()) {
+				erase(lids.front(), EraseOpts::Silent);
+			}
+		},
+
+		// 18. apply custom order
+		[=](a_node_rearrange, const std::vector<std::size_t>& new_order) {
+			impl.rearrange<Key::AnyOrder>(new_order);
+		},
+		// 19.
+		[=](a_node_rearrange, const std::vector<node::id_type>& new_order) {
+			impl.rearrange<Key::ID>(new_order);
+		},
+	}.unbox();
+}
 
 NAMESPACE_END(blue_sky::tree)

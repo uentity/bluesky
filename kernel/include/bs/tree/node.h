@@ -133,8 +133,65 @@ public:
 	template<Key K = Key::ID> using range = range_t<iterator<K>>;
 	template<Key K = Key::ID> using const_range = range_t<const_iterator<K>>;
 
+	/// links insertions policy
+	enum class InsertPolicy {
+		AllowDupNames = 0,
+		DenyDupNames = 1,
+		RenameDup = 2,
+		DenyDupOID = 4,
+		ReplaceDupOID = 8,
+		Merge = 16
+	};
+	/// link erase options (used for acctor)
+	enum class EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
+
+	using actor_insert_status = std::pair<std::optional<std::size_t>, bool>;
+
+	/// Interface of node actor, you can only send messages matching it
+	using actor_type = caf::typed_actor<
+		// get node's group ID
+		caf::replies_to<a_node_gid>::with<std::string>,
+		// propagate owner on child links
+		caf::reacts_to<a_node_propagate_owner, bool>,
+		// get node's handle
+		caf::replies_to<a_node_handle>::with<sp_link>,
+		// get number of leafs
+		caf::replies_to<a_node_size>::with<std::size_t>,
+
+		// find link by ID
+		caf::replies_to<a_lnk_find, id_type>::with<sp_link>,
+
+		// insert new link
+		caf::replies_to<a_lnk_insert, sp_link, InsertPolicy>::with<actor_insert_status>,
+		// insert into specified position
+		caf::replies_to<a_lnk_insert, sp_link, std::size_t, InsertPolicy>::with<actor_insert_status>,
+		// insert bunch of links
+		caf::replies_to<a_lnk_insert, std::vector<sp_link>, InsertPolicy>::with<std::size_t>,
+
+		// erase link by ID with specified options
+		caf::replies_to<a_lnk_erase, id_type, EraseOpts>::with<std::size_t>,
+		// erase link at specified position
+		caf::replies_to<a_lnk_erase, std::size_t>::with<std::size_t>,
+		// erase link with given string name
+		caf::replies_to<a_lnk_erase, std::string, Key>::with<std::size_t>,
+		// erase bunch of links
+		caf::replies_to<a_lnk_erase, std::vector<id_type>>::with<std::size_t>,
+
+		// apply custom order
+		caf::reacts_to<a_node_rearrange, std::vector<std::size_t>>,
+		caf::reacts_to<a_node_rearrange, std::vector<id_type>>
+	>;
+
 public:
 	/// Main API
+
+	// return node's actor handle
+	auto actor() const {
+		return caf::actor_cast<actor_type>(actor_);
+	}
+	static auto actor(const node& N) {
+		return N.actor();
+	}
 
 	/// number of elements in this node
 	std::size_t size() const;
@@ -191,23 +248,14 @@ public:
 	range<Key::OID>  equal_range_oid(const std::string& oid) const;
 	range<Key::Type> equal_type(const std::string& type_id) const;
 
-	/// links insertions policy
-	enum class InsertPolicy {
-		AllowDupNames = 0,
-		DenyDupNames = 1,
-		RenameDup = 2,
-		DenyDupOID = 4,
-		ReplaceDupOID = 8,
-		Merge = 16
-	};
 	/// leafs insertion
-	insert_status<Key::ID> insert(sp_link l, InsertPolicy pol = InsertPolicy::AllowDupNames);
+	insert_status<Key::AnyOrder> insert(sp_link l, InsertPolicy pol = InsertPolicy::AllowDupNames);
 	/// insert link just before given position
 	insert_status<Key::AnyOrder> insert(sp_link l, iterator<> pos, InsertPolicy pol = InsertPolicy::AllowDupNames);
 	/// insert link at given index
 	insert_status<Key::AnyOrder> insert(sp_link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames);
 	/// auto-create and insert hard link that points to object
-	insert_status<Key::ID> insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames);
+	insert_status<Key::AnyOrder> insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames);
 	/// insert links from given container
 	/// [NOTE] container elements will be moved from passed container!
 	template<
@@ -297,8 +345,6 @@ public:
 	/// if deep is true, correct owners in all subtree
 	void propagate_owner(bool deep = false);
 
-	/// obtain node's actor
-	auto actor() const -> const caf::actor&;
 	/// obtain node's group ID
 	auto gid() const -> std::string;
 
@@ -321,8 +367,6 @@ private:
 	std::shared_ptr<node_impl> pimpl_;
 	// strong ref to node's actor
 	caf::actor actor_;
-	// make blocking requests as function call
-	mutable caf::function_view<caf::actor> factor_;
 
 	// set node's handle
 	void set_handle(const sp_link& handle);
@@ -362,4 +406,5 @@ NAMESPACE_END(blue_sky::tree)
 
 // allow bitwise operations for InsertPoiicy enum class
 BS_ALLOW_ENUMOPS(blue_sky::tree::node::InsertPolicy)
+BS_ALLOW_ENUMOPS(blue_sky::tree::node::EraseOpts)
 

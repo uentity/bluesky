@@ -9,19 +9,25 @@
 #pragma once
 
 #include <bs/log.h>
+#include <bs/actor_common.h>
 #include <bs/tree/node.h>
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
+
+#include <boost/uuid/uuid_hash.hpp>
+
+#include <cereal/types/vector.hpp>
+
+#include <caf/scoped_actor.hpp>
 
 #include <set>
 #include <unordered_map>
 #include <algorithm>
 
-#include <boost/uuid/uuid_hash.hpp>
-
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;
 
+using id_type = link::id_type;
 using links_container = node::links_container;
 using Key = node::Key;
 template<Key K> using iterator = typename node::iterator<K>;
@@ -46,30 +52,67 @@ using node_impl_mutex = std::shared_mutex;
  *  node_impl
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API node_impl : public bs_detail::sharded_same_mutex<node_impl_mutex, 2> {
-	struct metadata_tag {};
-	struct full_tag {};
-
 public:
 	friend class node;
 
 	// lock granularity
 	enum { Metadata, Links };
 
-	// timeout for most queries
-	caf::duration timeout_;
-	// leafs data
+	// leafs
 	links_container links_;
 	// metadata
 	std::weak_ptr<link> handle_;
 	std::vector<std::string> allowed_otypes_;
+
+	// timeout for most queries
+	const caf::duration timeout;
+	// scoped actor for requests
+	caf::scoped_actor factor;
+
+	// local node group
 	caf::group self_grp;
+
+	// append private behavior to public iface
+	using actor_type = node::actor_type::extend<
+        // terminate actor
+		caf::reacts_to<a_bye>,
+		// track link rename
+		caf::reacts_to<a_ack, a_lnk_rename, id_type, std::string, std::string>,
+		// track link status
+		caf::reacts_to<a_ack, a_lnk_status, id_type, link::Req, link::ReqStatus, link::ReqStatus>,
+		// ack on insert - reflect insert from sibling node actor
+		caf::reacts_to<a_ack, a_lnk_insert, id_type, size_t, InsertPolicy>,
+		// ack on link move
+		caf::reacts_to<a_ack, a_lnk_insert, id_type, size_t, size_t>,
+		// ack on link erase from sibling node
+		caf::reacts_to<a_ack, a_lnk_erase, std::vector<id_type>, std::vector<std::string>>
+	>;
+
+	static auto actor(const node& N) {
+		return caf::actor_cast<actor_type>(N.actor_);
+	}
+
+	// make request to given link L
+	template<typename R, typename... Args>
+	auto actorf(const node& N, Args&&... args) {
+		return blue_sky::actorf<R>(
+			factor, caf::actor_cast<actor_type>(N.actor_), timeout, std::forward<Args>(args)...
+		);
+	}
+	// same as above but with configurable timeout
+	template<typename R, typename... Args>
+	auto actorf(const node& N, timespan timeout, Args&&... args) {
+		return blue_sky::actorf<R>(
+			factor, caf::actor_cast<actor_type>(N.actor_), timeout, std::forward<Args>(args)...
+		);
+	}
+
+	virtual auto spawn_actor(std::shared_ptr<node_impl> nimpl, const std::string& gid) const -> caf::actor;
 
 	// default & copy ctor
 	node_impl(node* super);
 	node_impl(const node_impl&, node* super);
 	node_impl(node_impl&&, node* super);
-
-	virtual auto spawn_actor(std::shared_ptr<node_impl> nimpl, const std::string& gid) const -> caf::actor;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  search

@@ -123,11 +123,6 @@ public:
 		caf::replies_to<a_apply, modificator_f, bool>::with<error::box>
 	>;
 
-	// return link's actor handle
-	template<typename ActorType = actor_type>
-	auto actor() const {
-		return caf::actor_cast<ActorType>(actor_);
-	}
 	// extract actor type from link
 	template<typename Link>
 	static auto actor(const Link& L) {
@@ -254,6 +249,12 @@ protected:
 
 	/// deny making link copies
 	link(const link&) = delete;
+
+	/// return link's typed actor handle
+	template<typename ActorType = actor_type>
+	auto actor() const {
+		return caf::actor_cast<ActorType>(actor_);
+	}
 
 	/// maually start internal actor (if not started already)
 	auto start_engine() -> bool;

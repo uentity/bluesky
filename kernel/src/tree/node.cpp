@@ -25,7 +25,6 @@ NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
 
 const auto uuid_from_str = boost::uuids::string_generator{};
-using EraseOpts = node_actor::EraseOpts;
 
 /*-----------------------------------------------------------------------------
  *  node
@@ -58,13 +57,10 @@ auto node::start_engine(const std::string& gid) -> bool {
 	if(!actor_) {
 		// generate random UUID for actor groud if passed GID is empty
 		actor_ = pimpl_->spawn_actor(pimpl_, gid.empty() ? to_string(uuid_gen()) : gid);
-		factor_ = caf::function_view{ actor_, def_timeout(true) };
 		return true;
 	}
 	return false;
 }
-
-auto node::actor() const -> const caf::actor& { return actor_; }
 
 auto node::gid() const -> std::string { return pimpl_->gid(); }
 
@@ -214,25 +210,24 @@ auto node::equal_type(const std::string& type_id) const -> range<Key::Type> {
 ///////////////////////////////////////////////////////////////////////////////
 //  insert
 //
-auto node::insert(sp_link l, InsertPolicy pol) -> insert_status<Key::ID> {
-	using R = insert_status<Key::ID>;
-	using AR = std::pair<std::optional<link::id_type>, bool>;
+auto node::insert(sp_link l, InsertPolicy pol) -> insert_status<Key::AnyOrder> {
+	using R = insert_status<Key::AnyOrder>;
+	using AR = actor_insert_status;
 
-	return actorf<AR>(factor_, a_lnk_insert(), std::move(l), pol)
+	return pimpl_->actorf<AR>(*this, a_lnk_insert(), std::move(l), pol)
 		.and_then([=](const AR& r) -> result_or_err<R> {
-			auto pos = r.first ? pimpl_->find<Key::ID, Key::ID>(*r.first) : pimpl_->end<Key::ID>();
-			return R{ std::move(pos), r.second };
+			return R{ std::next(pimpl_->begin(), r.first ? *r.first : pimpl_->size()), r.second };
 		})
-		.value_or(R{ pimpl_->end<Key::ID>(), false });
+		.value_or(R{ pimpl_->end<Key::AnyOrder>(), false });
 }
 
 auto node::insert(sp_link l, std::size_t idx, InsertPolicy pol) -> insert_status<Key::AnyOrder> {
 	using R = insert_status<Key::AnyOrder>;
-	using AR = std::pair<std::size_t, bool>;
+	using AR = actor_insert_status;
 
-	return actorf<AR>(factor_, a_lnk_insert(), std::move(l), idx, pol)
+	return pimpl_->actorf<AR>(*this, a_lnk_insert(), std::move(l), idx, pol)
 		.and_then([=](const AR& r) -> result_or_err<R> {
-			return R{ std::next(begin<Key::AnyOrder>(), r.first), r.second };
+			return R{ std::next(pimpl_->begin(), r.first ? *r.first : pimpl_->size()), r.second };
 		})
 		.value_or(R{ end<Key::AnyOrder>(), false });
 }
@@ -241,7 +236,7 @@ auto node::insert(sp_link l, iterator<> pos, InsertPolicy pol) -> insert_status<
 	return insert(std::move(l), (size_t)std::distance(begin<Key::AnyOrder>(), pos), pol);
 }
 
-auto node::insert(std::string name, sp_obj obj, InsertPolicy pol) -> insert_status<Key::ID> {
+auto node::insert(std::string name, sp_obj obj, InsertPolicy pol) -> insert_status<Key::AnyOrder> {
 	return insert(
 		std::make_shared<hard_link>(std::move(name), std::move(obj)), pol
 	);
@@ -251,27 +246,27 @@ auto node::insert(std::string name, sp_obj obj, InsertPolicy pol) -> insert_stat
 //  erase
 //
 auto node::erase(const std::size_t idx) -> size_t {
-	return actorf<size_t>(factor_, a_lnk_erase(), idx).value_or(0);
+	return pimpl_->actorf<size_t>(*this, a_lnk_erase(), idx).value_or(0);
 }
 
 auto node::erase(const id_type& lid) -> size_t {
-	return actorf<size_t>(factor_, a_lnk_erase(), lid, EraseOpts::Normal).value_or(0);
+	return pimpl_->actorf<size_t>(*this, a_lnk_erase(), lid, EraseOpts::Normal).value_or(0);
 }
 
 auto node::erase(const std::string& key, Key key_meaning) -> size_t {
-	return actorf<size_t>(factor_, a_lnk_erase(), key, key_meaning).value_or(0);
+	return pimpl_->actorf<size_t>(*this, a_lnk_erase(), key, key_meaning).value_or(0);
 }
 
 auto node::erase(const range<Key::ID>& r) -> size_t {
-	return actorf<size_t>(factor_, a_lnk_erase(), r.export_lids()).value_or(0);
+	return pimpl_->actorf<size_t>(*this, a_lnk_erase(), r.export_lids()).value_or(0);
 }
 
 auto node::erase(const range<Key::Name>& r) -> size_t {
-	return actorf<size_t>(factor_, a_lnk_erase(), r.export_lids()).value_or(0);
+	return pimpl_->actorf<size_t>(*this, a_lnk_erase(), r.export_lids()).value_or(0);
 }
 
 auto node::erase(const range<Key::OID>& r) -> size_t {
-	return actorf<size_t>(factor_, a_lnk_erase(), r.export_lids()).value_or(0);
+	return pimpl_->actorf<size_t>(*this, a_lnk_erase(), r.export_lids()).value_or(0);
 }
 
 auto node::clear() -> void {

@@ -15,6 +15,7 @@
 #include <bs/serialize/tree.h>
 #include "radio_subsyst.h"
 
+#include <caf/function_view.hpp>
 #include <caf/actor_system_config.hpp>
 #include <caf/event_based_actor.hpp>
 #include <caf/typed_event_based_actor.hpp>

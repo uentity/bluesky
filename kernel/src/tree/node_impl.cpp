@@ -20,15 +20,16 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 
 //static boost::uuids::string_generator uuid_from_str;
-using EraseOpts = node_actor::EraseOpts;
+using EraseOpts = node::EraseOpts;
 
 node_impl::node_impl(node* super)
-	: timeout_(def_timeout()), super_(super)
+	: timeout(def_timeout(true)), factor(kernel::radio::system()), super_(super)
 {}
 
 // implement shallow links copy ctor
 node_impl::node_impl(const node_impl& rhs, node* super)
-	: timeout_(rhs.timeout_), allowed_otypes_(rhs.allowed_otypes_), super_(super)
+	: allowed_otypes_(rhs.allowed_otypes_),
+	timeout(rhs.timeout), factor(kernel::radio::system()), super_(super)
 {
 	for(const auto& plink : rhs.links_.get<Key_tag<Key::AnyOrder>>()) {
 		// non-deep clone can result in unconditional moving nodes from source
@@ -39,9 +40,10 @@ node_impl::node_impl(const node_impl& rhs, node* super)
 }
 
 node_impl::node_impl(node_impl&& rhs, node* super)
-	: timeout_(std::move(rhs.timeout_)), links_(std::move(rhs.links_)),
+	: links_(std::move(rhs.links_)),
 	handle_(std::move(rhs.handle_)), allowed_otypes_(std::move(rhs.allowed_otypes_)),
-	self_grp(std::move(rhs.self_grp)), super_(super)
+	timeout(std::move(rhs.timeout)), factor(kernel::radio::system()), self_grp(std::move(rhs.self_grp)),
+	super_(super)
 {}
 
 auto node_impl::spawn_actor(std::shared_ptr<node_impl> nimpl, const std::string& gid) const -> caf::actor {

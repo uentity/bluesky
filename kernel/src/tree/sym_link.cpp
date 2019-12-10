@@ -59,7 +59,7 @@ struct sym_link_actor : public link_actor {
 	-> std::enable_if_t<tl::detail::is_expected<R>::value, caf::response_promise> {
 		auto res = make_response_promise<R>();
 		if(auto p = pointee())
-			res.delegate(p.value()->actor(), std::forward<Args>(args)...);
+			res.delegate(link::actor(*p.value()), std::forward<Args>(args)...);
 		else
 			res.deliver(R{ tl::unexpect, p.error() });
 		return res;
@@ -70,7 +70,7 @@ struct sym_link_actor : public link_actor {
 	-> std::enable_if_t<!tl::detail::is_expected<R>::value, caf::response_promise> {
 		auto res = make_response_promise<R>();
 		if(auto p = pointee())
-			res.delegate(p.value()->actor(), std::forward<Args>(args)...);
+			res.delegate(link::actor(*p.value()), std::forward<Args>(args)...);
 		else
 			res.deliver(std::move(errval));
 		return res;

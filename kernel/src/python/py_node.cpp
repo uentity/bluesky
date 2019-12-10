@@ -221,7 +221,7 @@ void py_bind_node(py::module& m) {
 		}, "link"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert given link")
 		// insert link at given index
 		.def("insert", [](node& N, const sp_link& l, const long idx, InsertPolicy pol = InsertPolicy::AllowDupNames) {
-			return N.insert(l, find_by_idx(N, idx, true), pol).second;
+			return N.insert(l, idx, pol).second;
 		}, "link"_a, "idx"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert link at given index")
 		// insert hard link to given object
 		.def("insert", [](node& N, std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) {
