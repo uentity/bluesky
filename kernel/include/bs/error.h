@@ -71,7 +71,7 @@ public:
 	static auto register_category(std::error_category const* cat) -> void;
 
 	/// serializable type that can carry error information and later reconstruct packed error
-	struct box {
+	struct BS_API box {
 		int ec;
 		std::string message, domain;
 
