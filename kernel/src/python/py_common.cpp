@@ -60,9 +60,10 @@ type_v test_type_v(const type_v& v) {
 
 auto pyinfinte() -> py::object {
 	static auto value = [] {
-		// get 'bs.infinite' value
-		auto km = *static_cast<py::module*>(kernel::detail::python_subsyst_impl::self().py_kmod());
-		return km.attr("infinite");
+		// return `datetime.timedelta.max` value
+		auto dtm = py::module::import("datetime");
+		auto py_dt = dtm.attr("timedelta");
+		return py_dt.attr("max");
 	}();
 
 	return value;
@@ -159,9 +160,7 @@ void py_bind_common(py::module& m) {
 	bind_reach_map<prop::propbook_i>(m, "propbook_i", py::module_local(false));
 
 	// add marker for infinite timespan
-	auto dtm = py::module::import("datetime");
-	auto py_dt = dtm.attr("timedelta");
-	m.attr("infinite") = py_dt.attr("max");
+	m.attr("infinite") = pyinfinte();
 }
 
 NAMESPACE_END(python)
