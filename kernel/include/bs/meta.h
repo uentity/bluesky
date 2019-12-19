@@ -25,4 +25,8 @@ constexpr decltype(auto) forward_as(typename std::remove_reference_t<T>& value) 
 	return static_cast<U&&>(value);
 }
 
+/// helper for visitors overloading
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 } // eof blue_sky::meta
