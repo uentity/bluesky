@@ -75,7 +75,7 @@ public:
 		return tl::make_unexpected(error{Error::NoFusionBridge});
 	}
 
-	// implement populate with specified child type
+	// populate with specified child type
 	auto populate(const std::string& child_type_id = "", bool wait_if_busy = true)
 	-> result_or_err<sp_node> {
 		// assume that if `child_type_id` is nonepmty,
@@ -106,7 +106,7 @@ struct BS_HIDDEN_API fusion_link_actor : public link_actor {
 	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override {
 		request_impl(
 			*this, Req::Data, opts | ReqOpts::HasDataCache | ReqOpts::Detached,
-			[Limpl = pimpl_] { return std::static_pointer_cast<fusion_link_impl>(Limpl)->populate(); },
+			[Limpl = pimpl_] { return std::static_pointer_cast<fusion_link_impl>(Limpl)->data(); },
 			std::move(cb)
 		);
 	}
