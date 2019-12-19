@@ -20,6 +20,7 @@
 #include <fmt/format.h>
 
 namespace {
+inline constexpr auto  BACKTRACE_WITH_SOURCE_LINES = false;
 
 int sys_get_backtrace(void **backtrace_, int size_) {
 	return backtrace (backtrace_, size_);
@@ -48,6 +49,7 @@ std::string exec(const std::string& cmd) {
 std::vector<std::string> sys_demangled_backtrace_names(void** callstack, char** symbollist, int size, int skip = 1) {
 	// result strings will go here
 	std::vector<std::string> res;
+	res.reserve(size - skip);
 
 	// allocate string which will be filled with the demangled function name
 	size_t funcnamesize = 512;
@@ -77,22 +79,26 @@ std::vector<std::string> sys_demangled_backtrace_names(void** callstack, char** 
 			*end_offset = '\0';
 
 			// mangled name is now in [begin_name, begin_offset) and caller
-			// offset in [begin_offset, end_offset). now apply
-			// __cxa_demangle():
+			// offset in [begin_offset, end_offset),
+			// now apply __cxa_demangle():
 			int status;
+			funcnamesize = 512;
 			char* ret = abi::__cxa_demangle(begin_name, funcname, &funcnamesize, &status);
 			if(status == 0) begin_name = ret; // use possibly realloc()-ed string
 
 			// print possibly demangled backtrace line
 			res.push_back(fmt::format("{: <3} {} : {} +{}", i, symbollist[i], begin_name, begin_offset));
-			// add source line info
-			// [NOTE] `DL_info` is required to obtain module start address and calc symbol offset
-			// for `addr2line`
-			Dl_info info;
-			if(dladdr(callstack[i], &info)) {
-				res.push_back("    => " + exec(
-					fmt::format("addr2line -i -p -e {} {:p}", symbollist[i], (void*)((char*)callstack[i] - (char*)info.dli_fbase))
-				));
+
+			if constexpr(BACKTRACE_WITH_SOURCE_LINES) {
+				// add source line info
+				// [NOTE] `DL_info` is required to obtain module start address and calc symbol offset
+				// for `addr2line`
+				Dl_info info;
+				if(dladdr(callstack[i], &info)) {
+					res.push_back("    => " + exec(
+						fmt::format("addr2line -i -p -e {} {:p}", symbollist[i], (void*)((char*)callstack[i] - (char*)info.dli_fbase))
+					));
+				}
 			}
 		}
 		else {
