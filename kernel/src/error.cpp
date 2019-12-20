@@ -19,7 +19,7 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include <cstring>
+#include <ostream>
 #include <unordered_map>
 #include <mutex>
 
@@ -106,49 +106,59 @@ std::error_code make_error_code(Error e) {
 /*-----------------------------------------------------------------------------
  *  error implementation
  *-----------------------------------------------------------------------------*/
-error::error(IsQuiet quiet, std::string message, std::error_code ec)
-	: runtime_error([ec_msg = ec.message(), msg = std::move(message)]() mutable {
-		auto res = std::move(ec_msg);
-		if(!msg.empty()) {
-			res += res.empty() ? "|> " : " |> ";
-			res += std::move(msg);
-		}
-		return res;
-	}()),
-	code(ec == Error::Undefined ? (quiet == IsQuiet::Yes ? Error::OK : Error::Happened) : std::move(ec))
+using opt_rterr = std::optional<std::runtime_error>;
+error::error(IsQuiet quiet, std::string_view message, std::error_code ec) noexcept :
+	code(ec == Error::Undefined ?
+		make_error_code(quiet == IsQuiet::Yes ? Error::OK : Error::Happened) :
+		std::move(ec)
+	),
+	info(message.size() ? opt_rterr{message.begin()} : opt_rterr{})
 {
 	if(quiet == IsQuiet::No) dump();
 }
 
-error::error(IsQuiet quiet, std::error_code ec) : error(quiet, "", std::move(ec)) {}
+error::error(IsQuiet quiet, std::error_code ec) noexcept
+	: code(std::move(ec))
+{
+	if(quiet == IsQuiet::No) dump();
+}
 
-error::error(IsQuiet quiet, std::string message, int ec, std::string_view cat_name)
-	: error(quiet, std::move(message), ECR.make_error_code(ec, cat_name))
+error::error(IsQuiet quiet, const std::system_error& er) noexcept
+	: code(er.code()), info(er.what())
+{
+	if(quiet == IsQuiet::No) dump();
+}
+
+error::error(IsQuiet quiet, std::string_view message, int ec, std::string_view cat_name) noexcept
+	: error(quiet, message, ECR.make_error_code(ec, cat_name))
 {}
 
-error::error(IsQuiet quiet, int ec, std::string_view cat_name)
-	: error(quiet,
-		ECR.lookup_category(cat_name) ? "" : fmt::format("Unknown error from category '{}'", cat_name),
-		ECR.make_error_code(ec, cat_name)
-	)
-{}
-
-error::error(IsQuiet quiet, const std::system_error& er)
-	: runtime_error(er.what()), code(er.code())
+error::error(IsQuiet quiet, int ec, std::string_view cat_name) noexcept
+	: error(quiet, ECR.make_error_code(ec, cat_name))
 {}
 
 // [NOTE] unpacking is always quiet
-error::error(IsQuiet quiet, box b) : error(IsQuiet::Yes, std::move(b.message), b.ec, b.domain) {}
+error::error(IsQuiet quiet, box b) noexcept
+	: error(
+		IsQuiet::Yes, b.message ? std::string_view{*b.message} : std::string_view{},
+		ECR.make_error_code(b.ec, b.domain)
+	)
+{}
 
-error::error(success_tag) : error(IsQuiet::Yes, Error::OK) {}
-
-// copy & move ctors are default
-error::error(const error& rhs) noexcept = default;
-error::error(error&& rhs) noexcept = default;
+error::error(success_tag) noexcept : error(IsQuiet::Yes, Error::OK) {}
 
 // put passed error_category into registry
 auto error::register_category(std::error_category const* cat) -> void {
 	ECR.register_category(cat);
+}
+
+auto error::what() const -> std::string {
+	std::string res = code.message();
+	if(info) {
+		res += res.empty() ? "|> " : " |> ";
+		res += info->what();
+	}
+	return res;
 }
 
 const char* error::domain() const noexcept {
@@ -156,15 +166,10 @@ const char* error::domain() const noexcept {
 }
 
 const char* error::message() const noexcept {
-	if(ECR.lookup_sys_category(domain()))
-		return what();
-	// custom message is tail part delimited by semicolon and space
-	else if(auto pos = strstr(what(), "|>"); pos)
-		return pos + 3;
-	return "";
+	return info ? info->what() : "";
 }
 
-bool error::ok() const {
+bool error::ok() const noexcept {
 	static const auto tree_extra_ok = tree::make_error_code(tree::Error::OKOK);
 
 	return !(bool)code || (code == tree_extra_ok);
@@ -179,10 +184,10 @@ BS_API std::string to_string(const error& er) {
 }
 
 auto error::pack() const -> box {
-	return { code.value(), message(), domain() };
+	return *this;
 }
 
-auto error::unpack(box b) -> error {
+auto error::unpack(box b) noexcept -> error {
 	return error{ IsQuiet::Yes, std::move(b) };
 }
 
@@ -202,12 +207,14 @@ BS_API std::ostream& operator <<(std::ostream& os, const error& ec) {
 //  error::box
 //
 
-error::box::box(const error& er) {
-	*this = er.pack();
+error::box::box(const error& er)
+	: ec(er.code.value()), domain(er.domain())
+{
+	if(er.info) message = er.info->what();
 }
 
-error::box::box(int ec_, std::string message_, std::string domain_)
-	: ec(ec_), message(std::move(message_)), domain(std::move(domain_))
+error::box::box(int ec_, std::string domain_, std::optional<std::string> message_)
+	: ec(ec_), domain(std::move(domain_)), message(std::move(message_))
 {}
 
 ///////////////////////////////////////////////////////////////////////////////

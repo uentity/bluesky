@@ -6,24 +6,26 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include "common.h"
 #include <tl/expected.hpp>
-#include <exception>
+
+#include <optional>
 #include <system_error>
-#include <ostream>
+#include <iosfwd>
 
 #define BS_REGISTER_ERROR_ENUM(E) \
 namespace std { template<> struct is_error_code_enum< E > : true_type {}; }
 
 #define EVAL if(auto er = ::blue_sky::error::eval(
 #define EVAL_SAFE if(auto er = ::blue_sky::error::eval_safe(
+#define EVAL_SAFE_QUIET if(auto er = ::blue_sky::error::eval_safe_quiet(
 #define RETURN_EVAL_ERR )) return er;
 
 #define SCOPE_EVAL if(auto er = ::blue_sky::error::eval([&] {
 #define SCOPE_EVAL_SAFE if(auto er = ::blue_sky::error::eval_safe([&] {
+#define SCOPE_EVAL_SAFE_QUIET if(auto er = ::blue_sky::error::eval_safe_quiet([&] {
 #define RETURN_SCOPE_ERR })) return er;
 
 /*-----------------------------------------------------------------------------
@@ -48,7 +50,7 @@ NAMESPACE_BEGIN(blue_sky)
 /*-----------------------------------------------------------------------------
  *  error class decalration
  *-----------------------------------------------------------------------------*/
-class BS_API error : public std::runtime_error {
+class BS_API error {
 public:
 	// indicates that no error happened
 	struct success_tag {};
@@ -73,11 +75,12 @@ public:
 	/// serializable type that can carry error information and later reconstruct packed error
 	struct BS_API box {
 		int ec;
-		std::string message, domain;
+		std::string domain;
+		std::optional<std::string> message;
 
 		box() = default;
 		box(const error& er);
-		box(int ec, std::string message, std::string domain);
+		box(int ec, std::string domain, std::optional<std::string> message);
 	};
 
 private:
@@ -95,57 +98,55 @@ private:
 public:
 	/// code of error is stored here
 	const std::error_code code;
+	/// optional runtime error that carries message
+	std::optional<std::runtime_error> info;
 
 	/// perfect forwarding ctor - construct 'non-quiet' error with Error::Happened code by default
 	template<
 		typename... Ts,
 		typename = std::enable_if_t< allow_forward<Ts...>::value >
 	>
-	error(Ts&&... args) : error(IsQuiet::No, std::forward<Ts>(args)...) {}
-
-	/// copy & move ctors - must not throw
-	error(const error& rhs) noexcept;
-	error(error&& rhs) noexcept;
-	~error() noexcept {}
-
+	error(Ts&&... args) noexcept : error(IsQuiet::No, std::forward<Ts>(args)...) {}
 	/// construct quiet error with OK status
-	error(success_tag);
+	error(success_tag) noexcept;
+
+	/// copy & move ctors
+	error(const error& rhs) = default;
+	error(error&& rhs) = default;
 
 	/// construct quiet error that don't get logged in constructor
 	/// quiet error can be treated like operation result
 	/// will construct error_code with Error::OK status by default
 	template<typename... Ts>
-	static error quiet(Ts&&... args) {
+	static auto quiet(Ts&&... args) noexcept -> error {
 		return error(IsQuiet::Yes, std::forward<Ts>(args)...);
 	}
 
 	/// returns error message
-	using std::runtime_error::what;
+	auto what() const -> std::string;
 
 	/// get error domain (category name of contained error_code)
-	const char* domain() const noexcept;
+	auto domain() const noexcept -> const char*;
 
 	/// returns custom error message that was passed to constructor
-	const char* message() const noexcept;
+	auto message() const noexcept -> const char*;
 
 	/// write error to kernel log
-	void dump() const;
+	auto dump() const -> void;
 
 	/// returns true if no error happened
 	/// equal to !(bool)code
-	bool ok() const;
+	auto ok() const noexcept -> bool;
 	/// converison to bool returns if error happened (not ok)
-	operator bool() const {
-		return !ok();
-	}
+	operator bool() const noexcept { return !ok(); }
 
 	/// pack error to serializable box
 	auto pack() const -> box;
 	/// unpack error from box
-	static auto unpack(box b) -> error;
+	static auto unpack(box b) noexcept -> error;
 
 	/// eval errors of functions sequence
-	static inline auto eval() -> error {
+	static inline auto eval() noexcept -> error {
 		return success_tag{};
 	}
 
@@ -191,13 +192,14 @@ public:
 
 	// same as `eval()` but also convert exceptions to errors
 	template<typename F, typename... Fs>
-	static auto eval_safe(F&& f, Fs&&... fs) noexcept -> error {
-		try {
-			return eval(std::forward<F>(f), std::forward<Fs>(fs)...);
-		}
-		catch(const std::system_error& e) { return {e}; }
-		catch(const std::exception& e) { return {e.what()}; }
-		catch(...) { return {}; }
+	static auto eval_safe(F&& f, Fs&&... fs) noexcept {
+		return eval_safe_impl(IsQuiet::No, std::forward<F>(f), std::forward<Fs>(fs)...);
+	}
+	// produces quiet errors
+	// can be used were skipping smth in case of error is normal
+	template<typename F, typename... Fs>
+	static auto eval_safe_quiet(F&& f, Fs&&... fs) noexcept {
+		return eval_safe_impl(IsQuiet::Yes, std::forward<F>(f), std::forward<Fs>(fs)...);
 	}
 
 	/// enable stream printing facility
@@ -208,22 +210,32 @@ public:
 
 private:
 	/// construct from message and error code
-	explicit error(IsQuiet, std::string message, std::error_code = Error::Undefined);
+	explicit error(IsQuiet, std::string_view message, std::error_code = Error::Undefined) noexcept;
 	/// construct from error code solely
-	explicit error(IsQuiet, std::error_code = Error::Undefined);
+	explicit error(IsQuiet, std::error_code = Error::Undefined) noexcept;
 	/// construct from message, int code and possible registered category name
-	explicit error(IsQuiet, std::string message, int err_code, std::string_view cat_name = "");
+	explicit error(IsQuiet, std::string_view message, int err_code, std::string_view cat_name = "") noexcept;
 	/// construct from int error code and possible registered category name
-	explicit error(IsQuiet, int err_code, std::string_view cat_name = "");
+	explicit error(IsQuiet, int err_code, std::string_view cat_name = "") noexcept;
 	// construct from system_error that already carries error code
-	explicit error(IsQuiet, const std::system_error& er);
+	explicit error(IsQuiet, const std::system_error& er) noexcept;
 	/// unpacking error from box is always quiet
-	explicit error(IsQuiet, box b);
+	explicit error(IsQuiet, box b) noexcept;
+
+	template<typename F, typename... Fs>
+	static auto eval_safe_impl(IsQuiet q, F&& f, Fs&&... fs) noexcept -> error {
+		try {
+			return eval(std::forward<F>(f), std::forward<Fs>(fs)...);
+		}
+		catch(const std::system_error& e) { return error{q, e}; }
+		catch(const std::exception& e) { return error{q, e.what()}; }
+		catch(...) { return error{q, Error::Happened}; }
+	}
 };
 
 /// produces quiet error from given params
 template<typename... Args>
-inline auto success(Args&&... args) -> error {
+inline auto success(Args&&... args) noexcept -> error {
 	return error::quiet(std::forward<Args>(args)...);
 }
 
@@ -235,4 +247,3 @@ template<class T> using result_or_err = tl::expected<T, error>;
 template<class T> using result_or_errbox = tl::expected<T, error::box>;
 
 NAMESPACE_END(blue_sky)
-
