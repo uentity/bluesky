@@ -13,6 +13,7 @@
 #include "base_types.h"
 #include "boost_uuid.h"
 
+#include <cereal/types/optional.hpp>
 #include <cereal/archives/portable_binary.hpp>
 #include <boost/interprocess/streams/vectorstream.hpp>
 
@@ -44,7 +45,7 @@ inspect(Inspector& f, T& x) {
 		cereal::PortableBinaryOutputArchive A(ss);
 		A(x);
 	}
-	catch(cereal::Exception&) {
+	catch(const cereal::Exception&) {
 		return sec::state_not_serializable;
 	}
 	return f.apply_raw(ss.vector().size()*sizeof(char), (void*)ss.vector().data());
@@ -69,7 +70,7 @@ inspect(Inspector& f, T& x) {
 			A(x);
 			return none;
 		}
-		catch(cereal::Exception&) {
+		catch(const cereal::Exception&) {
 			return sec::state_not_serializable;
 		}
 	});
