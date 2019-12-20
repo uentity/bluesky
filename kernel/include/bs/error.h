@@ -75,12 +75,11 @@ public:
 	/// serializable type that can carry error information and later reconstruct packed error
 	struct BS_API box {
 		int ec;
-		std::string domain;
-		std::optional<std::string> message;
+		std::string domain, message;
 
 		box() = default;
 		box(const error& er);
-		box(int ec, std::string domain, std::optional<std::string> message);
+		box(int ec, std::string domain, std::string message) noexcept;
 	};
 
 private:
@@ -98,8 +97,6 @@ private:
 public:
 	/// code of error is stored here
 	const std::error_code code;
-	/// optional runtime error that carries message
-	std::optional<std::runtime_error> info;
 
 	/// perfect forwarding ctor - construct 'non-quiet' error with Error::Happened code by default
 	template<
@@ -209,6 +206,9 @@ public:
 	friend BS_API std::string to_string(const error& er);
 
 private:
+	/// optional runtime error that carries message
+	std::optional<std::runtime_error> info;
+
 	/// construct from message and error code
 	explicit error(IsQuiet, std::string_view message, std::error_code = Error::Undefined) noexcept;
 	/// construct from error code solely

@@ -20,6 +20,7 @@
 #include <boost/uuid/uuid_io.hpp>
 
 #include <ostream>
+#include <string_view>
 #include <unordered_map>
 #include <mutex>
 
@@ -106,28 +107,25 @@ std::error_code make_error_code(Error e) {
 /*-----------------------------------------------------------------------------
  *  error implementation
  *-----------------------------------------------------------------------------*/
-using opt_rterr = std::optional<std::runtime_error>;
 error::error(IsQuiet quiet, std::string_view message, std::error_code ec) noexcept :
 	code(ec == Error::Undefined ?
 		make_error_code(quiet == IsQuiet::Yes ? Error::OK : Error::Happened) :
 		std::move(ec)
-	),
-	info(message.size() ? opt_rterr{message.begin()} : opt_rterr{})
+	)
 {
-	if(quiet == IsQuiet::No) dump();
+	try {
+		if(!message.empty()) info.emplace(message.begin());
+		if(quiet == IsQuiet::No) dump();
+	} catch(...) {}
 }
 
 error::error(IsQuiet quiet, std::error_code ec) noexcept
-	: code(std::move(ec))
-{
-	if(quiet == IsQuiet::No) dump();
-}
+	: error(quiet, std::string_view{}, std::move(ec))
+{}
 
 error::error(IsQuiet quiet, const std::system_error& er) noexcept
-	: code(er.code()), info(er.what())
-{
-	if(quiet == IsQuiet::No) dump();
-}
+	: error(quiet, er.what(), er.code())
+{}
 
 error::error(IsQuiet quiet, std::string_view message, int ec, std::string_view cat_name) noexcept
 	: error(quiet, message, ECR.make_error_code(ec, cat_name))
@@ -139,10 +137,7 @@ error::error(IsQuiet quiet, int ec, std::string_view cat_name) noexcept
 
 // [NOTE] unpacking is always quiet
 error::error(IsQuiet quiet, box b) noexcept
-	: error(
-		IsQuiet::Yes, b.message ? std::string_view{*b.message} : std::string_view{},
-		ECR.make_error_code(b.ec, b.domain)
-	)
+	: error(IsQuiet::Yes, b.message, ECR.make_error_code(b.ec, b.domain))
 {}
 
 error::error(success_tag) noexcept : error(IsQuiet::Yes, Error::OK) {}
@@ -213,7 +208,7 @@ error::box::box(const error& er)
 	if(er.info) message = er.info->what();
 }
 
-error::box::box(int ec_, std::string domain_, std::optional<std::string> message_)
+error::box::box(int ec_, std::string domain_, std::string message_) noexcept
 	: ec(ec_), domain(std::move(domain_)), message(std::move(message_))
 {}
 
