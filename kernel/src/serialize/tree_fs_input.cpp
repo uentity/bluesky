@@ -132,10 +132,9 @@ struct tree_fs_input::impl {
 	}
 
 	auto begin_node(tree_fs_input& ar) -> error {
-		// node reference is ONLY used for template matching
-		static constexpr tree::node* sentinel = nullptr;
 		return error::eval_safe(
-			[&]{ return head().map( [&](auto* ar) { prologue(*ar, *sentinel); }); },
+			// node reference (2nd arg) is ONLY used for template matching
+			[&]{ return head().map( [&](auto* ar) { prologue(*ar, *(tree::node*)nullptr); }); },
 			[&]{ return enter_root(); }
 		);
 	}
