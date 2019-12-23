@@ -46,7 +46,8 @@ using InsertPolicy = node::InsertPolicy;
 using bs_detail::shared;
 
 using node_impl_mutex = std::shared_mutex;
-//using node_impl_mutex = bs_detail::noop_mutex_tag;
+
+static constexpr auto noop_postproc_f = [](const auto&) {};
 
 /*-----------------------------------------------------------------------------
  *  node_impl
@@ -214,11 +215,10 @@ public:
 	//  insert
 	//
 	using leaf_postproc_fn = function_view< void(const sp_link&) >;
-	static constexpr auto noop_postroc_f = [](const auto&) {};
 
 	auto insert(
 		sp_link L, const InsertPolicy pol = InsertPolicy::AllowDupNames,
-		leaf_postproc_fn ppf = noop_postroc_f
+		leaf_postproc_fn ppf = noop_postproc_f
 	) -> insert_status<Key::ID>;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -226,7 +226,7 @@ public:
 	//
 	template<Key K = Key::ID>
 	auto erase(
-		const range<K>& r, leaf_postproc_fn ppf = noop_postroc_f,
+		const range<K>& r, leaf_postproc_fn ppf = noop_postproc_f,
 		bool dont_reset_owner = false
 	) -> size_t {
 		size_t res = 0;
@@ -242,7 +242,7 @@ public:
 
 	template<Key K = Key::ID>
 	auto erase(
-		const Key_type<K>& key, leaf_postproc_fn ppf = noop_postroc_f,
+		const Key_type<K>& key, leaf_postproc_fn ppf = noop_postproc_f,
 		bool dont_reset_owner = false
 	) -> size_t {
 		return erase<K>(equal_range<K>(key), ppf, dont_reset_owner);
@@ -315,7 +315,7 @@ private:
 	node* super_;
 
 	auto erase_impl(
-		iterator<Key::ID> key, leaf_postproc_fn ppf = noop_postroc_f,
+		iterator<Key::ID> key, leaf_postproc_fn ppf = noop_postproc_f,
 		bool dont_reset_owner = false
 	) -> iterator<Key::ID>;
 };

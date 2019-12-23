@@ -377,7 +377,7 @@ auto node_actor::erase(const link::id_type& victim, EraseOpts opts) -> size_t {
 	const auto ppf = [=](const sp_link& L) { on_erase(L, *this); };
 	return impl.erase<Key::ID>(
 		victim,
-		enumval(opts & EraseOpts::Silent) ? node_impl::noop_postroc_f : function_view{ ppf },
+		enumval(opts & EraseOpts::Silent) ? noop_postproc_f : function_view{ ppf },
 		bool(enumval(opts & EraseOpts::DontResetOwner))
 	);
 }
