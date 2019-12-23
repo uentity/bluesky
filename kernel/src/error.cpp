@@ -114,7 +114,7 @@ error::error(IsQuiet quiet, std::string_view message, std::error_code ec) noexce
 	)
 {
 	try {
-		if(!message.empty()) info.emplace(message.begin());
+		if(!message.empty()) info.emplace(std::string{ message.begin(), message.end() });
 		if(quiet == IsQuiet::No) dump();
 	} catch(...) {}
 }
