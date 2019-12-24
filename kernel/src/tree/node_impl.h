@@ -158,12 +158,10 @@ public:
 
 	template<Key K, Key R = Key::AnyOrder>
 	auto find(const Key_type<K>& key) const {
-		return project<K, R>([&] {
-			if constexpr(K == Key::AnyOrder)
-				return std::next(begin<K>(), key);
-			else
-				return links_.get<Key_tag<K>>().find(key);
-		}());
+		if constexpr(K == Key::AnyOrder)
+			return std::next(begin<K>(), key);
+		else
+			return project<K, R>(links_.get<Key_tag<K>>().find(key));
 	}
 
 	template<Key K = Key::ID>
