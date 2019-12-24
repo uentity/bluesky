@@ -51,9 +51,9 @@ void bind_any_array(py::module& m, const char* type_name) {
 
 	static auto make_array_key_iterator = [](any_array_t& A) {
 		if constexpr(any_array_t::is_map)
-			return py::make_key_iterator(A.begin(), A.end());
+			return py::make_key_iterator(A);
 		else
-			return py::make_iterator(A.begin(), A.end());
+			return py::make_iterator(A);
 	};
 
 	auto any_bind = py::class_<any_array_t>(m, type_name)
