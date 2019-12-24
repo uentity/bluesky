@@ -360,6 +360,30 @@
     <ClInclude Include="kernel\src\tree\node_actor.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\object_ptr.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\sharded_mutex.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\tensor_meta.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\kernel\radio.h">
+      <Filter>Заголовочные файлы\bs\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\errors.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\inode.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\kernel\python_subsyst.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\kernel\radio_subsyst.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -510,6 +534,12 @@
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\node_actor.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\kernel\radio.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\kernel\radio_subsyst.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
   </ItemGroup>

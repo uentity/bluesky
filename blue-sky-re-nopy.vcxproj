@@ -49,9 +49,12 @@
     <ClInclude Include="kernel\include\bs\detail\function_view.h" />
     <ClInclude Include="kernel\include\bs\detail\is_container.h" />
     <ClInclude Include="kernel\include\bs\detail\lib_descriptor.h" />
+    <ClInclude Include="kernel\include\bs\detail\object_ptr.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
     <ClInclude Include="kernel\include\bs\detail\scope_guard.h" />
+    <ClInclude Include="kernel\include\bs\detail\sharded_mutex.h" />
     <ClInclude Include="kernel\include\bs\detail\str_utils.h" />
+    <ClInclude Include="kernel\include\bs\detail\tensor_meta.h" />
     <ClInclude Include="kernel\include\bs\detail\tuple_utils.h" />
     <ClInclude Include="kernel\include\bs\detail\typestring.h" />
     <ClInclude Include="kernel\include\bs\error.h" />
@@ -62,6 +65,7 @@
     <ClInclude Include="kernel\include\bs\kernel\kernel.h" />
     <ClInclude Include="kernel\include\bs\kernel\misc.h" />
     <ClInclude Include="kernel\include\bs\kernel\plugins.h" />
+    <ClInclude Include="kernel\include\bs\kernel\radio.h" />
     <ClInclude Include="kernel\include\bs\kernel\tools.h" />
     <ClInclude Include="kernel\include\bs\kernel\types_factory.h" />
     <ClInclude Include="kernel\include\bs\kernel\type_tuple.h" />
@@ -100,7 +104,9 @@
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
     <ClInclude Include="kernel\include\bs\timetypes.h" />
+    <ClInclude Include="kernel\include\bs\tree\errors.h" />
     <ClInclude Include="kernel\include\bs\tree\fusion.h" />
+    <ClInclude Include="kernel\include\bs\tree\inode.h" />
     <ClInclude Include="kernel\include\bs\tree\link.h" />
     <ClInclude Include="kernel\include\bs\tree\node.h" />
     <ClInclude Include="kernel\include\bs\tree\tree.h" />
@@ -114,6 +120,8 @@
     <ClInclude Include="kernel\src\kernel\kimpl.h" />
     <ClInclude Include="kernel\src\kernel\logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\plugins_subsyst.h" />
+    <ClInclude Include="kernel\src\kernel\python_subsyst.h" />
+    <ClInclude Include="kernel\src\kernel\radio_subsyst.h" />
     <ClInclude Include="kernel\src\tree\actor_common.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
@@ -142,6 +150,8 @@
     <ClCompile Include="kernel\src\kernel\plugins.cpp" />
     <ClCompile Include="kernel\src\kernel\plugins_discover.cpp" />
     <ClCompile Include="kernel\src\kernel\plugins_subsyst.cpp" />
+    <ClCompile Include="kernel\src\kernel\radio.cpp" />
+    <ClCompile Include="kernel\src\kernel\radio_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\tools.cpp" />
     <ClCompile Include="kernel\src\kernel\types_factory.cpp" />
     <ClCompile Include="kernel\src\kernel\types_factory_subsyst.cpp" />
@@ -262,6 +272,8 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib</AdditionalLibraryDirectories>
@@ -279,6 +291,8 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib</AdditionalLibraryDirectories>
@@ -297,6 +311,8 @@
       <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -317,6 +333,8 @@
       <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

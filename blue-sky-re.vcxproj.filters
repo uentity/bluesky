@@ -420,6 +420,18 @@
     <ClInclude Include="kernel\src\tree\node_actor.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\src\kernel\radio_subsyst.h">
+      <Filter>Файлы исходного кода\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\request_impl.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\kernel\radio.h">
+      <Filter>Заголовочные файлы\bs\kernel</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\detail\sharded_mutex.h">
+      <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="kernel\src\assert.cpp">
@@ -604,6 +616,24 @@
     </ClCompile>
     <ClCompile Include="kernel\src\tree\node_actor.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\kernel\radio.cpp">
+      <Filter>Файлы исходного кода\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\kernel\radio_subsyst.cpp">
+      <Filter>Файлы исходного кода\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\link_actor_data.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\link_impl.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\node_impl.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\serialize\node.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

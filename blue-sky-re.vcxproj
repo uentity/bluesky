@@ -53,6 +53,7 @@
     <ClInclude Include="kernel\include\bs\detail\object_ptr.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
     <ClInclude Include="kernel\include\bs\detail\scope_guard.h" />
+    <ClInclude Include="kernel\include\bs\detail\sharded_mutex.h" />
     <ClInclude Include="kernel\include\bs\detail\str_utils.h" />
     <ClInclude Include="kernel\include\bs\detail\tensor_meta.h" />
     <ClInclude Include="kernel\include\bs\detail\tuple_utils.h" />
@@ -65,6 +66,7 @@
     <ClInclude Include="kernel\include\bs\kernel\kernel.h" />
     <ClInclude Include="kernel\include\bs\kernel\misc.h" />
     <ClInclude Include="kernel\include\bs\kernel\plugins.h" />
+    <ClInclude Include="kernel\include\bs\kernel\radio.h" />
     <ClInclude Include="kernel\include\bs\kernel\tools.h" />
     <ClInclude Include="kernel\include\bs\kernel\types_factory.h" />
     <ClInclude Include="kernel\include\bs\kernel\type_tuple.h" />
@@ -132,6 +134,7 @@
     <ClInclude Include="kernel\src\kernel\plugins_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\python_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\python_subsyst_impl.h" />
+    <ClInclude Include="kernel\src\kernel\radio_subsyst.h" />
     <ClInclude Include="kernel\src\tree\actor_common.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
@@ -140,6 +143,7 @@
     <ClInclude Include="kernel\src\tree\link_invoke.h" />
     <ClInclude Include="kernel\src\tree\node_actor.h" />
     <ClInclude Include="kernel\src\tree\node_impl.h" />
+    <ClInclude Include="kernel\src\tree\request_impl.h" />
     <ClInclude Include="kernel\src\tree\tree_impl.h" />
   </ItemGroup>
   <ItemGroup>
@@ -159,6 +163,8 @@
     <ClCompile Include="kernel\src\kernel\plugins_discover.cpp" />
     <ClCompile Include="kernel\src\kernel\plugins_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\python_subsyst.cpp" />
+    <ClCompile Include="kernel\src\kernel\radio.cpp" />
+    <ClCompile Include="kernel\src\kernel\radio_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\tools.cpp" />
     <ClCompile Include="kernel\src\kernel\types_factory.cpp" />
     <ClCompile Include="kernel\src\kernel\types_factory_subsyst.cpp" />
@@ -185,6 +191,7 @@
     <ClCompile Include="kernel\src\serialize\array.cpp" />
     <ClCompile Include="kernel\src\serialize\base_types.cpp" />
     <ClCompile Include="kernel\src\serialize\link.cpp" />
+    <ClCompile Include="kernel\src\serialize\node.cpp" />
     <ClCompile Include="kernel\src\serialize\object_formatter.cpp" />
     <ClCompile Include="kernel\src\serialize\python.cpp" />
     <ClCompile Include="kernel\src\serialize\tree.cpp" />
@@ -198,8 +205,11 @@
     <ClCompile Include="kernel\src\tree\inode.cpp" />
     <ClCompile Include="kernel\src\tree\link.cpp" />
     <ClCompile Include="kernel\src\tree\link_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\link_actor_data.cpp" />
+    <ClCompile Include="kernel\src\tree\link_impl.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
     <ClCompile Include="kernel\src\tree\node_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\node_impl.cpp" />
     <ClCompile Include="kernel\src\tree\sym_link.cpp" />
     <ClCompile Include="kernel\src\tree\tree.cpp" />
     <ClCompile Include="kernel\src\tree\tree_async.cpp" />
@@ -291,6 +301,8 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
@@ -308,6 +320,8 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs;$(BLUE_SKY_WINDEPS)\caf\lib64\debug</AdditionalLibraryDirectories>
@@ -326,6 +340,8 @@
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -346,6 +362,8 @@
       <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
