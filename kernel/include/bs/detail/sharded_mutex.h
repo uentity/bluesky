@@ -58,6 +58,7 @@ private:
 	};
 
 	enum class LockMode { Unique, Shared };
+	enum class IsDeferred { No, Yes };
 
 	// resolve lock type from mutex type
 	template<typename Mi> using shared_lock_t = std::conditional_t<
@@ -92,39 +93,34 @@ private:
 	}
 
 	// lock single mutex
-	template<size_t I, LockMode T, bool Deffered = false>
+	template<LockMode T, IsDeferred Deffered, size_t I>
 	constexpr auto lock_impl() const {
 		using lock_t = lock_t<std::tuple_element_t<I, guards_t>, T>;
-		if constexpr(Deffered)
+		if constexpr(Deffered == IsDeferred::Yes)
 			return lock_t{ std::get<I>(guards), std::defer_lock };
 		else
 			return lock_t{ std::get<I>(guards) };
 	}
 
-	// lock one or several mutexes
+	// lock one or more mutexes
 	template<LockMode T, size_t I, size_t... In>
 	constexpr auto lock_impl(std::index_sequence<I, In...> idx) const {
 		if constexpr(sizeof...(In)) {
 			// produce tuple of deferred locks and atomically lock 'em
-			auto locks = std::make_tuple(lock_impl<I, T, true>(), lock_impl<In, T, true>()...);
+			auto locks = std::make_tuple(
+				lock_impl<T, IsDeferred::Yes, I>(), lock_impl<T, IsDeferred::Yes, In>()...
+			);
 			std::apply( [](auto&... Ls) { std::lock(Ls...); }, locks );
 			return locks;
 		}
 		else
-			return lock_impl<I, T>();
+			return lock_impl<T, IsDeferred::No, I>();
 	}
+
 	// for empty sequence return noop lock
 	template<LockMode T>
 	constexpr auto lock_impl(std::index_sequence<>) const {
 		return noop_lock{};
-	}
-
-	// lock all mutexes
-	template<LockMode T>
-	constexpr auto lock_impl() const {
-		return lock_impl<T>(filter_noops(
-			std::index_sequence<>(), std::make_index_sequence< std::tuple_size_v<guards_t> >()
-		));
 	}
 
 	// lock one or more mutexes
@@ -132,6 +128,14 @@ private:
 	constexpr auto lock_impl() const {
 		return lock_impl<T>(filter_noops(
 			std::index_sequence<>(), std::index_sequence<I1, In...>{}
+		));
+	}
+
+	// lock all mutexes
+	template<LockMode T>
+	constexpr auto lock_impl() const {
+		return lock_impl<T>(filter_noops(
+			std::index_sequence<>(), std::make_index_sequence< std::tuple_size_v<guards_t> >()
 		));
 	}
 };
