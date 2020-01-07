@@ -118,6 +118,10 @@ auto link::name() const -> std::string {
 	//return pimpl_->name_;
 }
 
+auto link::name(unsafe_t) const -> std::string {
+	return pimpl_->name_;
+}
+
 // get link's object ID
 std::string link::oid() const {
 	return pimpl_->actorf<std::string>(*this, a_lnk_oid())

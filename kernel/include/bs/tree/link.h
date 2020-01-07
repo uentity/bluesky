@@ -37,6 +37,10 @@ enum class Event : std::uint64_t {
 struct launch_async_t {};
 inline constexpr auto launch_async = launch_async_t{};
 
+// denote operation that is thread-unsafe and can cause data race
+struct unsafe_t {};
+inline constexpr auto unsafe = unsafe_t{};
+
 class link_impl;
 class node_impl;
 
@@ -171,6 +175,9 @@ public:
 
 	/// obtain link's symbolic name
 	auto name() const -> std::string;
+	/// same as above, but returns name directly from stored member
+	/// can cause data race
+	auto name(unsafe_t) const -> std::string;
 
 	/// get link's container
 	auto owner() const -> sp_node;

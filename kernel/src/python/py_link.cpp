@@ -159,7 +159,8 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("id", [](const link& L) {
 			return boost::uuids::to_string(L.id());
 		})
-		.def_property_readonly("name", &link::name)
+		.def_property_readonly("name", [](const link& L) { return L.name(); })
+		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
 		.def_property_readonly("owner", &link::owner)
 		.def_property_readonly("info", &link::info)
 		.def_property("flags", &link::flags, &link::set_flags)
