@@ -65,12 +65,11 @@ sp_link find_obj(const node& N, const sp_obj& obj) {
 	return find<Key::OID, Throw>(N, obj->id());
 }
 
-auto find_by_idx(const node& N, const long idx, bool allow_end = false) {
+auto find_by_idx(const node& N, const long idx) {
 	// support for Pythonish indexing from both ends
-	const std::size_t positive_idx = idx < 0 ? N.size() + std::size_t(allow_end) + idx : std::size_t(idx);
-	if(positive_idx > N.size() - std::size_t(!allow_end))
-		throw py::key_error("Index out of bounds");
-	return std::next(N.begin(), positive_idx);
+	if(auto positive_idx = idx < 0 ? N.size() + idx : std::size_t(idx); positive_idx < N.size())
+		return std::next(N.begin(), positive_idx);
+	throw py::key_error("Index out of bounds");
 }
 
 // ------- index
