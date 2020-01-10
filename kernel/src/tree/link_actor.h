@@ -18,7 +18,6 @@
 #include <caf/actor_system.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-using namespace tree::detail;
 
 using id_type = link::id_type;
 using Flags = link::Flags;

@@ -14,10 +14,12 @@
 #include <bs/detail/enumops.h>
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
-#include "link_invoke.h"
 
 #include <boost/uuid/nil_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#if defined(_MSC_VER)
+#include <bs/detail/spinlock.h>
+#endif
 
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;
@@ -25,19 +27,17 @@ namespace bs_detail = blue_sky::detail;
 inline const auto nil_uid = boost::uuids::nil_uuid();
 inline const std::string nil_oid = to_string(nil_uid);
 
-using ReqReset = link::ReqReset;
-
 // for debug & print purposes
 auto to_string(link::Req) -> const char*;
 auto to_string(link::ReqStatus) -> const char*;
 
-using link_impl_mutex = std::shared_mutex;
-//using link_impl_mutex = bs_detail::noop_mutex_tag;
+using Req = link::Req;
+using ReqStatus = link::ReqStatus;
+using ReqReset = link::ReqReset;
+using link_impl_mutex = std::mutex;
 
 class BS_HIDDEN_API link_impl : public bs_detail::sharded_mutex<link_impl_mutex> {
 public:
-	using Req = link::Req;
-	using ReqStatus = link::ReqStatus;
 	using id_type = link::id_type;
 	using Flags = link::Flags;
 
@@ -57,8 +57,18 @@ public:
 
 	/// owner node
 	std::weak_ptr<tree::node> owner_;
+
 	/// status of operations
-	mutable tree::detail::status_handle status_[2];
+	struct status_handle {
+		ReqStatus value = ReqStatus::Void;
+
+#ifdef _MSC_VER
+		mutable bs_detail::spinlock guard;
+#else
+		mutable std::mutex guard;
+#endif
+	};
+	status_handle status_[2];
 
 	link_impl();
 	link_impl(std::string name, Flags f);

@@ -44,7 +44,7 @@ auto link_impl::reset_owner(const sp_node& new_owner) -> void {
 
 auto link_impl::req_status(Req request) const -> ReqStatus {
 	if(const auto i = (unsigned)request; i < 2) {
-		auto guard = detail::scope_atomic_flag{ status_[i].flag };
+		auto guard = std::lock_guard{ status_[i].guard };
 		return status_[i].value;
 	}
 	return ReqStatus::Void;
@@ -57,20 +57,26 @@ auto link_impl::rs_reset(
 	const auto i = (unsigned)request;
 	if(i >= 2) return ReqStatus::Error;
 
-	// atomic set value
+	// remove possible extra flags from cond
+	cond &= 3;
 	auto& S = status_[i];
-	auto guard = detail::scope_atomic_flag(S.flag);
+
+	// atomic set value
+	S.guard.lock();
 	const auto self = S.value;
-	const auto reset_cond = cond & 3;
-	if( reset_cond == ReqReset::Always ||
-		(reset_cond == ReqReset::IfEq && self == old_rs) ||
-		(reset_cond == ReqReset::IfNeq && self != old_rs)
+	if( cond == ReqReset::Always ||
+		(cond == ReqReset::IfEq && self == old_rs) ||
+		(cond == ReqReset::IfNeq && self != old_rs)
 	) {
 		S.value = new_rs;
+		S.guard.unlock();
 		// Data = OK will always fire (work as 'data changed' signal)
 		if(new_rs != self || (request == Req::Data && new_rs == ReqStatus::OK))
 			on_rs_changed(request, new_rs, self);
 	}
+	else
+		S.guard.unlock();
+
 	return self;
 }
 
