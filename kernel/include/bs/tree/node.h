@@ -158,6 +158,8 @@ public:
 		// get number of leafs
 		caf::replies_to<a_node_size>::with<std::size_t>,
 
+		// obtain node's content
+		caf::replies_to<a_node_leafs, Key>::with<links_v>,
 		// find link by ID
 		caf::replies_to<a_lnk_find, id_type>::with<sp_link>,
 
@@ -166,7 +168,7 @@ public:
 		// insert into specified position
 		caf::replies_to<a_lnk_insert, sp_link, std::size_t, InsertPolicy>::with<actor_insert_status>,
 		// insert bunch of links
-		caf::replies_to<a_lnk_insert, std::vector<sp_link>, InsertPolicy>::with<std::size_t>,
+		caf::replies_to<a_lnk_insert, links_v, InsertPolicy>::with<std::size_t>,
 
 		// erase link by ID with specified options
 		caf::replies_to<a_lnk_erase, id_type, EraseOpts>::with<std::size_t>,
@@ -201,6 +203,9 @@ public:
 
 	/// clears node
 	void clear();
+
+	/// get snapshot of node's content
+	auto leafs(Key order = Key::AnyOrder) const -> links_v;
 
 	// iterate in IDs order
 	template<Key K = Key::AnyOrder>

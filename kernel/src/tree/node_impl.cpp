@@ -87,6 +87,22 @@ auto node_impl::size() const -> std::size_t {
 	return links_.size();
 }
 
+auto node_impl::leafs(Key order) const -> links_v {
+	switch(order) {
+	default:
+	case Key::AnyOrder:
+		return values<Key::AnyOrder>();
+	case Key::ID:
+		return values<Key::ID>();
+	case Key::Name:
+		return values<Key::Name>();
+	case Key::OID:
+		return values<Key::OID>();
+	case Key::Type:
+		return values<Key::Type>();
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //  leafs insert & erase
 //

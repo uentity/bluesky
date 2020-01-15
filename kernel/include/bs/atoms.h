@@ -50,6 +50,7 @@ using a_node_propagate_owner = caf::atom_constant<caf::atom("tn powner")>;
 using a_node_handle = caf::atom_constant<caf::atom("tn handle")>;
 using a_node_size = caf::atom_constant<caf::atom("tn size")>;
 using a_node_rearrange = caf::atom_constant<caf::atom("tn rearng")>;
+using a_node_leafs = caf::atom_constant<caf::atom("tn leafs")>;
 
 } /* namespace blue_sky */
 

@@ -23,9 +23,9 @@ NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
 using Key = node::Key;
 
-using v_links = std::vector<sp_link>;
-using l_links = std::list<sp_link>;
-using l_nodes = std::list<sp_node>;
+using links_v = tree::links_v;
+using links_l = std::list<sp_link>;
+using nodes_l = std::list<sp_node>;
 
 NAMESPACE_BEGIN()
 
@@ -33,10 +33,10 @@ NAMESPACE_BEGIN()
 // accepts pointers to containers instead of references
 template<typename R, typename FR, typename Node>
 auto py_walk(
-	const R& root, std::function<void (const FR&, std::list<Node>*, v_links*)> pyf,
+	const R& root, std::function<void (const FR&, std::list<Node>*, links_v*)> pyf,
 	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
 ) {
-	walk(root, [pyf = std::move(pyf)] (const FR& cur_root, std::list<Node>& nodes, v_links& leafs) {
+	walk(root, [pyf = std::move(pyf)] (const FR& cur_root, std::list<Node>& nodes, links_v& leafs) {
 			// convert references to pointers
 			pyf(cur_root, &nodes, &leafs);
 		},
@@ -93,15 +93,15 @@ void py_bind_tree(py::module& m) {
 	);
 
 	// bind lists of links & nodes as opaque types
-	auto clV = py::bind_vector<v_links>(m, "links_vector", py::module_local(false));
-	detail::make_rich_pylist<v_links>(clV);
-	bind_list<l_links>(m, "links_list", py::module_local(false));
-	bind_list<l_nodes>(m, "nodes_list", py::module_local(false));
+	auto clV = py::bind_vector<links_v>(m, "links_vector", py::module_local(false));
+	detail::make_rich_pylist<links_v>(clV);
+	bind_list<links_l>(m, "links_list", py::module_local(false));
+	bind_list<nodes_l>(m, "nodes_list", py::module_local(false));
 
 	// walk
 	// [HINT] pass vectors to be modified as pointers - in this case pybind11 applies reference policy
-	using py_walk_links_cb = std::function<void(const sp_link&, l_links*, v_links*)>;
-	using py_walk_nodes_cb = std::function<void(const sp_node&, l_nodes*, v_links*)>;
+	using py_walk_links_cb = std::function<void(const sp_link&, links_l*, links_v*)>;
+	using py_walk_nodes_cb = std::function<void(const sp_node&, nodes_l*, links_v*)>;
 
 	m.def("walk",
 		[](

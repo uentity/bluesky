@@ -207,6 +207,15 @@ public:
 		return res;
 	}
 
+	template<Key K>
+	auto values() const -> links_v {
+		auto res = links_v(links_.size());
+		std::copy(begin<K>(), end<K>(), res.begin());
+		return res;
+	}
+
+	auto leafs(Key order) const -> links_v;
+
 	auto size() const -> std::size_t;
 
 	///////////////////////////////////////////////////////////////////////////////

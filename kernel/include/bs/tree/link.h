@@ -293,10 +293,13 @@ private:
 	friend class link_impl;
 	std::shared_ptr<link_impl> pimpl_;
 };
+
+/// handy aliases
 using sp_link = link::sp_link;
 using sp_clink = link::sp_clink;
 using link_ptr = link::link_ptr;
 using clink_ptr = link::clink_ptr;
+using links_v = std::vector<sp_link>;
 
 using cached_link_actor_type = link::actor_type::extend<
 	// get data cache

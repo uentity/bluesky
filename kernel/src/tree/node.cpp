@@ -20,6 +20,7 @@
 OMIT_OBJ_SERIALIZATION
 OMIT_ITERATORS_SERIALIZATION
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(std::vector<blue_sky::tree::node::id_type>)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::links_v)
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
@@ -112,6 +113,12 @@ auto node::size() const -> std::size_t {
 
 auto node::empty() const -> bool {
 	return pimpl_->links_.empty();
+}
+
+auto node::leafs(Key order) const -> links_v {
+	return pimpl_->actorf<links_v>(
+		*this, a_node_leafs(), order
+	).value_or(links_v{});
 }
 
 auto node::begin(Key_const<Key::AnyOrder>) const -> iterator<Key::AnyOrder> {

@@ -428,6 +428,8 @@ auto node_actor::make_behavior() -> behavior_type {
 		// 4. get size
 		[=](a_node_size) { return impl.size(); },
 
+		[=](a_node_leafs, Key order) { return impl.leafs(order); },
+
 		// 5.
 		[=](a_lnk_find, const link::id_type& lid) -> sp_link {
 			if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>())
