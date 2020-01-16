@@ -54,11 +54,23 @@ objbase& objbase::operator=(const objbase& rhs) {
 }
 
 const type_descriptor& objbase::bs_type() {
-	static type_descriptor td(
-		identity< objbase >(), identity< nil >(),
-		"objbase", "Base class of all BlueSky types", std::true_type(), std::true_type()
-	);
+	static auto td = [] {
+		auto td = type_descriptor(
+			identity< objbase >(), identity< nil >(),
+			"objbase", "Base class of all BlueSky types", std::true_type(), std::true_type()
+		);
+		// add constructor from custom OID
+		td.add_constructor([](const std::string& custom_oid) -> sp_obj {
+			return std::make_shared<objbase>(custom_oid);
+		});
+		return td;
+	}();
+
 	return td;
+}
+
+const type_descriptor& objbase::bs_resolve_type() const {
+	return bs_type();
 }
 
 int objbase::bs_register_this() const {
