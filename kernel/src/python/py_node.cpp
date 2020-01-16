@@ -8,9 +8,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/python/common.h>
+#include <bs/python/container_iterator.h>
 #include <bs/tree/node.h>
 
 #include <boost/uuid/uuid_io.hpp>
+
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 
@@ -143,10 +145,9 @@ void py_bind_node(py::module& m) {
 		BSPY_EXPORT_DEF(node)
 		.def(py::init<>())
 		.def("__len__", &node::size)
-		.def("__iter__",
-			[](const node& N) { return py::make_iterator(N.begin(), N.end()); },
-			py::keep_alive<0, 1>()
-		)
+		.def("__iter__", [](const node& N) { return make_container_iterator(N.leafs()); })
+
+		.def("leafs", &node::leafs, "Key"_a = node::Key::AnyOrder, "Return snapshot of node content")
 
 		// check by link ID
 		.def("__contains__", &contains_link, "link"_a)
