@@ -7,24 +7,23 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/bs.h>
+#include <bs/objbase.h>
+#include <bs/tree/inode.h>
+#include <bs/python/common.h>
 #include <bs/python/expected.h>
 #include <bs/serialize/object_formatter.h>
 
 #include <pybind11/functional.h>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(python)
+NAMESPACE_BEGIN(blue_sky::python)
 
 void py_bind_objbase(py::module& m) {
-	// explicit ctor defiition for multiple reuse
-	const auto objbase_ctor1 = [](std::string custom_oid = "") -> sp_obj {
-		return std::make_shared<py_object<>>(std::move(custom_oid));
-	};
 	// objebase binding
-	py::class_< objbase, py_object<>, sp_obj >(m, "objbase", py::multiple_inheritance())
+	py::class_<objbase, sp_obj>(m, "objbase")
 		BSPY_EXPORT_DEF(objbase)
-		.def(py::init(objbase_ctor1), "custom_oid"_a = "")
+		.def(py::init([](std::string custom_oid = "") -> sp_obj {
+			return std::make_shared<objbase>(std::move(custom_oid));
+		}), "custom_oid"_a = "")
 
 		.def("bs_resolve_type", &objbase::bs_resolve_type, py::return_value_policy::reference)
 		.def("bs_register_this", &objbase::bs_register_this)
@@ -37,13 +36,6 @@ void py_bind_objbase(py::module& m) {
 		// DEBUG
 		.def_property_readonly("refs", [](objbase& src) { return src.shared_from_this().use_count(); })
 	;
-	// add custom constructors for objbase that always constructs trampoline class
-	auto& td = objbase::bs_type();
-	td.add_constructor([]() -> sp_obj { return std::make_shared<py_object<>>(); });
-	td.add_constructor(objbase_ctor1);
-	td.add_copy_constructor([](bs_type_copy_param src) -> sp_obj {
-		return std::make_shared<py_object<>>( *static_cast<const py_object<>*>(src.get()) );
-	});
 
 	// object formatters
 	py::class_<object_formatter>(m, "object_formatter")
@@ -68,6 +60,4 @@ void py_bind_objbase(py::module& m) {
 		py::return_value_policy::reference);
 }
 
-NAMESPACE_END(python)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::python)

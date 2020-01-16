@@ -48,23 +48,4 @@ BSS_FCN_END
 BSS_REGISTER_TYPE(blue_sky::objbase)
 BSS_FCN_EXPORT(serialize, blue_sky::objbase)
 
-#ifdef BSPY_EXPORTING_PLUGIN
-/*-----------------------------------------------------------------------------
- *  py_object
- *-----------------------------------------------------------------------------*/
-using py_object = blue_sky::python::py_object<blue_sky::objbase>;
-
-BSS_FCN_INL_BEGIN(serialize, py_object)
-	ar(
-		make_nvp("objbase", cereal::base_class<blue_sky::objbase>(&t))
-	);
-BSS_FCN_INL_END(serialize, py_object)
-
-// [NOTE] using `CEREAL_REGISTER_TYPE` because BSS_REGISTER_TYPE will extract type name from `objbase`
-// and this will lead to conflict with `objbase` itself and deserialization errors
-CEREAL_REGISTER_TYPE(py_object)
-BSS_FCN_EXPORT(serialize, py_object)
-#endif
-
 BSS_REGISTER_DYNAMIC_INIT(base_types)
-

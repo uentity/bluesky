@@ -12,24 +12,7 @@
 #include <bs/tree/link.h>
 #include <bs/tree/fusion.h>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(python)
-
-/*-----------------------------------------------------------------------------
- *  link's trampoline class for derived types
- *-----------------------------------------------------------------------------*/
-template<typename Link = tree::link>
-class py_link : public Link {
-public:
-	using Link::Link;
-
-	tree::sp_link clone(bool deep = false) const override {
-		PYBIND11_OVERLOAD_PURE(tree::sp_link, Link, clone, deep);
-	}
-
-	std::string type_id() const override {
-		PYBIND11_OVERLOAD_PURE(std::string, Link, type_id, );
-	}
-};
+NAMESPACE_BEGIN(blue_sky::python)
 
 /*-----------------------------------------------------------------------------
  *  trampoline for fusion_iface
@@ -48,5 +31,4 @@ public:
 	}
 };
 
-NAMESPACE_END(python) NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::python)

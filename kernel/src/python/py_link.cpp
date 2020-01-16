@@ -70,7 +70,7 @@ void py_bind_link(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  Base link
 	//
-	py::class_<link, py_link<>, std::shared_ptr<link>> link_pyface(m, "link");
+	py::class_<link, sp_link> link_pyface(m, "link");
 
 	// export Flags enum
 	py::enum_<link::Flags>(link_pyface, "Flags", py::arithmetic())
@@ -206,17 +206,17 @@ void py_bind_link(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  Derived links
 	//
-	py::class_<hard_link, link, py_link<hard_link>, std::shared_ptr<hard_link>>(m, "hard_link")
+	py::class_<hard_link, link, std::shared_ptr<hard_link>>(m, "hard_link")
 		.def(py::init<std::string, sp_obj, link::Flags>(),
 			"name"_a, "data"_a, "flags"_a = link::Flags::Plain)
 	;
 
-	py::class_<weak_link, link, py_link<weak_link>, std::shared_ptr<weak_link>>(m, "weak_link")
+	py::class_<weak_link, link, std::shared_ptr<weak_link>>(m, "weak_link")
 		.def(py::init<std::string, const sp_obj&, link::Flags>(),
 			"name"_a, "data"_a, "flags"_a = link::Flags::Plain)
 	;
 
-	py::class_<sym_link, link, py_link<sym_link>, std::shared_ptr<sym_link>>(m, "sym_link")
+	py::class_<sym_link, link, std::shared_ptr<sym_link>>(m, "sym_link")
 		.def(py::init<std::string, std::string, link::Flags>(),
 			"name"_a, "path"_a, "flags"_a = link::Flags::Plain)
 		.def(py::init<std::string, const sp_link&, link::Flags>(),
@@ -229,7 +229,7 @@ void py_bind_link(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  fusion link/iface
 	//
-	py::class_<fusion_link, link, py_link<fusion_link>, std::shared_ptr<fusion_link>>(m, "fusion_link")
+	py::class_<fusion_link, link, std::shared_ptr<fusion_link>>(m, "fusion_link")
 		.def(py::init<std::string, sp_node, sp_fusion, link::Flags>(),
 			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = link::Flags::Plain)
 		.def(py::init<std::string, const char*, std::string, sp_fusion, link::Flags>(),

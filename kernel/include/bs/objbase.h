@@ -13,16 +13,12 @@
 #include "type_descriptor.h"
 
 // shortcut for quick declaration of shared ptr to BS object
-#define BS_SP(T) std::shared_ptr< T >
+#define BS_SP(T) std::shared_ptr<T>
 
 NAMESPACE_BEGIN(blue_sky)
 
-/*!
-	\class objbase
-	\ingroup object_base
-	\brief This is a base class for all objects.
-*/
-class BS_API objbase : public std::enable_shared_from_this< objbase > {
+/// @brief Base class for all BS objects
+class BS_API objbase : public std::enable_shared_from_this<objbase> {
 	friend class tree::link_impl;
 	friend class tree::link_actor;
 	friend class tree::node;
@@ -39,51 +35,56 @@ public:
 	// virtual destructor
 	virtual ~objbase();
 
-	/// swap function needed to provide assignment ability
-	void swap(objbase& rhs);
-
 	/// default move assignment is fine
 	objbase& operator=(objbase&&) = default;
 	/// copy-assignment - will make a copy with different ID
 	objbase& operator=(const objbase& rhs);
 
-	//! type_descriptor of objbase class
-	static const type_descriptor& bs_type();
-	/*!
-	\brief Type descriptor resolver for derived class.
-	This method should be overridden by childs.
-	\return reference to const type_descriptor
-	*/
-	virtual const type_descriptor& bs_resolve_type() const {
-		return bs_type();
+	auto swap(objbase& rhs) -> void;
+
+	/// `shared_from_this()` casted to derived type
+	template<typename Derived>
+	auto bs_shared_this() const {
+		return std::static_pointer_cast<const Derived, const objbase>(
+			this->shared_from_this()
+		);
 	}
 
+	template<typename Derived>
+	auto bs_shared_this() {
+		return std::static_pointer_cast<Derived, objbase>(
+			this->shared_from_this()
+		);
+	}
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  Core API that can't be shadowed in derived types
+	//  [NOTE] using `virtual ... final` trick ('virtuality' will be optimized away by compiler)
+	//
+	/// obtain type ID: for C++ types typeid is type_descriptor.name
+	virtual auto type_id() const -> std::string final;
+	/// obtain object's ID
+	virtual auto id() const -> std::string final;
+
+	/// check if object is actually a tree::node
+	virtual auto is_node() const -> bool final;
+
+	/// access inode (if exists)
+	virtual auto info() const -> result_or_err<tree::inode> final;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  Type-related API that derived types must provide
+	//
+	/// type_descriptor of objbase class
+	static auto bs_type() -> const type_descriptor&;
+	/// derived types must override this and return correct `type_descriptor`
+	virtual auto bs_resolve_type() const -> const type_descriptor&;
+
+	// [TODO] remove these outdated methods
 	// register this instance in kernel instances list
 	int bs_register_this() const;
 	// remove this instance from kernel instances list
 	int bs_free_this() const;
-
-	template< class Derived >
-	decltype(auto) bs_shared_this() const {
-		return std::static_pointer_cast< const Derived, const objbase >(this->shared_from_this());
-	}
-
-	template< class Derived >
-	decltype(auto) bs_shared_this() {
-		return std::static_pointer_cast< Derived, objbase >(this->shared_from_this());
-	}
-
-	/// obtain type ID: for C++ types typeid is type_descriptor.name
-	virtual std::string type_id() const;
-	/// obtain object's ID
-	virtual std::string id() const;
-
-	/// check if object is actually a tree::node
-	/// NOTE: no RTTI, no virtual functions, just checks flag
-	bool is_node() const;
-
-	/// access inode (if exists)
-	auto info() const -> result_or_err<tree::inode>;
 
 protected:
 	/// string ID storage

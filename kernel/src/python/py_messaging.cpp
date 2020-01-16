@@ -101,74 +101,6 @@ public:
 	}
 };
 
-// resulting trampoline for bs_mesagins
-class py_bs_messaging : public py_bs_imessaging< py_object<bs_messaging> > {
-public:
-	using py_bs_imessaging<py_object<bs_messaging>>::py_bs_imessaging;
-
-	bool subscribe(int signal_code, sp_slot slot) const override {
-		PYBIND11_OVERLOAD(
-			bool,
-			bs_messaging,
-			subscribe,
-			signal_code, std::move(slot)
-		);
-	}
-
-	bool unsubscribe(int signal_code, sp_slot slot) const override {
-		PYBIND11_OVERLOAD(
-			bool,
-			bs_messaging,
-			unsubscribe,
-			signal_code, std::move(slot)
-		);
-	}
-
-	ulong num_slots(int signal_code) const override {
-		PYBIND11_OVERLOAD(
-			ulong,
-			bs_messaging,
-			num_slots,
-			signal_code
-		);
-	}
-
-	bool fire_signal(int signal_code, std::any param, std::any sender) const override {
-		PYBIND11_OVERLOAD(
-			bool,
-			bs_messaging,
-			fire_signal,
-			signal_code, std::move(param), std::move(sender)
-		);
-	}
-
-	std::vector< int > get_signal_list() const override {
-		PYBIND11_OVERLOAD(
-			std::vector< int >,
-			bs_messaging,
-			get_signal_list
-		);
-	}
-
-	bool add_signal(int signal_code) override {
-		PYBIND11_OVERLOAD(
-			bool,
-			bs_messaging,
-			add_signal,
-			signal_code
-		);
-	}
-
-	bool remove_signal(int signal_code) override {
-		PYBIND11_OVERLOAD(
-			bool,
-			bs_messaging,
-			remove_signal,
-			signal_code
-		);
-	}
-};
-
 void slot_tester(int c, const sp_slot& slot, std::any param) {
 	slot->execute(nullptr, c, std::move(param));
 }
@@ -204,7 +136,8 @@ void py_bind_messaging(py::module& m) {
 
 	// bs_imessaging abstract class
 	py::class_<
-		bs_imessaging, py_bs_imessaging<>, std::shared_ptr<bs_imessaging>
+		bs_imessaging, py_bs_imessaging<>,
+		std::shared_ptr<bs_imessaging>
 	>(m, "imessaging")
 		.def("subscribe"       , &bs_imessaging::subscribe)
 		.def("unsubscribe"     , &bs_imessaging::unsubscribe)
@@ -219,8 +152,8 @@ void py_bind_messaging(py::module& m) {
 	bool (bs_messaging::*add_signal_ptr)(int) = &bs_messaging::add_signal;
 
 	py::class_<
-		bs_messaging, bs_imessaging, objbase, py_bs_messaging,
-		std::shared_ptr< bs_messaging >
+		bs_messaging, bs_imessaging, objbase, py_bs_imessaging<bs_messaging>,
+		std::shared_ptr<bs_messaging>
 	>(m, "messaging", py::multiple_inheritance())
 		BSPY_EXPORT_DEF(bs_messaging)
 

@@ -6,7 +6,6 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include <pybind11/pybind11.h>
@@ -17,8 +16,6 @@
 #include <pybind11/operators.h>
 
 #include <bs/error.h>
-#include <bs/objbase.h>
-#include <bs/type_macro.h>
 #include <bs/kernel/misc.h>
 #include <bs/python/kernel.h>
 
@@ -73,42 +70,9 @@ BSPY_EXPORT_DEF_((T<T_spec_tup>))
 namespace pybind11::detail { struct any_cast_extra { using type = type_list<__VA_ARGS__>; }; }
 
 NAMESPACE_BEGIN(blue_sky::python)
+
+/// inject namespace aliases
 namespace py = pybind11;
 using namespace pybind11::literals;
-
-// *-----------------------------------------------------------------------------
-// *  trampoline class for bindings for BS objects
-// *-----------------------------------------------------------------------------
-template<typename Object = objbase>
-class py_object : public Object {
-public:
-	// import derived type ctors
-	using Object::Object;
-	py_object() = default;
-
-	const type_descriptor& bs_resolve_type() const override {
-		PYBIND11_OVERLOAD(
-			const type_descriptor&,
-			Object,
-			bs_resolve_type
-		);
-	}
-
-	std::string type_id() const override {
-		PYBIND11_OVERLOAD(
-			std::string,
-			Object,
-			type_id
-		);
-	}
-
-	std::string id() const override {
-		PYBIND11_OVERLOAD(
-			std::string,
-			Object,
-			id
-		);
-	}
-};
 
 NAMESPACE_END(blue_sky::python)
