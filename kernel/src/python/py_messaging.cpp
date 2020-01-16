@@ -1,7 +1,7 @@
 /// @file
 /// @author uentity
 /// @date 12.01.2016
-/// @brief 
+/// @brief Python bindings for BS signal-slot subsystem
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -14,9 +14,6 @@ BSPY_ANY_CAST_EXTRA(long double)
 #include <bs/python/any.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
-
-void py_bind_signal(py::module&);
-
 NAMESPACE_BEGIN()
 using namespace std;
 
@@ -40,70 +37,8 @@ public:
 			}
 			else return pybind11::detail::cast_safe<void>(std::move(o));
 		}
-		//PYBIND11_OVERLOAD_PURE(
-		//	void,
-		//	bs_slot,
-		//	execute,
-		//	std::move(sender), signal_code, std::move(param)
-		//);
 	}
 };
-
-// bs_imessaging wrapper
-// template used to flatten trampoline hierarchy -- they don't support multiple inheritance
-template<typename Next = bs_imessaging>
-class py_bs_imessaging : public Next {
-public:
-	using Next::Next;
-
-	bool subscribe(int signal_code, sp_slot slot) const override {
-		PYBIND11_OVERLOAD_PURE(
-			bool,
-			Next,
-			subscribe,
-			signal_code, std::move(slot)
-		);
-	}
-
-	bool unsubscribe(int signal_code, sp_slot slot) const override {
-		PYBIND11_OVERLOAD_PURE(
-			bool,
-			Next,
-			unsubscribe,
-			signal_code, std::move(slot)
-		);
-	}
-
-	ulong num_slots(int signal_code) const override {
-		PYBIND11_OVERLOAD_PURE(
-			ulong,
-			Next,
-			num_slots,
-			signal_code
-		);
-	}
-
-	bool fire_signal(int signal_code, std::any param, std::any sender) const override {
-		PYBIND11_OVERLOAD_PURE(
-			bool,
-			Next,
-			fire_signal,
-			signal_code, std::move(param), std::move(sender)
-		);
-	}
-
-	std::vector< int > get_signal_list() const override {
-		PYBIND11_OVERLOAD_PURE(
-			std::vector< int >,
-			Next,
-			get_signal_list
-		);
-	}
-};
-
-void slot_tester(int c, const sp_slot& slot, std::any param) {
-	slot->execute(nullptr, c, std::move(param));
-}
 
 NAMESPACE_END()
 
@@ -131,34 +66,17 @@ void py_bind_messaging(py::module& m) {
 		.def("fire", &bs_signal::fire, "sender"_a = nullptr, "param"_a = std::any{})
 	;
 
-	// DEBUG
-	m.def("slot_tester", &slot_tester);
-
-	// bs_imessaging abstract class
-	py::class_<
-		bs_imessaging, py_bs_imessaging<>,
-		std::shared_ptr<bs_imessaging>
-	>(m, "imessaging")
-		.def("subscribe"       , &bs_imessaging::subscribe)
-		.def("unsubscribe"     , &bs_imessaging::unsubscribe)
-		.def("num_slots"       , &bs_imessaging::num_slots)
-		.def("fire_signal"     , &bs_imessaging::fire_signal,
-			"signal_code"_a, "param"_a = nullptr, "sender"_a = nullptr
-		)
-		.def("get_signal_list" , &bs_imessaging::get_signal_list)
-	;
-
 	// bs_messaging
 	bool (bs_messaging::*add_signal_ptr)(int) = &bs_messaging::add_signal;
 
 	py::class_<
-		bs_messaging, bs_imessaging, objbase, py_bs_imessaging<bs_messaging>,
+		bs_messaging, objbase,
 		std::shared_ptr<bs_messaging>
 	>(m, "messaging", py::multiple_inheritance())
 		BSPY_EXPORT_DEF(bs_messaging)
 
-		.def(py::init_alias<>())
-		.def(py::init_alias< bs_messaging::sig_range_t >())
+		.def(py::init<>())
+		.def(py::init<bs_messaging::sig_range_t>())
 		.def("subscribe"       , &bs_messaging::subscribe)
 		.def("unsubscribe"     , &bs_messaging::unsubscribe)
 		.def("num_slots"       , &bs_messaging::num_slots)
@@ -169,9 +87,6 @@ void py_bind_messaging(py::module& m) {
 		.def("remove_signal"   , &bs_messaging::remove_signal)
 		.def("get_signal_list" , &bs_messaging::get_signal_list)
 		.def("clear"           , &bs_messaging::clear)
-		.def("test_slot1", [](const bs_messaging& src, const sp_slot& slot, const sp_obj param = nullptr) {
-			slot->execute(src.shared_from_this(), 42, param);
-		})
 	;
 }
 
