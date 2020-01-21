@@ -10,13 +10,10 @@
 
 #include <bs/tree/node.h>
 #include <bs/kernel/radio.h>
-#include <bs/detail/enumops.h>
-#include <bs/detail/sharded_mutex.h>
 
 #include "actor_common.h"
 #include "node_impl.h"
 
-#include <set>
 #include <unordered_map>
 #include <optional>
 
@@ -27,7 +24,7 @@
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::node::iterator<K>) \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::node::range<K>)
 
-#define OMIT_ITERATORS_SERIALIZATION                               \
+#define OMIT_ITERATORS_SERIALIZATION                         \
 OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::ID)       \
 OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::OID)      \
 OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::Name)     \

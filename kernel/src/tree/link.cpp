@@ -7,9 +7,10 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include "link_actor.h"
+#include "ev_listener_actor.h"
 #include <bs/log.h>
 #include <bs/kernel/radio.h>
-#include "link_actor.h"
 
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
@@ -204,55 +205,55 @@ auto link::data_node(process_data_cb f, bool high_priority) const -> void {
  *  subscribers management
  *-----------------------------------------------------------------------------*/
 auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t {
-	struct ev_state { handle_event_cb f; };
+	using baby_t = ev_listener_actor<sp_clink>;
 
-	// produce event bhavior that calls passed callback with proper params
-	auto make_ev_character = [L = shared_from_this(), listen_to, f = std::move(f)](
-		caf::stateful_actor<ev_state>* self
-	) {
-		auto res = caf::message_handler{};
-		self->state.f = std::move(f);
+ 	// produce event bhavior that calls passed callback with proper params
+ 	auto make_ev_character = [L = shared_from_this(), listen_to](baby_t* self) {	
+ 		auto res = caf::message_handler{};
+ 		if(enumval(listen_to & Event::LinkRenamed))
+ 			res = res.or_else(
+ 				[self, wL = std::weak_ptr{L}] (
+ 					a_ack, a_lnk_rename, std::string new_name, std::string old_name
+ 				) {
+ 					if(auto lnk = wL.lock())
+ 						self->f(std::move(lnk), Event::LinkRenamed, {
+ 							{"new_name", std::move(new_name)},
+ 							{"prev_name", std::move(old_name)}
+ 						});
+ 				}
+ 			);
 
-		if(enumval(listen_to & Event::LinkRenamed))
-			res = res.or_else(
-				[self, wL = std::weak_ptr{L}] (
-					a_ack, a_lnk_rename, std::string new_name, std::string old_name
-				) {
-					if(auto lnk = wL.lock())
-						self->state.f(std::move(lnk), Event::LinkRenamed, {
-							{"new_name", std::move(new_name)},
-							{"prev_name", std::move(old_name)}
-						});
-				}
-			);
+ 		if(enumval(listen_to & Event::LinkStatusChanged))
+ 			res = res.or_else(
+ 				[self, wL = std::weak_ptr{L}] (
+ 					a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v
+ 				) {
+ 					if(auto lnk = wL.lock())
+ 						self->f(std::move(lnk), Event::LinkStatusChanged, {
+ 							{"request", prop::integer(new_v)},
+ 							{"new_status", prop::integer(new_v)},
+ 							{"prev_status", prop::integer(prev_v)}
+ 						});
+ 				}
+ 			);
 
-		if(enumval(listen_to & Event::LinkStatusChanged))
-			res = res.or_else(
-				[self, wL = std::weak_ptr{L}] (
-					a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v
-				) {
-					if(auto lnk = wL.lock())
-						self->state.f(std::move(lnk), Event::LinkStatusChanged, {
-							{"request", prop::integer(new_v)},
-							{"new_status", prop::integer(new_v)},
-							{"prev_status", prop::integer(prev_v)}
-						});
-				}
-			);
+ 		if(enumval(listen_to & Event::LinkDeleted))
+ 			res = res.or_else(
+ 				[self, lid = L->id()](a_bye) {
+					// when overriding this we must call `disconnect()` explicitly
+					self->disconnect();
+ 					self->f(sp_link{}, Event::LinkDeleted, {{ "lid", to_string(lid) }});
+ 				}
+ 			);
 
-		if(enumval(listen_to & Event::LinkDeleted))
-			res = res.or_else(
-				[self, lid = L->id()](a_bye) {
-					self->state.f(sp_link{}, Event::LinkDeleted, {{ "lid", to_string(lid) }});
-				}
-			);
+ 		return res;
+ 	};
 
-		return res;
-	};
-
-	// make shiny new subscriber actor, place into parent's room and return it's ID
-	auto baby = system().spawn(ev_listener_actor<ev_state>, pimpl_->self_grp, std::move(make_ev_character));
-	// and return ID
+	// make baby event handler actor
+	auto baby = system().spawn_in_group<baby_t>(
+		pimpl_->self_grp, pimpl_->self_grp, std::move(f), std::move(make_ev_character)
+	);
+	// return baby ID
 	return baby.id();
 }
 

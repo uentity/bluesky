@@ -8,8 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <bs/log.h>
 #include <bs/actor_common.h>
+#include <bs/log.h>
 #include <bs/tree/node.h>
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
@@ -17,8 +17,6 @@
 #include <boost/uuid/uuid_hash.hpp>
 
 #include <cereal/types/vector.hpp>
-
-#include <caf/scoped_actor.hpp>
 
 #include <set>
 #include <unordered_map>

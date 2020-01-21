@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "node_actor.h"
+#include "ev_listener_actor.h"
 #include <bs/kernel/types_factory.h>
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
@@ -386,14 +387,10 @@ auto node::rearrange(std::vector<std::size_t> new_order) -> void {
 //  events handling
 //
 auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
-	struct ev_state { handle_event_cb f; };
+	using baby_t = ev_listener_actor<sp_node>;
 
-	auto make_ev_character = [N = bs_shared_this<node>(), listen_to, f = std::move(f)](
-		caf::stateful_actor<ev_state>* self
-	) {
+	auto make_ev_character = [N = bs_shared_this<node>(), listen_to](baby_t* self) {
 		auto res = caf::message_handler{};
-		self->state.f = std::move(f);
-
 		if(enumval(listen_to & Event::LinkRenamed)) {
 			res = res.or_else(
 				[self, wN = std::weak_ptr{N}] (
@@ -401,7 +398,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 				) {
 					bsout() << "*-* node: fired LinkRenamed event" << bs_end;
 					if(auto N = wN.lock())
-						self->state.f(std::move(N), Event::LinkRenamed, {
+						self->f(std::move(N), Event::LinkRenamed, {
 							{"link_id", to_string(lid)},
 							{"new_name", std::move(new_name)},
 							{"prev_name", std::move(old_name)}
@@ -418,7 +415,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 				) {
 					bsout() << "*-* node: fired LinkStatusChanged event" << bs_end;
 					if(auto N = wN.lock())
-						self->state.f(std::move(N), Event::LinkStatusChanged, {
+						self->f(std::move(N), Event::LinkStatusChanged, {
 							{"link_id", to_string(lid)},
 							{"request", prop::integer(req)},
 							{"new_status", prop::integer(new_s)},
@@ -436,7 +433,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 				) {
 					bsout() << "*-* node: fired LinkInserted event" << bs_end;
 					if(auto N = wN.lock())
-						self->state.f(std::move(N), Event::LinkInserted, {
+						self->f(std::move(N), Event::LinkInserted, {
 							{"link_id", to_string(lid)},
 							{"pos", (prop::integer)pos}
 						});
@@ -447,7 +444,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 				) {
 					bsout() << "*-* node: fired LinkInserted event" << bs_end;
 					if(auto N = wN.lock())
-						self->state.f(std::move(N), Event::LinkInserted, {
+						self->f(std::move(N), Event::LinkInserted, {
 							{"link_id", to_string(lid)},
 							{"to_idx", (prop::integer)to_idx},
 							{"from_idx", (prop::integer)from_idx}
@@ -475,7 +472,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 						[](const link::id_type& lid) { return to_string(lid); }
 					);
 
-					self->state.f(std::move(N), Event::LinkErased, killed);
+					self->f(std::move(N), Event::LinkErased, killed);
 				}
 			);
 			bsout() << "*-* node: subscribed to LinkErased event" << bs_end;
@@ -485,8 +482,8 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 	};
 
 	// make shiny new subscriber actor and place into parent's room
-	auto baby = kernel::radio::system().spawn(
-		ev_listener_actor<ev_state>, pimpl_->self_grp, std::move(make_ev_character)
+	auto baby = kernel::radio::system().spawn_in_group<baby_t>(
+		pimpl_->self_grp, pimpl_->self_grp, std::move(f), std::move(make_ev_character)
 	);
 	// and return ID
 	return baby.id();

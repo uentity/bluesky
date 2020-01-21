@@ -8,7 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <bs/tree/link.h>
 #include <bs/tree/node.h>
 #include <bs/kernel/radio.h>
 
