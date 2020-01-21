@@ -227,6 +227,7 @@ private:
 		try {
 			return eval(std::forward<F>(f), std::forward<Fs>(fs)...);
 		}
+		catch(error& e) { return std::move(e); }
 		catch(const std::system_error& e) { return error{q, e}; }
 		catch(const std::exception& e) { return error{q, e.what()}; }
 		catch(...) { return error{q, Error::Happened}; }
