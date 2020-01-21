@@ -243,7 +243,9 @@ auto bind_tools(py::module& m) -> void {
 auto bind_radio(py::module& m) -> void {
 	namespace kr = kernel::radio;
 	m.def("await_all_actors_done", [] { kr::system().await_all_actors_done(); },
-		"Blocks until all actors are finished");
+		"Blocks until all actors are finished", py::call_guard<py::gil_scoped_release>());
+	m.def("await_actors_before_shutdown", [] {return kr::system().await_actors_before_shutdown(); });
+	m.def("await_actors_before_shutdown", [](bool x) { kr::system().await_actors_before_shutdown(x); });
 	m.def("toggle", &kr::toggle, "Start/stop radio subsystem");
 	m.def("start_server", &kr::start_server, "Helper that toggles radio on & starts listening");
 	m.def("start_client", &kr::start_client, "Helper that toggles radio on & starts client");
