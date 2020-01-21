@@ -18,7 +18,7 @@
 
 #include <boost/uuid/uuid_generators.hpp>
 
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::link::modificator_f)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::data_modificator_f)
 
 #define DEBUG_ACTOR 0
 
@@ -251,7 +251,7 @@ auto link_actor::make_behavior() -> behavior_type {
 
 		// 16. apply modifier function on pointee
 		// set `Data` status depending on error returned from modifier
-		[=](a_apply, link::modificator_f m, bool silent) mutable -> caf::result<error::box> {
+		[=](a_apply, data_modificator_f m, bool silent) mutable -> caf::result<error::box> {
 			auto res = make_response_promise();
 
 			request(caf::actor{this}, caf::duration{def_timeout(true)}, a_lnk_data(), true)

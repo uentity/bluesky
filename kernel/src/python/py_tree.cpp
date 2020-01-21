@@ -21,7 +21,6 @@ PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_node>);
 
 NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
-using Key = node::Key;
 
 using links_v = tree::links_v;
 using links_l = std::list<sp_link>;

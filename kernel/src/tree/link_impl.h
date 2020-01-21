@@ -27,23 +27,13 @@ namespace bs_detail = blue_sky::detail;
 inline const auto nil_uid = boost::uuids::nil_uuid();
 inline const std::string nil_oid = to_string(nil_uid);
 
-// for debug & print purposes
-auto to_string(link::Req) -> const char*;
-auto to_string(link::ReqStatus) -> const char*;
-
-using Req = link::Req;
-using ReqStatus = link::ReqStatus;
-using ReqReset = link::ReqReset;
 using link_impl_mutex = std::mutex;
 
 class BS_HIDDEN_API link_impl : public bs_detail::sharded_mutex<link_impl_mutex> {
 public:
-	using id_type = link::id_type;
-	using Flags = link::Flags;
-
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 
-	id_type id_;
+	link_id_type id_;
 	std::string name_;
 	Flags flags_;
 
@@ -174,6 +164,9 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 
 	auto pointee() const -> result_or_err<sp_link>;
 };
+
+auto to_string(Req) -> const char*;
+auto to_string(ReqStatus) -> const char*;
 
 NAMESPACE_END(blue_sky::tree)
 

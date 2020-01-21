@@ -13,17 +13,17 @@
 #include <boost/algorithm/string.hpp>
 
 #define CAN_CALL_DNODE(L) \
-( !((L).flags() & link::LazyLoad) || (L).req_status(link::Req::DataNode) == link::ReqStatus::OK )
+( !((L).flags() & link::LazyLoad) || (L).req_status(link::Req::DataNode) == ReqStatus::OK )
 
 NAMESPACE_BEGIN(blue_sky::tree::detail)
 
 sp_link walk_down_tree(
-	const std::string& next_lid, const sp_node& cur_level, node::Key path_unit = node::Key::ID
+	const std::string& next_lid, const sp_node& cur_level, Key path_unit = Key::ID
 );
 
 NAMESPACE_BEGIN()
 // put into hidden namespace to prevent equal multiple instantiations
-auto gen_walk_down_tree(node::Key path_unit = node::Key::ID) {
+auto gen_walk_down_tree(Key path_unit = Key::ID) {
 	return [path_unit](const std::string& next_lid, const sp_node& cur_level) {
 		return walk_down_tree(next_lid, cur_level, path_unit);
 	};
@@ -33,7 +33,7 @@ NAMESPACE_END()
 
 // find out if we can call `data_node()` honoring LazyLoad flag
 inline auto can_call_dnode(const link& L) -> bool {
-	return !(L.flags() & link::LazyLoad) || L.req_status(link::Req::DataNode) == link::ReqStatus::OK;
+	return !(L.flags() & LazyLoad) || L.req_status(Req::DataNode) == ReqStatus::OK;
 }
 
 // If `DerefControlElements` == true, processing function will be invoked for all path parts

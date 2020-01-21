@@ -28,29 +28,22 @@ CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::node::iterator<K>) \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::node::range<K>)
 
 #define OMIT_ITERATORS_SERIALIZATION                               \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::node::Key::ID)       \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::node::Key::OID)      \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::node::Key::Name)     \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::node::Key::Type)     \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::node::Key::AnyOrder) \
+OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::ID)       \
+OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::OID)      \
+OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::Name)     \
+OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::Type)     \
+OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::AnyOrder) \
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 
 using links_container = node::links_container;
-using Key = node::Key;
 template<Key K> using iterator = typename node::iterator<K>;
 template<Key K> using Key_tag = typename node::Key_tag<K>;
 template<Key K> using Key_type = typename node::Key_type<K>;
 template<Key K> using Key_const = typename node::Key_const<K>;
 template<Key K> using insert_status = typename node::insert_status<K>;
 template<Key K> using range = typename node::range<K>;
-
-using Flags = link::Flags;
-using Req = link::Req;
-using ReqStatus = link::ReqStatus;
-using InsertPolicy = node::InsertPolicy;
-using EraseOpts = node::EraseOpts;
 
 /*-----------------------------------------------------------------------------
  *  node_actor

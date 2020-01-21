@@ -19,9 +19,6 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-//static boost::uuids::string_generator uuid_from_str;
-using EraseOpts = node::EraseOpts;
-
 node_impl::node_impl(node* super)
 	: timeout(def_timeout(true)), factor(kernel::radio::system()), super_(super)
 {}

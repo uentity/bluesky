@@ -27,9 +27,10 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;
 
-using id_type = link::id_type;
+using id_type = link_id_type;
 using links_container = node::links_container;
-using Key = node::Key;
+using EraseOpts = node::EraseOpts;
+
 template<Key K> using iterator = typename node::iterator<K>;
 template<Key K> using Key_tag = typename node::Key_tag<K>;
 template<Key K> using Key_type = typename node::Key_type<K>;
@@ -38,13 +39,7 @@ template<Key K> using insert_status = typename node::insert_status<K>;
 template<Key K> using range = typename node::range<K>;
 template<Key K> using const_range = typename node::const_range<K>;
 
-using Flags = link::Flags;
-using Req = link::Req;
-using ReqStatus = link::ReqStatus;
-using InsertPolicy = node::InsertPolicy;
-
 using bs_detail::shared;
-
 using node_impl_mutex = std::shared_mutex;
 
 static constexpr auto noop_postproc_f = [](const auto&) {};
@@ -80,7 +75,7 @@ public:
 		// track link rename
 		caf::reacts_to<a_ack, a_lnk_rename, id_type, std::string, std::string>,
 		// track link status
-		caf::reacts_to<a_ack, a_lnk_status, id_type, link::Req, link::ReqStatus, link::ReqStatus>,
+		caf::reacts_to<a_ack, a_lnk_status, id_type, Req, ReqStatus, ReqStatus>,
 		// ack on insert - reflect insert from sibling node actor
 		caf::reacts_to<a_ack, a_lnk_insert, id_type, size_t, InsertPolicy>,
 		// ack on link move
@@ -137,7 +132,7 @@ public:
 				else continue;
 			}
 			// check populated status before moving to next level
-			if(l->flags() & link::LazyLoad && l->req_status(Req::DataNode) != ReqStatus::OK)
+			if(l->flags() & LazyLoad && l->req_status(Req::DataNode) != ReqStatus::OK)
 				continue;
 			// search on next level
 			if(const auto next_n = l->data_node()) {

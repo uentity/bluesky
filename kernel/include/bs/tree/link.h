@@ -11,9 +11,8 @@
 #include "../atoms.h"
 #include "../error.h"
 #include "../objbase.h"
-#include "../detail/enumops.h"
 #include "../propdict.h"
-#include "inode.h"
+#include "common.h"
 
 #include <boost/uuid/uuid.hpp>
 #include <cereal/access.hpp>
@@ -22,24 +21,6 @@
 #include <caf/typed_actor.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-
-// denote possible tree events
-enum class Event : std::uint64_t {
-	LinkRenamed = 1,
-	LinkStatusChanged = 2,
-	LinkInserted = 4,
-	LinkErased = 8,
-	LinkDeleted = 16,
-	All = std::uint64_t(-1)
-};
-
-// denote that we don't want to wait until invoke result is available
-struct launch_async_t {};
-inline constexpr auto launch_async = launch_async_t{};
-
-// denote operation that is thread-unsafe and can cause data race
-struct unsafe_t {};
-inline constexpr auto unsafe = unsafe_t{};
 
 class link_impl;
 class node_impl;
@@ -60,30 +41,11 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  static types, enumes, typed actor interface for link
 	//
-	using id_type = boost::uuids::uuid;
+	using id_type = link_id_type;
 	using sp_link = std::shared_ptr<link>;
 	using sp_clink = std::shared_ptr<const link>;
 	using link_ptr = object_ptr<link>;
 	using clink_ptr = object_ptr<const link>;
-
-	/// object data requests
-	enum class Req { Data = 0, DataNode = 1 };
-	/// states of reuqest
-	enum class ReqStatus { Void, Busy, OK, Error };
-	/// request status reset conditions
-	enum class ReqReset {
-		Always = 0, IfEq = 1, IfNeq = 2
-	};
-
-	/// flags reflect link properties and state
-	enum Flags {
-		Plain = 0,
-		Persistent = 1,
-		Disabled = 2,
-		LazyLoad = 4
-	};
-
-	using modificator_f = std::function< error(sp_obj) >;
 
 	/// Interface of link actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
@@ -124,7 +86,7 @@ public:
         // get data node
 		caf::replies_to<a_lnk_dnode, bool>::with<result_or_errbox<sp_node>>,
         // modify data
-		caf::replies_to<a_apply, modificator_f, bool>::with<error::box>
+		caf::replies_to<a_apply, data_modificator_f, bool>::with<error::box>
 	>;
 
 	// extract actor type from link
@@ -229,8 +191,8 @@ public:
 	}
 
 	/// make pointee data modification atomically
-	auto modify_data(modificator_f m, bool silent = false) const -> error;
-	auto modify_data(launch_async_t, modificator_f m, bool silent = false) const -> void;
+	auto modify_data(data_modificator_f m, bool silent = false) const -> error;
+	auto modify_data(launch_async_t, data_modificator_f m, bool silent = false) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Async API
@@ -417,5 +379,3 @@ private:
 };
 
 NAMESPACE_END(blue_sky::tree)
-
-BS_ALLOW_ENUMOPS(blue_sky::tree::Event)

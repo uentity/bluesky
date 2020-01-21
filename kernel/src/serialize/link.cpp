@@ -18,8 +18,6 @@
 
 using namespace cereal;
 using namespace blue_sky;
-using Req = blue_sky::tree::link::Req;
-using ReqStatus = blue_sky::tree::link::ReqStatus;
 using blue_sky::detail::shared;
 
 /*-----------------------------------------------------------------------------

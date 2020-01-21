@@ -124,7 +124,7 @@ auto ilink_impl::get_inode() -> result_or_err<inodeptr> {
 /*-----------------------------------------------------------------------------
  *  misc
  *-----------------------------------------------------------------------------*/
-auto to_string(link::Req r) -> const char* {
+auto to_string(Req r) -> const char* {
 	switch(r) {
 	case Req::Data : return "Data";
 	case Req::DataNode : return "DataNode";
@@ -132,7 +132,7 @@ auto to_string(link::Req r) -> const char* {
 	}
 }
 
-auto to_string(link::ReqStatus s) -> const char* {
+auto to_string(ReqStatus s) -> const char* {
 	switch(s) {
 	case ReqStatus::Void : return "Void";
 	case ReqStatus::Busy : return "Busy";

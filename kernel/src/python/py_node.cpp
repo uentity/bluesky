@@ -18,8 +18,6 @@
 
 NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
-using Key = node::Key;
-using InsertPolicy = node::InsertPolicy;
 
 /*-----------------------------------------------------------------------------
  *  hidden details
@@ -136,10 +134,7 @@ void py_bind_node(py::module& m) {
 		.value("RenameDup", InsertPolicy::RenameDup)
 		.value("DenyDupOID", InsertPolicy::DenyDupOID)
 		.value("Merge", InsertPolicy::Merge)
-		//.export_values();
 	;
-	//py::implicitly_convertible<int, InsertPolicy>();
-	//py::implicitly_convertible<long, InsertPolicy>();
 
 	node_pyface
 		BSPY_EXPORT_DEF(node)
@@ -147,7 +142,7 @@ void py_bind_node(py::module& m) {
 		.def("__len__", &node::size)
 		.def("__iter__", [](const node& N) { return make_container_iterator(N.leafs()); })
 
-		.def("leafs", &node::leafs, "Key"_a = node::Key::AnyOrder, "Return snapshot of node content")
+		.def("leafs", &node::leafs, "Key"_a = Key::AnyOrder, "Return snapshot of node content")
 
 		// check by link ID
 		.def("__contains__", &contains_link, "link"_a)

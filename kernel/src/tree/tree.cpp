@@ -14,9 +14,8 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
 
-using Key = node::Key;
 template<Key K> using Key_type = typename node::Key_type<K>;
 
 /*-----------------------------------------------------------------------------
@@ -141,7 +140,7 @@ NAMESPACE_END()
 
 NAMESPACE_BEGIN(detail)
 
-sp_link walk_down_tree(const std::string& cur_lid, const sp_node& level, node::Key path_unit) {
+sp_link walk_down_tree(const std::string& cur_lid, const sp_node& level, Key path_unit) {
 	if(!level) return nullptr;
 	const auto next = level->find(cur_lid, path_unit);
 	return next != level->end() ? *next : nullptr;
@@ -276,14 +275,14 @@ std::string convert_path(
 //  deref_path
 //
 sp_link deref_path(
-	const std::string& path, sp_link start, node::Key path_unit, bool follow_lazy_links
+	const std::string& path, sp_link start, Key path_unit, bool follow_lazy_links
 ) {
 	return detail::deref_path_impl(
 		path, std::move(start), nullptr, follow_lazy_links, detail::gen_walk_down_tree(path_unit)
 	);
 }
 sp_link deref_path(
-	const std::string& path, sp_node start, node::Key path_unit, bool follow_lazy_links
+	const std::string& path, sp_node start, Key path_unit, bool follow_lazy_links
 ) {
 	return detail::deref_path_impl(
 		path, nullptr, std::move(start), follow_lazy_links, detail::gen_walk_down_tree(path_unit)
@@ -331,5 +330,4 @@ auto make_root_link(
 		return link::make_root<hard_link>(std::move(name), std::move(root_node));
 }
 
-NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::tree)

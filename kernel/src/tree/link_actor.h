@@ -19,9 +19,6 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-using id_type = link::id_type;
-using Flags = link::Flags;
-
 enum class ReqOpts {
 	WaitIfBusy = 0, ErrorIfBusy = 1, ErrorIfNOK = 2, Detached = 4, DirectInvoke = 8,
 	HasDataCache = 16

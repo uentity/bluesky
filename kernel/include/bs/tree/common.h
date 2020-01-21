@@ -1,0 +1,76 @@
+/// @file
+/// @author uentity
+/// @date 05.12.2019
+/// @brief Common definitions for BS tree
+/// @copyright
+/// This Source Code Form is subject to the terms of the Mozilla Public License,
+/// v. 2.0. If a copy of the MPL was not distributed with this file,
+/// You can obtain one at https://mozilla.org/MPL/2.0/
+#pragma once
+
+#include "../common.h"
+#include "../detail/enumops.h"
+#include "inode.h"
+
+#include <boost/uuid/uuid.hpp>
+
+NAMESPACE_BEGIN(blue_sky::tree)
+
+// denote possible tree events
+enum class Event : std::uint32_t {
+	LinkRenamed = 1,
+	LinkStatusChanged = 2,
+	LinkInserted = 4,
+	LinkErased = 8,
+	LinkDeleted = 16,
+	All = std::uint32_t(-1)
+};
+
+/// link object data requests
+enum class Req { Data = 0, DataNode = 1 };
+/// request status reset conditions
+enum class ReqReset {
+	Always = 0, IfEq = 1, IfNeq = 2
+};
+/// states of reuqest
+enum class ReqStatus { Void, Busy, OK, Error };
+
+/// flags reflect link properties and state
+enum Flags {
+	Plain = 0,
+	Persistent = 1,
+	Disabled = 2,
+	LazyLoad = 4
+};
+
+/// node leafs indexes/ordering
+enum class Key { ID, OID, Name, Type, AnyOrder };
+
+/// links insertions policy
+enum class InsertPolicy {
+	AllowDupNames = 0,
+	DenyDupNames = 1,
+	RenameDup = 2,
+	DenyDupOID = 4,
+	ReplaceDupOID = 8,
+	Merge = 16
+};
+
+/// denote that we don't want to wait until invoke result is available
+struct launch_async_t {};
+inline constexpr auto launch_async = launch_async_t{};
+
+/// denote operation that is thread-unsafe and can cause data race
+struct unsafe_t {};
+inline constexpr auto unsafe = unsafe_t{};
+
+/// link's unique ID type
+using link_id_type = boost::uuids::uuid;
+/// function that modifies link's pointee
+using data_modificator_f = std::function< error(sp_obj) >;
+
+NAMESPACE_END(blue_sky::tree)
+
+// allow bitwise operators on some enums
+BS_ALLOW_ENUMOPS(blue_sky::tree::Event)
+BS_ALLOW_ENUMOPS(blue_sky::tree::InsertPolicy)

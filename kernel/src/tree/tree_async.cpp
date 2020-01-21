@@ -65,7 +65,7 @@ NAMESPACE_END()
  *-----------------------------------------------------------------------------*/
 // same as above but accept std::function
 auto deref_path(
-	deref_process_f f, std::string path, sp_link start, node::Key path_unit,
+	deref_process_f f, std::string path, sp_link start, Key path_unit,
 	bool follow_lazy_links, bool high_priority
 ) -> void {
 	// create local temp actor

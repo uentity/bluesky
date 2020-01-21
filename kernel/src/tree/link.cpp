@@ -15,7 +15,7 @@
 #include <bs/serialize/cafbind.h>
 
 OMIT_OBJ_SERIALIZATION
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::link::modificator_f)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::data_modificator_f)
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
@@ -78,7 +78,7 @@ auto link::info() const -> result_or_err<inode> {
 	});
 }
 
-link::Flags link::flags() const {
+auto link::flags() const -> Flags {
 	return pimpl_->actorf<Flags>(*this, a_lnk_flags()).value_or(Flags::Plain);
 }
 
@@ -147,11 +147,11 @@ auto link::data_node_ex(bool wait_if_busy) const -> result_or_err<sp_node> {
 	return pimpl_->actorf<result_or_errbox<sp_node>>(*this, a_lnk_dnode(), wait_if_busy);
 }
 
-auto link::modify_data(modificator_f m, bool silent) const -> error {
+auto link::modify_data(data_modificator_f m, bool silent) const -> error {
 	auto res = pimpl_->actorf<error::box>(*this, a_apply(), std::move(m), silent);
 	return res ? error::unpack(res.value()) : res.error();
 }
-auto link::modify_data(launch_async_t, modificator_f m, bool silent) const -> void {
+auto link::modify_data(launch_async_t, data_modificator_f m, bool silent) const -> void {
 	caf::anon_send(actor(), a_apply(), std::move(m), silent);
 }
 

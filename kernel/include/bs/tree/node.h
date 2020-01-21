@@ -65,8 +65,6 @@ public:
 		>
 	>;
 
-	// key alias
-	enum class Key { ID, OID, Name, Type, AnyOrder };
 	template<Key K> using Key_const = std::integral_constant<Key, K>;
 
 private:
@@ -133,16 +131,8 @@ public:
 	template<Key K = Key::ID> using range = range_t<iterator<K>>;
 	template<Key K = Key::ID> using const_range = range_t<const_iterator<K>>;
 
-	/// links insertions policy
-	enum class InsertPolicy {
-		AllowDupNames = 0,
-		DenyDupNames = 1,
-		RenameDup = 2,
-		DenyDupOID = 4,
-		ReplaceDupOID = 8,
-		Merge = 16
-	};
-	/// link erase options (used for acctor)
+
+	/// link erase options
 	enum class EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
 
 	using actor_insert_status = std::pair<std::optional<std::size_t>, bool>;
@@ -409,7 +399,4 @@ using cnode_ptr = object_ptr<const node>;
 
 NAMESPACE_END(blue_sky::tree)
 
-// allow bitwise operations for InsertPoiicy enum class
-BS_ALLOW_ENUMOPS(blue_sky::tree::node::InsertPolicy)
 BS_ALLOW_ENUMOPS(blue_sky::tree::node::EraseOpts)
-

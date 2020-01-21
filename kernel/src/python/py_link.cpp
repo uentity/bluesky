@@ -73,24 +73,24 @@ void py_bind_link(py::module& m) {
 	py::class_<link, sp_link> link_pyface(m, "link");
 
 	// export Flags enum
-	py::enum_<link::Flags>(link_pyface, "Flags", py::arithmetic())
-		.value("Persistent", link::Flags::Persistent)
-		.value("Disabled", link::Flags::Disabled)
+	py::enum_<Flags>(link_pyface, "Flags", py::arithmetic())
+		.value("Persistent", Flags::Persistent)
+		.value("Disabled", Flags::Disabled)
 		.export_values()
 	;
-	py::implicitly_convertible<int, link::Flags>();
-	py::implicitly_convertible<long, link::Flags>();
+	py::implicitly_convertible<int, Flags>();
+	py::implicitly_convertible<long, Flags>();
 
 	// export link request & status enums
-	py::enum_<link::Req>(link_pyface, "Req")
-		.value("Data", link::Req::Data)
-		.value("DataNode", link::Req::DataNode)
+	py::enum_<Req>(link_pyface, "Req")
+		.value("Data", Req::Data)
+		.value("DataNode", Req::DataNode)
 	;
-	py::enum_<link::ReqStatus>(link_pyface, "ReqStatus")
-		.value("Void", link::ReqStatus::Void)
-		.value("Busy", link::ReqStatus::Busy)
-		.value("OK", link::ReqStatus::OK)
-		.value("Error", link::ReqStatus::Error)
+	py::enum_<ReqStatus>(link_pyface, "ReqStatus")
+		.value("Void", ReqStatus::Void)
+		.value("Busy", ReqStatus::Busy)
+		.value("OK", ReqStatus::OK)
+		.value("Error", ReqStatus::Error)
 	;
 
 	// Events enum
@@ -132,7 +132,7 @@ void py_bind_link(py::module& m) {
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
 		.def("modify_data",
-			[](const link& L, link::modificator_f m, bool silent) {
+			[](const link& L, data_modificator_f m, bool silent) {
 				L.modify_data(launch_async, std::move(m), silent);
 			},
 			"m"_a, "silent"_a = false
@@ -144,15 +144,15 @@ void py_bind_link(py::module& m) {
 		.def("rename", &link::rename)
 		.def("req_status", &link::req_status, "Query for given operation status")
 		.def("rs_reset", &link::rs_reset,
-			"request"_a, "new_status"_a = link::ReqStatus::Void,
+			"request"_a, "new_status"_a = ReqStatus::Void,
 			"Unconditionally set status of given request"
 		)
 		.def("rs_reset_if_eq", &link::rs_reset_if_eq,
-			"request"_a, "self_rs"_a, "new_rs"_a = link::ReqStatus::Void,
+			"request"_a, "self_rs"_a, "new_rs"_a = ReqStatus::Void,
 			"Set status of given request if it is equal to given value, returns prev status"
 		)
 		.def("rs_reset_if_neq", &link::rs_reset_if_neq,
-			"request"_a, "self_rs"_a, "new_rs"_a = link::ReqStatus::Void,
+			"request"_a, "self_rs"_a, "new_rs"_a = ReqStatus::Void,
 			"Set status of given request if it is NOT equal to given value, returns prev status"
 		)
 
@@ -207,20 +207,20 @@ void py_bind_link(py::module& m) {
 	//  Derived links
 	//
 	py::class_<hard_link, link, std::shared_ptr<hard_link>>(m, "hard_link")
-		.def(py::init<std::string, sp_obj, link::Flags>(),
-			"name"_a, "data"_a, "flags"_a = link::Flags::Plain)
+		.def(py::init<std::string, sp_obj, Flags>(),
+			"name"_a, "data"_a, "flags"_a = Flags::Plain)
 	;
 
 	py::class_<weak_link, link, std::shared_ptr<weak_link>>(m, "weak_link")
-		.def(py::init<std::string, const sp_obj&, link::Flags>(),
-			"name"_a, "data"_a, "flags"_a = link::Flags::Plain)
+		.def(py::init<std::string, const sp_obj&, Flags>(),
+			"name"_a, "data"_a, "flags"_a = Flags::Plain)
 	;
 
 	py::class_<sym_link, link, std::shared_ptr<sym_link>>(m, "sym_link")
-		.def(py::init<std::string, std::string, link::Flags>(),
-			"name"_a, "path"_a, "flags"_a = link::Flags::Plain)
-		.def(py::init<std::string, const sp_link&, link::Flags>(),
-			"name"_a, "source"_a, "flags"_a = link::Flags::Plain)
+		.def(py::init<std::string, std::string, Flags>(),
+			"name"_a, "path"_a, "flags"_a = Flags::Plain)
+		.def(py::init<std::string, const sp_link&, Flags>(),
+			"name"_a, "source"_a, "flags"_a = Flags::Plain)
 
 		.def_property_readonly("check_alive", &sym_link::check_alive)
 		.def("src_path", &sym_link::src_path, "human_readable"_a = false)
@@ -230,10 +230,10 @@ void py_bind_link(py::module& m) {
 	//  fusion link/iface
 	//
 	py::class_<fusion_link, link, std::shared_ptr<fusion_link>>(m, "fusion_link")
-		.def(py::init<std::string, sp_node, sp_fusion, link::Flags>(),
-			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = link::Flags::Plain)
-		.def(py::init<std::string, const char*, std::string, sp_fusion, link::Flags>(),
-			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = link::Flags::Plain)
+		.def(py::init<std::string, sp_node, sp_fusion, Flags>(),
+			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = Flags::Plain)
+		.def(py::init<std::string, const char*, std::string, sp_fusion, Flags>(),
+			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = Flags::Plain)
 		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge)
 		.def("populate",
 			py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),

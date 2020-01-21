@@ -17,15 +17,15 @@
 
 #include <list>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
 
 /*-----------------------------------------------------------------------------
  *  Sync API
  *-----------------------------------------------------------------------------*/
 /// returns absolute link's path consisting from `path_unit` separated by '/'
 /// root ID isn't included, so absolute path always starts with '/'
-BS_API auto abspath(const link& L, node::Key path_unit = node::Key::ID) -> std::string;
-BS_API auto abspath(const sp_clink& L, node::Key path_unit = node::Key::ID) -> std::string;
+BS_API auto abspath(const link& L, Key path_unit = Key::ID) -> std::string;
+BS_API auto abspath(const sp_clink& L, Key path_unit = Key::ID) -> std::string;
 
 /// find root node from given link (can call `data_node()` if and only if root handle is passed)
 BS_API auto find_root(link& L) -> sp_node;
@@ -41,7 +41,7 @@ BS_API auto find_root_handle(const sp_node& N) -> sp_link;
 /// convert path one path representaion to another
 BS_API auto convert_path(
 	std::string src_path, sp_link start,
-	node::Key src_path_unit = node::Key::ID, node::Key dst_path_unit = node::Key::Name,
+	Key src_path_unit = Key::ID, Key dst_path_unit = Key::Name,
 	bool follow_lazy_links = false
 ) -> std::string;
 
@@ -49,12 +49,12 @@ BS_API auto convert_path(
 /// may be faster that full `node::deep_search()`
 /// also can lookup starting from any tree node given absolute path
 BS_API sp_link deref_path(
-	const std::string& path, sp_link start, node::Key path_unit = node::Key::ID,
+	const std::string& path, sp_link start, Key path_unit = Key::ID,
 	bool follow_lazy_links = true
 );
 /// sometimes it may be more convinient
 BS_API sp_link deref_path(
-	const std::string& path, sp_node start, node::Key path_unit = node::Key::ID,
+	const std::string& path, sp_node start, Key path_unit = Key::ID,
 	bool follow_lazy_links = true
 );
 
@@ -80,7 +80,7 @@ using deref_process_f = std::function<void(const sp_link&)>;
 
 BS_API auto deref_path(
 	deref_process_f f,
-	std::string path, sp_link start, node::Key path_unit = node::Key::ID,
+	std::string path, sp_link start, Key path_unit = Key::ID,
 	bool follow_lazy_links = true, bool high_priority = false
 ) -> void;
 
@@ -137,5 +137,5 @@ BS_API auto load_tree(
 	TreeArchive ar = TreeArchive::FS
 ) -> void;
 
-NAMESPACE_END(tree) NAMESPACE_END(blue_sky)
+NAMESPACE_END(blue_sky::tree)
 

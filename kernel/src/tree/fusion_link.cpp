@@ -22,7 +22,7 @@ fusion_iface::~fusion_iface() = default;
 fusion_link::fusion_link(
 	std::string name, sp_node data, sp_fusion bridge, Flags f
 ) : // set LazyLoad flag by default
-	super(std::make_shared<fusion_link_impl>( std::move(name), data, bridge, Flags(f | link::LazyLoad) ))
+	super(std::make_shared<fusion_link_impl>( std::move(name), data, bridge, Flags(f | LazyLoad) ))
 {}
 
 fusion_link::fusion_link(
