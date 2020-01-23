@@ -48,7 +48,7 @@ void walk_impl(
 
 		if(cur_node) {
 			// for each link in node
-			for(const auto& l : *cur_node) {
+			for(const auto& l : cur_node->leafs()) {
 				// collect nodes
 				if((follow_lazy_links || can_call_dnode(*l)) && l->data_node()) {
 					next_nodes.push_back(l);
@@ -94,7 +94,7 @@ void walk_impl(
 		std::vector<Key_type<Key::ID>> cur_symlinks;
 
 		// for each link in node
-		for(const auto& l : *cur_node) {
+		for(const auto& l : cur_node->leafs()) {
 			// remember symlinks
 			if(follow_symlinks && l->type_id() == "sym_link") {
 				if(active_symlinks.insert(l->id()).second)
