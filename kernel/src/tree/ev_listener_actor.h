@@ -58,8 +58,8 @@ struct ev_listener_actor : caf::event_based_actor {
 	}
 
 	auto disconnect() -> void {
-		leave(grp);
 		kernel::radio::system().registry().erase(id());
+		leave(grp);
 	}
 
 	auto make_behavior() -> behavior_type override {

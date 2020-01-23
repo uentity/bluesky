@@ -105,6 +105,9 @@ void py_bind_link(py::module& m) {
 	// async tag
 	py::class_<launch_async_t>(m, "launch_async_t");
 	m.attr("launch_async") = launch_async;
+	// unsafe tag
+	py::class_<unsafe_t>(m, "unsafe_t");
+	m.attr("unsafe") = unsafe;
 
 	// link base class
 	link_pyface
@@ -159,11 +162,13 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("id", [](const link& L) {
 			return boost::uuids::to_string(L.id());
 		})
-		.def_property_readonly("name", [](const link& L) { return L.name(); })
-		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
 		.def_property_readonly("owner", &link::owner)
-		.def_property_readonly("info", &link::info)
-		.def_property("flags", &link::flags, &link::set_flags)
+		.def_property_readonly("name", py::overload_cast<>(&link::name, py::const_))
+		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
+		.def_property("flags", py::overload_cast<>(&link::flags, py::const_), &link::set_flags)
+		.def_property_readonly("flags_unsafe", [](const link& L) { return L.flags(unsafe); })
+		.def("info", py::overload_cast<>(&link::info, py::const_))
+		.def("info", py::overload_cast<unsafe_t>(&link::info, py::const_))
 
 		// events subscrition
 		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All)

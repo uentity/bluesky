@@ -79,13 +79,25 @@ auto link::info() const -> result_or_err<inode> {
 	});
 }
 
+auto link::info(unsafe_t) const -> result_or_err<inode> {
+	return pimpl_->get_inode()
+	.and_then([](const inodeptr& i) {
+		return i ?
+			result_or_err<inode>(*i) :
+			tl::make_unexpected(error::quiet(Error::EmptyInode));
+	});
+}
+
 auto link::flags() const -> Flags {
 	return pimpl_->actorf<Flags>(*this, a_lnk_flags()).value_or(Flags::Plain);
 }
 
+auto link::flags(unsafe_t) const -> Flags {
+	return pimpl_->flags_;
+}
+
 void link::set_flags(Flags new_flags) {
 	caf::anon_send(actor(*this), a_lnk_flags(), new_flags);
-	//pimpl_->flags_ = new_flags;
 }
 
 auto link::req_status(Req request) const -> ReqStatus {
@@ -116,7 +128,6 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) -> Req
 /// obtain link's human-readable name
 auto link::name() const -> std::string {
 	return pimpl_->actorf<std::string>(*this, a_lnk_name()).value_or("");
-	//return pimpl_->name_;
 }
 
 auto link::name(unsafe_t) const -> std::string {

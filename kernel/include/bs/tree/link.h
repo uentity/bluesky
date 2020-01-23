@@ -108,9 +108,6 @@ public:
 
 	virtual ~link();
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  Generate
-	//
 	/// because we cannot make explicit copies of link
 	/// we need a dedicated function to make links clones
 	/// if `deep` flag is set, then clone pointed object as well
@@ -127,7 +124,7 @@ public:
 	}
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  Always fast API
+	//  Fast API
 	//
 	/// query what kind of link is this
 	virtual auto type_id() const -> std::string = 0;
@@ -145,6 +142,7 @@ public:
 	auto owner() const -> sp_node;
 
 	auto flags() const -> Flags;
+	auto flags(unsafe_t) const -> Flags;
 	auto set_flags(Flags new_flags) -> void;
 
 	/// rename link & notify owner node
@@ -152,6 +150,7 @@ public:
 
 	/// inspect object's inode
 	auto info() const -> result_or_err<inode>;
+	auto info(unsafe_t) const -> result_or_err<inode>;
 	/// get link's object ID -- fast, can return empty string
 	auto oid() const -> std::string;
 
