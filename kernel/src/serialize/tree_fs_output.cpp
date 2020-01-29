@@ -162,10 +162,7 @@ struct tree_fs_output::impl {
 				(*ar)(cereal::make_nvp("node_dir", N.gid()));
 
 				// custom leafs order
-				std::vector<std::string> leafs_order;
-				leafs_order.reserve(N.size());
-				for(const auto& L : N)
-					leafs_order.emplace_back(to_string(L->id()));
+				std::vector<std::string> leafs_order = N.skeys(tree::Key::ID, tree::Key::AnyOrder);
 				(*ar)(cereal::make_nvp("leafs_order", leafs_order));
 				// and finish
 				epilogue(*ar, N);

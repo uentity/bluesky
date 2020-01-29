@@ -169,12 +169,6 @@ auto sym_link::pimpl() const -> sym_link_impl* {
 	return static_cast<sym_link_impl*>(super::pimpl());
 }
 
-void sym_link::reset_owner(const sp_node& new_owner) {
-	link::reset_owner(new_owner);
-	// update link's status
-	check_alive();
-}
-
 bool sym_link::check_alive() {
 	auto res = bool(deref_path(pimpl()->path_, owner()));
 	auto S = res ? ReqStatus::OK : ReqStatus::Error;

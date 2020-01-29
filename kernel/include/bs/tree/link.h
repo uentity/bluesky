@@ -14,7 +14,6 @@
 #include "../propdict.h"
 #include "common.h"
 
-#include <boost/uuid/uuid.hpp>
 #include <cereal/access.hpp>
 
 #include <caf/actor.hpp>
@@ -41,7 +40,6 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  static types, enumes, typed actor interface for link
 	//
-	using id_type = link_id_type;
 	using sp_link = std::shared_ptr<link>;
 	using sp_clink = std::shared_ptr<const link>;
 	using link_ptr = object_ptr<link>;
@@ -52,7 +50,7 @@ public:
         // terminate actor
 		caf::reacts_to<a_bye>,
         // get link ID
-		caf::replies_to<a_lnk_id>::with<id_type>,
+		caf::replies_to<a_lnk_id>::with<lid_type>,
         // get pointee OID
 		caf::replies_to<a_lnk_oid>::with<std::string>,
         // get pointee type ID
@@ -130,7 +128,7 @@ public:
 	virtual auto type_id() const -> std::string = 0;
 
 	/// access link's unique ID
-	auto id() const -> id_type;
+	auto id() const -> lid_type;
 
 	/// obtain link's symbolic name
 	auto name() const -> std::string;
@@ -261,6 +259,7 @@ using sp_clink = link::sp_clink;
 using link_ptr = link::link_ptr;
 using clink_ptr = link::clink_ptr;
 using links_v = std::vector<sp_link>;
+using lids_v = std::vector<lid_type>;
 
 using cached_link_actor_type = link::actor_type::extend<
 	// get data cache
@@ -372,7 +371,6 @@ private:
 	sym_link();
 
 	auto pimpl() const -> sym_link_impl*;
-	auto reset_owner(const sp_node& new_owner) -> void override;
 
 	auto propagate_handle() -> result_or_err<sp_node> override;
 };

@@ -65,7 +65,7 @@ struct unsafe_t {};
 inline constexpr auto unsafe = unsafe_t{};
 
 /// link's unique ID type
-using link_id_type = boost::uuids::uuid;
+using lid_type = boost::uuids::uuid;
 /// function that modifies link's pointee
 using data_modificator_f = std::function< error(sp_obj) >;
 

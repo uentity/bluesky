@@ -19,6 +19,8 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
+const auto uuid_from_str = boost::uuids::string_generator{};
+
 node_impl::node_impl(node* super)
 	: timeout(def_timeout(true)), factor(kernel::radio::system()), super_(super)
 {}
@@ -100,60 +102,100 @@ auto node_impl::leafs(Key order) const -> links_v {
 	}
 }
 
+auto node_impl::search(const std::string& key, Key key_meaning) const -> sp_link {
+	switch(key_meaning) {
+	case Key::ID:
+		return search<Key::ID>(uuid_from_str(key));
+	case Key::OID:
+		return search<Key::OID>(key);
+	case Key::Type:
+		return search<Key::Type>(key);
+	default:
+	case Key::Name:
+		return search<Key::Name>(key);
+	}
+}
+
+auto node_impl::deep_search(const std::string& key, Key key_meaning) const -> sp_link {
+	switch(key_meaning) {
+	case Key::ID:
+		return deep_search<Key::ID>(uuid_from_str(key));
+	case Key::OID:
+		return deep_search<Key::OID>(key);
+	case Key::Type:
+		return deep_search<Key::Type>(key);
+	default:
+	case Key::Name:
+		return deep_search<Key::Name>(key);
+	}
+}
+
+auto node_impl::index(const std::string& key, Key key_meaning) const -> existing_index {
+	switch(key_meaning) {
+	case Key::ID:
+		return index<Key::ID>(uuid_from_str(key));
+	case Key::OID:
+		return index<Key::OID>(key);
+	case Key::Type:
+		return index<Key::Type>(key);
+	default:
+	case Key::Name:
+		return index<Key::Name>(key);
+	}
+}
+
+auto node_impl::equal_range(const std::string& key, Key key_meaning) const -> links_v {
+	switch(key_meaning) {
+	case Key::ID:
+		return equal_range<Key::ID>(uuid_from_str(key)).extract_values();
+	case Key::OID:
+		return equal_range<Key::OID>(key).extract_values();
+	case Key::Type:
+		return equal_range<Key::Type>(key).extract_values();
+	default:
+	case Key::Name:
+		return equal_range<Key::Name>(key).extract_values();
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //  leafs insert & erase
 //
+// hardcode number of rename trials on insertion
+inline constexpr auto rename_trials = 10000;
+
 auto node_impl::insert(
 	sp_link L, const InsertPolicy pol, leaf_postproc_fn ppf
 ) -> insert_status<Key::ID> {
 	// can't move persistent node from it's owner
-	if(!L || !accepts(L) || (L->flags() & Flags::Persistent && L->owner()))
-		return { end<Key::ID>(), false };
+	const auto Lflags = L->flags();
+	if(!L || !accepts(L) || (Lflags & Flags::Persistent && L->owner()))
+		return { {}, false };
 
-	auto& Limpl = *L->pimpl();
-	auto Lguard = Limpl.lock(shared);
+	// if insert policy deny duplicating name & we have to rename link being inserted
+	// then new link name will go here
+	auto Lname = std::optional<std::string>{};
 
-	// check if we have duplicated name
-	iterator<Key::ID> dup;
-	if(enumval(pol & 3) > 0) {
-		dup = find<Key::Name, Key::ID>(Limpl.name_);
-		if(dup != end<Key::ID>() && (*dup)->id() != Limpl.id_) {
-			bool unique_found = false;
-			// first check if dup names are prohibited
-			if(enumval(pol & InsertPolicy::DenyDupNames)) return {dup, false};
-			else if(enumval(pol & InsertPolicy::RenameDup) && !(Limpl.flags_ & Flags::Persistent)) {
-				// try to auto-rename link
-				std::string new_name;
-				for(int i = 0; i < 10000; ++i) {
-					new_name = Limpl.name_ + '_' + std::to_string(i);
-					if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
-						// we've found a unique name
-						L->rename(std::move(new_name));
-						unique_found = true;
-						break;
-					}
-				}
-			}
-			// if no unique name was found - return fail
-			if(!unique_found) return {dup, false};
-		}
-	}
-
-	// capture link's prev owner to restore it later if needed
-	const auto make_result = [&, prev_owner = Limpl.owner_.lock()](insert_status<Key::ID>&& res) {
+	// setup postprocessing step after successfull or failed insertion
+	const auto make_result = [&, prev_owner = L->owner()](insert_status<Key::ID>&& res) {
 		// work with link's original owner depending on if insert happened or not
 		auto& res_L = *res.first;
 		if(res.second) {
 			if(prev_owner && prev_owner != res_L->owner())
 				// [NOTE] on successfull insertion valid owner is already set
-				caf::anon_send(prev_owner->actor(), a_lnk_erase(), res_L->id(), EraseOpts::DontResetOwner);
+				caf::anon_send(
+					node_impl::actor(*prev_owner), a_node_erase(), res_L->id(), EraseOpts::DontResetOwner
+				);
 			// set handle if link contains node
 			res_L->propagate_handle();
+			// rename link if needed
+			if(Lname) res_L->rename(std::move(*Lname));
 			// invoke postprocessing of just inserted link
 			ppf(res_L);
 		}
 		else {
-			Limpl.owner_ = std::move(prev_owner);
+			// restore link's original owner
+			L->reset_owner(std::move(prev_owner));
 			// check if we need to deep merge given links
 			// go one step down the hierarchy
 			if(enumval(pol & InsertPolicy::Merge) && res.first != end<Key::ID>()) {
@@ -163,21 +205,43 @@ auto node_impl::insert(
 				auto dst_node = res_L->data_node();
 				if(src_node && dst_node) {
 					// insert all links from source node into destination
-					dst_node->insert(
-						std::vector<sp_link>(src_node->begin(), src_node->end()), pol
-					);
+					dst_node->insert(src_node->leafs(), pol);
 				}
 			}
 		}
 
 		return std::move(res);
 	};
-	// sym links can return proper OID only if owner is valid
-	// [NOTE] intentionally dont't call `link::reset_owner()` here, because it tries to obtain
-	// unique lock on link and we already hold shared one
-	if(const auto& target = super()) Limpl.owner_ = target;
 
-	// check for duplicating OID
+	// ----- insertion starts here
+	// 1. check if we have duplicated name and have to rename link after insertion
+	iterator<Key::ID> dup;
+	if(enumval(pol & 3) > 0) {
+		const auto old_name = L->name();
+		dup = find<Key::Name, Key::ID>(old_name);
+		if(dup != end<Key::ID>() && (*dup)->id() != L->id()) {
+			// first check if dup names are prohibited
+			if(enumval(pol & InsertPolicy::DenyDupNames) || Lflags & Flags::Persistent)
+				return {dup, false};
+			else if(enumval(pol & InsertPolicy::RenameDup)) {
+				// try to auto-rename link
+				for(int i = 0; i < rename_trials; ++i) {
+					auto new_name = old_name + '_' + std::to_string(i);
+					if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
+						Lname = std::move(new_name);
+						break;
+					}
+				}
+			}
+			// if no unique name was found - return fail
+			if(!Lname) return {dup, false};
+		}
+	}
+
+	// 2. early setup new owner, because sym links can return proper OID only if owner is valid
+	if(const auto& target = super()) L->reset_owner(target);
+
+	// 3. check for duplicating OID
 	auto& I = links_.get<Key_tag<Key::ID>>();
 	if( enumval(pol & (InsertPolicy::DenyDupOID | InsertPolicy::ReplaceDupOID)) ) {
 		if(dup = find<Key::OID, Key::ID>(L->oid()); dup != end<Key::ID>()) {
@@ -188,6 +252,7 @@ auto node_impl::insert(
 		}
 	}
 
+	// 4. insert & postprocess
 	return make_result(I.insert(std::move(L)));
 }
 
@@ -212,24 +277,65 @@ auto node_impl::adjust_inserted_link(const sp_link& lnk, const sp_node& target) 
 
 auto node_impl::erase_impl(
 	iterator<Key::ID> victim, leaf_postproc_fn ppf, bool dont_reset_owner
-) -> iterator<Key::ID> {
-	// postprocess
+) -> std::size_t {
+	// preprocess before erasing
 	auto L = *victim;
 	ppf(L);
 	// erase
-	auto res = links_.get<Key_tag<Key::ID>>().erase(victim);
 	if(!dont_reset_owner) L->reset_owner(nullptr);
+	auto& I = links_.get<Key_tag<Key::ID>>();
+	auto res = I.erase(victim);
+	return static_cast<std::size_t>(std::distance(I.begin(), res));
+}
+
+auto node_impl::erase(const std::string& key, Key key_meaning, leaf_postproc_fn ppf) -> size_t {
+	switch(key_meaning) {
+	case Key::ID:
+		return erase<Key::ID>(uuid_from_str(key), ppf);
+	case Key::OID:
+		return erase<Key::OID>(key, ppf);
+	case Key::Type:
+		return erase<Key::Type>(key, ppf);
+	default:
+	case Key::Name:
+		return erase<Key::Name>(key, ppf);
+	}
+}
+
+auto node_impl::erase(const lids_v& r, leaf_postproc_fn ppf) -> std::size_t {
+	std::size_t res = 0;
+	std::for_each(
+		r.begin(), r.end(),
+		[&](const auto& lid) { res += erase(lid, ppf); }
+	);
 	return res;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  misc
 //
-auto node_impl::refresh(const link::id_type& lid) -> void {
+auto node_impl::rename(
+	const std::string& key, const std::string& new_name, Key key_meaning, bool all
+) -> size_t {
+	switch(key_meaning) {
+	case Key::ID:
+		return rename<Key::ID>(uuid_from_str(key), new_name, all);
+	case Key::OID:
+		return rename<Key::OID>(key, new_name, all);
+	case Key::Type:
+		return rename<Key::Type>(key, new_name, all);
+	default:
+	case Key::Name:
+		return rename<Key::Name>(key, new_name, all);
+	}
+}
+
+auto node_impl::refresh(const lid_type& lid) -> void {
+	constexpr auto touch = [](auto&&) {};
+
 	// find target link by it's ID
 	auto& I = links_.get<Key_tag<Key::ID>>();
 	if(auto pos = I.find(lid); pos != I.end()) {
-		constexpr auto touch = [](auto&&) {};
 		// refresh each index in cycle
 		links_.get<Key_tag<Key::Name>>().modify_key( project<Key::ID, Key::Name>(pos), touch );
 		links_.get<Key_tag<Key::OID> >().modify_key( project<Key::ID, Key::OID>(pos),  touch );

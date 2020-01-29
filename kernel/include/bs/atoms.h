@@ -11,7 +11,9 @@
 #include <caf/atom.hpp>
 
 namespace blue_sky {
-
+///////////////////////////////////////////////////////////////////////////////
+//  common
+//
 // discover neighbourhood
 using a_hi = caf::atom_constant<caf::atom("bs hi")>;
 // used to inform others that I'm quit
@@ -21,6 +23,9 @@ using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 // used to invoke some processing over an object/actor
 using a_apply = caf::atom_constant<caf::atom("bs apply")>;
 
+///////////////////////////////////////////////////////////////////////////////
+//  link API
+//
 // async invoke `link::data()`
 using a_lnk_data = caf::atom_constant<caf::atom("tl data")>;
 using a_lnk_dcache = caf::atom_constant<caf::atom("tl dcache")>;
@@ -33,9 +38,6 @@ using a_flnk_bridge = caf::atom_constant<caf::atom("tfl bridge")>;
 using a_lnk_id = caf::atom_constant<caf::atom("tl id")>;
 using a_lnk_name = caf::atom_constant<caf::atom("tl name")>;
 using a_lnk_rename = caf::atom_constant<caf::atom("tl rename")>;
-using a_lnk_insert = caf::atom_constant<caf::atom("tl insert")>;
-using a_lnk_erase = caf::atom_constant<caf::atom("tl erase")>;
-using a_lnk_find = caf::atom_constant<caf::atom("tl find")>;
 
 using a_lnk_status = caf::atom_constant<caf::atom("tl status")>;
 using a_lnk_oid = caf::atom_constant<caf::atom("tl oid")>;
@@ -43,14 +45,26 @@ using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
 using a_lnk_inode = caf::atom_constant<caf::atom("tl inode")>;
 using a_lnk_flags = caf::atom_constant<caf::atom("tl flags")>;
 
+///////////////////////////////////////////////////////////////////////////////
+//  node API
+//
+using a_node_size = caf::atom_constant<caf::atom("tn size")>;
+using a_node_leafs = caf::atom_constant<caf::atom("tn leafs")>;
+using a_node_keys = caf::atom_constant<caf::atom("tn keys")>;
+using a_node_find = caf::atom_constant<caf::atom("tn find")>;
+using a_node_index = caf::atom_constant<caf::atom("tn index")>;
+using a_node_deep_search = caf::atom_constant<caf::atom("tn deeps")>;
+using a_node_equal_range = caf::atom_constant<caf::atom("tn eqrng")>;
+using a_node_insert = caf::atom_constant<caf::atom("tn insert")>;
+using a_node_erase = caf::atom_constant<caf::atom("tn erase")>;
+using a_node_clear = caf::atom_constant<caf::atom("tn clear")>;
+
 // query node's actor group ID
 using a_node_gid = caf::atom_constant<caf::atom("tn gid")>;
 using a_node_disconnect = caf::atom_constant<caf::atom("tn unplug")>;
 using a_node_propagate_owner = caf::atom_constant<caf::atom("tn powner")>;
 using a_node_handle = caf::atom_constant<caf::atom("tn handle")>;
-using a_node_size = caf::atom_constant<caf::atom("tn size")>;
 using a_node_rearrange = caf::atom_constant<caf::atom("tn rearng")>;
-using a_node_leafs = caf::atom_constant<caf::atom("tn leafs")>;
 
 } /* namespace blue_sky */
 

@@ -28,20 +28,21 @@ NAMESPACE_BEGIN()
 // ------- contains
 template<Key K>
 bool contains(const node& N, const std::string& key) {
-	return N.find(key, K) != N.end<>();
+	return N.index(key, K).has_value();
 }
 bool contains_link(const node& N, const sp_link& l) {
-	return N.find(l->id()) != N.end<>();
+	return N.index(l->id()).has_value();
 }
 bool contains_obj(const node& N, const sp_obj& obj) {
-	return N.find(obj->id(), Key::OID) != N.end<>();
+	return N.index(obj->id(), Key::OID).has_value();
 }
 
 // ------- find
 template<Key K, bool Throw = true>
 auto find(const node& N, const std::string& key) -> sp_link {
-	auto r = N.find(key, K);
-	if(r != N.end<>()) return *r;
+	if(auto r = N.find(key, K))
+		return r;
+
 	if(Throw) {
 		std::string msg = "Node doesn't contain link ";
 		switch(K) {
@@ -68,20 +69,23 @@ sp_link find_obj(const node& N, const sp_obj& obj) {
 auto find_by_idx(const node& N, const long idx) {
 	// support for Pythonish indexing from both ends
 	if(auto positive_idx = idx < 0 ? N.size() + idx : std::size_t(idx); positive_idx < N.size())
-		return std::next(N.begin(), positive_idx);
+		return N.find(positive_idx);
 	throw py::key_error("Index out of bounds");
 }
 
 // ------- index
 template<Key K>
 auto index(const node& N, const std::string& key) -> std::size_t {
-	return N.index(key, K);
+	if(auto i = N.index(key, K)) return *i;
+	throw py::index_error();
 }
 auto index_link(const node& N, const sp_link& l) {
-	return N.index(l->id());
+	if(auto i = N.index(l->id())) return *i;
+	throw py::index_error();
 }
 auto index_obj(const node& N, const sp_obj& obj) {
-	return N.index(obj->id(), Key::OID);
+	if(auto i = N.index(obj->id(), Key::OID)) return *i;
+	throw py::index_error();
 }
 
 // ------- deep search
@@ -164,7 +168,7 @@ void py_bind_node(py::module& m) {
 
 		// get item by int index
 		.def("__getitem__", [](const node& N, const long idx) {
-			return *find_by_idx(N, idx);
+			return find_by_idx(N, idx);
 		}, "link_idx"_a)
 		// search by link ID
 		.def("__getitem__", &find<Key::ID>, "lid"_a)
@@ -197,26 +201,23 @@ void py_bind_node(py::module& m) {
 		// deep search by object ID
 		.def("deep_search_oid", &deep_search<Key::OID>, "oid"_a, "Deep search for link to object with given ID")
 
-		.def("equal_range", [](const node& N, const std::string& link_name) {
-			auto r = N.equal_range(link_name);
-			return py::make_iterator(r.first, r.second);
-		}, py::keep_alive<0, 1>(), "link_name"_a)
-		.def("equal_range_oid", [](const node& N, const std::string& oid) {
-			auto r = N.equal_range_oid(oid);
-			return py::make_iterator(r.first, r.second);
-		}, py::keep_alive<0, 1>(), "OID"_a)
-		.def("equal_type", [](const node& N, const std::string& type_id) {
-			auto r = N.equal_type(type_id);
-			return py::make_iterator(r.first, r.second);
-		}, py::keep_alive<0, 1>(), "obj_type_id"_a)
+		.def("equal_range", [](const node& N, std::string link_name) {
+			return make_container_iterator(N.equal_range(std::move(link_name), Key::Name));
+		}, "link_name"_a)
+		.def("equal_range_oid", [](const node& N, std::string oid) {
+			return make_container_iterator(N.equal_range(std::move(oid), Key::OID));
+		}, "OID"_a)
+		.def("equal_type", [](const node& N, std::string type_id) {
+			return make_container_iterator(N.equal_range(std::move(type_id), Key::Type));
+		}, "obj_type_id"_a)
 
 		// insert given link
-		.def("insert", [](node& N, const sp_link& l, InsertPolicy pol = InsertPolicy::AllowDupNames) {
-			return N.insert(l, uint(pol)).second;
+		.def("insert", [](node& N, sp_link l, InsertPolicy pol = InsertPolicy::AllowDupNames) {
+			return N.insert(std::move(l), pol).second;
 		}, "link"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert given link")
 		// insert link at given index
-		.def("insert", [](node& N, const sp_link& l, const long idx, InsertPolicy pol = InsertPolicy::AllowDupNames) {
-			return N.insert(l, idx, pol).second;
+		.def("insert", [](node& N, sp_link l, const long idx, InsertPolicy pol = InsertPolicy::AllowDupNames) {
+			return N.insert(std::move(l), idx, pol).second;
 		}, "link"_a, "idx"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert link at given index")
 		// insert hard link to given object
 		.def("insert", [](node& N, std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) {
@@ -246,42 +247,16 @@ void py_bind_node(py::module& m) {
 		.def_property_readonly("size", &node::size)
 		.def_property_readonly("empty", &node::empty)
 		.def("clear", &node::clear, "Clears all node contents")
-		.def("keys", [](const node& N, Key ktype = Key::ID) {
-			if(ktype == Key::ID) {
-				// convert UUIDs to string representation
-				auto keys = N.keys<>();
-				std::vector<std::string> res;
-				res.reserve(keys.size());
-				for(const auto& k : keys)
-					res.emplace_back(boost::uuids::to_string(k));
-				return res;
-			}
-			else {
-				switch(ktype) {
-				default:
-				case Key::Name :
-					return N.keys<Key::Name>();
-				case Key::OID :
-					return N.keys<Key::OID>();
-				case Key::Type :
-					return N.keys<Key::Type>();
-				};
-			}
-		}, "key_type"_a = Key::ID)
+		.def("keys", &node::skeys, "key_type"_a = Key::ID, "ordering"_a = Key::AnyOrder)
 
 		// link rename
 		// by ID or OID or name
-		.def("rename", py::overload_cast<const std::string&, std::string, Key, bool>(&node::rename),
-			"key"_a, "new_name"_a, "key_meaning"_a = Key::ID, "all"_a = false,
+		.def("rename", py::overload_cast<std::string, std::string, Key, bool>(&node::rename),
+			"key"_a, "new_name"_a, "key_meaning"_a = Key::ID, "all"_a = true,
 			"Rename link with given key (ID, OID or link name)")
-		// by link instance (extracts ID)
-		.def("rename", [](node& N, const sp_link& l, std::string new_name) {
-			return N.rename(l->id(), std::move(new_name));
-		}, "link"_a, "new_name"_a, "Rename given link")
 		// by index offset
-		.def("rename", [](node& N, const long idx, std::string new_name) {
-			return N.rename(find_by_idx(N, idx), std::move(new_name));
-		}, "idx"_a, "new_name"_a, "Rename link with given index")
+		.def("rename", py::overload_cast<std::size_t, std::string>(&node::rename),
+			"idx"_a, "new_name"_a, "Rename link with given index")
 		// by object instance
 		.def("rename", [](node& N, const sp_obj& obj, std::string new_name, bool all = false) {
 			return N.rename(obj->id(), std::move(new_name), Key::OID, all);

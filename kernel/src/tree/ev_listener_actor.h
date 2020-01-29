@@ -44,7 +44,7 @@ struct ev_listener_actor : caf::event_based_actor {
 		caf::actor_config& cfg, caf::group tgt_grp, callback_t cb,
 		std::function< caf::message_handler(ev_listener_actor*) > make_event_behavior
 	)
-		: super(cfg), grp(std::move(tgt_grp)), f(make_safe_callback(std::move(cb)))
+		: super(cfg), f(make_safe_callback(std::move(cb))), grp(std::move(tgt_grp))
 	{
 		// silently drop all other messages not in my character
 		set_default_handler(caf::drop);

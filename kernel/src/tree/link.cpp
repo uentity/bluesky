@@ -47,7 +47,7 @@ auto link::pimpl() const -> link_impl* {
 }
 
 /// access link's unique ID
-auto link::id() const -> id_type {
+auto link::id() const -> lid_type {
 	// ID cannot change
 	return pimpl_->id_;
 }
@@ -218,47 +218,47 @@ auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t {
 	using baby_t = ev_listener_actor<sp_clink>;
 
- 	// produce event bhavior that calls passed callback with proper params
- 	auto make_ev_character = [L = shared_from_this(), listen_to](baby_t* self) {	
- 		auto res = caf::message_handler{};
- 		if(enumval(listen_to & Event::LinkRenamed))
- 			res = res.or_else(
- 				[self, wL = std::weak_ptr{L}] (
- 					a_ack, a_lnk_rename, std::string new_name, std::string old_name
- 				) {
- 					if(auto lnk = wL.lock())
- 						self->f(std::move(lnk), Event::LinkRenamed, {
- 							{"new_name", std::move(new_name)},
- 							{"prev_name", std::move(old_name)}
- 						});
- 				}
- 			);
+	// produce event bhavior that calls passed callback with proper params
+	auto make_ev_character = [L = shared_from_this(), listen_to](baby_t* self) {
+		auto res = caf::message_handler{};
+		if(enumval(listen_to & Event::LinkRenamed))
+			res = res.or_else(
+				[self, wL = std::weak_ptr{L}] (
+					a_ack, a_lnk_rename, std::string new_name, std::string old_name
+				) {
+					if(auto lnk = wL.lock())
+						self->f(std::move(lnk), Event::LinkRenamed, {
+							{"new_name", std::move(new_name)},
+							{"prev_name", std::move(old_name)}
+						});
+				}
+			);
 
- 		if(enumval(listen_to & Event::LinkStatusChanged))
- 			res = res.or_else(
- 				[self, wL = std::weak_ptr{L}] (
- 					a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v
- 				) {
- 					if(auto lnk = wL.lock())
- 						self->f(std::move(lnk), Event::LinkStatusChanged, {
- 							{"request", prop::integer(new_v)},
- 							{"new_status", prop::integer(new_v)},
- 							{"prev_status", prop::integer(prev_v)}
- 						});
- 				}
- 			);
+		if(enumval(listen_to & Event::LinkStatusChanged))
+			res = res.or_else(
+				[self, wL = std::weak_ptr{L}] (
+					a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v
+				) {
+					if(auto lnk = wL.lock())
+						self->f(std::move(lnk), Event::LinkStatusChanged, {
+							{"request", prop::integer(new_v)},
+							{"new_status", prop::integer(new_v)},
+							{"prev_status", prop::integer(prev_v)}
+						});
+				}
+			);
 
- 		if(enumval(listen_to & Event::LinkDeleted))
- 			res = res.or_else(
- 				[self, lid = L->id()](a_bye) {
+		if(enumval(listen_to & Event::LinkDeleted))
+			res = res.or_else(
+				[self, lid = L->id()](a_bye) {
 					// when overriding this we must call `disconnect()` explicitly
 					self->disconnect();
- 					self->f(sp_link{}, Event::LinkDeleted, {{ "lid", to_string(lid) }});
- 				}
- 			);
+					self->f(sp_link{}, Event::LinkDeleted, {{ "lid", to_string(lid) }});
+				}
+			);
 
- 		return res;
- 	};
+		return res;
+	};
 
 	// make baby event handler actor
 	auto baby = system().spawn_in_group<baby_t>(

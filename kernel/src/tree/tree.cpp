@@ -15,9 +15,6 @@
 #include <boost/algorithm/string.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-
-template<Key K> using Key_type = typename node::Key_type<K>;
-
 /*-----------------------------------------------------------------------------
  *  impl details
  *-----------------------------------------------------------------------------*/
@@ -26,12 +23,12 @@ NAMESPACE_BEGIN()
 void walk_impl(
 	const std::list<sp_link>& nodes, walk_links_fv step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links,
-	std::set<Key_type<Key::ID>> active_symlinks = {}
+	std::set<lid_type> active_symlinks = {}
 ) {
 	using detail::can_call_dnode;
 	sp_node cur_node;
 	std::list<sp_link> next_nodes;
-	std::vector<sp_link> next_leafs;
+	links_v next_leafs;
 	// for each node
 	for(const auto& N : nodes) {
 		if(!N) continue;
@@ -77,11 +74,11 @@ void walk_impl(
 void walk_impl(
 	const std::list<sp_node>& nodes, walk_nodes_fv step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links,
-	std::set<Key_type<Key::ID>> active_symlinks = {}
+	std::set<lid_type> active_symlinks = {}
 ) {
 	using detail::can_call_dnode;
 	std::list<sp_node> next_nodes;
-	std::vector<sp_link> next_leafs;
+	links_v next_leafs;
 
 	// for each node
 	for(const auto& cur_node : nodes) {
@@ -91,7 +88,7 @@ void walk_impl(
 		next_leafs.clear();
 
 		// symlinks among cur_node
-		std::vector<Key_type<Key::ID>> cur_symlinks;
+		lids_v cur_symlinks;
 
 		// for each link in node
 		for(const auto& l : cur_node->leafs()) {
@@ -142,8 +139,7 @@ NAMESPACE_BEGIN(detail)
 
 sp_link walk_down_tree(const std::string& cur_lid, const sp_node& level, Key path_unit) {
 	if(!level) return nullptr;
-	const auto next = level->find(cur_lid, path_unit);
-	return next != level->end() ? *next : nullptr;
+	return level->find(cur_lid, path_unit);
 }
 
 NAMESPACE_END(detail)
@@ -253,12 +249,9 @@ std::string convert_path(
 		sp_link res;
 		if(next_level.empty() || next_level == "." || next_level == "..")
 			res_path.emplace_back(std::move(next_level));
-		else {
-			const auto next = cur_level->find(next_level, src_path_unit);
-			if(next != cur_level->end()) {
-				res = *next;
-				res_path.emplace_back(link2path_unit(*res, dst_path_unit));
-			}
+		else if(auto next = cur_level->find(next_level, src_path_unit)) {
+			res = std::move(next);
+			res_path.emplace_back(link2path_unit(*res, dst_path_unit));
 		}
 		return res;
 	};

@@ -13,29 +13,25 @@
 #include <bs/tree/node.h>
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
+#include "node_leafs_storage.h"
 
 #include <boost/uuid/uuid_hash.hpp>
 
 #include <cereal/types/vector.hpp>
 
+#include <iterator>
 #include <set>
 #include <unordered_map>
 #include <algorithm>
+#include <utility>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;
 
-using id_type = link_id_type;
-using links_container = node::links_container;
-using EraseOpts = node::EraseOpts;
+using existing_index = typename node::existing_index;
 
-template<Key K> using iterator = typename node::iterator<K>;
-template<Key K> using Key_tag = typename node::Key_tag<K>;
-template<Key K> using Key_type = typename node::Key_type<K>;
-template<Key K> using Key_const = typename node::Key_const<K>;
-template<Key K> using insert_status = typename node::insert_status<K>;
-template<Key K> using range = typename node::range<K>;
-template<Key K> using const_range = typename node::const_range<K>;
+/// link erase options
+enum class EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
 
 using bs_detail::shared;
 using node_impl_mutex = std::shared_mutex;
@@ -68,18 +64,20 @@ public:
 
 	// append private behavior to public iface
 	using actor_type = node::actor_type::extend<
-        // terminate actor
+		// terminate actor
 		caf::reacts_to<a_bye>,
+		// erase link by ID with specified options
+		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>,
 		// track link rename
-		caf::reacts_to<a_ack, a_lnk_rename, id_type, std::string, std::string>,
+		caf::reacts_to<a_ack, a_lnk_rename, lid_type, std::string, std::string>,
 		// track link status
-		caf::reacts_to<a_ack, a_lnk_status, id_type, Req, ReqStatus, ReqStatus>,
+		caf::reacts_to<a_ack, a_lnk_status, lid_type, Req, ReqStatus, ReqStatus>,
 		// ack on insert - reflect insert from sibling node actor
-		caf::reacts_to<a_ack, a_lnk_insert, id_type, size_t, InsertPolicy>,
+		caf::reacts_to<a_ack, a_node_insert, lid_type, size_t, InsertPolicy>,
 		// ack on link move
-		caf::reacts_to<a_ack, a_lnk_insert, id_type, size_t, size_t>,
+		caf::reacts_to<a_ack, a_node_insert, lid_type, size_t, size_t>,
 		// ack on link erase from sibling node
-		caf::reacts_to<a_ack, a_lnk_erase, std::vector<id_type>, std::vector<std::string>>
+		caf::reacts_to<a_ack, a_node_erase, lids_v, std::vector<std::string>>
 	>;
 
 	static auto actor(const node& N) {
@@ -109,16 +107,64 @@ public:
 	node_impl(node_impl&&, node* super);
 
 	///////////////////////////////////////////////////////////////////////////////
+	//  iterate
+	//
+	template<Key K = Key::AnyOrder>
+	auto begin() const {
+		return links_.get<Key_tag<K>>().begin();
+	}
+	template<Key K = Key::AnyOrder>
+	auto end() const {
+		return links_.get<Key_tag<K>>().end();
+	}
+
+	template<Key K, Key R = Key::AnyOrder>
+	auto project(iterator<K> pos) const {
+		if constexpr(K == R)
+			return pos;
+		else
+			return links_.project<Key_tag<R>>(std::move(pos));
+	}
+
+	// convert iterator to offset from beginning of AnyOrder index
+	template<Key K = Key::AnyOrder>
+	auto to_index(iterator<K> pos) const -> existing_index {
+		auto& I = links_.get<Key_tag<Key::AnyOrder>>();
+		if(auto ipos = project<K>(std::move(pos)); ipos != I.end())
+			return static_cast<std::size_t>(std::distance(I.begin(), ipos));
+		return {};
+	}
+
+	///////////////////////////////////////////////////////////////////////////////
 	//  search
 	//
+	template<Key K, Key R = Key::AnyOrder>
+	auto find(const Key_type<K>& key) const {
+		if constexpr(K == Key::AnyOrder)
+			// prevent indexing past array size
+			return project<K, R>(std::next( begin<K>(), std::min(key, links_.size()) ));
+		else
+			return project<K, R>(links_.get<Key_tag<K>>().find(key));
+	}
+
+	// same as find, but returns link (null if not found)
+	template<Key K>
+	auto search(const Key_type<K>& key) const -> sp_link {
+		if(auto p = find<K, K>(key); p != links_.get<Key_tag<K>>().end())
+			return *p;
+		return nullptr;
+	}
+
+	auto search(const std::string& key, Key key_meaning) const -> sp_link;
+
+	// deep search
 	template<Key K = Key::ID>
 	static auto deep_search_impl(
 		const node_impl& n, const Key_type<K>& key,
 		std::set<Key_type<Key::ID>> active_symlinks = {}
 	) -> sp_link {
 		// first do direct search in leafs
-		auto r = n.find<K, K>(key);
-		if(r != n.end<K>()) return *r;
+		if(auto r = n.search<K>(key)) return r;
 
 		// if not succeeded search in children nodes
 		for(const auto& l : n.links_) {
@@ -149,14 +195,17 @@ public:
 		return this->deep_search_impl<K>(*this, key);
 	}
 
-	template<Key K, Key R = Key::AnyOrder>
-	auto find(const Key_type<K>& key) const {
-		if constexpr(K == Key::AnyOrder)
-			return std::next(begin<K>(), key);
-		else
-			return project<K, R>(links_.get<Key_tag<K>>().find(key));
+	auto deep_search(const std::string& key, Key key_meaning) const -> sp_link;
+
+	// index of link with given key in AnyOrder index
+	template<Key K>
+	auto index(const Key_type<K>& key) const -> existing_index {
+		return to_index(find<K>(key));
 	}
 
+	auto index(const std::string& key, Key key_meaning) const -> existing_index;
+
+	// equal key
 	template<Key K = Key::ID>
 	auto equal_range(const Key_type<K>& key) const -> range<K> {
 		if constexpr(K != Key::AnyOrder) {
@@ -168,36 +217,25 @@ public:
 		}
 	}
 
+	auto equal_range(const std::string& key, Key key_meaning) const -> links_v;
+
 	///////////////////////////////////////////////////////////////////////////////
-	//  iterate
+	//  keys & values
 	//
-	template<Key K = Key::AnyOrder>
-	auto begin() const {
-		return links_.get<Key_tag<K>>().begin();
-	}
-	template<Key K = Key::AnyOrder>
-	auto end() const {
-		return links_.get<Key_tag<K>>().end();
+	template<Key K, typename Iterator>
+	static auto keys(Iterator start, Iterator finish) {
+		return range_t<Iterator>{ std::move(start), std::move(finish) }
+		.template extract_keys<K>();
 	}
 
-	template<Key K, Key R = Key::AnyOrder>
-	auto project(iterator<K> pos) const {
-		if constexpr(K == R)
-			return pos;
-		else
-			return links_.project<Key_tag<R>>(std::move(pos));
+	template<Key K, typename Container>
+	static auto keys(const Container& links) {
+		return keys<K>(links.begin(), links.end());
 	}
 
 	template<Key K>
-	auto keys() const -> std::vector<Key_type<K>> {
-		auto kex = Key_tag<K>();
-		auto res = std::vector<Key_type<K>>(links_.size());
-		std::transform(
-			links_.begin(), links_.end(), res.begin(),
-			[&](const auto& L) { return kex(*L); }
-		);
-		std::sort(res.begin(), res.end());
-		return res;
+	auto keys() const {
+		return keys<K>(links_);
 	}
 
 	template<Key K>
@@ -226,57 +264,49 @@ public:
 	//
 	template<Key K = Key::ID>
 	auto erase(
-		const range<K>& r, leaf_postproc_fn ppf = noop_postproc_f,
-		bool dont_reset_owner = false
-	) -> size_t {
-		size_t res = 0;
-		for(auto x = r.begin(); x != r.end();) {
-			if constexpr(K == Key::ID)
-				erase_impl(x++, ppf, dont_reset_owner);
-			else
-				erase_impl(project<K, Key::ID>(x++), ppf, dont_reset_owner);
-			++res;
-		}
-		return res;
-	}
-
-	template<Key K = Key::ID>
-	auto erase(
 		const Key_type<K>& key, leaf_postproc_fn ppf = noop_postproc_f,
 		bool dont_reset_owner = false
 	) -> size_t {
-		return erase<K>(equal_range<K>(key), ppf, dont_reset_owner);
+		if constexpr(K == Key::ID || K == Key::AnyOrder)
+			return erase_impl(find<K, Key::ID>(key), std::move(ppf), dont_reset_owner);
+		else
+			return erase<K>(equal_range<K>(key), std::move(ppf), dont_reset_owner);
 	}
+
+	auto erase(const std::string& key, Key key_meaning, leaf_postproc_fn ppf = noop_postproc_f) -> size_t;
+
+	auto erase(const lids_v& r, leaf_postproc_fn ppf = noop_postproc_f) -> std::size_t;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  rename
 	//
-	template<Key K>
-	bool rename(iterator<K>&& pos, std::string&& new_name) {
-		if(pos == end<K>()) return false;
-		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
-			l->rename(std::move(name));
-		});
+	template<Key K = Key::ID>
+	auto rename(
+		const Key_type<K>& key, const std::string& new_name, bool all = true
+	) -> size_t {
+		// [NOTE] does rename via link, index update relies on retranslating rename ack message
+		auto res = 0;
+		if constexpr(K == Key::ID || K == Key::AnyOrder) {
+			if(auto p = find<K, K>(key); p != end<K>()) {
+				(*p)->rename(new_name);
+				res = 1;
+			}
+		}
+		else {
+			for(auto& p : equal_range<K>(key)) {
+				p->rename(new_name);
+				++res;
+			}
+		}
+		return res;
 	}
 
-	template<Key K>
-	std::size_t rename(const Key_type<K>& key, const std::string& new_name, bool all = false) {
-		auto matched_items = equal_range<K>(key);
-		auto& storage = links_.get<Key_tag<K>>();
-		auto renamer = [&new_name](sp_link& l) {
-			l->rename(new_name);
-		};
-		int cnt = 0;
-		for(auto pos = matched_items.begin(); pos != matched_items.end(); ++pos) {
-			storage.modify(pos, renamer);
-			++cnt;
-			if(!all) break;
-		}
-		return cnt;
-	}
+	auto rename(
+		const std::string& key, const std::string& new_name, Key key_meaning, bool all = true
+	) -> size_t;
 
 	// update node indexes to match current link content
-	auto refresh(const link::id_type& lid) -> void;
+	auto refresh(const lid_type& lid) -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  rearrange
@@ -314,11 +344,29 @@ public:
 private:
 	node* super_;
 
+	// returns index of removed element
+	// [NOTE] don't do range checking
 	auto erase_impl(
 		iterator<Key::ID> key, leaf_postproc_fn ppf = noop_postproc_f,
 		bool dont_reset_owner = false
-	) -> iterator<Key::ID>;
+	) -> std::size_t;
+
+	// erase multiple elements given in valid (!) range
+	template<Key K = Key::ID>
+	auto erase(
+		const range<K>& r, leaf_postproc_fn ppf = noop_postproc_f,
+		bool dont_reset_owner = false
+	) -> size_t {
+		size_t res = 0;
+		for(auto x = r.begin(); x != r.end();) {
+			erase_impl(project<K, Key::ID>(x++), ppf, dont_reset_owner);
+			++res;
+		}
+		return res;
+	}
 };
 using sp_nimpl = std::shared_ptr<node_impl>;
 
 NAMESPACE_END(blue_sky::tree)
+
+BS_ALLOW_ENUMOPS(blue_sky::tree::EraseOpts)

@@ -19,28 +19,8 @@
 
 #include <boost/uuid/uuid_hash.hpp>
 
-// iterators are only passed by `node` API and must not be serialized
-#define OMIT_ITERATORS_SERIALIZATION_(K)                         \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::node::iterator<K>) \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::node::range<K>)
-
-#define OMIT_ITERATORS_SERIALIZATION                         \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::ID)       \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::OID)      \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::Name)     \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::Type)     \
-OMIT_ITERATORS_SERIALIZATION_(blue_sky::tree::Key::AnyOrder) \
-
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
-
-using links_container = node::links_container;
-template<Key K> using iterator = typename node::iterator<K>;
-template<Key K> using Key_tag = typename node::Key_tag<K>;
-template<Key K> using Key_type = typename node::Key_type<K>;
-template<Key K> using Key_const = typename node::Key_const<K>;
-template<Key K> using insert_status = typename node::insert_status<K>;
-template<Key K> using range = typename node::range<K>;
 
 /*-----------------------------------------------------------------------------
  *  node_actor
@@ -54,7 +34,7 @@ public:
 	node_impl& impl;
 	// map links to retranslator actors
 	using axon_t = std::pair<std::uint64_t, std::optional<std::uint64_t>>;
-	std::unordered_map<link::id_type, axon_t> axons_;
+	std::unordered_map<lid_type, axon_t> axons_;
 
 	node_actor(caf::actor_config& cfg, caf::group ngrp, sp_nimpl Nimpl);
 	virtual ~node_actor();
@@ -71,11 +51,9 @@ public:
 
 	auto insert(
 		sp_link L, std::size_t idx, const InsertPolicy pol, bool silent = false
-	) -> std::pair<size_t, bool>;
+	) -> node::insert_status;
 
-	auto erase(const link::id_type& key, EraseOpts opts = EraseOpts::Normal) -> size_t;
-	auto erase(std::size_t idx) -> size_t;
-	auto erase(const std::string& key, Key key_meaning = Key::Name) -> size_t;
+	auto erase(const lid_type& key, EraseOpts opts = EraseOpts::Normal) -> size_t;
 
 	auto retranslate_from(const sp_link& L) -> void;
 	auto stop_retranslate_from(const sp_link& L) -> void;

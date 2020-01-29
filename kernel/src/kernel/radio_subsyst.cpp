@@ -39,7 +39,7 @@ using namespace kernel::config;
 NAMESPACE_BEGIN()
 
 using radio_station_handle = caf::typed_actor<
-	//caf::replies_to< a_hi >::with< std::vector<tree::link::id_type> >
+	//caf::replies_to< a_hi >::with< std::vector<tree::lid_type> >
 	caf::replies_to< a_hi >::with< std::vector<tree::sp_link> >
 >;
 
@@ -49,7 +49,7 @@ auto radio_station(radio_station_handle::pointer self)
 		std::vector<tree::sp_link> publids;
 		for(const auto& L : KRADIO.publinks)
 			publids.push_back(L);
-		//std::vector<tree::link::id_type> publids;
+		//std::vector<tree::lid_type> publids;
 		//for(const auto& L : KRADIO.publinks)
 		//	publids.push_back(L->id());
 		return publids;
@@ -64,7 +64,7 @@ NAMESPACE_END()
 radio_subsyst::radio_subsyst() {
 	actor_config()
 		.add_actor_type("radio_station", radio_station)
-		.add_message_type<tree::link::id_type>("link_id_type")
+		.add_message_type<tree::lid_type>("link_id_type")
 	;
 
 	// [NOTE] `actor_system` starts worker and other service threads in constructor.
@@ -179,7 +179,7 @@ auto radio_subsyst::publish_link(tree::sp_link L) -> error {
 	return perfect;
 }
 
-auto radio_subsyst::unpublish_link(tree::link::id_type lid) -> error {
+auto radio_subsyst::unpublish_link(tree::lid_type lid) -> error {
 	for(auto L = publinks.begin(), end = publinks.end(); L != end; ++L)
 		if((*L)->id() == lid) publinks.erase(L);
 	return perfect;

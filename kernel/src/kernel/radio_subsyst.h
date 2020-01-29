@@ -36,7 +36,7 @@ struct BS_HIDDEN_API radio_subsyst {
 	auto start_client(const std::string& host) -> error;
 
 	auto publish_link(tree::sp_link L) -> error;
-	auto unpublish_link(tree::link::id_type lid) -> error;
+	auto unpublish_link(tree::lid_type lid) -> error;
 
 private:
 	// kernel's actor system

@@ -125,7 +125,7 @@ auto link_actor::make_behavior() -> behavior_type {
 		},
 
 		/// 1. get id
-		[=](a_lnk_id) -> link::id_type {
+		[=](a_lnk_id) -> lid_type {
 			adbg(this) << "<- a_lnk_id: " << to_string(impl.id_) << std::endl;
 			return impl.id_;
 		},

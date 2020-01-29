@@ -33,7 +33,7 @@ class BS_HIDDEN_API link_impl : public bs_detail::sharded_mutex<link_impl_mutex>
 public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 
-	link_id_type id_;
+	lid_type id_;
 	std::string name_;
 	Flags flags_;
 

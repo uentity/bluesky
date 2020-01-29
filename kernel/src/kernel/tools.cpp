@@ -90,7 +90,7 @@ void print_link(const sp_clink& l, bool follow_symlinks, int level) {
 	if(l->type_id() == "sym_link" && !follow_symlinks) return;
 	if(auto n = l->data_node()) {
 		// print leafs
-		for(const auto &leaf : *n)
+		for(const auto &leaf : n->leafs())
 			print_link(leaf, follow_symlinks, level+1);
 	}
 }

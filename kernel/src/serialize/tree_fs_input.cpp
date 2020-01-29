@@ -249,17 +249,14 @@ struct tree_fs_input::impl {
 			if(N.size() < 2 || leafs_order.size() < 2) return;
 
 			// convert string uids to UUIDs
-			auto wanted_order = std::vector<link::id_type>(leafs_order.size());
+			auto wanted_order = std::vector<lid_type>(leafs_order.size());
 			std::transform(
 				leafs_order.cbegin(), leafs_order.cend(), wanted_order.begin(),
 				[](const auto& s_uid) { return uuid_from_str(s_uid); }
 			);
 
 			// extract current order of link IDs
-			auto res_order = std::vector<link::id_type>();
-			res_order.reserve(N.size());
-			for(auto i = N.begin(), end = N.end(); i != end; ++i)
-				res_order.push_back((*i)->id());
+			auto res_order = N.keys(Key::AnyOrder);
 
 			// sort according to passed `leafs_order`
 			const auto lo_begin = wanted_order.begin(), lo_end = wanted_order.end();

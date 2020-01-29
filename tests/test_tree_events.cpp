@@ -37,9 +37,6 @@ using namespace blue_sky::log;
 using namespace blue_sky::tree;
 using namespace blue_sky::prop;
 
-using Req = link::Req;
-using ReqStatus = link::ReqStatus;
-
 BOOST_AUTO_TEST_CASE(test_tree_events) {
 	std::cout << "\n\n*** testing tree events..." << std::endl;
 	std::cout << "*********************************************************************" << std::endl;
@@ -50,7 +47,7 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 
 	auto hN = make_persons_tree();
 	auto N = hN->data_node();
-	auto L = *N->find("hard_Citizen_0", node::Key::Name);
+	auto L = N->find("hard_Citizen_0", Key::Name);
 	// make deeper tree
 	auto N1 = std::make_shared<node>();
 	N1->insert("N", N);
@@ -63,9 +60,10 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 
 	auto test_rename = [](auto tgt, sp_link src) -> int {
 		using T = decltype(tgt);
+		using P = std::add_const_t<typename T::element_type>;
 
 		std::atomic<int> rename_cnt = 0;
-		auto rename_cb = [&](T who, Event, prop::propdict what) -> void {
+		auto rename_cb = [&](std::shared_ptr<P> who, Event, prop::propdict what) -> void {
 			++rename_cnt;
 			//bsout() << "=> {}: renamed '{}' -> '{}'" << to_string(who->id())
 			//	<< get<std::string>(what, "prev_name") << get<std::string>(what, "new_name") << bs_end;
@@ -94,9 +92,10 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 
 	auto test_status = [](auto tgt, sp_link src) -> int {
 		using T = decltype(tgt);
+		using P = std::add_const_t<typename T::element_type>;
 
 		std::atomic<int> status_cnt = 0;
-		auto status_cb = [&](T who, Event, prop::propdict what) {
+		auto status_cb = [&](std::shared_ptr<P> who, Event, prop::propdict what) {
 			++status_cnt;
 			//bsout() << "=> {}: status {}: {} -> {}" << to_string(who->id()) <<
 			//	get<integer>(what, "request") << get<integer>(what, "prev_status") << 
