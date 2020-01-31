@@ -56,24 +56,20 @@ struct sym_link_actor : public link_actor {
 
 	template<typename R, typename... Args>
 	auto delegate_source(Args&&... args)
-	-> std::enable_if_t<tl::detail::is_expected<R>::value, caf::response_promise> {
-		auto res = make_response_promise<R>();
+	-> std::enable_if_t<tl::detail::is_expected<R>::value, caf::result<R>> {
 		if(auto p = pointee())
-			res.delegate(link::actor(*p.value()), std::forward<Args>(args)...);
+			return delegate(link::actor(*p.value()), std::forward<Args>(args)...);
 		else
-			res.deliver(R{ tl::unexpect, p.error() });
-		return res;
+			return R{ tl::unexpect, p.error() };
 	}
 
 	template<typename R, typename... Args>
 	auto delegate_source(R errval, Args&&... args)
-	-> std::enable_if_t<!tl::detail::is_expected<R>::value, caf::response_promise> {
-		auto res = make_response_promise<R>();
+	-> std::enable_if_t<!tl::detail::is_expected<R>::value, caf::result<R>> {
 		if(auto p = pointee())
-			res.delegate(link::actor(*p.value()), std::forward<Args>(args)...);
+			return delegate(link::actor(*p.value()), std::forward<Args>(args)...);
 		else
-			res.deliver(std::move(errval));
-		return res;
+			return errval;
 	}
 
 	// delegate name, OID, etc requests to source link
@@ -93,7 +89,7 @@ struct sym_link_actor : public link_actor {
 			},
 
 			[this](a_lnk_inode) -> caf::result< result_or_errbox<inodeptr> > {
-				return delegate_source< result_or_errbox<std::string> >(a_lnk_inode());
+				return delegate_source< result_or_errbox<inodeptr> >(a_lnk_inode());
 			},
 
 		}).or_else(super::make_behavior());
@@ -184,7 +180,7 @@ std::string sym_link::src_path(bool human_readable) const {
 	return {};
 }
 
-result_or_err<sp_node> sym_link::propagate_handle() {
+auto sym_link::propagate_handle() -> result_or_err<sp_node> {
 	// sym link cannot be a node's handle
 	return data_node_ex();
 }
