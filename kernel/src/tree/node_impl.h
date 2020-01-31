@@ -52,7 +52,6 @@ public:
 	links_container links_;
 	// metadata
 	std::weak_ptr<link> handle_;
-	std::vector<std::string> allowed_otypes_;
 
 	// timeout for most queries
 	const caf::duration timeout;
@@ -157,46 +156,6 @@ public:
 
 	auto search(const std::string& key, Key key_meaning) const -> sp_link;
 
-	// deep search
-	template<Key K = Key::ID>
-	static auto deep_search_impl(
-		const node_impl& n, const Key_type<K>& key,
-		std::set<Key_type<Key::ID>> active_symlinks = {}
-	) -> sp_link {
-		// first do direct search in leafs
-		if(auto r = n.search<K>(key)) return r;
-
-		// if not succeeded search in children nodes
-		for(const auto& l : n.links_) {
-			// remember symlink
-			const auto is_symlink = l->type_id() == "sym_link";
-			if(is_symlink){
-				if(active_symlinks.find(l->id()) == active_symlinks.end())
-					active_symlinks.insert(l->id());
-				else continue;
-			}
-			// check populated status before moving to next level
-			if(l->flags() & LazyLoad && l->req_status(Req::DataNode) != ReqStatus::OK)
-				continue;
-			// search on next level
-			if(const auto next_n = l->data_node()) {
-				auto next_l = deep_search_impl<K>(*next_n->pimpl_, key, active_symlinks);
-				if(next_l) return next_l;
-			}
-			// remove symlink
-			if(is_symlink)
-				active_symlinks.erase(l->id());
-		}
-		return nullptr;
-	}
-
-	template<Key K = Key::ID>
-	auto deep_search(const Key_type<K>& key) const -> sp_link {
-		return this->deep_search_impl<K>(*this, key);
-	}
-
-	auto deep_search(const std::string& key, Key key_meaning) const -> sp_link;
-
 	// index of link with given key in AnyOrder index
 	template<Key K>
 	auto index(const Key_type<K>& key) const -> existing_index {
@@ -282,7 +241,7 @@ public:
 	//
 	template<Key K = Key::ID>
 	auto rename(
-		const Key_type<K>& key, const std::string& new_name, bool all = true
+		const Key_type<K>& key, const std::string& new_name
 	) -> size_t {
 		// [NOTE] does rename via link, index update relies on retranslating rename ack message
 		auto res = 0;
@@ -300,10 +259,6 @@ public:
 		}
 		return res;
 	}
-
-	auto rename(
-		const std::string& key, const std::string& new_name, Key key_meaning, bool all = true
-	) -> size_t;
 
 	// update node indexes to match current link content
 	auto refresh(const lid_type& lid) -> void;
@@ -325,9 +280,6 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  misc
 	//
-	bool accepts(const sp_link& what) const;
-	auto accept_object_types(std::vector<std::string> allowed_types) -> void;
-
 	void set_handle(const sp_link& new_handle);
 
 	auto propagate_owner(bool deep) -> void;

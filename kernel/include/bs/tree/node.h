@@ -80,8 +80,8 @@ public:
 		caf::replies_to<a_lnk_rename, lid_type, std::string>::with<std::size_t>,
 		// erase link at specified position
 		caf::replies_to<a_lnk_rename, std::size_t, std::string>::with<std::size_t>,
-		// rename link(s) addressed by given key
-		caf::replies_to<a_lnk_rename, std::string, std::string, Key, bool>::with<std::size_t>,
+		// rename link(s) with specified name
+		caf::replies_to<a_lnk_rename, std::string, std::string>::with<std::size_t>,
 
 		// apply custom order
 		caf::reacts_to<a_node_rearrange, std::vector<std::size_t>>,
@@ -169,11 +169,8 @@ public:
 	auto rename(std::size_t idx, std::string new_name) -> bool;
 	/// rename link with given ID
 	auto rename(lid_type lid, std::string new_name) -> bool;
-	/// rename link adresses by given key
-	/// if `all == true`, rename all links matced by key, otherwise first found link is renamed
-	auto rename(
-		std::string key, std::string new_name, Key key_meaning = Key::Name, bool all = true
-	) -> std::size_t;
+	/// rename link(s) with specified name
+	auto rename(std::string old_name, std::string new_name) -> std::size_t;
 
 	/// apply custom order
 	auto rearrange(std::vector<lid_type> new_order) -> void;
@@ -191,13 +188,6 @@ public:
 	// stops retranslating messages to this node
 	// if `deep` is true, then also disconnect each subtree node
 	auto disconnect(bool deep = true) -> void;
-
-	/// API for managing link filters
-	/// test is given link can be inserted into the node
-	auto  accepts(const sp_link& what) const -> bool;
-	/// only simple object type filter is supported
-	auto accept_object_types(std::vector<std::string> allowed_types) -> void;
-	auto allowed_object_types() const -> std::vector<std::string>;
 
 	/// obtain link to this node conained in owner (parent) node
 	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)

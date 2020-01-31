@@ -78,6 +78,8 @@ kernel_cpp_list = [
 	"src/tree/node.cpp",
 	"src/tree/node_impl.cpp",
 	"src/tree/node_actor.cpp",
+	"src/tree/node_extraidx_actor.cpp",
+	"src/tree/node_retranslators.cpp",
 	"src/tree/tree.cpp",
 	"src/tree/tree_async.cpp",
 	"src/tree/fusion_link.cpp",

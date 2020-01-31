@@ -19,8 +19,6 @@
 #include <boost/uuid/random_generator.hpp>
 
 OMIT_OBJ_SERIALIZATION
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::links_v)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::lids_v)
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)
@@ -87,19 +85,6 @@ auto node::handle() const -> sp_link {
 
 auto node::set_handle(const sp_link& handle) -> void {
 	pimpl_->set_handle(handle);
-}
-
-auto node::accepts(const sp_link& what) const -> bool {
-	return pimpl_->accepts(what);
-}
-
-auto node::accept_object_types(std::vector<std::string> allowed_types) -> void {
-	pimpl_->accept_object_types(std::move(allowed_types));
-}
-
-auto node::allowed_object_types() const -> std::vector<std::string> {
-	auto guard = pimpl_->lock<node_impl::Metadata>(shared);
-	return pimpl_->allowed_otypes_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -270,9 +255,9 @@ auto node::rename(lid_type lid, std::string new_name) -> bool {
 	).value_or(false);
 }
 
-auto node::rename(std::string key, std::string new_name, Key key_meaning, bool all) -> std::size_t {
+auto node::rename(std::string old_name, std::string new_name) -> std::size_t {
 	return pimpl_->actorf<std::size_t>(
-		*this, a_lnk_rename(), std::move(key), std::move(new_name), key_meaning, all
+		*this, a_lnk_rename(), std::move(old_name), std::move(new_name)
 	).value_or(false);
 }
 

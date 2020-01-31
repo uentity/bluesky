@@ -14,8 +14,9 @@
 #include "actor_common.h"
 #include "node_impl.h"
 
+#include <caf/actor_cast.hpp>
+
 #include <unordered_map>
-#include <optional>
 
 #include <boost/uuid/uuid_hash.hpp>
 
@@ -32,12 +33,18 @@ public:
 	// holds reference to node impl
 	sp_nimpl pimpl_;
 	node_impl& impl;
+
 	// map links to retranslator actors
 	using axon_t = std::pair<std::uint64_t, std::optional<std::uint64_t>>;
 	std::unordered_map<lid_type, axon_t> axons_;
 
 	node_actor(caf::actor_config& cfg, caf::group ngrp, sp_nimpl Nimpl);
 	virtual ~node_actor();
+
+	// return typed actor handle to this
+	node_impl::actor_type handle() const {
+		return caf::actor_cast<node_impl::actor_type>(address());
+	}
 
 	// say goodbye to others & leave self group
 	auto goodbye() -> void;

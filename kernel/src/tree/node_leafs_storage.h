@@ -80,13 +80,11 @@ using links_container = mi::multi_index_container<
 	mi::indexed_by<
 		mi::sequenced< mi::tag< detail::any_order > >,
 		mi::hashed_unique< mi::tag< detail::id_key >, detail::id_key >,
-		mi::ordered_non_unique< mi::tag< detail::name_key >, detail::name_key >,
-		mi::ordered_non_unique< mi::tag< detail::oid_key >, detail::oid_key >,
-		mi::ordered_non_unique< mi::tag< detail::type_key >, detail::type_key >
+		mi::ordered_non_unique< mi::tag< detail::name_key >, detail::name_key >
+		//mi::ordered_non_unique< mi::tag< detail::oid_key >, detail::oid_key >,
+		//mi::ordered_non_unique< mi::tag< detail::type_key >, detail::type_key >
 	>
 >;
-
-template<Key K> inline constexpr auto has_builtin_index = K != Key::OID && K != Key::Type;
 
 template<Key K> using Key_tag = typename detail::Key_dispatch<K>::tag;
 template<Key K> using Key_type = typename detail::Key_dispatch<K>::type;
@@ -95,6 +93,8 @@ template<Key K = Key::AnyOrder> using Index = typename links_container::index<Ke
 template<Key K = Key::AnyOrder> using iterator = typename Index<K>::iterator;
 template<Key K = Key::AnyOrder> using const_iterator = typename Index<K>::const_iterator;
 template<Key K = Key::ID> using insert_status = std::pair<iterator<K>, bool>;
+
+constexpr auto has_builtin_index(Key K) { return K != Key::OID && K != Key::Type; }
 
 /*-----------------------------------------------------------------------------
  *  range

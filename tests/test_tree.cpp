@@ -36,9 +36,6 @@ using namespace blue_sky::log;
 using namespace blue_sky::tree;
 using namespace std::chrono_literals;
 
-using Req = link::Req;
-using ReqStatus = link::ReqStatus;
-
 NAMESPACE_BEGIN()
 
 class fusion_client : public fusion_iface {

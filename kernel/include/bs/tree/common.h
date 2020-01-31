@@ -51,9 +51,7 @@ enum class InsertPolicy {
 	AllowDupNames = 0,
 	DenyDupNames = 1,
 	RenameDup = 2,
-	DenyDupOID = 4,
-	ReplaceDupOID = 8,
-	Merge = 16
+	Merge = 4
 };
 
 /// denote that we don't want to wait until invoke result is available

@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "node_actor.h"
+#include "node_extraidx_actor.h"
 #include "link_impl.h"
 #include <bs/log.h>
 #include <bs/tree/tree.h>
@@ -17,52 +18,18 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 
-//#include <caf/actor_ostream.hpp>
-#include <caf/stateful_actor.hpp>
+#include <caf/typed_event_based_actor.hpp>
 #include <caf/others.hpp>
 
 #include <cereal/types/optional.hpp>
 
 #define DEBUG_ACTOR 0
-
-#if DEBUG_ACTOR == 1
-#include <caf/actor_ostream.hpp>
-#endif
-
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::links_v)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::lids_v)
+#include "node_retranslators.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 
-NAMESPACE_BEGIN()
-#if DEBUG_ACTOR == 1
-
-template<typename Actor>
-auto adbg(Actor* A, const std::string& nid = {}) -> caf::actor_ostream {
-	auto res = caf::aout(A);
-	if constexpr(std::is_same_v<Actor, node_actor>) {
-		res << "[N] ";
-		if(auto pgrp = A->impl.self_grp.get())
-			res << "[" << A->impl.self_grp.get()->identifier() << "]";
-		else
-			res << "[null grp]";
-		res <<  ": ";
-	}
-	else if(!nid.empty() && nid.front() != '"') {
-		res << "[N] [" << nid << "]: ";
-	}
-	return res;
-}
-
-#else
-
-template<typename Actor>
-constexpr auto adbg(const Actor*, const std::string& = {}) { return log::D(); }
-
-#endif
-NAMESPACE_END()
 /*-----------------------------------------------------------------------------
  *  node_actor
  *-----------------------------------------------------------------------------*/
@@ -127,152 +94,18 @@ auto node_actor::name() const -> const char* {
 	return "node_actor";
 }
 
-///////////////////////////////////////////////////////////////////////////////
-//  leafs events retranslators
-//
-NAMESPACE_BEGIN()
-// state for node & link retranslators
-struct node_rsl_state {
-	caf::group src_grp;
-	caf::group tgt_grp;
-
-	auto src_grp_id() const -> const std::string& {
-		return src_grp ? src_grp.get()->identifier() : nil_grp_id;
-	}
-	auto tgt_grp_id() const -> const std::string& {
-		return tgt_grp ? tgt_grp.get()->identifier() : nil_grp_id;
-	}
-};
-
-struct link_rsl_state : node_rsl_state {
-	lid_type src_id;
-};
-
-// actor that retranslate some of link's messages attaching a link's ID to them
-auto link_retranslator(caf::stateful_actor<link_rsl_state>* self, caf::group node_grp, lid_type lid)
--> caf::behavior {
-	// remember target node group
-	self->state.tgt_grp = std::move(node_grp);
-	// connect source
-	//auto lid = L->id();
-	self->state.src_grp = system().groups().get_local(to_string(lid));
-	self->state.src_id = std::move(lid);
-	self->join(self->state.src_grp);
-
-	auto sdbg = [=](const std::string& msg_name = {}) {
-		auto res = adbg(self, self->state.tgt_grp_id()) << "<- [L] [" << self->state.src_grp_id() << "] ";
-		//auto res = caf::aout(self) << self->state.tgt_grp_id() << " <- ";
-		if(!msg_name.empty())
-			res << '{' << msg_name << "} ";
-		return res;
-	};
-	sdbg() << "retranslator started" << std::endl;
-
-	// register self
-	const auto sid = self->id();
-	system().registry().put(sid, self);
-
-	// silently drop all other messages not in my character
-	self->set_default_handler(caf::drop);
-
-	return {
-		// quit after source
-		[=](a_bye) {
-			self->leave(self->state.src_grp);
-			system().registry().erase(sid);
-			sdbg() << "retranslator quit" << std::endl;
-		},
-
-		// retranslate events
-		[=](a_ack, a_lnk_rename, std::string new_name, std::string old_name) {
-			sdbg("rename") << old_name << " -> " << new_name << std::endl;
-			self->send<high_prio>(
-				self->state.tgt_grp, a_ack(), a_lnk_rename(), self->state.src_id,
-				std::move(new_name), std::move(old_name)
-			);
-		},
-
-		[=](a_ack, a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			sdbg("status") << to_string(req) << ": " << to_string(prev_s) << " -> " << to_string(new_s);
-			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_lnk_status(), self->state.src_id, req, new_s, prev_s);
-		}
-	};
-}
-
-// actor that retranslate some of link's messages attaching a link's ID to them
-auto node_retranslator(caf::stateful_actor<node_rsl_state>* self, caf::group node_grp, std::string subnode_id)
--> caf::behavior {
-	// remember target node group
-	self->state.tgt_grp = std::move(node_grp);
-	// join subnode group
-	self->state.src_grp = system().groups().get_local(subnode_id);
-	self->join(self->state.src_grp);
-
-	auto sdbg = [=](const std::string& msg_name = {}) {
-		auto res = adbg(self, self->state.tgt_grp_id()) << "<- [N] [" << self->state.src_grp_id() << "] ";
-		//auto res = caf::aout(self) << self->state.tgt_grp_id() << " <- ";
-		if(!msg_name.empty())
-			res << '{' << msg_name << "} ";
-		return res;
-	};
-	sdbg() << "retranslator started" << std::endl;
-
-	// register self
-	const auto sid = self->id();
-	system().registry().put(sid, self);
-
-	// silently drop all other messages not in my character
-	self->set_default_handler(caf::drop);
-
-	return {
-		// quit following source
-		[=](a_bye) {
-			self->leave(self->state.src_grp);
-			system().registry().erase(sid);
-			sdbg() << "retranslator quit" << std::endl;
-		},
-
-		// retranslate events
-		[=](a_ack, a_lnk_rename, const lid_type& lid, std::string new_name, std::string old_name) {
-			sdbg("rename") << old_name << " -> " << new_name << std::endl;
-			self->send<high_prio>(
-				self->state.tgt_grp, a_ack(), a_lnk_rename(), lid, std::move(new_name), std::move(old_name)
-			);
-		},
-
-		[=](a_ack, a_lnk_status, const lid_type& lid, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			sdbg("status") << to_string(req) << ": " << to_string(prev_s) << " -> " << to_string(new_s);
-			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_lnk_status(), lid, req, new_s, prev_s);
-		},
-
-		[=](a_ack, a_node_insert, const lid_type& lid, std::size_t pos, InsertPolicy pol) {
-			sdbg("insert") << to_string(lid) << " in pos " << pos << std::endl;
-			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_node_insert(), lid, pos, pol);
-		},
-		[=](a_ack, a_node_insert, const lid_type& lid, std::size_t to_idx, std::size_t from_idx) {
-			sdbg("insert move") << to_string(lid) << " pos " << from_idx << " -> " << to_idx << std::endl;
-			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_node_insert(), lid, to_idx, from_idx);
-		},
-
-		[=](a_ack, a_node_erase, std::vector<lid_type> lids, std::vector<std::string> oids) {
-			sdbg("erase") << (lids.empty() ? "" : to_string(lids[0])) << std::endl;
-			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_node_erase(), std::move(lids), oids);
-		}
-	};
-}
-
-NAMESPACE_END()
-
 auto node_actor::retranslate_from(const sp_link& L) -> void {
-	const auto& lid = L->id();
+	const auto lid = L->id();
 	auto& AS = system();
 
 	// spawn link retranslator first
-	auto axon = axon_t{ AS.spawn(link_retranslator, impl.self_grp, lid).id(), {} };
-	// and node (if pointee is a node)
-	L->data_node_gid().map([&](std::string gid) {
-		axon.second = AS.spawn(node_retranslator, impl.self_grp, std::move(gid)).id();
-	});
+	auto axon = axon_t{
+		AS.spawn(link_retranslator, impl.self_grp, lid).id(), {}
+	};
+	// for hard links also listen to subtree
+	if(L->type_id() == "hard_link")
+		axon.second = AS.spawn(node_retranslator, impl.self_grp, lid, link::actor(*L)).id();
+
 	axons_[lid] = std::move(axon);
 	//adbg(this) << "*-* node: retranslating events from link " << L->name() << std::endl;
 }
@@ -285,7 +118,7 @@ auto node_actor::stop_retranslate_from(const sp_link& L) -> void {
 
 	// stop link retranslator
 	send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(rs.first)), a_bye());
-	// and subnode
+	// .. and for subnode
 	if(rs.second)
 		send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(*rs.second)), a_bye());
 	axons_.erase(prs);
@@ -302,12 +135,12 @@ auto node_actor::insert(
 		to_string(L->id()) << std::endl;
 
 	return impl.insert(std::move(L), pol, [=](const sp_link& child_L) {
-		// create link exevents retranlator
+		// create link events retranlator
 		retranslate_from(child_L);
 		// send message that link inserted (with position)
 		if(!silent) send<high_prio>(
 			impl.self_grp, a_ack(), a_node_insert(),
-			child_L->id(), (size_t)std::distance(impl.begin(), impl.find<Key::ID>(child_L->id())), pol
+			child_L->id(), impl.to_index(impl.find<Key::ID>(child_L->id())), pol
 		);
 	});
 }
@@ -316,33 +149,31 @@ auto node_actor::insert(
 	sp_link L, std::size_t to_idx, const InsertPolicy pol, bool silent
 ) -> node::insert_status {
 	// 1. insert an element using ID index
-	// [NOTE] silent insert, send message later below
+	// [NOTE] silent insert - send ack message later
 	auto res = insert(std::move(L), pol, true);
+	auto res_idx = impl.to_index<Key::ID>(res.first);
+	if(!res_idx) return { res_idx, res.second };
 
 	// 2. reposition an element in AnyOrder index
-	if(res.first != impl.end<Key::ID>()) {
-		auto from = impl.project<Key::ID>(res.first);
-		to_idx = std::min(to_idx, impl.size());
-		auto to = std::next(impl.begin(), to_idx);
-		if(to != from)
-			pimpl_->links_.get<Key_tag<Key::AnyOrder>>().relocate(to, from);
+	to_idx = std::min(to_idx, impl.size());
+	auto from = impl.project<Key::ID>(res.first);
+	auto to = std::next(impl.begin(), to_idx);
+	// noop if to == from
+	pimpl_->links_.get<Key_tag<Key::AnyOrder>>().relocate(to, from);
 
-		// detect move and send proper message
-		auto lid = (*res.first)->id();
-		if(!silent) {
-			if(res.second) // normal insert
-				send<high_prio>(
-					impl.self_grp, a_ack(), a_node_insert(), std::move(lid), to_idx, pol
-				);
-			else if(to != from) // move
-				send<high_prio>(
-					impl.self_grp, a_ack(), a_node_insert(), std::move(lid), to_idx,
-					(size_t)std::distance(impl.begin(), from)
-				);
-		}
-		return { impl.to_index<Key::AnyOrder>(to), res.second };
+	// detect move and send proper message
+	auto lid = (*res.first)->id();
+	if(!silent) {
+		if(res.second) // normal insert
+			send<high_prio>(
+				impl.self_grp, a_ack(), a_node_insert(), std::move(lid), to_idx, pol
+			);
+		else if(to != from) // move
+			send<high_prio>(
+				impl.self_grp, a_ack(), a_node_insert(), std::move(lid), to_idx, *res_idx
+			);
 	}
-	return { {}, res.second };
+	return { to_idx, res.second };
 }
 
 
@@ -351,7 +182,7 @@ NAMESPACE_BEGIN()
 auto on_erase(const sp_link& L, node_actor& self) {
 	self.stop_retranslate_from(L);
 
-	// collect link IDs & obj IDs of all deleted subtree elements
+	// collect link IDs of all deleted subtree elements
 	// first elem is erased link itself
 	lids_v lids{ L->id() };
 	std::vector<std::string> oids{ L->oid() };
@@ -409,24 +240,43 @@ auto node_actor::make_behavior() -> behavior_type {
 
 		// 5.
 		[=](a_node_find, const lid_type& lid) -> sp_link {
-			return impl.search<Key::ID>(lid);
+			adbg(this) << "{a_node_find LID} " << to_string(lid) << std::endl;
+			auto res = impl.search<Key::ID>(lid);
+			adbg(this) << "{a_node_found link} " << (res ? to_string(res->id()) : "") << std::endl;
+			return res;
 		},
 
 		[=](a_node_find, std::size_t idx) -> sp_link {
+			adbg(this) << "{a_node_find idx} " << idx << std::endl;
 			return impl.search<Key::AnyOrder>(idx);
 		},
 
-		[=](a_node_find, const std::string key, Key key_meaning) -> sp_link {
-			return impl.search(key, key_meaning);
+		[=](a_node_find, std::string key, Key key_meaning) -> caf::result<sp_link> {
+			adbg(this) << "{a_node_find key} " << key << std::endl;
+			if(has_builtin_index(key_meaning))
+				return impl.search(key, key_meaning);
+			else
+				return delegate(
+					system().spawn(extraidx_search_actor),
+					a_node_find(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
+				);
 		},
 
 		// deep search
-		[=](a_node_deep_search, const lid_type& lid) -> sp_link {
-			return impl.deep_search<Key::ID>(lid);
+		[=](a_node_deep_search, lid_type lid) -> caf::result<sp_link> {
+			adbg(this) << "{a_node_deep_search}" << std::endl;
+			return delegate(
+				system().spawn(extraidx_deep_search_actor, handle()),
+				a_node_deep_search(), std::move(lid)
+			);
 		},
 
-		[=](a_node_deep_search, const std::string key, Key key_meaning) -> sp_link {
-			return impl.deep_search(key, key_meaning);
+		[=](a_node_deep_search, std::string key, Key key_meaning) -> caf::result<sp_link> {
+			adbg(this) << "{a_node_deep_search}" << std::endl;
+			return delegate(
+				system().spawn(extraidx_deep_search_actor, handle()),
+				a_node_deep_search(), std::move(key), key_meaning
+			);
 		},
 
 		// index
@@ -434,13 +284,25 @@ auto node_actor::make_behavior() -> behavior_type {
 			return impl.index<Key::ID>(lid);
 		},
 
-		[=](a_node_index, const std::string key, Key key_meaning) -> existing_index {
-			return impl.index(key, key_meaning);
+		[=](a_node_index, std::string key, Key key_meaning) -> caf::result<existing_index> {
+			if(has_builtin_index(key_meaning))
+				return impl.index(key, key_meaning);
+			else
+				return delegate(
+					system().spawn(extraidx_search_actor),
+					a_node_index(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
+				);
 		},
 
 		// equal_range
-		[=](a_node_equal_range, const std::string key, Key key_meaning) -> links_v {
-			return impl.equal_range(key, key_meaning);
+		[=](a_node_equal_range, std::string key, Key key_meaning) -> caf::result<links_v> {
+			if(has_builtin_index(key_meaning))
+				return impl.equal_range(key, key_meaning);
+			else
+				return delegate(
+					system().spawn(extraidx_search_actor),
+					a_node_equal_range(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
+				);
 		},
 
 		// 8. insert new link
@@ -469,18 +331,27 @@ auto node_actor::make_behavior() -> behavior_type {
 		[=](a_node_erase, const lid_type& lid) -> std::size_t {
 			return erase(lid);
 		},
+
 		// 14. all other erase overloads do normal erase
 		[=](a_node_erase, std::size_t idx) {
 			return impl.erase<Key::AnyOrder>(
 				idx, [=](const sp_link& L) { on_erase(L, *this); }
 			);
 		},
+
 		// 15.
-		[=](a_node_erase, const std::string& key, Key key_meaning) {
-			return impl.erase(
-				key, key_meaning, [=](const sp_link& L) { on_erase(L, *this); }
-			);
+		[=](a_node_erase, std::string key, Key key_meaning) -> caf::result<std::size_t>{
+			if(has_builtin_index(key_meaning))
+				return impl.erase(
+					key, key_meaning, [=](const sp_link& L) { on_erase(L, *this); }
+				);
+			else
+				return delegate(
+					system().spawn(extraidx_erase_actor, handle()),
+					a_node_erase(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
+				);
 		},
+
 		// 16. erase bunch of links
 		[=](a_node_erase, const lids_v& lids) {
 			return impl.erase(
@@ -501,10 +372,8 @@ auto node_actor::make_behavior() -> behavior_type {
 			return impl.rename<Key::AnyOrder>(idx, new_name);
 		},
 
-		[=](
-			a_lnk_rename, const std::string& key, const std::string& new_name,Key key_meaning, bool all
-		) -> std::size_t {
-			return impl.rename(key, new_name, key_meaning, all);
+		[=](a_lnk_rename, const std::string& old_name, const std::string& new_name) -> std::size_t {
+			return impl.rename<Key::Name>(old_name, new_name);
 		},
 
 		// 18. apply custom order
@@ -512,7 +381,6 @@ auto node_actor::make_behavior() -> behavior_type {
 			impl.rearrange<Key::AnyOrder>(new_order);
 		},
 
-		// 19.
 		[=](a_node_rearrange, const lids_v& new_order) {
 			impl.rearrange<Key::ID>(new_order);
 		},

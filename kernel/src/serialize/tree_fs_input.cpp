@@ -249,7 +249,7 @@ struct tree_fs_input::impl {
 			if(N.size() < 2 || leafs_order.size() < 2) return;
 
 			// convert string uids to UUIDs
-			auto wanted_order = std::vector<lid_type>(leafs_order.size());
+			auto wanted_order = lids_v(leafs_order.size());
 			std::transform(
 				leafs_order.cbegin(), leafs_order.cend(), wanted_order.begin(),
 				[](const auto& s_uid) { return uuid_from_str(s_uid); }

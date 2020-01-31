@@ -64,10 +64,7 @@ BSS_FCN_INL_BEGIN(serialize, node_impl)
 			return 0;
 	}();
 
-	ar(
-		make_nvp("allowed_otypes", t.allowed_otypes_),
-		make_nvp("leafs", leafs_view(t))
-	);
+	ar(make_nvp("leafs", leafs_view(t)));
 BSS_FCN_INL_END(save, node_impl)
 
 /*-----------------------------------------------------------------------------

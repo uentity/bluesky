@@ -12,12 +12,15 @@
 #include <bs/tree/node.h>
 
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/string_generator.hpp>
 
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
+
+const auto uuid_from_str = boost::uuids::string_generator{};
 
 /*-----------------------------------------------------------------------------
  *  hidden details
@@ -91,8 +94,12 @@ auto index_obj(const node& N, const sp_obj& obj) {
 // ------- deep search
 template<Key K>
 auto deep_search(const node& N, const std::string& key) -> sp_link {
-	return N.deep_search(key, K);
+	if constexpr(K == Key::ID)
+		return N.deep_search(uuid_from_str(key));
+	else
+		return N.deep_search(key, K);
 }
+
 auto deep_search_obj(const node& N, const sp_obj& obj) {
 	return N.deep_search(obj->id(), Key::OID);
 }
@@ -136,7 +143,6 @@ void py_bind_node(py::module& m) {
 		.value("AllowDupNames", InsertPolicy::AllowDupNames)
 		.value("DenyDupNames", InsertPolicy::DenyDupNames)
 		.value("RenameDup", InsertPolicy::RenameDup)
-		.value("DenyDupOID", InsertPolicy::DenyDupOID)
 		.value("Merge", InsertPolicy::Merge)
 	;
 
@@ -250,27 +256,16 @@ void py_bind_node(py::module& m) {
 		.def("keys", &node::skeys, "key_type"_a = Key::ID, "ordering"_a = Key::AnyOrder)
 
 		// link rename
-		// by ID or OID or name
-		.def("rename", py::overload_cast<std::string, std::string, Key, bool>(&node::rename),
-			"key"_a, "new_name"_a, "key_meaning"_a = Key::ID, "all"_a = true,
-			"Rename link with given key (ID, OID or link name)")
+		.def("rename", py::overload_cast<std::string, std::string>(&node::rename),
+			"old_name"_a, "new_name"_a, "Rename all links with given old_name")
 		// by index offset
 		.def("rename", py::overload_cast<std::size_t, std::string>(&node::rename),
 			"idx"_a, "new_name"_a, "Rename link with given index")
-		// by object instance
-		.def("rename", [](node& N, const sp_obj& obj, std::string new_name, bool all = false) {
-			return N.rename(obj->id(), std::move(new_name), Key::OID, all);
-		}, "obj"_a, "new_name"_a, "all"_a = false, "Rename link(s) to given object")
+		// by ID
+		.def("rename", py::overload_cast<lid_type, std::string>(&node::rename),
+			"lid"_a, "new_name"_a, "Rename link with given ID")
 
 		// misc API
-		.def("accepts", &node::accepts, "Check if node accepts given link")
-		.def("accept_object_types", &node::accept_object_types,
-			"Set white list of object types that node will accept"
-		)
-		.def_property_readonly("allowed_object_types", &node::allowed_object_types,
-			"Returns white list of object types that node will accept"
-		)
-
 		.def_property_readonly("handle", &node::handle,
 			"Returns a single link that owns this node in overall tree"
 		)
