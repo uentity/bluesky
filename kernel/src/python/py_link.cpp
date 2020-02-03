@@ -22,9 +22,7 @@ using namespace tree;
 
 NAMESPACE_BEGIN()
 
-auto py_kernel() -> kernel::detail::python_subsyst_impl& {
-	return kernel::detail::python_subsyst_impl::self();
-}
+inline const auto py_kernel = &kernel::detail::python_subsyst_impl::self;
 
 auto adapt(sp_obj&& source, const link& L) {
 	return py_kernel().adapt(std::move(source), L);
@@ -72,64 +70,32 @@ void py_bind_link(py::module& m) {
 	//
 	py::class_<link, sp_link> link_pyface(m, "link");
 
-	// export Flags enum
-	py::enum_<Flags>(link_pyface, "Flags", py::arithmetic())
-		.value("Persistent", Flags::Persistent)
-		.value("Disabled", Flags::Disabled)
-		.export_values()
-	;
-	py::implicitly_convertible<int, Flags>();
-	py::implicitly_convertible<long, Flags>();
-
-	// export link request & status enums
-	py::enum_<Req>(link_pyface, "Req")
-		.value("Data", Req::Data)
-		.value("DataNode", Req::DataNode)
-	;
-	py::enum_<ReqStatus>(link_pyface, "ReqStatus")
-		.value("Void", ReqStatus::Void)
-		.value("Busy", ReqStatus::Busy)
-		.value("OK", ReqStatus::OK)
-		.value("Error", ReqStatus::Error)
-	;
-
-	// Events enum
-	py::enum_<Event>(m, "Event")
-		.value("LinkRenamed", Event::LinkRenamed)
-		.value("LinkStatusChanged", Event::LinkStatusChanged)
-		.value("LinkInserted", Event::LinkInserted)
-		.value("LinkErased", Event::LinkErased)
-		.value("All", Event::All)
-	;
-
-	// async tag
-	py::class_<launch_async_t>(m, "launch_async_t");
-	m.attr("launch_async") = launch_async;
-	// unsafe tag
-	py::class_<unsafe_t>(m, "unsafe_t");
-	m.attr("unsafe") = unsafe;
+	// [TODO] remove it later (added for compatibility)
+	link_pyface.attr("Flags") = m.attr("Flags");
+	link_pyface.attr("Req") = m.attr("Req");
+	link_pyface.attr("ReqStatus") = m.attr("ReqStatus");
 
 	// link base class
 	link_pyface
-		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link")
+		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link", nogil)
 
 		// [NOTE] return adapted objects (and pass 'em to callbacks)
 		.def("data_ex",
 			[](const link& L, bool wait_if_busy) {
 				return adapt(L.data_ex(wait_if_busy), L);
 			},
-			"wait_if_busy"_a = true
+			"wait_if_busy"_a = true, nogil
 		)
-		.def("data", [](const link& L){ return adapt(L.data(), L); })
+		.def("data", [](const link& L){ return adapt(L.data(), L); }, nogil)
 		.def("data", [](const link& L, adapted_data_cb f, bool high_priority) {
 				return L.data(adapt(std::move(f)), high_priority);
-			}, "f"_a, "high_priority"_a = false
+			}, "f"_a, "high_priority"_a = false, nogil
 		)
 
-		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = true)
-		.def("data_node", py::overload_cast<>(&link::data_node, py::const_))
+		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = true, nogil)
+		.def("data_node", py::overload_cast<>(&link::data_node, py::const_), nogil)
 		.def("data_node", py::overload_cast<link::process_data_cb, bool>(&link::data_node, py::const_),
-			"f"_a, "high_priority"_a = false
+			"f"_a, "high_priority"_a = false, nogil
 		)
 
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
@@ -138,75 +104,51 @@ void py_bind_link(py::module& m) {
 			[](const link& L, data_modificator_f m, bool silent) {
 				L.modify_data(launch_async, std::move(m), silent);
 			},
-			"m"_a, "silent"_a = false
+			"m"_a, "silent"_a = false,
+			"Place given modificator `m` to link's events loop and return immediately", nogil
 		)
+		//.def("modify_data",
+		//	py::overload_cast<launch_async_t, data_modificator_f, bool>(&link::modify_data, py::const_),
+		//	"launch_async"_a, "m"_a, "silent"_a = false,
+		//	"Place given modificator `m` to link's events loop and return immediately", nogil
+		//)
+		//.def("modify_data",
+		//	py::overload_cast<data_modificator_f, bool>(&link::modify_data, py::const_),
+		//	"m"_a, "silent"_a = false,
+		//	"Execute given modificator `m` inside link context and wait until it's done", nogil
+		//)
 
 		.def("type_id", &link::type_id)
-		.def("oid", &link::oid)
-		.def("obj_type_id", &link::obj_type_id)
-		.def("rename", &link::rename)
-		.def("req_status", &link::req_status, "Query for given operation status")
+		.def("oid", &link::oid, nogil)
+		.def("obj_type_id", &link::obj_type_id, nogil)
+		.def("rename", &link::rename, nogil)
+		.def("req_status", &link::req_status, "Query for given operation status", nogil)
 		.def("rs_reset", &link::rs_reset,
 			"request"_a, "new_status"_a = ReqStatus::Void,
-			"Unconditionally set status of given request"
+			"Unconditionally set status of given request", nogil
 		)
 		.def("rs_reset_if_eq", &link::rs_reset_if_eq,
 			"request"_a, "self_rs"_a, "new_rs"_a = ReqStatus::Void,
-			"Set status of given request if it is equal to given value, returns prev status"
+			"Set status of given request if it is equal to given value, returns prev status", nogil
 		)
 		.def("rs_reset_if_neq", &link::rs_reset_if_neq,
 			"request"_a, "self_rs"_a, "new_rs"_a = ReqStatus::Void,
-			"Set status of given request if it is NOT equal to given value, returns prev status"
+			"Set status of given request if it is NOT equal to given value, returns prev status", nogil
 		)
 
-		.def_property_readonly("id", [](const link& L) {
-			return boost::uuids::to_string(L.id());
-		})
+		.def_property_readonly("id", [](const link& L) { return to_string(L.id()); })
 		.def_property_readonly("owner", &link::owner)
-		.def_property_readonly("name", py::overload_cast<>(&link::name, py::const_))
+		.def_property_readonly("name", py::overload_cast<>(&link::name, py::const_), nogil)
 		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
-		.def_property("flags", py::overload_cast<>(&link::flags, py::const_), &link::set_flags)
+		.def_property("flags", py::overload_cast<>(&link::flags, py::const_), &link::set_flags, nogil)
 		.def_property_readonly("flags_unsafe", [](const link& L) { return L.flags(unsafe); })
-		.def("info", py::overload_cast<>(&link::info, py::const_))
+		.def("info", py::overload_cast<>(&link::info, py::const_), nogil)
 		.def("info", py::overload_cast<unsafe_t>(&link::info, py::const_))
 
 		// events subscrition
-		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All)
-		.def("unsubscribe", &link::unsubscribe, "event_cb_id"_a)
+		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
+		.def("unsubscribe", &link::unsubscribe, "event_cb_id"_a, nogil)
 	;
-
-	// export adapters manip functions
-	using adapter_fn = kernel::detail::python_subsyst_impl::adapter_fn;
-
-	m.def("register_adapter", [](std::string obj_type_id, adapter_fn f) {
-			py_kernel().register_adapter(std::move(obj_type_id), std::move(f));
-		}, "obj_type_id"_a, "adapter_fn"_a, "Register adapter for specified BS type"
-	);
-	m.def("register_default_adapter", [](adapter_fn f) {
-			py_kernel().register_default_adapter(std::move(f));
-		}, "adapter_fn"_a, "Register default adapter for all BS types with no adapter registered"
-	);
-	m.def("clear_adapters", []() { py_kernel().clear_adapters(); },
-		"Remove all adapters (including default) for BS types"
-	);
-	m.def("adapt", [](sp_obj source, const tree::link& L) {
-			return py_kernel().adapt(std::move(source), L);
-		}, "source"_a, "lnk"_a,
-		"Make adapter for given object"
-	);
-	m.def("adapted_types", []() { return py_kernel().adapted_types(); },
-		"Return list of types with registered adapters ('*' denotes default adapter)"
-	);
-	m.def("drop_adapted_cache", [](const sp_obj& obj) {
-			return py_kernel().drop_adapted_cache(obj);
-		}, "obj"_a = nullptr,
-		"Clear cached adapter for given object (or drop all cached adapters if object is None)"
-	);
-	m.def("get_cached_adapter", [](const sp_obj& obj) {
-			return py_kernel().get_cached_adapter(obj);
-		},
-		"obj"_a, "Get cached adapter for given object (if created before, otherwise None)"
-	);
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Derived links
@@ -227,8 +169,8 @@ void py_bind_link(py::module& m) {
 		.def(py::init<std::string, const sp_link&, Flags>(),
 			"name"_a, "source"_a, "flags"_a = Flags::Plain)
 
-		.def_property_readonly("check_alive", &sym_link::check_alive)
-		.def("src_path", &sym_link::src_path, "human_readable"_a = false)
+		.def_property_readonly("check_alive", &sym_link::check_alive, nogil)
+		.def("src_path", &sym_link::src_path, "human_readable"_a = false, nogil)
 	;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -239,14 +181,14 @@ void py_bind_link(py::module& m) {
 			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = Flags::Plain)
 		.def(py::init<std::string, const char*, std::string, sp_fusion, Flags>(),
 			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = Flags::Plain)
-		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge)
+		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge, nogil)
 		.def("populate",
 			py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),
-			"child_type_id"_a, "wait_if_busy"_a = true
+			"child_type_id"_a, "wait_if_busy"_a = true, nogil
 		)
 		.def("populate",
 			py::overload_cast<link::process_data_cb, std::string>(&fusion_link::populate, py::const_),
-			"f"_a, "obj_type_id"_a
+			"f"_a, "obj_type_id"_a, nogil
 		)
 	;
 

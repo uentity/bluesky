@@ -177,17 +177,16 @@ auto bind_cafdict(py::handle scope, const std::string &name, Args&&... args) {
 //  bind kernel subsystems API
 //
 auto bind_plugins_api(py::module& m) -> void {
-	m.def("load_plugin", &kernel::plugins::load_plugin, "fname"_a);
-	m.def("load_plugins", &kernel::plugins::load_plugins);
-	m.def("unload_plugin", &kernel::plugins::unload_plugin,
-		"plugin_descriptor"_a);
-	m.def("unload_plugins", &kernel::plugins::unload_plugins);
-	m.def("loaded_plugins", &kernel::plugins::loaded_plugins);
+	m.def("load_plugin", &kernel::plugins::load_plugin, "fname"_a, nogil);
+	m.def("load_plugins", &kernel::plugins::load_plugins, nogil);
+	m.def("unload_plugin", &kernel::plugins::unload_plugin, "plugin_descriptor"_a, nogil);
+	m.def("unload_plugins", &kernel::plugins::unload_plugins, nogil);
+	m.def("loaded_plugins", &kernel::plugins::loaded_plugins, nogil);
 	m.def("plugin_types", py::overload_cast<const plugin_descriptor&>(&kernel::plugins::plugin_types),
-		"plugin_descriptor"_a);
+		"plugin_descriptor"_a, nogil);
 	m.def("plugin_types", py::overload_cast<const std::string&>(&kernel::plugins::plugin_types),
-		"plugin_name"_a);
-	m.def("registered_types", &kernel::plugins::registered_types);
+		"plugin_name"_a, nogil);
+	m.def("registered_types", &kernel::plugins::registered_types, nogil);
 }
 
 auto bind_tfactory_api(py::module& m) -> void {
@@ -234,23 +233,23 @@ auto bind_misc_api(py::module& m) {
 
 auto bind_tools(py::module& m) -> void {
 	m.def("print_loaded_types", &kernel::tools::print_loaded_types);
-	m.def("print_link", [](const tree::sp_link& l) { kernel::tools::print_link(l, 0); });
+	m.def("print_link", [](const tree::sp_link& l) { kernel::tools::print_link(l, 0); }, nogil);
 	m.def("print_link", [](const tree::sp_node& n, std::string name = "/") {
 		kernel::tools::print_link(std::make_shared<tree::hard_link>(name, n), 0);
-	}, "node"_a, "root_name"_a = "/");
+	}, "node"_a, "root_name"_a = "/", nogil);
 }
 
 auto bind_radio(py::module& m) -> void {
 	namespace kr = kernel::radio;
 	m.def("await_all_actors_done", [] { kr::system().await_all_actors_done(); },
-		"Blocks until all actors are finished", py::call_guard<py::gil_scoped_release>());
+		"Blocks until all actors are finished", nogil);
 	m.def("await_actors_before_shutdown", [] {return kr::system().await_actors_before_shutdown(); });
 	m.def("await_actors_before_shutdown", [](bool x) { kr::system().await_actors_before_shutdown(x); });
 	m.def("toggle", &kr::toggle, "Start/stop radio subsystem");
-	m.def("start_server", &kr::start_server, "Helper that toggles radio on & starts listening");
-	m.def("start_client", &kr::start_client, "Helper that toggles radio on & starts client");
-	m.def("publish_link", &kr::publish_link);
-	m.def("unpublish_link", &kr::unpublish_link);
+	m.def("start_server", &kr::start_server, "Helper that toggles radio on & starts listening", nogil);
+	m.def("start_client", &kr::start_client, "Helper that toggles radio on & starts client", nogil);
+	m.def("publish_link", &kr::publish_link, nogil);
+	m.def("unpublish_link", &kr::unpublish_link, nogil);
 }
 
 auto bind_kernel_api(py::module& m) -> void {
@@ -294,7 +293,13 @@ NAMESPACE_END() // eof hodden namespace
 /*-----------------------------------------------------------------------------
  *  main kernel binding fcn
  *-----------------------------------------------------------------------------*/
-void py_bind_kernel(py::module& m) {
+
+auto py_bind_adapters(py::module& m) -> void;
+
+auto py_bind_kernel(py::module& m) -> void {
+	// place adapters into root bs module
+	py_bind_adapters(m);
+
 	auto kmod = m.def_submodule("kernel", "BS kernel");
 	bind_kernel_api(kmod);
 }

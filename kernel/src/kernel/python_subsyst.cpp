@@ -17,6 +17,9 @@
 #include "plugins_subsyst.h"
 
 #include <boost/uuid/uuid_io.hpp>
+
+#include <pybind11/functional.h>
+
 #include <functional>
 
 #define WITH_KMOD \
@@ -127,6 +130,8 @@ auto python_subsyst_impl::register_default_adapter(adapter_fn f) -> void {
 }
 
 auto python_subsyst_impl::clear_adapters() -> void {
+	drop_adapted_cache();
+
 	auto solo = std::lock_guard{ guard_ };
 	adapters_.clear();
 	def_adapter_ = nullptr;
@@ -152,6 +157,7 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 		// inc ref counter for new link
 		if(lnk2obj_.try_emplace(std::move(slid), cached_A->first).second)
 			++cached_A->second.second;
+		py::gil_scoped_acquire();
 		return cached_A->second.first;
 	}
 
@@ -165,8 +171,10 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 
 			// kill cache entry if ref counter reaches zero
 			if(auto cached_A = self.acache_.find(cached_L->second); cached_A != self.acache_.end()) {
-				if(--cached_A->second.second == 0)
+				if(--cached_A->second.second == 0) {
+					py::gil_scoped_acquire();
 					self.acache_.erase(cached_A);
+				}
 			}
 			self.lnk2obj_.erase(cached_L);
 		}
@@ -182,10 +190,12 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 		lnk2obj_[std::move(slid)] = obj_ptr;
 		// cache adapter with ref counter = 1
 		return acache_.try_emplace(
-			obj_ptr, acache_value{ afn(std::move(source)), 1 }
+			obj_ptr, afn(std::move(source)), 1
 		).first->second.first;
 	};
+
 	auto pf = adapters_.find(source->type_id());
+	py::gil_scoped_acquire();
 	return pf != adapters_.end() ?
 		adapt_and_cache(pf->second) :
 		( def_adapter_ ? adapt_and_cache(def_adapter_) : py::cast(source) );
@@ -227,3 +237,49 @@ auto python_subsyst_impl::self() -> python_subsyst_impl& {
 }
 
 NAMESPACE_END(blue_sky::kernel::detail)
+
+NAMESPACE_BEGIN(blue_sky::python)
+
+auto py_bind_adapters(py::module& m) -> void {
+	using namespace kernel::detail;
+	static auto py_kernel = &python_subsyst_impl::self;
+
+	// export adapters manip functions
+	using adapter_fn = kernel::detail::python_subsyst_impl::adapter_fn;
+
+	// called with GIL released
+	m.def("register_adapter", [](std::string obj_type_id, adapter_fn f) {
+			py_kernel().register_adapter(std::move(obj_type_id), std::move(f));
+		}, "obj_type_id"_a, "adapter_fn"_a, "Register adapter for specified BS type", nogil
+	);
+	m.def("register_default_adapter", [](adapter_fn f) {
+			py_kernel().register_default_adapter(std::move(f));
+		}, "adapter_fn"_a, "Register default adapter for all BS types with no adapter registered", nogil
+	);
+	m.def("adapted_types", []() { return py_kernel().adapted_types(); },
+		"Return list of types with registered adapters ('*' denotes default adapter)", nogil
+	);
+	// [NOTE] containes fine-grained GIL acquire, so can be called w/o GIL
+	m.def("adapt", [](sp_obj source, const tree::link& L) {
+			return py_kernel().adapt(std::move(source), L);
+		}, "source"_a, "lnk"_a,
+		"Make adapter for given object", nogil
+	);
+
+	// called normally with captured GIL
+	m.def("clear_adapters", []() { py_kernel().clear_adapters(); },
+		"Remove all adapters (including default) for BS types"
+	);
+	m.def("drop_adapted_cache", [](const sp_obj& obj) {
+			return py_kernel().drop_adapted_cache(obj);
+		}, "obj"_a = nullptr,
+		"Clear cached adapter for given object (or drop all cached adapters if object is None)"
+	);
+	m.def("get_cached_adapter", [](const sp_obj& obj) {
+			return py_kernel().get_cached_adapter(obj);
+		},
+		"obj"_a, "Get cached adapter for given object (if created before, otherwise None)"
+	);
+}
+
+NAMESPACE_END(blue_sky::python)

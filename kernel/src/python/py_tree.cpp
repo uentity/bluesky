@@ -15,7 +15,7 @@
 #include <pybind11/chrono.h>
 
 // make it possible to bind opaque std::list & std::vector (w/o content copying)
-PYBIND11_MAKE_OPAQUE(std::vector<blue_sky::tree::sp_link>);
+PYBIND11_MAKE_OPAQUE(blue_sky::tree::links_v);
 PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_link>);
 PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_node>);
 
@@ -53,7 +53,49 @@ void py_bind_link(py::module&);
 void py_bind_node(py::module&);
 
 void py_bind_tree(py::module& m) {
-	// invoke link & node bindings
+	///////////////////////////////////////////////////////////////////////////////
+	//  common part
+	//
+	// export Flags enum
+	py::enum_<Flags>(m, "Flags", py::arithmetic())
+		.value("Persistent", Flags::Persistent)
+		.value("Disabled", Flags::Disabled)
+		.export_values()
+	;
+	py::implicitly_convertible<int, Flags>();
+	py::implicitly_convertible<long, Flags>();
+
+	// export link request & status enums
+	py::enum_<Req>(m, "Req")
+		.value("Data", Req::Data)
+		.value("DataNode", Req::DataNode)
+	;
+	py::enum_<ReqStatus>(m, "ReqStatus")
+		.value("Void", ReqStatus::Void)
+		.value("Busy", ReqStatus::Busy)
+		.value("OK", ReqStatus::OK)
+		.value("Error", ReqStatus::Error)
+	;
+
+	// Events enum
+	py::enum_<Event>(m, "Event")
+		.value("LinkRenamed", Event::LinkRenamed)
+		.value("LinkStatusChanged", Event::LinkStatusChanged)
+		.value("LinkInserted", Event::LinkInserted)
+		.value("LinkErased", Event::LinkErased)
+		.value("All", Event::All)
+	;
+
+	// async tag
+	py::class_<launch_async_t>(m, "launch_async_t");
+	m.attr("launch_async") = launch_async;
+	// unsafe tag
+	py::class_<unsafe_t>(m, "unsafe_t");
+	m.attr("unsafe") = unsafe;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  link & node
+	//
 	py_bind_link(m);
 	py_bind_node(m);
 
@@ -61,34 +103,34 @@ void py_bind_tree(py::module& m) {
 	//  tree API
 	//
 	m.def("abspath", py::overload_cast<const sp_clink&, Key>(&abspath),
-		"lnk"_a, "path_unit"_a = Key::ID, "Get link's absolute path");
+		"lnk"_a, "path_unit"_a = Key::ID, "Get link's absolute path", nogil);
 	m.def("find_root", py::overload_cast<const sp_link&>(&find_root),
-		"L"_a, "Return root node of a tree that given link belongs to");
+		"L"_a, "Return root node of a tree that given link belongs to", nogil);
 	m.def("find_root", py::overload_cast<sp_node>(&find_root),
-		"N"_a, "Return root node of a tree that given node belongs to");
+		"N"_a, "Return root node of a tree that given node belongs to", nogil);
 	m.def("find_root_handle", py::overload_cast<sp_clink>(&find_root_handle),
-		"L"_a, "Return handle (link) of a tree root that given link belongs to");
+		"L"_a, "Return handle (link) of a tree root that given link belongs to", nogil);
 	m.def("find_root_handle", py::overload_cast<const sp_node&>(&find_root_handle),
-		"L"_a, "Return handle (link) of a tree root that given node belongs to");
+		"L"_a, "Return handle (link) of a tree root that given node belongs to", nogil);
 	m.def("convert_path", &convert_path,
 		"src_path"_a, "start"_a, "src_path_unit"_a = Key::ID, "dst_path_unit"_a = Key::Name,
 		"follow_lazy_links"_a = false,
-		"Convert path string from one representation to another (for ex. link IDs -> link names)"
+		"Convert path string from one representation to another (for ex. link IDs -> link names)", nogil
 	);
 	m.def("deref_path",py::overload_cast<const std::string&, sp_link, Key, bool>(&deref_path),
 		"path"_a, "start"_a, "path_unit"_a = Key::ID, "follow_lazy_links"_a = true,
-		"Quick link search by given path relative to `start`"
+		"Quick link search by given path relative to `start`", nogil
 	);
 	m.def("deref_path",py::overload_cast<const std::string&, sp_node, Key, bool>(&deref_path),
 		"path"_a, "start"_a, "path_unit"_a = Key::ID, "follow_lazy_links"_a = true,
-		"Quick link search by given path relative to `start`"
+		"Quick link search by given path relative to `start`", nogil
 	);
 	// async deref_path
 	m.def("deref_path",
 		py::overload_cast<deref_process_f, std::string, sp_link, Key, bool, bool>(&deref_path),
 		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = Key::ID,
 		"follow_lazy_links"_a = true, "high_priority"_a = false,
-		"Async quick link search by given path relative to `start`"
+		"Async quick link search by given path relative to `start`", nogil
 	);
 
 	// bind lists of links & nodes as opaque types
@@ -110,7 +152,7 @@ void py_bind_tree(py::module& m) {
 			py_walk(root, std::move(cb), topdown, follow_symlinks, follow_lazy_links);
 		},
 		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true, "follow_lazy_links"_a = false,
-		"Walk the tree similar to Python `os.walk()`"
+		"Walk the tree similar to Python `os.walk()`", nogil
 	);
 	m.def("walk",
 		[](
@@ -120,13 +162,13 @@ void py_bind_tree(py::module& m) {
 			py_walk(root, std::move(cb), topdown, follow_symlinks, follow_lazy_links);
 		},
 		"root_node"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true, "follow_lazy_links"_a = false,
-		"Walk the tree similar to Python `os.walk()` (alternative)"
+		"Walk the tree similar to Python `os.walk()` (alternative)", nogil
 	);
 
 	// make root link
 	m.def("make_root_link", &make_root_link,
 		"link_type"_a = "hard_link", "name"_a = "/", "root_node"_a = nullptr,
-		"Make root link pointing to node which handle is preset to returned link"
+		"Make root link pointing to node which handle is preset to returned link", nogil
 	);
 
 	// save/load tree
@@ -136,13 +178,13 @@ void py_bind_tree(py::module& m) {
 		.value("FS", TreeArchive::FS)
 	;
 	m.def("save_tree", py::overload_cast<sp_link, std::string, TreeArchive, timespan>(&save_tree),
-		"root"_a, "filename"_a, "ar"_a = TreeArchive::FS, "wait_for"_a = infinite);
+		"root"_a, "filename"_a, "ar"_a = TreeArchive::FS, "wait_for"_a = infinite, nogil);
 	m.def("save_tree", py::overload_cast<on_serialized_f, sp_link, std::string, TreeArchive>(&save_tree),
-		"callback"_a, "root"_a, "filename"_a, "ar"_a = TreeArchive::FS);
+		"callback"_a, "root"_a, "filename"_a, "ar"_a = TreeArchive::FS, nogil);
 	m.def("load_tree", py::overload_cast<std::string, TreeArchive>(&load_tree),
-		"filename"_a, "ar"_a = TreeArchive::FS);
+		"filename"_a, "ar"_a = TreeArchive::FS, nogil);
 	m.def("load_tree", py::overload_cast<on_serialized_f, std::string, TreeArchive>(&load_tree),
-		"callback"_a, "filename"_a, "ar"_a = TreeArchive::FS);
+		"callback"_a, "filename"_a, "ar"_a = TreeArchive::FS, nogil);
 }
 
 NAMESPACE_END(blue_sky::python)
