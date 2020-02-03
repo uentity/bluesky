@@ -16,45 +16,6 @@
 #include <caf/group.hpp>
 #include <caf/stateful_actor.hpp>
 
-// [TODO] refactor & remove debug support from here
-#ifndef DEBUG_ACTOR
-	#define DEBUG_ACTOR 0
-#endif
-
-#if DEBUG_ACTOR == 1
-#include <caf/actor_ostream.hpp>
-#endif
-
-NAMESPACE_BEGIN()
-#if DEBUG_ACTOR == 1
-
-template<typename Actor>
-auto adbg(Actor* A, const std::string& nid = {}) -> caf::actor_ostream {
-	auto res = caf::aout(A);
-	if constexpr(std::is_same_v<Actor, node_actor>) {
-		res << "[N] ";
-		if(auto pgrp = A->impl.self_grp.get())
-			res << "[" << A->impl.self_grp.get()->identifier() << "]";
-		else
-			res << "[null grp]";
-		res <<  ": ";
-	}
-	else if(!nid.empty() && nid.front() != '"') {
-		res << "[N] [" << nid << "]: ";
-	}
-	return res;
-}
-
-#else
-
-template<typename Actor>
-constexpr auto adbg(const Actor*, const std::string& = {}) {
-	return blue_sky::log::D();
-}
-
-#endif
-NAMESPACE_END()
-
 NAMESPACE_BEGIN(blue_sky::tree)
 
 // state for node & link retranslators

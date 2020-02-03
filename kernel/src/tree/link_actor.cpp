@@ -18,33 +18,24 @@
 
 #include <boost/uuid/uuid_generators.hpp>
 
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::data_modificator_f)
-
 #define DEBUG_ACTOR 0
+#include "actor_debug.h"
 
-#if DEBUG_ACTOR == 1
-#include <caf/actor_ostream.hpp>
-#endif
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::data_modificator_f)
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 using bs_detail::shared;
 
-NAMESPACE_BEGIN()
 #if DEBUG_ACTOR == 1
 
-auto adbg(link_actor* A) -> caf::actor_ostream {
+static auto adbg(link_actor* A) -> caf::actor_ostream {
 	return caf::aout(A) << "[L] [" << to_string(A->impl.id_) <<
 		"] [" << A->impl.name_ << "]: ";
 }
 
-#else
-
-constexpr auto adbg(link_actor*) { return log::D(); }
-
 #endif
-NAMESPACE_END()
 
 /*-----------------------------------------------------------------------------
  *  link

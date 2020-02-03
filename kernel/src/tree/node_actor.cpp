@@ -9,6 +9,7 @@
 
 #include "node_actor.h"
 #include "node_extraidx_actor.h"
+#include "node_retranslators.h"
 #include "link_impl.h"
 #include <bs/log.h>
 #include <bs/tree/tree.h>
@@ -24,11 +25,25 @@
 #include <cereal/types/optional.hpp>
 
 #define DEBUG_ACTOR 0
-#include "node_retranslators.h"
+#include "actor_debug.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 using namespace std::chrono_literals;
+
+#if DEBUG_ACTOR == 1
+
+static auto adbg(node_actor* A) -> caf::actor_ostream {
+	auto res = caf::aout(A);
+	res << "[N] ";
+	if(auto pgrp = A->impl.self_grp.get())
+		res << "[" << A->impl.self_grp.get()->identifier() << "]";
+	else
+		res << "[null grp]";
+	return res <<  ": ";
+}
+
+#endif
 
 /*-----------------------------------------------------------------------------
  *  node_actor
@@ -242,7 +257,6 @@ auto node_actor::make_behavior() -> behavior_type {
 		[=](a_node_find, const lid_type& lid) -> sp_link {
 			adbg(this) << "{a_node_find LID} " << to_string(lid) << std::endl;
 			auto res = impl.search<Key::ID>(lid);
-			adbg(this) << "{a_node_found link} " << (res ? to_string(res->id()) : "") << std::endl;
 			return res;
 		},
 

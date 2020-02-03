@@ -16,8 +16,33 @@
 
 #include <boost/uuid/uuid_io.hpp>
 
+#define DEBUG_ACTOR 0
+#include "actor_debug.h"
+
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
+
+#if DEBUG_ACTOR == 1
+
+template<typename State>
+static auto adbg(caf::stateful_actor<State>* A, const std::string& msg_name = {}) {
+	auto& S = A->state;
+	auto res = caf::aout(A);
+	if(auto nid = S.tgt_grp_id(); !nid.empty())
+		res << "[N] [" << nid << "]: ";
+	if(auto sid = S.src_grp_id(); !sid.empty()) {
+		if constexpr(std::is_same_v<State, node_rsl_state>)
+			res << "<- [N]";
+		else
+			res << "<- [L]";
+		res << " [" << sid << "] ";
+	}
+	if(!msg_name.empty())
+		res << '{' << msg_name << "} ";
+	return res;
+}
+
+#endif
 
 // actor that retranslate some of link's messages attaching a link's ID to them
 auto link_retranslator(caf::stateful_actor<rsl_state>* self, caf::group node_grp, lid_type lid)
@@ -29,15 +54,6 @@ auto link_retranslator(caf::stateful_actor<rsl_state>* self, caf::group node_grp
 	self->state.src_grp = system().groups().get_local(to_string(lid));
 	self->join(self->state.src_grp);
 
-	auto sdbg = [=](const std::string& msg_name = {}) {
-		auto res = adbg(self, self->state.tgt_grp_id()) << "<- [L] [" << self->state.src_grp_id() << "] ";
-		//auto res = caf::aout(self) << self->state.tgt_grp_id() << " <- ";
-		if(!msg_name.empty())
-			res << '{' << msg_name << "} ";
-		return res;
-	};
-	sdbg() << "retranslator started" << std::endl;
-
 	// register self
 	const auto sid = self->id();
 	system().registry().put(sid, self);
@@ -45,17 +61,18 @@ auto link_retranslator(caf::stateful_actor<rsl_state>* self, caf::group node_grp
 	// silently drop all other messages not in my character
 	self->set_default_handler(caf::drop);
 
+	adbg(self) << "retranslator started" << std::endl;
 	return {
 		// quit after source
 		[=](a_bye) {
 			self->leave(self->state.src_grp);
 			system().registry().erase(sid);
-			sdbg() << "retranslator quit" << std::endl;
+			adbg(self) << "retranslator quit" << std::endl;
 		},
 
 		// retranslate events
 		[=](a_ack, a_lnk_rename, std::string new_name, std::string old_name) {
-			sdbg("rename") << old_name << " -> " << new_name << std::endl;
+			adbg(self, "rename") << old_name << " -> " << new_name << std::endl;
 			self->send<high_prio>(
 				self->state.tgt_grp, a_ack(), a_lnk_rename(), self->state.src_lid,
 				std::move(new_name), std::move(old_name)
@@ -63,7 +80,8 @@ auto link_retranslator(caf::stateful_actor<rsl_state>* self, caf::group node_grp
 		},
 
 		[=](a_ack, a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			sdbg("status") << to_string(req) << ": " << to_string(prev_s) << " -> " << to_string(new_s);
+			adbg(self, "status") <<
+				to_string(req) << ": " << to_string(prev_s) << " -> " << to_string(new_s) << std::endl;
 			self->send<high_prio>(
 				self->state.tgt_grp, a_ack(), a_lnk_status(), self->state.src_lid, req, new_s, prev_s
 			);
@@ -81,15 +99,6 @@ auto node_retranslator(
 	self->state.src_lid = lid;
 	self->state.src_actor = std::move(Lactor);
 
-	auto sdbg = [=](const std::string& msg_name = {}) {
-		auto res = adbg(self, self->state.tgt_grp_id()) << "<- [N] [" << self->state.src_grp_id() << "] ";
-		//auto res = caf::aout(self) << self->state.tgt_grp_id() << " <- ";
-		if(!msg_name.empty())
-			res << '{' << msg_name << "} ";
-		return res;
-	};
-	sdbg() << "retranslator started" << std::endl;
-
 	// register self
 	const auto sid = self->id();
 	system().registry().put(sid, self);
@@ -100,6 +109,7 @@ auto node_retranslator(
 	// auto-start self
 	self->send<high_prio>(self, a_apply());
 
+	adbg(self) << "retranslator started" << std::endl;
 	return {
 		// setup retranslator source
 		[=](a_apply) {
@@ -108,14 +118,14 @@ auto node_retranslator(
 			.then([=](result_or_errbox<std::string> src_gid) {
 				if(src_gid && !src_gid->empty()) {
 					// join subnode group
-					sdbg() << "going to join node source " << *src_gid << std::endl;
+					adbg(self) << "going to join node source " << *src_gid << std::endl;
 					self->state.src_grp = system().groups().get_local(*src_gid);
 					self->join(self->state.src_grp);
-					sdbg() << "joined source group " << *src_gid << std::endl;
+					adbg(self) << "joined source group " << *src_gid << std::endl;
 				}
 				else {
 					// link doesn't point to node, exit
-					sdbg() << "shutdown, src is not a node " << *src_gid << std::endl;
+					adbg(self) << "shutdown, src is not a node " << *src_gid << std::endl;
 					self->send<high_prio>(self, a_bye());
 				}
 			});
@@ -125,33 +135,34 @@ auto node_retranslator(
 		[=](a_bye) {
 			self->leave(self->state.src_grp);
 			system().registry().erase(sid);
-			sdbg() << "retranslator quit" << std::endl;
+			adbg(self) << "retranslator quit" << std::endl;
 		},
 
 		// retranslate events
 		[=](a_ack, a_lnk_rename, const lid_type& lid, std::string new_name, std::string old_name) {
-			sdbg("rename") << old_name << " -> " << new_name << std::endl;
+			adbg(self, "rename") << old_name << " -> " << new_name << std::endl;
 			self->send<high_prio>(
 				self->state.tgt_grp, a_ack(), a_lnk_rename(), lid, std::move(new_name), std::move(old_name)
 			);
 		},
 
 		[=](a_ack, a_lnk_status, const lid_type& lid, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			sdbg("status") << to_string(req) << ": " << to_string(prev_s) << " -> " << to_string(new_s);
+			adbg(self, "status")
+				<< to_string(req) << ": " << to_string(prev_s) << " -> " << to_string(new_s) << std::endl;
 			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_lnk_status(), lid, req, new_s, prev_s);
 		},
 
 		[=](a_ack, a_node_insert, const lid_type& lid, std::size_t pos, InsertPolicy pol) {
-			sdbg("insert") << to_string(lid) << " in pos " << pos << std::endl;
+			adbg(self, "insert") << to_string(lid) << " in pos " << pos << std::endl;
 			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_node_insert(), lid, pos, pol);
 		},
 		[=](a_ack, a_node_insert, const lid_type& lid, std::size_t to_idx, std::size_t from_idx) {
-			sdbg("insert move") << to_string(lid) << " pos " << from_idx << " -> " << to_idx << std::endl;
+			adbg(self, "insert move") << to_string(lid) << " pos " << from_idx << " -> " << to_idx << std::endl;
 			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_node_insert(), lid, to_idx, from_idx);
 		},
 
 		[=](a_ack, a_node_erase, lids_v lids, std::vector<std::string> oids) {
-			sdbg("erase") << (lids.empty() ? "" : to_string(lids[0])) << std::endl;
+			adbg(self, "erase") << (lids.empty() ? "" : to_string(lids[0])) << std::endl;
 			self->send<high_prio>(self->state.tgt_grp, a_ack(), a_node_erase(), std::move(lids), oids);
 		}
 	};
