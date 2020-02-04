@@ -68,14 +68,23 @@ public:
 	//  API
 	//
 	// make request to given link L
+	// [TODO] remove temp spawn new actor for every link request
 	template<typename R, typename Link, typename... Args>
 	auto actorf(const Link& L, Args&&... args) {
-		return blue_sky::actorf<R>(factor, Link::actor(L), timeout, std::forward<Args>(args)...);
+		return blue_sky::actorf<R>(
+			caf::scoped_actor{kernel::radio::system()}, Link::actor(L), timeout,
+			std::forward<Args>(args)...
+		);
+		//return blue_sky::actorf<R>(factor, Link::actor(L), timeout, std::forward<Args>(args)...);
 	}
 	// same as above but with configurable timeout
 	template<typename R, typename Link, typename... Args>
 	auto actorf(const Link& L, timespan timeout, Args&&... args) {
-		return blue_sky::actorf<R>(factor, Link::actor(L), timeout, std::forward<Args>(args)...);
+		return blue_sky::actorf<R>(
+			caf::scoped_actor{kernel::radio::system()}, Link::actor(L), timeout,
+			std::forward<Args>(args)...
+		);
+		//return blue_sky::actorf<R>(factor, Link::actor(L), timeout, std::forward<Args>(args)...);
 	}
 
 	// spawn actor corresponding to this impl type
