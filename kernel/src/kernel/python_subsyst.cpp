@@ -152,17 +152,17 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 	auto solo = std::lock_guard{ guard_ };
 
 	// check if adapter already created for given object
-	auto slid = to_string(L.id());
+	auto Lid = L.id();
 	if(auto cached_A = acache_.find(source.get()); cached_A != acache_.end()) {
 		// inc ref counter for new link
-		if(lnk2obj_.try_emplace(std::move(slid), cached_A->first).second)
+		if(lnk2obj_.try_emplace(to_string(Lid), cached_A->first).second)
 			++cached_A->second.second;
 		py::gil_scoped_acquire();
 		return cached_A->second.first;
 	}
 
 	// handler for link erased event responsible for deleting cached adapters
-	static auto on_link_delete = [](tree::sp_clink, tree::Event, prop::propdict params) {
+	[[maybe_unused]] static auto on_link_delete = [](tree::sp_clink, tree::Event, prop::propdict params) {
 		auto& self = python_subsyst_impl::self();
 		auto solo = std::lock_guard{ self.guard_ };
 		if(const auto* lid = prop::get_if<std::string>(&params, "lid")) {
@@ -185,9 +185,12 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 		auto* obj_ptr = source.get();
 
 		// install erased event handler
-		L.subscribe(on_link_delete, tree::Event::LinkDeleted);
+		// [NOTE] disabled because of issues with Python GC (?)
+		// [FIXME] fix when real cause of problem is found
+		//L.subscribe(on_link_delete, tree::Event::LinkDeleted);
+
 		// remember link
-		lnk2obj_[std::move(slid)] = obj_ptr;
+		lnk2obj_[to_string(Lid)] = obj_ptr;
 		// cache adapter with ref counter = 1
 		return acache_.try_emplace(
 			obj_ptr, afn(std::move(source)), 1
