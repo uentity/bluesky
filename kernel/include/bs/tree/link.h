@@ -18,6 +18,7 @@
 
 #include <caf/actor.hpp>
 #include <caf/typed_actor.hpp>
+#include <caf/scoped_actor.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
@@ -87,10 +88,10 @@ public:
 		caf::replies_to<a_apply, data_modificator_f, bool>::with<error::box>
 	>;
 
-	// extract actor type from link
+	/// get link's typed actor handle
 	template<typename Link>
 	static auto actor(const Link& L) {
-		return L.template actor<typename Link::actor_type>();
+		return caf::actor_cast<typename Link::actor_type>(L.raw_actor());
 	}
 
 	/// provide shared pointers casted to derived type
@@ -111,7 +112,7 @@ public:
 	/// if `deep` flag is set, then clone pointed object as well
 	virtual auto clone(bool deep = false) const -> sp_link = 0;
 
-	/// create root link to node with and set it as node's handle
+	/// create root link + propagate handle
 	template<typename Link, typename... Args>
 	static auto make_root(Args&&... args) -> std::shared_ptr<Link> {
 		if(auto lnk = std::make_shared<Link>(std::forward<Args>(args)...)) {
@@ -216,14 +217,17 @@ protected:
 	/// deny making link copies
 	link(const link&) = delete;
 
-	/// return link's typed actor handle
-	template<typename ActorType = actor_type>
-	auto actor() const {
-		return caf::actor_cast<ActorType>(actor_);
-	}
+	/// get access to link's impl for derived links
+	auto pimpl() const -> link_impl*;
+
+	/// return link's raw (dynamic-typed) actor handle
+	auto raw_actor() const -> const caf::actor&;
 
 	/// maually start internal actor (if not started already)
 	auto start_engine() -> bool;
+
+	/// set handle of passed node to self
+	auto self_handle_node(const sp_node& N) -> void;
 
 	// silent replace old name with new in link's internals
 	auto rename_silent(std::string new_name) -> void;
@@ -238,14 +242,9 @@ protected:
 	// default implementation obtains node via `data_node_ex()` and sets it's handle to self
 	// but derived link can change default behaviour
 	virtual auto propagate_handle() -> result_or_err<sp_node>;
-	/// set handle of passed node to self
-	auto self_handle_node(const sp_node& N) -> void;
 
-	// get access to link's impl for derived links
-	auto pimpl() const -> link_impl*;
-
-	// strong ref to internal typeless link's actor
-	caf::actor actor_;
+	// scoped actor for requests
+	caf::scoped_actor factor_;
 
 private:
 	// string ref to link's impl

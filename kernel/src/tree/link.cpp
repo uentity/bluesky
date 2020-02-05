@@ -23,7 +23,7 @@ using namespace kernel::radio;
 using bs_detail::shared;
 
 link::link(std::shared_ptr<link_impl> impl, bool start_actor)
-	: pimpl_(std::move(impl))
+	: factor_(system()), pimpl_(std::move(impl))
 {
 	if(!pimpl_) throw error{ "Trying to construct tree::link with invalid (null) impl" };
 	if(start_actor) start_engine();
@@ -35,15 +35,15 @@ link::~link() {
 }
 
 auto link::start_engine() -> bool {
-	if(!actor_) {
-		actor_ = pimpl_->spawn_actor(pimpl_);
-		return true;
-	}
-	return false;
+	return pimpl_->start_engine(pimpl_);
 }
 
 auto link::pimpl() const -> link_impl* {
 	return pimpl_.get();
+}
+
+auto link::raw_actor() const -> const caf::actor& {
+	return pimpl_->actor_;
 }
 
 /// access link's unique ID
@@ -164,7 +164,7 @@ auto link::modify_data(data_modificator_f m, bool silent) const -> error {
 	return res ? error::unpack(res.value()) : res.error();
 }
 auto link::modify_data(launch_async_t, data_modificator_f m, bool silent) const -> void {
-	caf::anon_send(actor(), a_apply(), std::move(m), silent);
+	caf::anon_send(actor(*this), a_apply(), std::move(m), silent);
 }
 
 auto link::data_node_gid() const -> result_or_err<std::string> {

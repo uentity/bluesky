@@ -39,8 +39,9 @@ public:
 
 	// timeout for most queries
 	const caf::duration timeout;
-	// scoped actor for requests
-	caf::scoped_actor factor;
+
+	// strong ref to internal typeless link's actor
+	caf::actor actor_;
 
 	// keep local link group
 	caf::group self_grp;
@@ -63,6 +64,9 @@ public:
 	link_impl();
 	link_impl(std::string name, Flags f);
 	virtual ~link_impl();
+
+	// starts link's actor
+	auto start_engine(std::shared_ptr<link_impl> limpl) -> bool;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  API
@@ -87,7 +91,7 @@ public:
 		//return blue_sky::actorf<R>(factor, Link::actor(L), timeout, std::forward<Args>(args)...);
 	}
 
-	// spawn actor corresponding to this impl type
+	// raw spawn actor corresponding to this impl type
 	virtual auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor;
 
 	/// obtain inode pointer

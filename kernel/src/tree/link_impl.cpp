@@ -23,8 +23,7 @@ static boost::uuids::random_generator idgen;
  *  link_impl
  *-----------------------------------------------------------------------------*/
 link_impl::link_impl(std::string name, Flags f)
-	: id_(idgen()), name_(std::move(name)), flags_(f),
-	timeout(def_timeout(true)), factor(kernel::radio::system())
+	: id_(idgen()), name_(std::move(name)), flags_(f), timeout(def_timeout(true))
 {}
 
 link_impl::link_impl()
@@ -33,8 +32,16 @@ link_impl::link_impl()
 
 link_impl::~link_impl() = default;
 
-auto link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
+auto link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<link_actor>(std::move(limpl));
+}
+
+auto link_impl::start_engine(sp_limpl limpl) -> bool {
+	if(!actor_) {
+		actor_ = spawn_actor(std::move(limpl));
+		return true;
+	}
+	return false;
 }
 
 auto link_impl::reset_owner(const sp_node& new_owner) -> void {
