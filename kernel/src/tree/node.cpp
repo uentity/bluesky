@@ -15,9 +15,6 @@
 #include <bs/tree/tree.h>
 #include <bs/serialize/cafbind.h>
 
-#include <boost/uuid/string_generator.hpp>
-#include <boost/uuid/random_generator.hpp>
-
 OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky)
@@ -27,7 +24,8 @@ NAMESPACE_BEGIN(tree)
  *  node
  *-----------------------------------------------------------------------------*/
 node::node(bool start_actor, std::string custom_id)
-	: objbase(true, std::move(custom_id)), pimpl_(std::make_shared<node_impl>(this))
+	: objbase(true, std::move(custom_id)), pimpl_(std::make_shared<node_impl>(this)),
+	factor_(system())
 {
 	if(start_actor) start_engine();
 }
@@ -37,7 +35,8 @@ node::node(std::string custom_id)
 {}
 
 node::node(const node& src)
-	: objbase(src), pimpl_(std::make_shared<node_impl>(*src.pimpl_, this))
+	: objbase(src), pimpl_(std::make_shared<node_impl>(*src.pimpl_, this)),
+	factor_(system())
 {
 	start_engine();
 }
@@ -46,24 +45,20 @@ node::~node() {
 	// mark self as deleted for impl & actor
 	pimpl_->super_ = nullptr;
 	// then kill self actor
-	caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
+	caf::anon_send_exit(actor(), caf::exit_reason::user_shutdown);
 }
 
 auto node::start_engine(const std::string& gid) -> bool {
-	static auto uuid_gen = boost::uuids::random_generator{};
-	if(!actor_) {
-		// generate random UUID for actor groud if passed GID is empty
-		actor_ = pimpl_->spawn_actor(pimpl_, gid.empty() ? to_string(uuid_gen()) : gid);
-		return true;
-	}
-	return false;
+	return pimpl_->start_engine(pimpl_, gid);
 }
+
+auto node::raw_actor() const -> const caf::actor& { return pimpl_->actor_; }
 
 auto node::gid() const -> std::string { return pimpl_->gid(); }
 
 auto node::disconnect(bool deep) -> void {
 	// disconnect self
-	caf::anon_send(actor_, a_node_disconnect());
+	caf::anon_send(pimpl_->actor(), a_node_disconnect());
 
 	if(deep) {
 		// don't follow symlinks & lazy links
@@ -75,7 +70,7 @@ auto node::disconnect(bool deep) -> void {
 }
 
 auto node::propagate_owner(bool deep) -> void {
-	caf::anon_send(actor_, a_node_propagate_owner(), deep);
+	caf::anon_send(actor(), a_node_propagate_owner(), deep);
 }
 
 auto node::handle() const -> sp_link {
@@ -237,7 +232,7 @@ auto node::erase(std::string key, Key key_meaning) -> size_t {
 }
 
 auto node::clear() -> void {
-	caf::anon_send(actor_, a_node_clear());
+	caf::anon_send(actor(), a_node_clear());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -46,11 +46,14 @@ public:
 		return caf::actor_cast<node_impl::actor_type>(address());
 	}
 
-	// say goodbye to others & leave self group
-	auto goodbye() -> void;
+	auto make_behavior() -> behavior_type override;
+
+	auto on_exit() -> void override;
 
 	auto name() const -> const char* override;
-	auto make_behavior() -> behavior_type override;
+
+	// say goodbye to others & leave self group
+	auto goodbye() -> void;
 
 	auto insert(
 		sp_link L, const InsertPolicy pol, bool silent = false

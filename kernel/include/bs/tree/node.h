@@ -93,7 +93,7 @@ public:
 
 	// return node's actor handle
 	auto actor() const {
-		return caf::actor_cast<actor_type>(actor_);
+		return caf::actor_cast<actor_type>(raw_actor());
 	}
 	static auto actor(const node& N) {
 		return N.actor();
@@ -217,11 +217,14 @@ private:
 
 	// PIMPL
 	std::shared_ptr<node_impl> pimpl_;
-	// strong ref to node's actor
-	caf::actor actor_;
+	// scoped actor for requests
+	caf::scoped_actor factor_;
 
 	/// accept link impl and optionally start internal actor
 	node(bool start_actor, std::string custom_oid = "");
+
+	/// return node's raw (dynamic-typed) actor handle
+	auto raw_actor() const -> const caf::actor&;
 
 	/// maually start internal actor (if not started already)
 	auto start_engine(const std::string& gid = "") -> bool;

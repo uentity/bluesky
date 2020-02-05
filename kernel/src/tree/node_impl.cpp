@@ -16,6 +16,7 @@
 #include <bs/serialize/cafbind.h>
 
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/random_generator.hpp>
 
 OMIT_OBJ_SERIALIZATION
 
@@ -24,12 +25,12 @@ NAMESPACE_BEGIN(blue_sky::tree)
 const auto uuid_from_str = boost::uuids::string_generator{};
 
 node_impl::node_impl(node* super)
-	: timeout(def_timeout(true)), factor(kernel::radio::system()), super_(super)
+	: timeout(def_timeout(true)), super_(super)
 {}
 
 // implement shallow links copy ctor
 node_impl::node_impl(const node_impl& rhs, node* super)
-	: timeout(rhs.timeout), factor(kernel::radio::system()), super_(super)
+	: timeout(rhs.timeout), super_(super)
 {
 	for(const auto& plink : rhs.links_.get<Key_tag<Key::AnyOrder>>()) {
 		// non-deep clone can result in unconditional moving nodes from source
@@ -41,14 +42,24 @@ node_impl::node_impl(const node_impl& rhs, node* super)
 
 node_impl::node_impl(node_impl&& rhs, node* super)
 	: links_(std::move(rhs.links_)), handle_(std::move(rhs.handle_)),
-	timeout(std::move(rhs.timeout)), factor(kernel::radio::system()), self_grp(std::move(rhs.self_grp)),
+	timeout(std::move(rhs.timeout)), actor_(std::move(rhs.actor_)), self_grp(std::move(rhs.self_grp)),
 	super_(super)
 {}
 
-auto node_impl::spawn_actor(std::shared_ptr<node_impl> nimpl, const std::string& gid) const -> caf::actor {
+auto node_impl::spawn_actor(sp_nimpl nimpl, const std::string& gid) const -> caf::actor {
 	// [NOTE] don't make shared_ptr here, because this can be called from node's ctor
 	if(!super_) throw error{ "Can't spawn actor for null node" };
 	return spawn_nactor(std::move(nimpl), gid);
+}
+
+auto node_impl::start_engine(sp_nimpl nimpl, const std::string& gid) -> bool {
+	static auto uuid_gen = boost::uuids::random_generator{};
+	if(!actor_) {
+		// generate random UUID for actor groud if passed GID is empty
+		actor_ = spawn_actor(std::move(nimpl), gid.empty() ? to_string(uuid_gen()) : gid);
+		return true;
+	}
+	return false;
 }
 
 auto node_impl::gid() const -> std::string {

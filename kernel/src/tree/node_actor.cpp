@@ -109,6 +109,14 @@ auto node_actor::name() const -> const char* {
 	return "node_actor";
 }
 
+auto node_actor::on_exit() -> void {
+	adbg(this) << "dies" << std::endl;
+	// [IMPORTANT] manually reset pimpl, otherwise cycle won't break:
+	// actor dtor never called until at least one strong ref to it still exists
+	// (even though behavior is terminated by sending `exit` message)
+	pimpl_.reset();
+}
+
 auto node_actor::retranslate_from(const sp_link& L) -> void {
 	const auto lid = L->id();
 	auto& AS = system();
@@ -241,6 +249,8 @@ auto node_actor::make_behavior() -> behavior_type {
 
 		// 0, skip `bye` (should always come from myself)
 		[=](a_bye) {},
+
+		[=](a_node_disconnect) { disconnect(); },
 
 		// 2. propagate owner
 		[=](a_node_propagate_owner, bool deep) { impl.propagate_owner(deep); },

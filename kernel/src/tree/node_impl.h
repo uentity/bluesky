@@ -55,8 +55,8 @@ public:
 
 	// timeout for most queries
 	const caf::duration timeout;
-	// scoped actor for requests
-	caf::scoped_actor factor;
+	// strong ref to node's actor
+	caf::actor actor_;
 
 	// local node group
 	caf::group self_grp;
@@ -65,6 +65,8 @@ public:
 	using actor_type = node::actor_type::extend<
 		// terminate actor
 		caf::reacts_to<a_bye>,
+		// stop all retranslators
+		caf::reacts_to<a_node_disconnect>,
 		// erase link by ID with specified options
 		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>,
 		// track link rename
@@ -79,26 +81,32 @@ public:
 		caf::reacts_to<a_ack, a_node_erase, lids_v, std::vector<std::string>>
 	>;
 
+	auto actor() const {
+		return caf::actor_cast<actor_type>(actor_);
+	}
+		
 	static auto actor(const node& N) {
-		return caf::actor_cast<actor_type>(N.actor_);
+		return caf::actor_cast<actor_type>(N.pimpl_->actor_);
 	}
 
 	// make request to given link L
 	template<typename R, typename... Args>
 	auto actorf(const node& N, Args&&... args) {
 		return blue_sky::actorf<R>(
-			factor, caf::actor_cast<actor_type>(N.actor_), timeout, std::forward<Args>(args)...
+			N.factor_, actor(N), timeout, std::forward<Args>(args)...
 		);
 	}
 	// same as above but with configurable timeout
 	template<typename R, typename... Args>
 	auto actorf(const node& N, timespan timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
-			factor, caf::actor_cast<actor_type>(N.actor_), timeout, std::forward<Args>(args)...
+			N.factor_, actor(N), timeout, std::forward<Args>(args)...
 		);
 	}
 
 	virtual auto spawn_actor(std::shared_ptr<node_impl> nimpl, const std::string& gid) const -> caf::actor;
+
+	auto start_engine(std::shared_ptr<node_impl> nimpl, const std::string& gid = "") -> bool;
 
 	// default & copy ctor
 	node_impl(node* super);
