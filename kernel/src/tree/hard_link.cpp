@@ -51,9 +51,17 @@ auto hard_link_impl::set_data(sp_obj obj) -> void {
 	}
 }
 
-auto hard_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
+auto hard_link_impl::clone(bool deep) const -> sp_limpl {
+	return std::make_shared<hard_link_impl>(
+		name_, deep ? kernel::tfactory::clone_object(data_) : data_, flags_
+	);
+}
+
+auto hard_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<fast_link_actor>(std::move(limpl));
 }
+
+LIMPL_TYPE_DEF(hard_link_impl, "hard_link")
 
 ///////////////////////////////////////////////////////////////////////////////
 //  class
@@ -66,20 +74,10 @@ hard_link::hard_link() :
 	super(std::make_shared<hard_link_impl>(), false)
 {}
 
-link::sp_link hard_link::clone(bool deep) const {
-	return std::make_shared<hard_link>(
-		name(),
-		deep ? kernel::tfactory::clone_object(pimpl()->data_) : pimpl()->data_,
-		flags()
-	);
-}
+LINK_CONVERT_TO(hard_link)
 
-std::string hard_link::type_id() const {
-	return "hard_link";
-}
-
-auto hard_link::pimpl() const -> hard_link_impl* {
-	return static_cast<hard_link_impl*>(super::pimpl());
+auto hard_link::type_id_() -> std::string_view {
+	return hard_link_impl::type_id_();
 }
 
 /*-----------------------------------------------------------------------------
@@ -117,9 +115,21 @@ auto weak_link_impl::set_data(const sp_obj& obj) -> void {
 	}
 }
 
-auto weak_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
+auto weak_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<fast_link_actor>(std::move(limpl));
 }
+
+auto weak_link_impl::clone(bool deep) const -> sp_limpl {
+	// cannot make deep copy of object pointee
+	return deep ? nullptr : std::make_shared<weak_link_impl>(name_, data_.lock(), flags_);
+}
+
+auto weak_link_impl::propagate_handle(const link& super) -> result_or_err<sp_node> {
+	// weak link cannot be a node's handle
+	return actorf<result_or_errbox<sp_node>>(super, a_lnk_dnode(), true);
+}
+
+LIMPL_TYPE_DEF(weak_link_impl, "weak_link")
 
 ///////////////////////////////////////////////////////////////////////////////
 //  class
@@ -132,22 +142,10 @@ weak_link::weak_link() :
 	super(std::make_shared<weak_link_impl>(), false)
 {}
 
-link::sp_link weak_link::clone(bool deep) const {
-	// cannot make deep copy of object pointee
-	return deep ? nullptr : std::make_shared<weak_link>(name(), pimpl()->data_.lock(), flags());
-}
+LINK_CONVERT_TO(weak_link)
 
-std::string weak_link::type_id() const {
-	return "weak_link";
-}
-
-auto weak_link::pimpl() const -> weak_link_impl* {
-	return static_cast<weak_link_impl*>(super::pimpl());
-}
-
-auto weak_link::propagate_handle() -> result_or_err<sp_node> {
-	// weak link cannot be a node's handle
-	return data_node_ex();
+auto weak_link::type_id_() -> std::string_view {
+	return weak_link_impl::type_id_();
 }
 
 NAMESPACE_END(blue_sky::tree)

@@ -11,6 +11,7 @@
 #include "link_actor.h"
 #include "actor_common.h"
 #include <bs/atoms.h>
+#include <bs/log.h>
 
 #include <boost/uuid/random_generator.hpp>
 
@@ -36,12 +37,16 @@ auto link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<link_actor>(std::move(limpl));
 }
 
-auto link_impl::start_engine(sp_limpl limpl) -> bool {
-	if(!actor_) {
-		actor_ = spawn_actor(std::move(limpl));
-		return true;
-	}
-	return false;
+auto link_impl::propagate_handle(const link& super) -> result_or_err<sp_node> {
+	return actorf<result_or_errbox<sp_node>>(super, a_lnk_dnode(), false)
+	.and_then( [&](sp_node&& N) -> result_or_err<sp_node> {
+		super.self_handle_node(N);
+		return std::move(N);
+	} );
+}
+
+auto link_impl::set_node_handle(const link& h, const sp_node& N) -> void {
+	h.self_handle_node(N);
 }
 
 auto link_impl::reset_owner(const sp_node& new_owner) -> void {
@@ -120,10 +125,6 @@ ilink_impl::ilink_impl()
 	: super()
 {}
 
-auto ilink::pimpl() const -> ilink_impl* {
-	return static_cast<ilink_impl*>(super::pimpl());
-}
-
 auto ilink_impl::get_inode() -> result_or_err<inodeptr> {
 	return inode_;
 };
@@ -135,7 +136,7 @@ auto to_string(Req r) -> const char* {
 	switch(r) {
 	case Req::Data : return "Data";
 	case Req::DataNode : return "DataNode";
-	default: return "unknown";
+	default: return "<bad request>";
 	}
 }
 
@@ -145,7 +146,7 @@ auto to_string(ReqStatus s) -> const char* {
 	case ReqStatus::Busy : return "Busy";
 	case ReqStatus::OK : return "OK";
 	case ReqStatus::Error : return "Error";
-	default: return "unknown";
+	default: return "<bad request status>";
 	}
 }
 

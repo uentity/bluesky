@@ -76,13 +76,11 @@ NAMESPACE_END(detail)
 
 // container that will store all node elements (links)
 using links_container = mi::multi_index_container<
-	sp_link,
+	link,
 	mi::indexed_by<
 		mi::sequenced< mi::tag< detail::any_order > >,
 		mi::hashed_unique< mi::tag< detail::id_key >, detail::id_key >,
 		mi::ordered_non_unique< mi::tag< detail::name_key >, detail::name_key >
-		//mi::ordered_non_unique< mi::tag< detail::oid_key >, detail::oid_key >,
-		//mi::ordered_non_unique< mi::tag< detail::type_key >, detail::type_key >
 	>
 >;
 
@@ -135,12 +133,12 @@ struct range_t : public std::pair<Iterator, Iterator> {
 	template<Key K = Key::ID>
 	auto extract_keys() const {
 		return extract<Key_type<K>>(
-			[kex = Key_tag<K>()](const auto& x) { return kex(*x); }
+			[kex = Key_tag<K>()](const auto& x) { return kex(x); }
 		);
 	}
 
 	auto extract_values() const {
-		return extract<sp_link>(
+		return extract<link>(
 			[](const auto& x) { return x; }
 		);
 	}

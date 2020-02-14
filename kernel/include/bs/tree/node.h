@@ -16,7 +16,6 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-class node_impl;
 class node_actor;
 
 class BS_API node : public objbase {
@@ -29,10 +28,8 @@ public:
 	using actor_type = caf::typed_actor<
 		// get node's group ID
 		caf::replies_to<a_node_gid>::with<std::string>,
-		// propagate owner on child links
-		caf::reacts_to<a_node_propagate_owner, bool>,
 		// get node's handle
-		caf::replies_to<a_node_handle>::with<sp_link>,
+		caf::replies_to<a_node_handle>::with<link>,
 		// get number of leafs
 		caf::replies_to<a_node_size>::with<std::size_t>,
 
@@ -40,15 +37,15 @@ public:
 		caf::replies_to<a_node_leafs, Key>::with<links_v>,
 
 		// find link by ID
-		caf::replies_to<a_node_find, lid_type>::with<sp_link>,
+		caf::replies_to<a_node_find, lid_type>::with<link>,
 		// find link at specified index
-		caf::replies_to<a_node_find, std::size_t>::with<sp_link>,
+		caf::replies_to<a_node_find, std::size_t>::with<link>,
 		// find link by string key & meaning
-		caf::replies_to<a_node_find, std::string, Key>::with<sp_link>,
+		caf::replies_to<a_node_find, std::string, Key>::with<link>,
 
 		// deep search
-		caf::replies_to<a_node_deep_search, lid_type>::with<sp_link>,
-		caf::replies_to<a_node_deep_search, std::string, Key>::with<sp_link>,
+		caf::replies_to<a_node_deep_search, lid_type>::with<link>,
+		caf::replies_to<a_node_deep_search, std::string, Key>::with<link>,
 
 		// return link index
 		caf::replies_to<a_node_index, lid_type>::with<existing_index>,
@@ -59,9 +56,9 @@ public:
 		caf::replies_to<a_node_equal_range, std::string, Key>::with<links_v>,
 
 		// insert new link
-		caf::replies_to<a_node_insert, sp_link, InsertPolicy>::with<insert_status>,
+		caf::replies_to<a_node_insert, link, InsertPolicy>::with<insert_status>,
 		// insert into specified position
-		caf::replies_to<a_node_insert, sp_link, std::size_t, InsertPolicy>::with<insert_status>,
+		caf::replies_to<a_node_insert, link, std::size_t, InsertPolicy>::with<insert_status>,
 		// insert bunch of links
 		caf::replies_to<a_node_insert, links_v, InsertPolicy>::with<std::size_t>,
 
@@ -117,15 +114,15 @@ public:
 	auto skeys(Key key_meaning, Key ordering = Key::AnyOrder) const -> std::vector<std::string>;
 
 	// search link by given key
-	auto find(std::size_t idx) const -> sp_link;
-	auto find(lid_type id) const -> sp_link;
+	auto find(std::size_t idx) const -> link;
+	auto find(lid_type id) const -> link;
 	/// find link by given key with specified treatment
-	auto find(std::string key, Key key_meaning = Key::ID) const -> sp_link;
+	auto find(std::string key, Key key_meaning = Key::ID) const -> link;
 
 	/// search among all subtree elements
-	auto deep_search(lid_type id) const -> sp_link;
+	auto deep_search(lid_type id) const -> link;
 	/// deep search by given key with specified treatment
-	auto deep_search(std::string key, Key key_meaning) const -> sp_link;
+	auto deep_search(std::string key, Key key_meaning) const -> link;
 
 	/// get integer index of a link relative to beginning
 	auto index(lid_type lid) const -> existing_index;
@@ -135,9 +132,9 @@ public:
 	auto equal_range(std::string key, Key key_meaning) const -> links_v;
 
 	/// leafs insertion
-	auto insert(sp_link l, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
+	auto insert(link l, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
 	/// insert link at given index
-	auto insert(sp_link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
+	auto insert(link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
 	/// auto-create and insert hard link that points to object
 	auto insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
 	/// insert bunch of links
@@ -149,7 +146,7 @@ public:
 	auto insert(C&& links, InsertPolicy pol = InsertPolicy::AllowDupNames) -> void {
 		for(auto& L : links) {
 			static_assert(
-				std::is_base_of<link, std::decay_t<decltype(*L)>>::value,
+				std::is_base_of<link, std::decay_t<decltype(L)>>::value,
 				"Links container should contain shared pointers to `tree::link` objects"
 			);
 			insert(std::move(L), pol);
@@ -191,7 +188,7 @@ public:
 
 	/// obtain link to this node conained in owner (parent) node
 	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)
-	auto handle() const -> sp_link;
+	auto handle() const -> link;
 
 	/// ensure that owner of all contained leafs is correctly set to this node
 	/// if deep is true, correct owners in all subtree
@@ -230,7 +227,7 @@ private:
 	auto start_engine(const std::string& gid = "") -> bool;
 
 	// set node's handle
-	auto set_handle(const sp_link& handle) -> void;
+	auto set_handle(const link& handle) -> void;
 
 	BS_TYPE_DECL
 };

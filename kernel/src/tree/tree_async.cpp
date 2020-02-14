@@ -30,7 +30,7 @@ NAMESPACE_BEGIN()
 
 template <typename level_process_f>
 using deref_actor_t = caf::typed_actor<
-	caf::reacts_to<std::string, sp_link, level_process_f, deref_process_f, bool>
+	caf::reacts_to<std::string, link, level_process_f, deref_process_f, bool>
 >;
 
 template<typename level_process_f>
@@ -47,7 +47,7 @@ struct deref_actor : blue_sky::detail::anon_async_api_mixin< deref_actor_t<level
 	static auto async_behavior(typename actor_t::pointer self) -> typename actor_t::behavior_type {
 		return {
 			[](
-				const std::string& path, sp_link lnk,
+				const std::string& path, link lnk,
 				const level_process_f& lp, const deref_process_f& f,
 				bool follow_lazy_links
 			) {
@@ -65,7 +65,7 @@ NAMESPACE_END()
  *-----------------------------------------------------------------------------*/
 // same as above but accept std::function
 auto deref_path(
-	deref_process_f f, std::string path, sp_link start, Key path_unit,
+	deref_process_f f, std::string path, link start, Key path_unit,
 	bool follow_lazy_links, bool high_priority
 ) -> void {
 	// create local temp actor

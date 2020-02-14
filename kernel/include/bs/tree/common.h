@@ -67,6 +67,15 @@ using lid_type = boost::uuids::uuid;
 /// function that modifies link's pointee
 using data_modificator_f = std::function< error(sp_obj) >;
 
+/// forward declare major types
+class link;
+class link_impl;
+class link_actor;
+
+class node;
+class node_impl;
+class node_actor;
+
 NAMESPACE_END(blue_sky::tree)
 
 // allow bitwise operators on some enums

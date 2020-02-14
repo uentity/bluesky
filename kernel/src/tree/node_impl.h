@@ -14,6 +14,7 @@
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
 #include "node_leafs_storage.h"
+#include "link_impl.h"
 
 #include <boost/uuid/uuid_hash.hpp>
 
@@ -50,8 +51,10 @@ public:
 
 	// leafs
 	links_container links_;
-	// metadata
-	std::weak_ptr<link> handle_;
+
+	// weak ref to parent link
+	std::weak_ptr<link_impl> handle_impl_;
+	std::weak_ptr<link::actor_handle> handle_actor_;
 
 	// timeout for most queries
 	const caf::duration timeout;
@@ -84,7 +87,7 @@ public:
 	auto actor() const {
 		return caf::actor_cast<actor_type>(actor_);
 	}
-		
+
 	static auto actor(const node& N) {
 		return caf::actor_cast<actor_type>(N.pimpl_->actor_);
 	}
@@ -156,13 +159,13 @@ public:
 
 	// same as find, but returns link (null if not found)
 	template<Key K>
-	auto search(const Key_type<K>& key) const -> sp_link {
+	auto search(const Key_type<K>& key) const -> link {
 		if(auto p = find<K, K>(key); p != links_.get<Key_tag<K>>().end())
 			return *p;
-		return nullptr;
+		return {};
 	}
 
-	auto search(const std::string& key, Key key_meaning) const -> sp_link;
+	auto search(const std::string& key, Key key_meaning) const -> link;
 
 	// index of link with given key in AnyOrder index
 	template<Key K>
@@ -219,10 +222,10 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  insert
 	//
-	using leaf_postproc_fn = function_view< void(const sp_link&) >;
+	using leaf_postproc_fn = function_view< void(const link&) >;
 
 	auto insert(
-		sp_link L, const InsertPolicy pol = InsertPolicy::AllowDupNames,
+		link L, const InsertPolicy pol = InsertPolicy::AllowDupNames,
 		leaf_postproc_fn ppf = noop_postproc_f
 	) -> insert_status<Key::ID>;
 
@@ -255,13 +258,13 @@ public:
 		auto res = 0;
 		if constexpr(K == Key::ID || K == Key::AnyOrder) {
 			if(auto p = find<K, K>(key); p != end<K>()) {
-				(*p)->rename(new_name);
+				p->rename(new_name);
 				res = 1;
 			}
 		}
 		else {
 			for(auto& p : equal_range<K>(key)) {
-				p->rename(new_name);
+				p.rename(new_name);
 				++res;
 			}
 		}
@@ -277,7 +280,7 @@ public:
 	template<Key K>
 	auto rearrange(const std::vector<Key_type<K>>& new_order) {
 		// convert vector of keys into vector of iterators
-		std::vector<std::reference_wrapper<const sp_link>> i_order;
+		std::vector<std::reference_wrapper<const link>> i_order;
 		i_order.reserve(new_order.size());
 		for(const auto& k : new_order)
 			i_order.push_back(std::ref(*find<K>(k)));
@@ -288,13 +291,12 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  misc
 	//
-	void set_handle(const sp_link& new_handle);
-
-	auto propagate_owner(bool deep) -> void;
+	auto handle() const -> link;
+	void set_handle(const link& handle);
 
 	// postprocessing of just inserted link
 	// if link points to node, return it
-	static sp_node adjust_inserted_link(const sp_link& lnk, const sp_node& target);
+	static auto adjust_inserted_link(const link& lnk, const sp_node& target) -> sp_node;
 
 	// obtain pointer to owner node
 	auto super() const -> sp_node;

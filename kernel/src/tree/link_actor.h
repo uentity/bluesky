@@ -28,7 +28,6 @@ enum class ReqOpts {
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API link_actor : public caf::event_based_actor {
 public:
-	//using super = caf::stateful_actor<lnk_state>;
 	using super = caf::event_based_actor;
 	using behavior_type = super::behavior_type;
 

@@ -78,9 +78,7 @@ auto link_actor::name() const -> const char* {
 
 auto link_actor::on_exit() -> void {
 	adbg(this) << "dies" << std::endl;
-	// [IMPORTANT] manually reset pimpl, otherwise cycle won't break:
-	// actor dtor never called until at least one strong ref to it still exists
-	// (even though behavior is terminated by sending `exit` message)
+	// force release strong ref to link's impl
 	pimpl_.reset();
 }
 
@@ -114,9 +112,9 @@ auto link_actor::make_behavior() -> behavior_type {
 	using typed_behavior = typename link::actor_type::behavior_type;
 
 	return typed_behavior{
-		/// 0. skip `bye` message (should always come from myself)
+		// skip `bye` message (should always come from myself)
 		[=](a_bye) -> void {
-			adbg(this) << "<- a_lnk_bye" << std::endl;
+			adbg(this) << "<- a_lnk_bye " << std::endl;
 		},
 
 		/// 1. get id
@@ -146,7 +144,7 @@ auto link_actor::make_behavior() -> behavior_type {
 			//auto tstart = make_timestamp();
 			data_ex(
 				[&](result_or_errbox<sp_obj> obj) mutable {
-					res = obj ? obj.value()->type_id() : type_descriptor::nil().name;
+					res = obj ? obj.value()->type_id() : nil_otid;
 					adbg(this) << "<- a_lnk_otid: " << res << std::endl;
 				},
 				ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke

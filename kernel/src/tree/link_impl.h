@@ -8,30 +8,62 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <bs/tree/link.h>
+#include <bs/tree/node.h>
 #include <bs/actor_common.h>
 #include <bs/kernel/radio.h>
 #include <bs/detail/enumops.h>
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
-
-#include <boost/uuid/nil_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #if defined(_MSC_VER)
 #include <bs/detail/spinlock.h>
 #endif
+
+#include <boost/uuid/nil_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+// helper macro to inject link type ids
+#define LIMPL_TYPE_DECL                            \
+static auto type_id_() -> std::string_view;        \
+auto type_id() const -> std::string_view override;
+
+#define LIMPL_TYPE_DEF(lnk_class, typename)                                \
+auto lnk_class::type_id_() -> std::string_view { return typename; }        \
+auto lnk_class::type_id() const -> std::string_view { return type_id_(); }
+
+#define LINK_CONVERT_TO(lnk_class)                                     \
+lnk_class::lnk_class(const link& rhs) : link(rhs, type_id_()) {}       \
+lnk_class::lnk_class(link&& rhs) : link(std::move(rhs), type_id_()) {}
 
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;
 
 inline const auto nil_uid = boost::uuids::nil_uuid();
-inline const std::string nil_oid = to_string(nil_uid);
+inline const auto nil_oid = to_string(nil_uid);
+inline const auto nil_otid = type_descriptor::nil().name;
 
 using link_impl_mutex = std::mutex;
 
-class BS_HIDDEN_API link_impl : public bs_detail::sharded_mutex<link_impl_mutex> {
+///////////////////////////////////////////////////////////////////////////////
+//  actor_handle
+//
+struct link::actor_handle {
+	caf::actor actor_;
+
+	actor_handle(caf::actor Lactor);
+	~actor_handle();
+};
+using sp_ahandle = std::shared_ptr<link::actor_handle>;
+
+///////////////////////////////////////////////////////////////////////////////
+//  base link_impl
+//
+class BS_HIDDEN_API link_impl :
+	public std::enable_shared_from_this<link_impl>, public bs_detail::sharded_mutex<link_impl_mutex>
+{
 public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
+	using sp_limpl = std::shared_ptr<link_impl>;
+	using actor_type = link::actor_type;
 
 	lid_type id_;
 	std::string name_;
@@ -39,9 +71,6 @@ public:
 
 	// timeout for most queries
 	const caf::duration timeout;
-
-	// strong ref to internal typeless link's actor
-	caf::actor actor_;
 
 	// keep local link group
 	caf::group self_grp;
@@ -65,41 +94,39 @@ public:
 	link_impl(std::string name, Flags f);
 	virtual ~link_impl();
 
-	// starts link's actor
-	auto start_engine(std::shared_ptr<link_impl> limpl) -> bool;
+	// raw spawn actor corresponding to this impl type
+	virtual auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor;
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  API
-	//
 	// make request to given link L
-	// [TODO] remove temp spawn new actor for every link request
 	template<typename R, typename Link, typename... Args>
 	auto actorf(const Link& L, Args&&... args) {
-		return blue_sky::actorf<R>(
-			caf::scoped_actor{kernel::radio::system()}, Link::actor(L), timeout,
-			std::forward<Args>(args)...
-		);
-		//return blue_sky::actorf<R>(factor, Link::actor(L), timeout, std::forward<Args>(args)...);
+		return blue_sky::actorf<R>( L.factor(), Link::actor(L), timeout, std::forward<Args>(args)... );
 	}
 	// same as above but with configurable timeout
 	template<typename R, typename Link, typename... Args>
 	auto actorf(const Link& L, timespan timeout, Args&&... args) {
-		return blue_sky::actorf<R>(
-			caf::scoped_actor{kernel::radio::system()}, Link::actor(L), timeout,
-			std::forward<Args>(args)...
-		);
-		//return blue_sky::actorf<R>(factor, Link::actor(L), timeout, std::forward<Args>(args)...);
+		return blue_sky::actorf<R>( L.factor(), Link::actor(L), timeout, std::forward<Args>(args)... );
 	}
 
-	// raw spawn actor corresponding to this impl type
-	virtual auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor;
+	/// return type ID of link
+	virtual auto type_id() const -> std::string_view = 0;
+
+	/// clone this impl
+	virtual auto clone(bool deep = false) const -> sp_limpl = 0;
+
+	/// [NOTE] download pointee data - must be implemented by derived links
+	virtual auto data() -> result_or_err<sp_obj> = 0;
 
 	/// obtain inode pointer
 	/// default impl do it via `data_ex()` call
 	virtual auto get_inode() -> result_or_err<inodeptr>;
 
-	/// [NOTE] download pointee data - must be implemented by derived links
-	virtual auto data() -> result_or_err<sp_obj> = 0;
+	// if pointee is a node - set node's handle to self and return pointee
+	virtual auto propagate_handle(const link& L) -> result_or_err<sp_node>;
+	static auto set_node_handle(const link& h, const sp_node& N) -> void;
+
+	/// switch link's owner
+	auto reset_owner(const sp_node& new_owner) -> void;
 
 	auto req_status(Req request) const -> ReqStatus;
 
@@ -111,14 +138,12 @@ public:
 		on_rs_changed_fn on_rs_changed = on_rs_changed_noop
 	) -> ReqStatus;
 
-	auto reset_owner(const sp_node& new_owner) -> void;
-
 	/// create or set or create inode for given target object
 	/// [NOTE] if `new_info` is non-null, returned inode may be NOT EQUAL to `new_info`
 	static auto make_inode(const sp_obj& target, inodeptr new_info = nullptr) -> inodeptr;
 };
 
-using sp_limpl = std::shared_ptr<link_impl>;
+using sp_limpl = link_impl::sp_limpl;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  derived links
@@ -143,10 +168,14 @@ struct BS_HIDDEN_API hard_link_impl : ilink_impl {
 	hard_link_impl();
 	hard_link_impl(std::string name, sp_obj data, Flags f);
 
+	auto clone(bool deep = false) const -> sp_limpl override;
+
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
 	auto data() -> result_or_err<sp_obj> override;
 	auto set_data(sp_obj obj) -> void;
+
+	LIMPL_TYPE_DECL
 };
 
 struct BS_HIDDEN_API weak_link_impl : ilink_impl {
@@ -157,10 +186,16 @@ struct BS_HIDDEN_API weak_link_impl : ilink_impl {
 	weak_link_impl();
 	weak_link_impl(std::string name, const sp_obj& data, Flags f);
 
+	auto clone(bool deep = false) const -> sp_limpl override;
+
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
 	auto data() -> result_or_err<sp_obj> override;
 	auto set_data(const sp_obj& obj) -> void;
+
+	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
+
+	LIMPL_TYPE_DECL
 };
 
 struct BS_HIDDEN_API sym_link_impl : link_impl {
@@ -171,11 +206,17 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 	sym_link_impl();
 	sym_link_impl(std::string name, std::string path, Flags f);
 
+	auto clone(bool deep = false) const -> sp_limpl override;
+
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
 	auto data() -> result_or_err<sp_obj> override;
 
-	auto pointee() const -> result_or_err<sp_link>;
+	auto pointee() const -> result_or_err<link>;
+
+	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
+
+	LIMPL_TYPE_DECL
 };
 
 auto to_string(Req) -> const char*;

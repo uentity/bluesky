@@ -9,6 +9,8 @@
 
 #include "link_actor.h"
 #include "ev_listener_actor.h"
+#include "nil_link.h"
+
 #include <bs/log.h>
 #include <bs/kernel/radio.h>
 
@@ -22,28 +24,105 @@ NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 using bs_detail::shared;
 
+///////////////////////////////////////////////////////////////////////////////
+//  actor_handle
+//
+link::actor_handle::actor_handle(caf::actor Lactor)
+	: actor_(std::move(Lactor))
+{}
+
+// destructor of actor handle terminates wrapped actor
+link::actor_handle::~actor_handle() {
+	caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  link
+//
+// empty ctor constructs empty link
+link::link()
+	: factor_(system(), true), actor_(nil_link::actor()), pimpl_(nil_link::pimpl())
+{}
+
 link::link(std::shared_ptr<link_impl> impl, bool start_actor)
-	: factor_(system()), pimpl_(std::move(impl))
+	: factor_(system(), true), actor_(nil_link::actor()),
+	pimpl_(impl ? std::move(impl) : nil_link::pimpl())
 {
-	if(!pimpl_) throw error{ "Trying to construct tree::link with invalid (null) impl" };
 	if(start_actor) start_engine();
 }
 
-link::~link() {
-	//caf::anon_send(actor_, a_bye());
-	caf::anon_send_exit(actor(*this), caf::exit_reason::user_shutdown);
+link::link(const link& rhs)
+	: factor_(system(), true), actor_(rhs.actor_), pimpl_(rhs.pimpl_)
+{}
+
+link::link(const link& rhs, std::string_view rhs_type_id)
+	: factor_(system(), true),
+	actor_(rhs.type_id() == rhs_type_id ? rhs.actor_ : nil_link::actor()),
+	pimpl_(rhs.type_id() == rhs_type_id ? rhs.pimpl_ : nil_link::pimpl())
+{}
+
+link::link(link&& rhs)
+	: factor_(system(), true), actor_(std::move(rhs.actor_)), pimpl_(std::move(rhs.pimpl_))
+{
+	rhs.actor_ = nil_link::actor();
+	rhs.pimpl_ = nil_link::pimpl();
+}
+
+link::link(link&& rhs, std::string_view rhs_type_id)
+	: factor_(system(), true), actor_(nil_link::actor()), pimpl_(nil_link::pimpl())
+{
+	if(rhs.type_id() == rhs_type_id) {
+		pimpl_ = std::move(rhs.pimpl_);
+		rhs.pimpl_ = nil_link::pimpl();
+		actor_ = std::move(rhs.actor_);
+		rhs.actor_ = nil_link::actor();
+	}
+}
+
+link::~link() = default;
+
+auto link::operator=(const link& rhs) -> link& {
+	actor_ = rhs.actor_;
+	pimpl_ = rhs.pimpl_;
+	return *this;
+}
+
+auto link::operator=(link&& rhs) -> link& {
+	actor_ = std::move(rhs.actor_);
+	pimpl_ = std::move(rhs.pimpl_);
+	return *this;
 }
 
 auto link::start_engine() -> bool {
-	return pimpl_->start_engine(pimpl_);
+	if(actor_ == nil_link::self().actor()) {
+		actor_ = std::make_shared<actor_handle>(pimpl_->spawn_actor(pimpl_));
+		return true;
+	}
+	return false;
+}
+
+auto link::is_nil() const -> bool {
+	return pimpl_ == nil_link::pimpl();
+}
+
+auto link::clone(bool deep) const -> link {
+	return { pimpl_->clone(deep) };
 }
 
 auto link::pimpl() const -> link_impl* {
 	return pimpl_.get();
 }
 
+auto link::factor() const -> const caf::scoped_actor& {
+	return factor_;
+}
+
 auto link::raw_actor() const -> const caf::actor& {
-	return pimpl_->actor_;
+	return actor_->actor_;
+}
+
+auto link::type_id() const -> std::string_view {
+	return pimpl_->type_id();
 }
 
 /// access link's unique ID
@@ -52,11 +131,11 @@ auto link::id() const -> lid_type {
 	return pimpl_->id_;
 }
 
-auto link::rename(std::string new_name) -> void {
+auto link::rename(std::string new_name) const -> void {
 	caf::anon_send(actor(*this), a_lnk_rename(), std::move(new_name), false);
 }
 
-auto link::rename_silent(std::string new_name) -> void {
+auto link::rename_silent(std::string new_name) const -> void {
 	caf::anon_send(actor(*this), a_lnk_rename(), std::move(new_name), true);
 }
 
@@ -66,7 +145,7 @@ auto link::owner() const -> sp_node {
 	return pimpl_->owner_.lock();
 }
 
-void link::reset_owner(const sp_node& new_owner) {
+auto link::reset_owner(const sp_node& new_owner) const -> void {
 	pimpl_->reset_owner(new_owner);
 }
 
@@ -96,7 +175,7 @@ auto link::flags(unsafe_t) const -> Flags {
 	return pimpl_->flags_;
 }
 
-void link::set_flags(Flags new_flags) {
+auto link::set_flags(Flags new_flags) const -> void {
 	caf::anon_send(actor(*this), a_lnk_flags(), new_flags);
 }
 
@@ -104,19 +183,19 @@ auto link::req_status(Req request) const -> ReqStatus {
 	return pimpl_->req_status(request);
 }
 
-auto link::rs_reset(Req request, ReqStatus new_rs) -> ReqStatus {
+auto link::rs_reset(Req request, ReqStatus new_rs) const -> ReqStatus {
 	return pimpl_->actorf<ReqStatus>(
 		*this, a_lnk_status(), request, ReqReset::Always, new_rs, ReqStatus::Void
 	).value_or(ReqStatus::Error);
 }
 
-auto link::rs_reset_if_eq(Req request, ReqStatus self, ReqStatus new_rs) -> ReqStatus {
+auto link::rs_reset_if_eq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
 	return pimpl_->actorf<ReqStatus>(
 		*this, a_lnk_status(), request, ReqReset::IfEq, new_rs, self
 	).value_or(ReqStatus::Error);
 }
 
-auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) -> ReqStatus {
+auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
 	return pimpl_->actorf<ReqStatus>(
 		*this, a_lnk_status(), request, ReqReset::IfNeq, new_rs, self
 	).value_or(ReqStatus::Error);
@@ -145,10 +224,10 @@ std::string link::oid() const {
 
 std::string link::obj_type_id() const {
 	return pimpl_->actorf<std::string>(*this, a_lnk_otid())
-		.value_or( type_descriptor::nil().name );
+		.value_or( nil_otid );
 	//return pimpl_->data()
-	//	.map([](const sp_obj& obj) { return obj ? obj->type_id() : type_descriptor::nil().name; })
-	//	.value_or(type_descriptor::nil().name);
+	//	.map([](const sp_obj& obj) { return obj ? obj->type_id() : nil_otid; })
+	//	.value_or(nil_otid);
 }
 
 auto link::data_ex(bool wait_if_busy) const -> result_or_err<sp_obj> {
@@ -175,17 +254,12 @@ auto link::is_node() const -> bool {
 	return !data_node_gid().value_or("").empty();
 }
 
-void link::self_handle_node(const sp_node& N) {
-	if(N) N->set_handle(shared_from_this());
+void link::self_handle_node(const sp_node& N) const {
+	if(N) N->set_handle(*this);
 }
 
-result_or_err<sp_node> link::propagate_handle() {
-	return is_node() ? data_node_ex()
-	.and_then( [this](sp_node&& N) -> result_or_err<sp_node> {
-		N->set_handle(shared_from_this());
-		return std::move(N);
-	} )
-	: tl::make_unexpected( error::quiet(Error::NotANode) );
+auto link::propagate_handle() const -> result_or_err<sp_node> {
+	return pimpl_->propagate_handle(*this);
 }
 
 /*-----------------------------------------------------------------------------
@@ -195,8 +269,8 @@ result_or_err<sp_node> link::propagate_handle() {
 auto link::data(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
 		actor(*this), def_timeout(true), high_priority,
-		[f = std::move(f), self = shared_from_this()](result_or_errbox<sp_obj> eobj) {
-			f(std::move(eobj), std::move(self));
+		[f = std::move(f), self_impl = pimpl_](result_or_errbox<sp_obj> eobj) {
+			f(std::move(eobj), link(self_impl));
 		},
 		a_lnk_data(), true
 	);
@@ -205,8 +279,8 @@ auto link::data(process_data_cb f, bool high_priority) const -> void {
 auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
 		actor(*this), def_timeout(true), high_priority,
-		[f = std::move(f), self = shared_from_this()](result_or_errbox<sp_node> eobj) {
-			f(std::move(eobj), std::move(self));
+		[f = std::move(f), self_impl = pimpl_](result_or_errbox<sp_node> eobj) {
+			f(std::move(eobj), link(self_impl));
 		},
 		a_lnk_dnode(), true
 	);
@@ -216,18 +290,18 @@ auto link::data_node(process_data_cb f, bool high_priority) const -> void {
  *  subscribers management
  *-----------------------------------------------------------------------------*/
 auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t {
-	using baby_t = ev_listener_actor<sp_clink>;
+	using baby_t = ev_listener_actor<link>;
 
 	// produce event bhavior that calls passed callback with proper params
-	auto make_ev_character = [L = shared_from_this(), listen_to](baby_t* self) {
+	auto make_ev_character = [self_impl = pimpl_, listen_to](baby_t* self) {
 		auto res = caf::message_handler{};
 		if(enumval(listen_to & Event::LinkRenamed))
 			res = res.or_else(
-				[self, wL = std::weak_ptr{L}] (
+				[self, wimpl = std::weak_ptr{self_impl}] (
 					a_ack, a_lnk_rename, std::string new_name, std::string old_name
 				) {
-					if(auto lnk = wL.lock())
-						self->f(std::move(lnk), Event::LinkRenamed, {
+					if(auto impl = wimpl.lock())
+						self->f(link{std::move(impl)}, Event::LinkRenamed, {
 							{"new_name", std::move(new_name)},
 							{"prev_name", std::move(old_name)}
 						});
@@ -236,11 +310,11 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 
 		if(enumval(listen_to & Event::LinkStatusChanged))
 			res = res.or_else(
-				[self, wL = std::weak_ptr{L}] (
+				[self, wimpl = std::weak_ptr{self_impl}] (
 					a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v
 				) {
-					if(auto lnk = wL.lock())
-						self->f(std::move(lnk), Event::LinkStatusChanged, {
+					if(auto impl = wimpl.lock())
+						self->f(link{std::move(impl)}, Event::LinkStatusChanged, {
 							{"request", prop::integer(new_v)},
 							{"new_status", prop::integer(new_v)},
 							{"prev_status", prop::integer(prev_v)}
@@ -250,10 +324,10 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 
 		if(enumval(listen_to & Event::LinkDeleted))
 			res = res.or_else(
-				[self, lid = L->id()](a_bye) {
+				[self, lid = self_impl->id_](a_bye) {
 					// when overriding this we must call `disconnect()` explicitly
 					self->disconnect();
-					self->f(sp_link{}, Event::LinkDeleted, {{ "lid", to_string(lid) }});
+					self->f(link{nullptr}, Event::LinkDeleted, {{ "lid", to_string(lid) }});
 				}
 			);
 

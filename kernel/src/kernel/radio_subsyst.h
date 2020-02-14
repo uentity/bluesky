@@ -20,7 +20,7 @@ NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
 struct BS_HIDDEN_API radio_subsyst {
 	// store links that will be visible to the world
-	std::set< tree::sp_link, std::less<> > publinks;
+	std::set< tree::link, std::less<> > publinks;
 
 	radio_subsyst();
 
@@ -35,7 +35,7 @@ struct BS_HIDDEN_API radio_subsyst {
 
 	auto start_client(const std::string& host) -> error;
 
-	auto publish_link(tree::sp_link L) -> error;
+	auto publish_link(tree::link L) -> error;
 	auto unpublish_link(tree::lid_type lid) -> error;
 
 private:

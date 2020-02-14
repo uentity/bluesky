@@ -62,7 +62,6 @@ using a_node_clear = caf::atom_constant<caf::atom("tn clear")>;
 // query node's actor group ID
 using a_node_gid = caf::atom_constant<caf::atom("tn gid")>;
 using a_node_disconnect = caf::atom_constant<caf::atom("tn unplug")>;
-using a_node_propagate_owner = caf::atom_constant<caf::atom("tn powner")>;
 using a_node_handle = caf::atom_constant<caf::atom("tn handle")>;
 using a_node_rearrange = caf::atom_constant<caf::atom("tn rearng")>;
 

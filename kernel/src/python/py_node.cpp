@@ -33,8 +33,8 @@ template<Key K>
 bool contains(const node& N, std::string key) {
 	return N.index(std::move(key), K).has_value();
 }
-bool contains_link(const node& N, const sp_link& l) {
-	return N.index(l->id()).has_value();
+bool contains_link(const node& N, const link& l) {
+	return N.index(l.id()).has_value();
 }
 bool contains_obj(const node& N, const sp_obj& obj) {
 	return N.index(obj->id(), Key::OID).has_value();
@@ -42,7 +42,7 @@ bool contains_obj(const node& N, const sp_obj& obj) {
 
 // ------- find
 template<Key K, bool Throw = true>
-auto find(const node& N, std::string key) -> sp_link {
+auto find(const node& N, std::string key) -> link {
 	if(auto r = N.find(std::move(key), K))
 		return r;
 
@@ -63,11 +63,11 @@ auto find(const node& N, std::string key) -> sp_link {
 		}
 		throw py::key_error(msg + key);
 	}
-	return nullptr;
+	return {};
 }
 
 template<bool Throw = true>
-sp_link find_obj(const node& N, const sp_obj& obj) {
+link find_obj(const node& N, const sp_obj& obj) {
 	return find<Key::OID, Throw>(N, obj->id());
 }
 
@@ -87,8 +87,8 @@ auto index(const node& N, std::string key) -> std::size_t {
 	py::gil_scoped_acquire();
 	throw py::index_error();
 }
-auto index_link(const node& N, const sp_link& l) {
-	if(auto i = N.index(l->id())) return *i;
+auto index_link(const node& N, const link& l) {
+	if(auto i = N.index(l.id())) return *i;
 	py::gil_scoped_acquire();
 	throw py::index_error();
 }
@@ -100,7 +100,7 @@ auto index_obj(const node& N, const sp_obj& obj) {
 
 // ------- deep search
 template<Key K>
-auto deep_search(const node& N, std::string key) -> sp_link {
+auto deep_search(const node& N, std::string key) -> link {
 	return N.deep_search(std::move(key), K);
 }
 
@@ -121,8 +121,8 @@ template<Key K>
 void erase(node& N, const std::string& key) {
 	N.erase(key, K);
 }
-void erase_link(node& N, const sp_link& l) {
-	N.erase(l->id());
+void erase_link(node& N, const link& l) {
+	N.erase(l.id());
 }
 void erase_obj(node& N, const sp_obj& obj) {
 	N.erase(obj->id(), Key::OID);
@@ -233,11 +233,11 @@ void py_bind_node(py::module& m) {
 		.def("equal_type", &equal_range<Key::Type>, "obj_type_id"_a, nogil)
 
 		// insert given link
-		.def("insert", [](node& N, sp_link l, InsertPolicy pol = InsertPolicy::AllowDupNames) {
+		.def("insert", [](node& N, link l, InsertPolicy pol = InsertPolicy::AllowDupNames) {
 			return N.insert(std::move(l), pol).second;
 		}, "link"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert given link", nogil)
 		// insert link at given index
-		.def("insert", [](node& N, sp_link l, const long idx, InsertPolicy pol = InsertPolicy::AllowDupNames) {
+		.def("insert", [](node& N, link l, const long idx, InsertPolicy pol = InsertPolicy::AllowDupNames) {
 			return N.insert(std::move(l), idx, pol).second;
 		}, "link"_a, "idx"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert link at given index", nogil)
 		// insert hard link to given object

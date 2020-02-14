@@ -31,12 +31,12 @@ auto start_client(const std::string& host) -> blue_sky::error {
 	return KRADIO.start_client(host);
 }
 
-auto publish_link(tree::sp_link L) -> error {
+auto publish_link(tree::link L) -> error {
 	return KRADIO.publish_link(std::move(L));
 }
 
-auto unpublish_link(tree::sp_link L) -> error {
-	return KRADIO.unpublish_link(L->id());
+auto unpublish_link(tree::link L) -> error {
+	return KRADIO.unpublish_link(L.id());
 }
 
 NAMESPACE_END(blue_sky::kernel::radio)

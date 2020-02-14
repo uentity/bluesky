@@ -17,9 +17,9 @@
 
 NAMESPACE_BEGIN(blue_sky::tree::detail)
 
-sp_link walk_down_tree(
+auto walk_down_tree(
 	const std::string& next_lid, const sp_node& cur_level, Key path_unit = Key::ID
-);
+) -> link;
 
 NAMESPACE_BEGIN()
 // put into hidden namespace to prevent equal multiple instantiations
@@ -43,11 +43,11 @@ template<
 	typename level_deref_f = decltype(gen_walk_down_tree())
 >
 auto deref_path_impl(
-	const std::string& path, sp_link L, sp_node root = nullptr, bool follow_lazy_links = true,
+	const std::string& path, link L, sp_node root = nullptr, bool follow_lazy_links = true,
 	level_deref_f deref_f = gen_walk_down_tree()
-) -> sp_link {
+) -> link {
 	// split path into elements
-	if(path.empty()) return nullptr;
+	if(path.empty()) return {};
 	std::vector<std::string> path_parts;
 	boost::split(path_parts, path, boost::is_any_of("/"));
 
@@ -64,19 +64,19 @@ auto deref_path_impl(
 		if(part.empty() || part == ".")
 			is_control_elem = true;
 		else if(part == "..") {
-			root = L ? L->owner() : nullptr;
+			root = L ? L.owner() : nullptr;
 			is_control_elem = true;
 		}
 		else if(!root)
-			root = L && (follow_lazy_links || can_call_dnode(*L)) ?
-				L->data_node() : nullptr;
+			root = L && (follow_lazy_links || can_call_dnode(L)) ?
+				L.data_node() : nullptr;
 
 		if constexpr(DerefControlElements) {
 			// intentional ignore of deref return value
 			if(is_control_elem) deref_f(part, root);
 		}
 		if(!is_control_elem) {
-			L = root ? deref_f(part, root) : nullptr;
+			L = root ? deref_f(part, root) : link{};
 			if(!L) break;
 			// force root recalc on next spin
 			root.reset();

@@ -16,6 +16,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
+#include <pybind11/operators.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
@@ -38,12 +39,12 @@ auto adapt(result_or_err<T>&& source, const link& L) {
 	});
 }
 
-using adapted_data_cb = std::function<void(result_or_err<py::object>, sp_clink)>;
+using adapted_data_cb = std::function<void(result_or_err<py::object>, link)>;
 
 auto adapt(adapted_data_cb&& f) {
-	return [f = std::move(f)](result_or_err<sp_obj> obj, sp_clink L) {
+	return [f = std::move(f)](result_or_err<sp_obj> obj, link L) {
 		if(L)
-			f(adapt(std::move(obj), *L), std::move(L));
+			f(adapt(std::move(obj), L), std::move(L));
 		else
 			f(tl::make_unexpected(error{ "Bad (null) link" }), std::move(L));
 	};
@@ -68,7 +69,7 @@ void py_bind_link(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  Base link
 	//
-	py::class_<link, sp_link> link_pyface(m, "link");
+	py::class_<link> link_pyface(m, "link");
 
 	// [TODO] remove it later (added for compatibility)
 	link_pyface.attr("Flags") = m.attr("Flags");
@@ -77,6 +78,12 @@ void py_bind_link(py::module& m) {
 
 	// link base class
 	link_pyface
+		.def(py::init())
+		.def(py::self == py::self)
+		.def(py::self < py::self)
+		.def("__bool__", [](const link& self) { return (bool)self; }, py::is_operator())
+		.def_property_readonly("is_nil", [](const link& self) { return self.is_nil(); })
+
 		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link", nogil)
 
 		// [NOTE] return adapted objects (and pass 'em to callbacks)
@@ -153,20 +160,20 @@ void py_bind_link(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  Derived links
 	//
-	py::class_<hard_link, link, std::shared_ptr<hard_link>>(m, "hard_link")
+	py::class_<hard_link, link>(m, "hard_link")
 		.def(py::init<std::string, sp_obj, Flags>(),
 			"name"_a, "data"_a, "flags"_a = Flags::Plain)
 	;
 
-	py::class_<weak_link, link, std::shared_ptr<weak_link>>(m, "weak_link")
+	py::class_<weak_link, link>(m, "weak_link")
 		.def(py::init<std::string, const sp_obj&, Flags>(),
 			"name"_a, "data"_a, "flags"_a = Flags::Plain)
 	;
 
-	py::class_<sym_link, link, std::shared_ptr<sym_link>>(m, "sym_link")
+	py::class_<sym_link, link>(m, "sym_link")
 		.def(py::init<std::string, std::string, Flags>(),
 			"name"_a, "path"_a, "flags"_a = Flags::Plain)
-		.def(py::init<std::string, const sp_link&, Flags>(),
+		.def(py::init<std::string, const link&, Flags>(),
 			"name"_a, "source"_a, "flags"_a = Flags::Plain)
 
 		.def_property_readonly("check_alive", &sym_link::check_alive, nogil)
@@ -176,7 +183,7 @@ void py_bind_link(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  fusion link/iface
 	//
-	py::class_<fusion_link, link, std::shared_ptr<fusion_link>>(m, "fusion_link")
+	py::class_<fusion_link, link>(m, "fusion_link")
 		.def(py::init<std::string, sp_node, sp_fusion, Flags>(),
 			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = Flags::Plain)
 		.def(py::init<std::string, const char*, std::string, sp_fusion, Flags>(),

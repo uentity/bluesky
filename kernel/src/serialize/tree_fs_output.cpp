@@ -130,11 +130,11 @@ struct tree_fs_output::impl {
 		return &heads_.back();
 	}
 
-	auto begin_link(const tree::sp_link& L) -> error {
+	auto begin_link(const tree::link& L) -> error {
 		if(auto er = enter_root()) return er;
 		if(cur_path_ == root_path_) return perfect;
 
-		return add_head(cur_path_ / to_string(L->id()));
+		return add_head(cur_path_ / to_string(L.id()));
 	}
 
 	auto end_link() -> error {
@@ -400,7 +400,7 @@ auto tree_fs_output::head() -> result_or_err<cereal::JSONOutputArchive*> {
 	return pimpl_->head();
 }
 
-auto tree_fs_output::begin_link(const tree::sp_link& L) -> error {
+auto tree_fs_output::begin_link(const tree::link& L) -> error {
 	return pimpl_->begin_link(L);
 }
 
@@ -442,11 +442,11 @@ auto tree_fs_output::select_active_formatter(std::string_view obj_type_id, std::
 //  prologue, epilogue
 //
 
-auto prologue(tree_fs_output& ar, tree::sp_link const& L) -> void {
+auto prologue(tree_fs_output& ar, tree::link const& L) -> void {
 	if(auto er = ar.begin_link(L)) throw er;
 }
 
-auto epilogue(tree_fs_output& ar, tree::sp_link const&) -> void {
+auto epilogue(tree_fs_output& ar, tree::link const&) -> void {
 	if(auto er = ar.end_link()) throw er;
 }
 

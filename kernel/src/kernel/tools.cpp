@@ -76,10 +76,10 @@ std::string get_backtrace(int backtrace_depth, int skip) {
 
 using namespace blue_sky::tree;
 
-void print_link(const sp_clink& l, bool follow_symlinks, int level) {
-	static const auto dumplnk = [](const sp_clink& l_) {
-		std::cout << l_->name() << " [" << l_->type_id() << ' ' << l_->id() << "] -> ("
-		          << l_->obj_type_id() << ", " << l_->oid() << ")" << std::endl;
+void print_link(link l, bool follow_symlinks, int level) {
+	static const auto dumplnk = [](const link& l_) {
+		std::cout << l_.name() << " [" << l_.type_id() << ' ' << l_.id() << "] -> ("
+		          << l_.obj_type_id() << ", " << l_.oid() << ")" << std::endl;
 	};
 
 	const std::string loffs(level*2, ' ');
@@ -87,8 +87,8 @@ void print_link(const sp_clink& l, bool follow_symlinks, int level) {
 	std::cout << loffs;
 	dumplnk(l);
 	// and go down
-	if(l->type_id() == "sym_link" && !follow_symlinks) return;
-	if(auto n = l->data_node()) {
+	if(l.type_id() == sym_link::type_id_() && !follow_symlinks) return;
+	if(auto n = l.data_node()) {
 		// print leafs
 		for(const auto &leaf : n->leafs())
 			print_link(leaf, follow_symlinks, level+1);

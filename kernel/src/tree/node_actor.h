@@ -56,17 +56,17 @@ public:
 	auto goodbye() -> void;
 
 	auto insert(
-		sp_link L, const InsertPolicy pol, bool silent = false
+		link L, const InsertPolicy pol, bool silent = false
 	) -> insert_status<Key::ID>;
 
 	auto insert(
-		sp_link L, std::size_t idx, const InsertPolicy pol, bool silent = false
+		link L, std::size_t idx, const InsertPolicy pol, bool silent = false
 	) -> node::insert_status;
 
 	auto erase(const lid_type& key, EraseOpts opts = EraseOpts::Normal) -> size_t;
 
-	auto retranslate_from(const sp_link& L) -> void;
-	auto stop_retranslate_from(const sp_link& L) -> void;
+	auto retranslate_from(const link& L) -> void;
+	auto stop_retranslate_from(const link& L) -> void;
 	// stops retranslating from all leafs
 	auto disconnect() -> void;
 };

@@ -24,7 +24,7 @@ BS_API auto start_server() -> void;
 
 BS_API auto start_client(const std::string& host) -> error;
 
-BS_API auto publish_link(tree::sp_link L) -> error;
-BS_API auto unpublish_link(tree::sp_link L) -> error;
+BS_API auto publish_link(tree::link L) -> error;
+BS_API auto unpublish_link(tree::link L) -> error;
 
 NAMESPACE_END(blue_sky::kernel::radio)

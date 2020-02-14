@@ -18,7 +18,7 @@ using extraidx_search_api = caf::typed_actor<
 	// sort content according to given index
 	caf::replies_to<a_node_leafs, Key, links_v>::with<links_v>,
 	// find link by string key & meaning
-	caf::replies_to<a_node_find, std::string, Key, links_v>::with<sp_link>,
+	caf::replies_to<a_node_find, std::string, Key, links_v>::with<link>,
 	// return index of link with string key & meaning
 	caf::replies_to<a_node_index, std::string, Key, links_v>::with<node::existing_index>,
 	// equal_range
@@ -29,8 +29,8 @@ auto extraidx_search_actor(extraidx_search_api::pointer) -> extraidx_search_api:
 
 // deep search - requires node actor
 using extraidx_deep_search_api = caf::typed_actor<
-	caf::replies_to<a_node_deep_search, lid_type>::with<sp_link>,
-	caf::replies_to<a_node_deep_search, std::string, Key>::with<sp_link>
+	caf::replies_to<a_node_deep_search, lid_type>::with<link>,
+	caf::replies_to<a_node_deep_search, std::string, Key>::with<link>
 >;
 
 auto extraidx_deep_search_actor(extraidx_deep_search_api::pointer, node_impl::actor_type Nactor)

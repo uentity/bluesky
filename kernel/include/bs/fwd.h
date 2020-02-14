@@ -63,14 +63,13 @@ class link;
 class link_actor;
 class link_impl;
 class node;
-typedef std::shared_ptr< link > sp_link;
 typedef std::shared_ptr< node > sp_node;
 
 }
 
 // common typedefs
-typedef std::size_t  ulong; //!< unsigned long
-typedef unsigned int uint; //!< unsigned int
+using ulong = std::size_t;
+using uint = unsigned int;
 
 } // eof blue_sky namespace
 

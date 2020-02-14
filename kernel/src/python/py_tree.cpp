@@ -16,14 +16,14 @@
 
 // make it possible to bind opaque std::list & std::vector (w/o content copying)
 PYBIND11_MAKE_OPAQUE(blue_sky::tree::links_v);
-PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_link>);
+PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::link>);
 PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_node>);
 
 NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
 
 using links_v = tree::links_v;
-using links_l = std::list<sp_link>;
+using links_l = std::list<link>;
 using nodes_l = std::list<sp_node>;
 
 NAMESPACE_BEGIN()
@@ -102,13 +102,13 @@ void py_bind_tree(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  tree API
 	//
-	m.def("abspath", py::overload_cast<const sp_clink&, Key>(&abspath),
+	m.def("abspath", &abspath,
 		"lnk"_a, "path_unit"_a = Key::ID, "Get link's absolute path", nogil);
-	m.def("find_root", py::overload_cast<const sp_link&>(&find_root),
+	m.def("find_root", py::overload_cast<link>(&find_root),
 		"L"_a, "Return root node of a tree that given link belongs to", nogil);
 	m.def("find_root", py::overload_cast<sp_node>(&find_root),
 		"N"_a, "Return root node of a tree that given node belongs to", nogil);
-	m.def("find_root_handle", py::overload_cast<sp_clink>(&find_root_handle),
+	m.def("find_root_handle", py::overload_cast<link>(&find_root_handle),
 		"L"_a, "Return handle (link) of a tree root that given link belongs to", nogil);
 	m.def("find_root_handle", py::overload_cast<const sp_node&>(&find_root_handle),
 		"L"_a, "Return handle (link) of a tree root that given node belongs to", nogil);
@@ -117,7 +117,7 @@ void py_bind_tree(py::module& m) {
 		"follow_lazy_links"_a = false,
 		"Convert path string from one representation to another (for ex. link IDs -> link names)", nogil
 	);
-	m.def("deref_path",py::overload_cast<const std::string&, sp_link, Key, bool>(&deref_path),
+	m.def("deref_path",py::overload_cast<const std::string&, link, Key, bool>(&deref_path),
 		"path"_a, "start"_a, "path_unit"_a = Key::ID, "follow_lazy_links"_a = true,
 		"Quick link search by given path relative to `start`", nogil
 	);
@@ -127,7 +127,7 @@ void py_bind_tree(py::module& m) {
 	);
 	// async deref_path
 	m.def("deref_path",
-		py::overload_cast<deref_process_f, std::string, sp_link, Key, bool, bool>(&deref_path),
+		py::overload_cast<deref_process_f, std::string, link, Key, bool, bool>(&deref_path),
 		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = Key::ID,
 		"follow_lazy_links"_a = true, "high_priority"_a = false,
 		"Async quick link search by given path relative to `start`", nogil
@@ -141,12 +141,12 @@ void py_bind_tree(py::module& m) {
 
 	// walk
 	// [HINT] pass vectors to be modified as pointers - in this case pybind11 applies reference policy
-	using py_walk_links_cb = std::function<void(const sp_link&, links_l*, links_v*)>;
+	using py_walk_links_cb = std::function<void(const link&, links_l*, links_v*)>;
 	using py_walk_nodes_cb = std::function<void(const sp_node&, nodes_l*, links_v*)>;
 
 	m.def("walk",
 		[](
-			const sp_link& root, py_walk_links_cb cb,
+			const link& root, py_walk_links_cb cb,
 			bool topdown, bool follow_symlinks, bool follow_lazy_links
 		) {
 			py_walk(root, std::move(cb), topdown, follow_symlinks, follow_lazy_links);
@@ -177,9 +177,9 @@ void py_bind_tree(py::module& m) {
 		.value("Binary", TreeArchive::Binary)
 		.value("FS", TreeArchive::FS)
 	;
-	m.def("save_tree", py::overload_cast<sp_link, std::string, TreeArchive, timespan>(&save_tree),
+	m.def("save_tree", py::overload_cast<link, std::string, TreeArchive, timespan>(&save_tree),
 		"root"_a, "filename"_a, "ar"_a = TreeArchive::FS, "wait_for"_a = infinite, nogil);
-	m.def("save_tree", py::overload_cast<on_serialized_f, sp_link, std::string, TreeArchive>(&save_tree),
+	m.def("save_tree", py::overload_cast<on_serialized_f, link, std::string, TreeArchive>(&save_tree),
 		"callback"_a, "root"_a, "filename"_a, "ar"_a = TreeArchive::FS, nogil);
 	m.def("load_tree", py::overload_cast<std::string, TreeArchive>(&load_tree),
 		"filename"_a, "ar"_a = TreeArchive::FS, nogil);

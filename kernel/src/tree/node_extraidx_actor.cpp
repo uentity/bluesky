@@ -31,12 +31,12 @@ NAMESPACE_BEGIN()
 // returns memoized key extractor
 template<Key K>
 auto memo_kex() {
-	return [kex = Key_tag<K>(), memo = std::unordered_map<link*, Key_type<K>>{}](
-		const sp_link& L
+	return [kex = Key_tag<K>(), memo = std::unordered_map<const link*, Key_type<K>>{}](
+		const link& L
 	) mutable {
-		if(auto p = memo.find(L.get()); p != memo.end()) return p->second;
-		auto k = kex(*L);
-		memo[L.get()] = k;
+		if(auto p = memo.find(&L); p != memo.end()) return p->second;
+		auto k = kex(L);
+		memo[&L] = k;
 		return k;
 	};
 }
@@ -53,7 +53,7 @@ auto memo_less() {
 template<Key K>
 auto equal_to(const Key_type<K>& rhs) {
 	return [&, kex = Key_tag<K>()](const auto& x) {
-		return kex(*x) == rhs;
+		return kex(x) == rhs;
 	};
 }
 
@@ -117,38 +117,38 @@ template<Key K = Key::ID>
 auto deep_search(
 	const caf::scoped_actor& f, node::actor_type Nactor, const Key_type<K>& key,
 	std::set<lid_type> active_symlinks = {}
-) -> sp_link {
+) -> link {
 	// first do direct search in leafs
-	sp_link r;
+	link r;
 	if constexpr(K == Key::ID)
-		r = actorf<sp_link>(f, Nactor, infinite, a_node_find(), key).value_or(nullptr);
+		r = actorf<link>(f, Nactor, infinite, a_node_find(), key).value_or(link{});
 	else
-		r = actorf<sp_link>(f, Nactor, infinite, a_node_find(), key, K).value_or(nullptr);
+		r = actorf<link>(f, Nactor, infinite, a_node_find(), key, K).value_or(link{});
 	if(r) return r;
 
 	// if not succeeded search in children nodes
 	auto leafs = actorf<links_v>(f, Nactor, infinite, a_node_leafs(), Key::AnyOrder).value_or(links_v{});
 	for(const auto& l : leafs) {
 		// remember symlink
-		const auto is_symlink = l->type_id() == "sym_link";
+		const auto is_symlink = l.type_id() == sym_link::type_id_();
 		if(is_symlink){
-			if(active_symlinks.find(l->id()) == active_symlinks.end())
-				active_symlinks.insert(l->id());
+			if(active_symlinks.find(l.id()) == active_symlinks.end())
+				active_symlinks.insert(l.id());
 			else continue;
 		}
 		// check populated status before moving to next level
-		if(l->flags() & LazyLoad && l->req_status(Req::DataNode) != ReqStatus::OK)
+		if(l.flags() & LazyLoad && l.req_status(Req::DataNode) != ReqStatus::OK)
 			continue;
 		// search on next level
-		if(auto next_n = l->data_node()) {
+		if(auto next_n = l.data_node()) {
 			auto next_l = deep_search<K>(f, next_n->actor(), key, active_symlinks);
 			if(next_l) return next_l;
 		}
 		// remove symlink
 		if(is_symlink)
-			active_symlinks.erase(l->id());
+			active_symlinks.erase(l.id());
 	}
-	return nullptr;
+	return {};
 }
 
 NAMESPACE_END()
@@ -165,10 +165,10 @@ return {
 	},
 
 	// find link with given key (link ID index isn't supported)
-	[](a_node_find, const std::string& key, Key meaning, const links_v& leafs) -> sp_link {
+	[](a_node_find, const std::string& key, Key meaning, const links_v& leafs) -> link {
 		if(auto p = find(key, meaning, leafs); p != leafs.end())
 			return *p;
-		return nullptr;
+		return {};
 	},
 
 	// [NOTE] assume leafs are in AnyOrder!
@@ -186,12 +186,12 @@ return {
 auto extraidx_deep_search_actor(extraidx_deep_search_api::pointer self, node_impl::actor_type Nactor)
 -> extraidx_deep_search_api::behavior_type { return {
 	// deep search
-	[=](a_node_deep_search, const lid_type& key) -> sp_link {
+	[=](a_node_deep_search, const lid_type& key) -> link {
 		//caf::aout(self) << "==> a_node_deep_search extra" << std::endl;
 		return deep_search<Key::ID>(caf::scoped_actor{system()}, Nactor, key);
 	},
 
-	[=](a_node_deep_search, const std::string& key, Key meaning) -> sp_link {
+	[=](a_node_deep_search, const std::string& key, Key meaning) -> link {
 		auto f = caf::scoped_actor{system()};
 		switch(meaning) {
 		default:

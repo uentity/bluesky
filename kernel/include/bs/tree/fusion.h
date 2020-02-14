@@ -29,14 +29,12 @@ using sp_fusion = std::shared_ptr<fusion_iface>;
 /*-----------------------------------------------------------------------------
  *  Fusion link populates object children when `data_node()` or `data()` is called
  *-----------------------------------------------------------------------------*/
-struct fusion_link_impl;
-
-class BS_API fusion_link : public ilink {
+class BS_API fusion_link : public link {
 	friend class blue_sky::atomizer;
 	friend class cereal::access;
 
 public:
-	using super = ilink;
+	using super = link;
 
 	using actor_type = cached_link_actor_type::extend<
 		// populate pointee with given children types
@@ -52,15 +50,16 @@ public:
 		std::string name, sp_node data = nullptr,
 		sp_fusion bridge = nullptr, Flags f = Plain
 	);
+
 	fusion_link(
 		std::string name, const char* obj_type, std::string oid = "",
 		sp_fusion bridge = nullptr, Flags f = Plain
 	);
+	/// convert from base link
+	fusion_link(const link& rhs);
+	fusion_link(link&& rhs);
 
-	auto clone(bool deep = false) const -> sp_link override;
-
-	// link API implementation
-	auto type_id() const -> std::string override;
+	static auto type_id_() -> std::string_view;
 
 	// force `fusion_iface::populate()` call with specified children types
 	// regardless of populate status
@@ -81,14 +80,6 @@ public:
 private:
 	// don't start internal actor
 	fusion_link();
-
-	//friend struct fusion_link_impl;
-	auto pimpl() const -> fusion_link_impl*;
-
-	// bypass `data_node_ex()` call and directly set handle of contained node object
-	auto propagate_handle() -> result_or_err<sp_node> override;
 };
-using sp_fusion_link = std::shared_ptr<fusion_link>;
-using sp_cfusion_link = std::shared_ptr<const fusion_link>;
 
 NAMESPACE_END(blue_sky::tree)

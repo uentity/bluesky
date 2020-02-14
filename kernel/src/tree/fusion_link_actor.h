@@ -25,7 +25,6 @@ using bs_detail::shared;
  *  fusion_link_impl
  *-----------------------------------------------------------------------------*/
 struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
-public:
 	// treat Error::OKOK status as object is fully loaded by fusion_iface
 	inline static const auto obj_fully_loaded = make_error_code(Error::OKOK);
 	// bridge
@@ -35,7 +34,6 @@ public:
 
 	using super = ilink_impl;
 	using super::owner_;
-	using super::lock;
 
 	fusion_link_impl(std::string name, sp_node data, sp_fusion bridge, Flags f)
 		: super(std::move(name), data, f), bridge_(std::move(bridge)), data_(std::move(data))
@@ -50,10 +48,8 @@ public:
 		if(bridge_) return bridge_;
 		// try to look up in parent link
 		if(auto parent = owner_.lock()) {
-			if(auto phandle = parent->handle()) {
-				if(phandle->type_id() == "fusion_link")
-					return std::static_pointer_cast<fusion_link>(phandle)->bridge();
-			}
+			if(auto phandle = fusion_link{ parent->handle() })
+				return phandle.bridge();
 		}
 		return nullptr;
 	}
@@ -92,7 +88,13 @@ public:
 		return tl::make_unexpected(Error::NoFusionBridge);
 	}
 
-	inline auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor override;
+	auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor override;
+
+	auto clone(bool deep = false) const -> sp_limpl override;
+
+	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
+
+	LIMPL_TYPE_DECL
 };
 
 /*-----------------------------------------------------------------------------
@@ -147,7 +149,7 @@ struct BS_HIDDEN_API fusion_link_actor : public link_actor {
 
 			// easier obj ID & object type id retrival
 			[L](a_lnk_otid) {
-				return L->data_ ? L->data_->type_id() : type_descriptor::nil().name;
+				return L->data_ ? L->data_->type_id() : nil_otid;
 			},
 			[L](a_lnk_oid) {
 				return L->data_ ? L->data_->id() : nil_oid;
@@ -162,9 +164,5 @@ struct BS_HIDDEN_API fusion_link_actor : public link_actor {
 		}.or_else(super::make_behavior());
 	}
 };
-
-auto fusion_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
-	return spawn_lactor<fusion_link_actor>(std::move(limpl));
-}
 
 NAMESPACE_END(blue_sky::tree)

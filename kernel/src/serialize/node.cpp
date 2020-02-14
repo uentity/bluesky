@@ -46,7 +46,7 @@ struct leafs_view {
 		// load links in custom index order
 		auto& any_order = N.links_.get<Key_tag<Key::AnyOrder>>();
 		for(std::size_t i = 0; i < sz; ++i) {
-			sp_link leaf;
+			link leaf;
 			ar(leaf);
 			//N.insert(std::move(leaf));
 			any_order.insert(any_order.end(), std::move(leaf));

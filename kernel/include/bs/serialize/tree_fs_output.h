@@ -37,7 +37,7 @@ public:
 	// retrive stream for archive's head (if any)
 	auto head() -> result_or_err<cereal::JSONOutputArchive*>;
 
-	auto begin_link(const tree::sp_link& L) -> error;
+	auto begin_link(const tree::link& L) -> error;
 	auto end_link() -> error;
 
 	auto begin_node(const tree::node& N) -> error;
@@ -118,8 +118,8 @@ private:
 	std::unique_ptr<impl> pimpl_;
 };
 
-BS_API auto prologue(tree_fs_output& ar, tree::sp_link const& L) -> void;
-BS_API auto epilogue(tree_fs_output& ar, tree::sp_link const& L) -> void;
+BS_API auto prologue(tree_fs_output& ar, tree::link const& L) -> void;
+BS_API auto epilogue(tree_fs_output& ar, tree::link const& L) -> void;
 
 BS_API auto prologue(tree_fs_output& ar, tree::node const& N) -> void;
 BS_API auto epilogue(tree_fs_output& ar, tree::node const& N) -> void;

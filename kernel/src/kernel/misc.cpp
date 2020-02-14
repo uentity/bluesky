@@ -12,6 +12,7 @@
 #include <bs/misc.h>
 #include "kimpl.h"
 #include "python_subsyst.h"
+#include "../tree/nil_link.h"
 
 #include <spdlog/spdlog.h>
 
@@ -45,6 +46,8 @@ auto shutdown() -> void {
 	// shut down if not already Down
 	auto expected_state = InitState::Initialized;
 	if(KIMPL.init_state_.compare_exchange_strong(expected_state, InitState::Down)) {
+		// terminate nil link service
+		tree::nil_link::stop();
 		// turn off radio subsystem
 		KIMPL.shutdown_radio();
 		// shutdown mt logs

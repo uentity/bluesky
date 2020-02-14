@@ -162,7 +162,7 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 	}
 
 	// handler for link erased event responsible for deleting cached adapters
-	[[maybe_unused]] static auto on_link_delete = [](tree::sp_clink, tree::Event, prop::propdict params) {
+	[[maybe_unused]] static auto on_link_delete = [](tree::link, tree::Event, prop::propdict params) {
 		auto& self = python_subsyst_impl::self();
 		auto solo = std::lock_guard{ self.guard_ };
 		if(const auto* lid = prop::get_if<std::string>(&params, "lid")) {

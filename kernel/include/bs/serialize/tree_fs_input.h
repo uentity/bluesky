@@ -50,7 +50,9 @@ public:
 private:
 	template<typename T> struct has_empty {
 		static constexpr auto prologue = std::is_same_v<T, std::nullptr_t> |
-			std::is_arithmetic_v<T>;
+			std::is_arithmetic_v<T> |
+			// match any link
+			std::is_base_of_v<tree::link, std::remove_cv_t<T>>;
 		static constexpr auto epilogue = prologue;
 	};
 
@@ -76,7 +78,7 @@ private:
 			std::is_same_v<type, cereal::NameValuePair<U>> |
 			std::is_same_v<type, cereal::DeferredData<U>> |
 			std::is_same_v<type, cereal::SizeTag<U>> |
-			// detect shared_ptr to link and derived friends
+			// match shared_ptr to link and derived friends
 			(std::is_same_v<type, std::shared_ptr<U>> && std::is_base_of_v<tree::link, std::remove_cv_t<U>>) |
 			dispatch<type>::value;
 

@@ -40,13 +40,13 @@ NAMESPACE_BEGIN()
 
 using radio_station_handle = caf::typed_actor<
 	//caf::replies_to< a_hi >::with< std::vector<tree::lid_type> >
-	caf::replies_to< a_hi >::with< std::vector<tree::sp_link> >
+	caf::replies_to< a_hi >::with< std::vector<tree::link> >
 >;
 
 auto radio_station(radio_station_handle::pointer self)
 -> radio_station_handle::behavior_type { return {
 	[](a_hi) {
-		std::vector<tree::sp_link> publids;
+		std::vector<tree::link> publids;
 		for(const auto& L : KRADIO.publinks)
 			publids.push_back(L);
 		//std::vector<tree::lid_type> publids;
@@ -126,7 +126,7 @@ auto radio_subsyst::toggle(bool on) -> error {
 
 auto radio_subsyst::start_server() -> void {
 	if(toggle(true)) return;
-	actor_config().add_message_type<tree::sp_link>("link");
+	actor_config().add_message_type<tree::link>("link");
 
 	std::cout << "*** started server on port " << get_or(BSCONFIG, "port", def_port) << std::endl
 		<< "type 'quit' to shutdown the server" << std::endl;
@@ -149,7 +149,7 @@ auto radio_subsyst::start_client(const std::string& host) -> error {
 			host << get_or(BSCONFIG, "port", def_port) << bs_end;
 	}
 
-	actor_config().add_message_type<tree::sp_link>("link");
+	actor_config().add_message_type<tree::link>("link");
 	auto station = actor_sys_->middleman().remote_spawn<radio_station_handle>(
 		*netnode, "radio_station", caf::make_message(), get_or(BSCONFIG, "timeout", def_timeout)
 	);
@@ -162,10 +162,10 @@ auto radio_subsyst::start_client(const std::string& host) -> error {
 
 	std::cout << "Server returned public links: [";
 	auto first = true;
-	for(const auto& lid : *res) {
+	for(const auto& L : *res) {
 		if(first) first = false;
 		else std::cout << ' ';
-		std::cout << to_string(lid->id());
+		std::cout << to_string(L.id());
 	}
 	std::cout << ']' << std::endl;
 
@@ -174,14 +174,14 @@ auto radio_subsyst::start_client(const std::string& host) -> error {
 	return perfect;
 }
 
-auto radio_subsyst::publish_link(tree::sp_link L) -> error {
+auto radio_subsyst::publish_link(tree::link L) -> error {
 	publinks.insert(std::move(L));
 	return perfect;
 }
 
 auto radio_subsyst::unpublish_link(tree::lid_type lid) -> error {
 	for(auto L = publinks.begin(), end = publinks.end(); L != end; ++L)
-		if((*L)->id() == lid) publinks.erase(L);
+		if(L->id() == lid) publinks.erase(L);
 	return perfect;
 }
 

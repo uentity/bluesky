@@ -62,7 +62,7 @@ auto node::disconnect(bool deep) -> void {
 
 	if(deep) {
 		// don't follow symlinks & lazy links
-		walk(bs_shared_this<node>(), [](const sp_node&, std::list<sp_node>& subnodes, std::vector<sp_link>&) {
+		walk(bs_shared_this<node>(), [](const sp_node&, std::list<sp_node>& subnodes, std::vector<link>&) {
 			for(const auto& N : subnodes)
 				N->disconnect(false);
 		}, true, false, false);
@@ -70,15 +70,20 @@ auto node::disconnect(bool deep) -> void {
 }
 
 auto node::propagate_owner(bool deep) -> void {
-	caf::anon_send(actor(), a_node_propagate_owner(), deep);
+	// properly setup owner in node's leafs
+	auto self = bs_shared_this<node>();
+	for(auto& L : leafs()) {
+		auto child_node = node_impl::adjust_inserted_link(L, self);
+		if(deep && child_node)
+			child_node->propagate_owner(true);
+	}
 }
 
-auto node::handle() const -> sp_link {
-	auto guard = pimpl_->lock<node_impl::Metadata>(shared);
-	return pimpl_->handle_.lock();
+auto node::handle() const -> link {
+	return pimpl_->handle();
 }
 
-auto node::set_handle(const sp_link& handle) -> void {
+auto node::set_handle(const link& handle) -> void {
 	pimpl_->set_handle(handle);
 }
 
@@ -109,7 +114,7 @@ auto node::keys(Key ordering) const -> lids_v {
 auto node::skeys(Key key_meaning, Key ordering) const -> std::vector<std::string> {
 	static const auto slids = [](const links_v& Ls) {
 		return range_t{ Ls.begin(), Ls.end() }.extract<std::string>(
-			[](const auto& L) { return to_string(L->id()); }
+			[](const auto& L) { return to_string(L.id()); }
 		);
 	};
 
@@ -132,35 +137,35 @@ auto node::skeys(Key key_meaning, Key ordering) const -> std::vector<std::string
 ///////////////////////////////////////////////////////////////////////////////
 //  find
 //
-auto node::find(std::size_t idx) const -> sp_link {
-	return pimpl_->actorf<sp_link>(
+auto node::find(std::size_t idx) const -> link {
+	return pimpl_->actorf<link>(
 		*this, a_node_find(), idx
-	).value_or(nullptr);
+	).value_or(link{});
 }
 
-auto node::find(lid_type id) const -> sp_link {
-	return pimpl_->actorf<sp_link>(
+auto node::find(lid_type id) const -> link {
+	return pimpl_->actorf<link>(
 		*this, a_node_find(), std::move(id)
-	).value_or(nullptr);
+	).value_or(link{});
 }
 
-auto node::find(std::string key, Key key_meaning) const -> sp_link {
-	return pimpl_->actorf<sp_link>(
+auto node::find(std::string key, Key key_meaning) const -> link {
+	return pimpl_->actorf<link>(
 		*this, a_node_find(), std::move(key), key_meaning
-	).value_or(nullptr);
+	).value_or(link{});
 }
 
 // ---- deep_search
-auto node::deep_search(lid_type id) const -> sp_link {
-	return pimpl_->actorf<sp_link>(
+auto node::deep_search(lid_type id) const -> link {
+	return pimpl_->actorf<link>(
 		*this, a_node_deep_search(), std::move(id)
-	).value_or(nullptr);
+	).value_or(link{});
 }
 
-auto node::deep_search(std::string key, Key key_meaning) const -> sp_link {
-	return pimpl_->actorf<sp_link>(
+auto node::deep_search(std::string key, Key key_meaning) const -> link {
+	return pimpl_->actorf<link>(
 		*this, a_node_deep_search(), std::move(key), key_meaning
-	).value_or(nullptr);
+	).value_or(link{});
 }
 
 // ---- index
@@ -186,13 +191,13 @@ auto node::equal_range(std::string key, Key key_meaning) const -> links_v {
 ///////////////////////////////////////////////////////////////////////////////
 //  insert
 //
-auto node::insert(sp_link l, InsertPolicy pol) -> insert_status {
+auto node::insert(link l, InsertPolicy pol) -> insert_status {
 	return pimpl_->actorf<insert_status>(
 		*this, a_node_insert(), std::move(l), pol
 	).value_or(insert_status{ {}, false });
 }
 
-auto node::insert(sp_link l, std::size_t idx, InsertPolicy pol) -> insert_status {
+auto node::insert(link l, std::size_t idx, InsertPolicy pol) -> insert_status {
 	return pimpl_->actorf<insert_status>(
 		*this, a_node_insert(), std::move(l), idx, pol
 	).value_or(insert_status{ {}, false });
@@ -205,9 +210,7 @@ auto node::insert(links_v ls, InsertPolicy pol) -> std::size_t {
 }
 
 auto node::insert(std::string name, sp_obj obj, InsertPolicy pol) -> insert_status {
-	return insert(
-		std::make_shared<hard_link>(std::move(name), std::move(obj)), pol
-	);
+	return insert( hard_link(std::move(name), std::move(obj)), pol );
 }
 
 ///////////////////////////////////////////////////////////////////////////////

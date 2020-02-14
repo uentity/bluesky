@@ -15,11 +15,11 @@
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::error::box)                                   \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::sp_obj)                                       \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::inodeptr)                               \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_link)                                \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::link)                                   \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::sp_node)                                \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::sp_obj>)         \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::inodeptr>) \
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::sp_link>)  \
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::link>)     \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::result_or_errbox<::blue_sky::tree::sp_node>)  \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::links_v)                                \
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(::blue_sky::tree::lids_v)

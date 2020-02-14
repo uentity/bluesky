@@ -90,7 +90,8 @@ struct tree_fs_input::impl {
 
 	auto enter_root() -> error {
 		if(root_path_.empty())
-			if(auto er = enter_dir(root_dname_, root_path_)) return er;
+			if(auto er = enter_dir(root_dname_, root_path_))
+				return er;
 		if(cur_path_.empty()) cur_path_ = root_path_;
 		return perfect;
 	}
@@ -187,7 +188,7 @@ struct tree_fs_input::impl {
 					[&] { add_head(cur_path_ / std::move(f)); },
 					[&] {
 						auto finally = detail::scope_guard{[this]{ pop_head(); }};
-						tree::sp_link L;
+						tree::link L;
 						ar(L);
 						N.insert(std::move(L));
 					}
@@ -215,8 +216,7 @@ struct tree_fs_input::impl {
 					[&] { add_head(f); },
 					[&] {
 						auto finally = detail::scope_guard{[this]{ pop_head(); }};
-
-						tree::sp_link L;
+						tree::link L;
 						ar(L);
 						N.insert(std::move(L));
 					}
@@ -236,7 +236,7 @@ struct tree_fs_input::impl {
 			//			[&] {
 			//				auto finally = detail::scope_guard{[this]{ pop_head(); }};
 
-			//				tree::sp_link L;
+			//				tree::link L;
 			//				ar(L);
 			//				N.insert(std::move(L));
 			//			}
