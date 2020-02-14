@@ -33,8 +33,8 @@ void walk_impl(
 	for(const auto& N : nodes) {
 		if(!N) continue;
 		// remember symlink
-		const auto is_symlink = follow_symlinks && N.type_id() == sym_link::type_id_();
-		if(is_symlink && !active_symlinks.insert(N.id()).second)
+		const auto is_symlink = N.type_id() == sym_link::type_id_();
+		if(is_symlink && (!follow_symlinks || !active_symlinks.insert(N.id()).second))
 			continue;
 
 		// obtain node from link honoring LazyLoad flag
@@ -47,7 +47,7 @@ void walk_impl(
 			// for each link in node
 			for(const auto& l : cur_node->leafs()) {
 				// collect nodes
-				if((follow_lazy_links || can_call_dnode(l)) && l.data_node()) {
+				if((follow_lazy_links || can_call_dnode(l)) && l.is_node()) {
 					next_nodes.push_back(l);
 				}
 				else
@@ -55,7 +55,7 @@ void walk_impl(
 			}
 		}
 
-		// if `topdown` == true, process this node BEFORE leafs processing
+		// if `topdown` == true, process this node BEFORE leafs
 		if(topdown)
 			step_f(N, next_nodes, next_leafs);
 		// process list of next nodes
@@ -276,7 +276,7 @@ auto walk(
 	link root, walk_links_fv step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links
 ) -> void {
-	walk_impl({std::move(root)}, step_f, topdown, follow_symlinks, follow_lazy_links);
+	walk_impl({root}, step_f, topdown, follow_symlinks, follow_lazy_links);
 }
 
 auto walk(
@@ -304,7 +304,7 @@ auto make_root_link(
 ) -> link {
 	if(!root_node) root_node = std::make_shared<node>();
 	// create link depending on type
-	if(link_type == "fusion_link")
+	if(link_type == fusion_link::type_id_())
 		return link::make_root<fusion_link>(std::move(name), std::move(root_node));
 	else
 		return link::make_root<hard_link>(std::move(name), std::move(root_node));

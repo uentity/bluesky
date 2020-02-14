@@ -44,9 +44,9 @@ using adapted_data_cb = std::function<void(result_or_err<py::object>, link)>;
 auto adapt(adapted_data_cb&& f) {
 	return [f = std::move(f)](result_or_err<sp_obj> obj, link L) {
 		if(L)
-			f(adapt(std::move(obj), L), std::move(L));
+			f(adapt(std::move(obj), L), L);
 		else
-			f(tl::make_unexpected(error{ "Bad (null) link" }), std::move(L));
+			f(tl::make_unexpected(error{ "Bad (null) link" }), L);
 	};
 }
 

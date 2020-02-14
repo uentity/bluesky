@@ -26,18 +26,26 @@ using links_v = tree::links_v;
 using links_l = std::list<link>;
 using nodes_l = std::list<sp_node>;
 
+// [IMPORTANT] point that we must return elements BY VALUE from links vector & list
+NAMESPACE_BEGIN(detail)
+
+template<> struct vector_needs_copy<links_v> : std::true_type {};
+template<> struct vector_needs_copy<links_l> : std::true_type {};
+
+NAMESPACE_END(detail)
+
 NAMESPACE_BEGIN()
 
 // `walk()` proxy functor to allow nodes & leafs lists modification in Python callback 'pyf'
 // accepts pointers to containers instead of references
 template<typename R, typename FR, typename Node>
 auto py_walk(
-	const R& root, std::function<void (const FR&, std::list<Node>*, links_v*)> pyf,
+	R root, std::function<void (FR, std::list<Node>*, links_v*)> pyf,
 	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
 ) {
-	walk(root, [pyf = std::move(pyf)] (const FR& cur_root, std::list<Node>& nodes, links_v& leafs) {
+	walk(std::move(root), [pyf = std::move(pyf)] (FR cur_root, std::list<Node>& nodes, links_v& leafs) {
 			// convert references to pointers
-			pyf(cur_root, &nodes, &leafs);
+			pyf(std::move(cur_root), &nodes, &leafs);
 		},
 		topdown, follow_symlinks, follow_lazy_links
 	);
@@ -134,8 +142,7 @@ void py_bind_tree(py::module& m) {
 	);
 
 	// bind lists of links & nodes as opaque types
-	auto clV = py::bind_vector<links_v>(m, "links_vector", py::module_local(false));
-	detail::make_rich_pylist<links_v>(clV);
+	bind_rich_vector<links_v>(m, "links_vector", py::module_local(false));
 	bind_list<links_l>(m, "links_list", py::module_local(false));
 	bind_list<nodes_l>(m, "nodes_list", py::module_local(false));
 
@@ -146,7 +153,7 @@ void py_bind_tree(py::module& m) {
 
 	m.def("walk",
 		[](
-			const link& root, py_walk_links_cb cb,
+			link root, py_walk_links_cb cb,
 			bool topdown, bool follow_symlinks, bool follow_lazy_links
 		) {
 			py_walk(root, std::move(cb), topdown, follow_symlinks, follow_lazy_links);
@@ -156,10 +163,10 @@ void py_bind_tree(py::module& m) {
 	);
 	m.def("walk",
 		[](
-			const sp_node& root, py_walk_nodes_cb cb,
+			sp_node root, py_walk_nodes_cb cb,
 			bool topdown, bool follow_symlinks, bool follow_lazy_links
 		) {
-			py_walk(root, std::move(cb), topdown, follow_symlinks, follow_lazy_links);
+			py_walk(std::move(root), std::move(cb), topdown, follow_symlinks, follow_lazy_links);
 		},
 		"root_node"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true, "follow_lazy_links"_a = false,
 		"Walk the tree similar to Python `os.walk()` (alternative)", nogil
