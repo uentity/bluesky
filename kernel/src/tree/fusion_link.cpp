@@ -33,8 +33,6 @@ auto fusion_link_impl::propagate_handle(const link& L) -> result_or_err<sp_node>
 	return data_ ? result_or_err<sp_node>(data_) : tl::make_unexpected(Error::EmptyData);
 }
 
-LIMPL_TYPE_DEF(fusion_link_impl, "fusion_link")
-
 /*-----------------------------------------------------------------------------
  *  fusion_link
  *-----------------------------------------------------------------------------*/
@@ -62,8 +60,6 @@ fusion_link::fusion_link(
 fusion_link::fusion_link()
 	: super(std::make_shared<fusion_link_impl>(), false)
 {}
-
-LINK_CONVERT_TO(fusion_link)
 
 auto fusion_link::populate(const std::string& child_type_id, bool wait_if_busy) const
 -> result_or_err<sp_node> {
@@ -100,8 +96,7 @@ auto fusion_link::cache() const -> sp_node {
 	);
 }
 
-auto fusion_link::type_id_() -> std::string_view {
-	return fusion_link_impl::type_id_();
-}
+LINK_CONVERT_TO(fusion_link)
+LINK_TYPE_DEF(fusion_link, fusion_link_impl, "fusion_link")
 
 NAMESPACE_END(blue_sky::tree)

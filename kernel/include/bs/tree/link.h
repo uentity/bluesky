@@ -84,16 +84,17 @@ public:
 
 	/// empty ctor will construct nil link
 	link();
-
-	/// copy & move ctors
-	link(const link& rhs);
-	link(link&& rhs);
-
-	/// assignments
-	auto operator=(const link& rhs) -> link&;
-	auto operator=(link&& rhs) -> link&;
-
 	virtual ~link();
+
+	/// copy ctor & assignment
+	link(const link& rhs);
+	auto operator=(const link& rhs) -> link&;
+
+	/// [NOTE] move operations CAN be implemeted, but will be MORE expensive than copy
+	/// Call `reset()` to make link nill explicitly
+
+	/// makes link nil
+	auto reset() -> void;
 
 	/// links are compared by ID
 	friend auto operator==(const link& lhs, const link& rhs) -> bool {
@@ -230,9 +231,8 @@ protected:
 	/// if `self_tid` specified - ensure that `impl` is of requested type
 	link(std::shared_ptr<link_impl> impl, bool start_actor = true);
 
-	/// ensure that rhs type id mathes requested, otherwise link is nil
+	/// ensure that rhs type id matches requested, otherwise link is nil
 	link(const link& rhs, std::string_view rhs_type_id);
-	link(link&& rhs, std::string_view rhs_type_id);
 
 	/// get access to link's impl for derived links
 	auto pimpl() const -> link_impl*;
@@ -249,9 +249,6 @@ protected:
 	// silent replace old name with new in link's internals
 	auto rename_silent(std::string new_name) const -> void;
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  misc API for inherited links
-	//
 	/// switch link's owner
 	auto reset_owner(const sp_node& new_owner) const -> void;
 
@@ -260,10 +257,10 @@ protected:
 	// but derived link can change default behaviour
 	auto propagate_handle() const -> result_or_err<sp_node>;
 
-	// scoped actor for requests
-	caf::scoped_actor factor_;
-
 private:
+	// scoped actor for requests
+	const caf::scoped_actor factor_;
+
 	// strong ref to internal link's actor
 	// [NOTE] trick with shared ptr to handle is required to correctly track `link` instances
 	// and terminate internal actor when no more links exist
@@ -299,7 +296,6 @@ public:
 	hard_link(std::string name, sp_obj data, Flags f = Plain);
 	/// convert from base link
 	hard_link(const link& rhs);
-	hard_link(link&& rhs);
 
 	static auto type_id_() -> std::string_view;
 
@@ -324,7 +320,6 @@ public:
 	weak_link(std::string name, const sp_obj& data, Flags f = Plain);
 	/// convert from base link
 	weak_link(const link& rhs);
-	weak_link(link&& rhs);
 
 	static auto type_id_() -> std::string_view;
 
@@ -350,7 +345,6 @@ public:
 	sym_link(std::string name, const link& src, Flags f = Plain);
 	/// convert from base link
 	sym_link(const link& rhs);
-	sym_link(link&& rhs);
 
 	static auto type_id_() -> std::string_view;
 

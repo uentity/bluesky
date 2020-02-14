@@ -126,8 +126,6 @@ auto sym_link_impl::propagate_handle(const link& super) -> result_or_err<sp_node
 	return actorf<result_or_errbox<sp_node>>(super, a_lnk_dnode(), true);
 }
 
-LIMPL_TYPE_DEF(sym_link_impl, "sym_link")
-
 ///////////////////////////////////////////////////////////////////////////////
 //  class
 //
@@ -147,8 +145,6 @@ sym_link::sym_link()
 	: super(std::make_shared<sym_link_impl>(), false)
 {}
 
-LINK_CONVERT_TO(sym_link)
-
 bool sym_link::check_alive() {
 	auto res = bool(deref_path(SIMPL.path_, owner()));
 	auto S = res ? ReqStatus::OK : ReqStatus::Error;
@@ -164,8 +160,7 @@ std::string sym_link::src_path(bool human_readable) const {
 	return {};
 }
 
-auto sym_link::type_id_() -> std::string_view {
-	return sym_link_impl::type_id_();
-}
+LINK_CONVERT_TO(sym_link)
+LINK_TYPE_DEF(sym_link, sym_link_impl, "sym_link")
 
 NAMESPACE_END(blue_sky::tree)

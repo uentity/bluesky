@@ -39,7 +39,6 @@ link::actor_handle::~actor_handle() {
 ///////////////////////////////////////////////////////////////////////////////
 //  link
 //
-// empty ctor constructs empty link
 link::link()
 	: factor_(system(), true), actor_(nil_link::actor()), pimpl_(nil_link::pimpl())
 {}
@@ -61,24 +60,6 @@ link::link(const link& rhs, std::string_view rhs_type_id)
 	pimpl_(rhs.type_id() == rhs_type_id ? rhs.pimpl_ : nil_link::pimpl())
 {}
 
-link::link(link&& rhs)
-	: factor_(system(), true), actor_(std::move(rhs.actor_)), pimpl_(std::move(rhs.pimpl_))
-{
-	rhs.actor_ = nil_link::actor();
-	rhs.pimpl_ = nil_link::pimpl();
-}
-
-link::link(link&& rhs, std::string_view rhs_type_id)
-	: factor_(system(), true), actor_(nil_link::actor()), pimpl_(nil_link::pimpl())
-{
-	if(rhs.type_id() == rhs_type_id) {
-		pimpl_ = std::move(rhs.pimpl_);
-		rhs.pimpl_ = nil_link::pimpl();
-		actor_ = std::move(rhs.actor_);
-		rhs.actor_ = nil_link::actor();
-	}
-}
-
 link::~link() = default;
 
 auto link::operator=(const link& rhs) -> link& {
@@ -87,10 +68,9 @@ auto link::operator=(const link& rhs) -> link& {
 	return *this;
 }
 
-auto link::operator=(link&& rhs) -> link& {
-	actor_ = std::move(rhs.actor_);
-	pimpl_ = std::move(rhs.pimpl_);
-	return *this;
+auto link::reset() -> void {
+	actor_ = nil_link::actor();
+	pimpl_ = nil_link::pimpl();
 }
 
 auto link::start_engine() -> bool {

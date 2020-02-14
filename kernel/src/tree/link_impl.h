@@ -26,13 +26,16 @@
 static auto type_id_() -> std::string_view;        \
 auto type_id() const -> std::string_view override;
 
-#define LIMPL_TYPE_DEF(lnk_class, typename)                                \
-auto lnk_class::type_id_() -> std::string_view { return typename; }        \
-auto lnk_class::type_id() const -> std::string_view { return type_id_(); }
+#define LIMPL_TYPE_DEF(limpl_class, typename)                                \
+auto limpl_class::type_id_() -> std::string_view { return typename; }        \
+auto limpl_class::type_id() const -> std::string_view { return type_id_(); }
 
-#define LINK_CONVERT_TO(lnk_class)                                     \
-lnk_class::lnk_class(const link& rhs) : link(rhs, type_id_()) {}       \
-lnk_class::lnk_class(link&& rhs) : link(std::move(rhs), type_id_()) {}
+#define LINK_TYPE_DEF(lnk_class, limpl_class, typename)                            \
+LIMPL_TYPE_DEF(limpl_class, typename)                                              \
+auto lnk_class::type_id_() -> std::string_view { return limpl_class::type_id_(); }
+
+#define LINK_CONVERT_TO(lnk_class)                               \
+lnk_class::lnk_class(const link& rhs) : link(rhs, type_id_()) {}
 
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;

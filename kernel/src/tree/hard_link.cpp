@@ -61,8 +61,6 @@ auto hard_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<fast_link_actor>(std::move(limpl));
 }
 
-LIMPL_TYPE_DEF(hard_link_impl, "hard_link")
-
 ///////////////////////////////////////////////////////////////////////////////
 //  class
 //
@@ -75,10 +73,7 @@ hard_link::hard_link() :
 {}
 
 LINK_CONVERT_TO(hard_link)
-
-auto hard_link::type_id_() -> std::string_view {
-	return hard_link_impl::type_id_();
-}
+LINK_TYPE_DEF(hard_link, hard_link_impl, "hard_link")
 
 /*-----------------------------------------------------------------------------
  *  weak_link
@@ -129,8 +124,6 @@ auto weak_link_impl::propagate_handle(const link& super) -> result_or_err<sp_nod
 	return actorf<result_or_errbox<sp_node>>(super, a_lnk_dnode(), true);
 }
 
-LIMPL_TYPE_DEF(weak_link_impl, "weak_link")
-
 ///////////////////////////////////////////////////////////////////////////////
 //  class
 //
@@ -143,9 +136,6 @@ weak_link::weak_link() :
 {}
 
 LINK_CONVERT_TO(weak_link)
-
-auto weak_link::type_id_() -> std::string_view {
-	return weak_link_impl::type_id_();
-}
+LINK_TYPE_DEF(weak_link, weak_link_impl, "weak_link")
 
 NAMESPACE_END(blue_sky::tree)

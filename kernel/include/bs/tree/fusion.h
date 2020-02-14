@@ -57,7 +57,6 @@ public:
 	);
 	/// convert from base link
 	fusion_link(const link& rhs);
-	fusion_link(link&& rhs);
 
 	static auto type_id_() -> std::string_view;
 
