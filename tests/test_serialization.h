@@ -76,22 +76,28 @@ auto test_load(typename select_archives<Binary>::StreamData data, T& obj) -> voi
 	}
 }
 
-template<bool Binary = false, typename T = blue_sky::sp_obj>
-auto test_saveload(const T& obj, bool dump_serialized = true) {
-	T obj1;
-	test_load<Binary>(test_save<Binary>(obj, dump_serialized), obj1);
-	if constexpr(std::is_convertible_v<T, blue_sky::sp_cobj>)
-		BOOST_TEST(obj->id() == obj1->id());
-	return obj1;
+template<bool Binary = false, typename U = blue_sky::sp_obj, typename V = U>
+decltype(auto) test_saveload(const U& src, V& tar, bool dump_serialized = true) {
+	test_load<Binary>(test_save<Binary>(src, dump_serialized), tar);
+	return tar;
 }
 
-template<typename T>
-auto test_json(const T& obj, bool dump_serialized = true) {
-	return test_saveload(obj, dump_serialized);
+template<bool Binary = false, typename U = blue_sky::sp_obj>
+auto test_saveload(const U& src, bool dump_serialized = true) {
+	U tar;
+	test_load<Binary>(test_save<Binary>(src, dump_serialized), tar);
+	if constexpr(std::is_convertible_v<U, blue_sky::sp_cobj>)
+		BOOST_TEST(src->id() == tar->id());
+	return tar;
 }
 
-template<typename T>
-auto test_binary(const T& obj) {
-	return test_saveload<true>(obj);
+template<typename... Ts>
+decltype(auto) test_json(Ts&&... ts) {
+	return test_saveload<false>(std::forward<Ts>(ts)...);
+}
+
+template<typename... Ts>
+decltype(auto) test_binary(Ts&&... ts) {
+	return test_saveload<true>(std::forward<Ts>(ts)...);
 }
 

@@ -46,7 +46,7 @@ using sp_person = std::shared_ptr< bs_person >;
 
 BSS_FCN_DECL(serialize, bs_person)
 
-auto make_persons_tree() -> tree::sp_link;
+auto make_persons_tree() -> tree::link;
 
 /*-----------------------------------------------------------------------------
  * templated class

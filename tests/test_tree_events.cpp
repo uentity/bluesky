@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 	//auto L = std::make_shared<hard_link>("person link", std::move(P));
 
 	auto hN = make_persons_tree();
-	auto N = hN->data_node();
+	auto N = hN.data_node();
 	auto L = N->find("hard_Citizen_0", Key::Name);
 	// make deeper tree
 	auto N1 = std::make_shared<node>();
@@ -58,65 +58,63 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 
 	// test link rename
 
-	auto test_rename = [](auto tgt, sp_link src) -> int {
-		using T = decltype(tgt);
-		using P = std::add_const_t<typename T::element_type>;
+	auto test_rename = [](auto&& tgt, tree::link src) -> int {
+		using T = std::decay_t<decltype(tgt)>;
 
 		std::atomic<int> rename_cnt = 0;
-		auto rename_cb = [&](std::shared_ptr<P> who, Event, prop::propdict what) -> void {
+		auto rename_cb = [&](auto who, Event, prop::propdict what) -> void {
 			++rename_cnt;
 			//bsout() << "=> {}: renamed '{}' -> '{}'" << to_string(who->id())
 			//	<< get<std::string>(what, "prev_name") << get<std::string>(what, "new_name") << bs_end;
 		};
 
-		auto h_rename = tgt->subscribe(rename_cb, Event::LinkRenamed);
+		auto h_rename = tgt.subscribe(rename_cb, Event::LinkRenamed);
 		for(int i = 0; i < 1000; ++i)
-			src->rename("Tyler " + std::to_string(i));
+			src.rename("Tyler " + std::to_string(i));
 		std::this_thread::sleep_for(200ms);
 
-		tgt->unsubscribe(h_rename);
+		tgt.unsubscribe(h_rename);
 		std::this_thread::sleep_for(10ms);
 
 		for(int i = 0; i < 100; ++i)
-			src->rename("Tyler " + std::to_string(i));
+			src.rename("Tyler " + std::to_string(i));
 		std::this_thread::sleep_for(200ms);
 		return rename_cnt;
 	};
 
-	std::cout << "### rename link->node calls: " << test_rename(N3, L) << std::endl;
+	std::cout << "### rename link->node calls: " << test_rename(*N3, L) << std::endl;
 	std::cout << "### rename link->link calls: " << test_rename(L, L) << std::endl;
 
 	/////////////////////////////////////////////////////////////////////////////////
 	//  status
 	//
 
-	auto test_status = [](auto tgt, sp_link src) -> int {
-		using T = decltype(tgt);
-		using P = std::add_const_t<typename T::element_type>;
+	auto test_status = [](auto&& tgt, tree::link src) -> int {
+		using T = std::decay_t<decltype(tgt)>;
 
 		std::atomic<int> status_cnt = 0;
-		auto status_cb = [&](std::shared_ptr<P> who, Event, prop::propdict what) {
+		auto status_cb = [&](auto who, Event, prop::propdict what) {
 			++status_cnt;
 			//bsout() << "=> {}: status {}: {} -> {}" << to_string(who->id()) <<
 			//	get<integer>(what, "request") << get<integer>(what, "prev_status") << 
 			//	get<integer>(what, "new_status") << bs_end;
 		};
 
-		auto h_status = tgt->subscribe(status_cb, Event::LinkStatusChanged);
+		auto h_status = tgt.subscribe(status_cb, Event::LinkStatusChanged);
 		for(int i = 0; i < 1000; ++i)
-			src->rs_reset(Req::Data, ReqStatus((int)ReqStatus::OK + i & 1));
+			src.rs_reset(Req::Data, ReqStatus((int)ReqStatus::OK + i & 1));
 		std::this_thread::sleep_for(200ms);
 
-		tgt->unsubscribe(h_status);
+		tgt.unsubscribe(h_status);
 		std::this_thread::sleep_for(10ms);
 
 		for(int i = 0; i < 100; ++i)
-			src->rs_reset(Req::Data, ReqStatus((int)ReqStatus::OK + i & 1));
+			src.rs_reset(Req::Data, ReqStatus((int)ReqStatus::OK + i & 1));
 		std::this_thread::sleep_for(200ms);
 		return status_cnt;
 	};
 
 	// summary
-	std::cout << "### status link->node calls: " << test_status(N3, L) << std::endl;
+	std::cout << "### status link->node calls: " << test_status(*N3, L) << std::endl;
 	std::cout << "### status link->link calls: " << test_status(L, L) << std::endl;
 }
