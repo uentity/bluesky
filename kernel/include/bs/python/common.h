@@ -74,4 +74,6 @@ NAMESPACE_BEGIN(blue_sky::python)
 namespace py = pybind11;
 using namespace pybind11::literals;
 
+[[maybe_unused]] inline static const auto nogil = py::call_guard<py::gil_scoped_release>();
+
 NAMESPACE_END(blue_sky::python)
