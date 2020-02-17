@@ -78,12 +78,12 @@ public:
 		caf::replies_to<a_apply, data_modificator_f, bool>::with<error::box>
 	>;
 
-	/// handle that wraps strong ref to link's internal actor
-	/// and terminates it on destruction
-	struct actor_handle;
-
 	/// empty ctor will construct nil link
 	link();
+
+	/// will make hard link
+	link(std::string name, sp_obj data, Flags f = Plain);
+
 	virtual ~link();
 
 	/// copy ctor & assignment

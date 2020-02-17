@@ -43,6 +43,10 @@ link::link()
 	: factor_(system(), true), actor_(nil_link::actor()), pimpl_(nil_link::pimpl())
 {}
 
+link::link(std::string name, sp_obj data, Flags f)
+	: link(hard_link{std::move(name), std::move(data), f})
+{}
+
 link::link(std::shared_ptr<link_impl> impl, bool start_actor)
 	: factor_(system(), true), actor_(nil_link::actor()),
 	pimpl_(impl ? std::move(impl) : nil_link::pimpl())
