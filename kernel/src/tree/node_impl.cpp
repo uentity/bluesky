@@ -41,8 +41,7 @@ node_impl::node_impl(const node_impl& rhs, node* super)
 }
 
 node_impl::node_impl(node_impl&& rhs, node* super)
-	: links_(std::move(rhs.links_)),
-	handle_impl_(std::move(rhs.handle_impl_)), handle_actor_(std::move(rhs.handle_actor_)),
+	: links_(std::move(rhs.links_)), handle_(std::move(rhs.handle_)),
 	timeout(std::move(rhs.timeout)), actor_(std::move(rhs.actor_)), self_grp(std::move(rhs.self_grp)),
 	super_(super)
 {}
@@ -72,26 +71,21 @@ auto node_impl::super() const -> sp_node {
 	return super_ ? super_->bs_shared_this<node>() : nullptr;
 }
 
-auto node_impl::set_handle(const link& handle) -> void {
+auto node_impl::set_handle(const link& new_handle) -> void {
 	auto guard = lock<Metadata>();
 	// remove node from existing owner if it differs from owner of new handle
-	if(const auto old_handle = handle_impl_.lock()) {
-		const auto owner = old_handle->owner_.lock();
-		if(owner && (!handle || owner != handle.owner()))
-			owner->erase(old_handle->id_);
+	if(const auto old_handle = handle()) {
+		const auto owner = old_handle.owner();
+		if(owner && (!new_handle || owner != new_handle.owner()))
+			owner->erase(old_handle.id());
 	}
 
 	// set new handle link
-	handle_impl_ = handle.pimpl_;
-	handle_actor_ = handle.actor_;
+	handle_ = new_handle;
 }
 
 auto node_impl::handle() const -> link {
-	auto res = link{ handle_impl_.lock(), false };
-	if(res) res.actor_ = handle_actor_.lock();
-	// if handle actor is dead -> self = nil
-	if(!res.actor_) res = link{};
-	return res;
+	return handle_.lock();
 }
 
 auto node_impl::size() const -> std::size_t {

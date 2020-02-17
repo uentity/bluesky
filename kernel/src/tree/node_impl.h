@@ -53,8 +53,7 @@ public:
 	links_container links_;
 
 	// weak ref to parent link
-	std::weak_ptr<link_impl> handle_impl_;
-	std::weak_ptr<link::actor_handle> handle_actor_;
+	link::weak_ptr handle_;
 
 	// timeout for most queries
 	const caf::duration timeout;

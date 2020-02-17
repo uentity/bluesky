@@ -36,6 +36,35 @@ class BS_API link {
 	friend class node_actor;
 
 public:
+	/// handle that wraps strong ref to link's internal actor
+	/// and terminates it on destruction
+	struct actor_handle;
+
+	/// holds weak ptr to given link with semantics similar to `std::weak_ptr`
+	struct BS_API weak_ptr {
+
+		weak_ptr() = default;
+		auto operator=(const weak_ptr&) -> weak_ptr& = default;
+
+		/// construct & assign from link
+		weak_ptr(const link& src);
+		auto operator=(const link& rhs) -> weak_ptr&;
+
+		/// obtain 'normal' link
+		auto lock() const -> link;
+
+		/// check if ptr is expired
+		auto expired() const -> bool;
+
+		/// resets link and makes it expired
+		auto reset() -> void;
+
+	private:
+		std::weak_ptr<link::actor_handle> actor_;
+		std::weak_ptr<link_impl> pimpl_;
+	};
+
+
 	/// Interface of link actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
         // terminate actor

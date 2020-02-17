@@ -37,6 +37,36 @@ link::actor_handle::~actor_handle() {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  link_weak_ptr
+//
+link::weak_ptr::weak_ptr(const link& src)
+	: actor_(src.actor_), pimpl_(src.pimpl_)
+{}
+
+auto link::weak_ptr::operator=(const link& rhs) -> weak_ptr& {
+	pimpl_ = rhs.pimpl_;
+	actor_ = rhs.actor_;
+	return *this;
+}
+
+auto link::weak_ptr::lock() const -> link {
+	auto res = link{ pimpl_.lock(), false };
+	if(res) res.actor_ = actor_.lock();
+	// if handle actor is dead -> self = nil
+	if(!res.actor_) res = link{};
+	return res;
+}
+
+auto link::weak_ptr::expired() const -> bool {
+	return actor_.expired();
+}
+
+auto link::weak_ptr::reset() -> void {
+	pimpl_.reset();
+	actor_.reset();
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //  link
 //
 link::link()
