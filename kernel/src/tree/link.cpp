@@ -307,15 +307,13 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 	using baby_t = ev_listener_actor<link>;
 
 	// produce event bhavior that calls passed callback with proper params
-	auto make_ev_character = [self_impl = pimpl_, listen_to](baby_t* self) {
+	auto make_ev_character = [weak_src = weak_ptr{*this}, src_id = id(), listen_to](baby_t* self) {
 		auto res = caf::message_handler{};
 		if(enumval(listen_to & Event::LinkRenamed))
 			res = res.or_else(
-				[self, wimpl = std::weak_ptr{self_impl}] (
-					a_ack, a_lnk_rename, std::string new_name, std::string old_name
-				) {
-					if(auto impl = wimpl.lock())
-						self->f(link{std::move(impl)}, Event::LinkRenamed, {
+				[=](a_ack, a_lnk_rename, std::string new_name, std::string old_name) {
+					if(auto src = weak_src.lock())
+						self->f(link{std::move(src)}, Event::LinkRenamed, {
 							{"new_name", std::move(new_name)},
 							{"prev_name", std::move(old_name)}
 						});
@@ -324,11 +322,9 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 
 		if(enumval(listen_to & Event::LinkStatusChanged))
 			res = res.or_else(
-				[self, wimpl = std::weak_ptr{self_impl}] (
-					a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v
-				) {
-					if(auto impl = wimpl.lock())
-						self->f(link{std::move(impl)}, Event::LinkStatusChanged, {
+				[=](a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v) {
+					if(auto src = weak_src.lock())
+						self->f(link{std::move(src)}, Event::LinkStatusChanged, {
 							{"request", prop::integer(new_v)},
 							{"new_status", prop::integer(new_v)},
 							{"prev_status", prop::integer(prev_v)}
@@ -338,10 +334,10 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 
 		if(enumval(listen_to & Event::LinkDeleted))
 			res = res.or_else(
-				[self, lid = self_impl->id_](a_bye) {
+				[=](a_bye) {
 					// when overriding this we must call `disconnect()` explicitly
 					self->disconnect();
-					self->f(link{nullptr}, Event::LinkDeleted, {{ "lid", to_string(lid) }});
+					self->f( weak_src.lock(), Event::LinkDeleted, {{ "lid", to_string(src_id) }} );
 				}
 			);
 
