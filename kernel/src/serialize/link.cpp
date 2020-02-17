@@ -84,7 +84,7 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link_impl, tree::ilink_impl)
 //  hard_link_impl
 //
 BSS_FCN_INL_BEGIN(serialize, tree::hard_link_impl)
-	if constexpr(!Archive::is_loading::value) {
+	if constexpr(Archive::is_saving::value) {
 		ar( make_nvp("data", t.data_) );
 	}
 	else {
@@ -106,7 +106,7 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::hard_link_impl)
 //  weak_link_impl
 //
 BSS_FCN_INL_BEGIN(serialize, tree::weak_link_impl)
-	if constexpr(!Archive::is_loading::value) {
+	if constexpr(Archive::is_saving::value) {
 		ar( make_nvp("data", t.data_.lock()) );
 	}
 	else {
@@ -140,7 +140,7 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link_impl, tree::sym_link_impl)
 //  fusion_link_impl
 //
 BSS_FCN_INL_BEGIN(serialize, tree::fusion_link_impl)
-	if constexpr(!Archive::is_loading::value) {
+	if constexpr(Archive::is_saving::value) {
 		ar( make_nvp("bridge", t.bridge_) );
 	}
 	else {
@@ -163,6 +163,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(tree::hard_link_impl, "hard_link")
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::weak_link_impl, "weak_link")
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::sym_link_impl, "sym_link")
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::fusion_link_impl, "fusion_link")
+
 /*-----------------------------------------------------------------------------
  *  link
  *-----------------------------------------------------------------------------*/
@@ -171,14 +172,11 @@ BSS_FCN_BEGIN(serialize, tree::link)
 	if constexpr(Archive::is_saving::value) {
 		// for nil links save empty impl pointer
 		auto Limpl = t ? t.pimpl_ : tree::sp_limpl{};
-		ar(make_nvp("impl", Limpl));
+		ar(make_nvp("link", Limpl));
 	}
 	else {
-		ar(make_nvp("impl", t.pimpl_));
+		ar(make_nvp("link", t.pimpl_));
 		if(!t.pimpl_) t = tree::link{};
-	}
-
-	if constexpr(Archive::is_loading::value) {
 		// ID is ready, we can start internal actor
 		t.start_engine();
 		// assume link is root by default -- it's safe when restoring link or tree from archive
