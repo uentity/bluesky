@@ -7,12 +7,15 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include "tree_fs_impl.h"
+
+#include <bs/tree/errors.h>
+#include <bs/tree/node.h>
+
 #include <bs/serialize/tree_fs_input.h>
-#include <bs/serialize/object_formatter.h>
-#include <bs/serialize/serialize_decl.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
-#include <bs/tree/node.h>
+#include <bs/serialize/object_formatter.h>
 
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/string_generator.hpp>
@@ -23,12 +26,6 @@
 
 #include <caf/all.hpp>
 
-#include <filesystem>
-#include <fstream>
-#include <list>
-#include <algorithm>
-//#include <execution>
-
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
 using NodeLoad = tree_fs_input::NodeLoad;
@@ -38,99 +35,13 @@ const auto uuid_from_str = boost::uuids::string_generator{};
 ///////////////////////////////////////////////////////////////////////////////
 //  tree_fs_input::impl
 //
-struct tree_fs_input::impl {
+struct tree_fs_input::impl : detail::file_heads_manager<false> {
+	using heads_mgr_t = detail::file_heads_manager<false>;
+	using Error = tree::Error;
 
 	impl(std::string root_fname, NodeLoad mode) :
-		mode_(mode), root_fname_(std::move(root_fname))
-	{
-		// try convert root filename to absolute
-		auto root_path = fs::path(root_fname_);
-		auto abs_root = fs::path{};
-		auto er = error::eval_safe([&]{ abs_root = fs::absolute(root_path); });
-		if(!er) {
-			// extract root dir from absolute filename
-			root_dname_ = abs_root.parent_path().string();
-			root_fname_ = abs_root.filename().string();
-		}
-		else if(root_path.has_parent_path()) {
-			// could not make abs path
-			root_dname_ = root_path.parent_path().string();
-			root_fname_ = root_path.filename().string();
-		}
-		else {
-			// best we can do
-			error::eval_safe([&]{ root_dname_ = fs::current_path().string(); });
-		}
-	}
-
-	// if entering `src_path` is successfull, set `tar_path` to src_path
-	// if `tar_path` is nonempty, return success immediately
-	template<typename Path>
-	auto enter_dir(Path src_path, fs::path& tar_path) -> error {
-		auto path = fs::path(std::move(src_path));
-		//if(path == tar_path) return perfect;
-		if(path.empty()) return error{"Cannot load tree from empty path"};
-
-		EVAL_SAFE
-			// check that path exists
-			[&]{
-				return fs::exists(path) ?
-					perfect : error{ fmt::format("Can't enter {}: does not exist", path) };
-			},
-			// check that path is a directory
-			[&]{
-				return fs::is_directory(path) ?
-					perfect : error{ fmt::format("Can't enter {}: not a directory", path) };
-			}
-		RETURN_EVAL_ERR
-
-		tar_path = std::move(path);
-		return perfect;
-	}
-
-	auto enter_root() -> error {
-		if(root_path_.empty())
-			if(auto er = enter_dir(root_dname_, root_path_))
-				return er;
-		if(cur_path_.empty()) cur_path_ = root_path_;
-		return perfect;
-	}
-
-	auto add_head(const fs::path& head_path) -> error {
-	return error::eval_safe(
-		// enter parent dir
-		// [NOTE] - disabled, because in all usage conditions we already entered parent dir
-		//[&] { return enter_dir(head_path.parent_path(), cur_path_); },
-		// open head file
-		[&] {
-			if(auto neck = std::ifstream(head_path, std::ios::in)) {
-				necks_.push_back(std::move(neck));
-				heads_.emplace_back(necks_.back());
-				return success();
-			}
-			return error{ fmt::format("Can't open file '{}' for reading", head_path) };
-		}
-	); }
-
-	auto pop_head() -> void {
-		if(!heads_.empty()) {
-			heads_.pop_back();
-			necks_.pop_back();
-		}
-	}
-
-	auto head() -> result_or_err<cereal::JSONInputArchive*> {
-		if(heads_.empty()) {
-			if(auto er = error::eval(
-				[&]{ return enter_root(); },
-				[&]{ return add_head(root_path_ / root_fname_); },
-				[&] { // read objects directory
-					heads_.back()( cereal::make_nvp("objects_dir", objects_dname_) );
-				}
-			)) return tl::make_unexpected(std::move(er));
-		}
-		return &heads_.back();
-	}
+		heads_mgr_t{std::move(root_fname)}, mode_(mode)
+	{}
 
 	auto begin_node(tree_fs_input& ar) -> error {
 		return error::eval_safe(
@@ -141,7 +52,7 @@ struct tree_fs_input::impl {
 	}
 
 	auto end_node(tree_fs_input& ar, tree::node& N) -> error {
-		if(cur_path_.empty()) return {"Node loading wasn't started"};
+		if(cur_path_.empty()) return Error::NodeWasntStarted;
 
 		// always return to parent dir after node is loaded
 		auto finally = scope_guard{[=, p = cur_path_] {
@@ -294,9 +205,7 @@ struct tree_fs_input::impl {
 
 		// obtain formatter
 		auto F = get_formatter(obj.type_id(), obj_frm);
-		if(!F) return { fmt::format(
-			"Cannot load '{}' - missing formatter '{}'", obj.type_id(), obj_frm
-		) };
+		if(!F) return { fmt::format("{} -> {}", obj.type_id(), obj_frm), Error::MissingFormatter };
 
 		// if object is node and formatter don't store leafs, then load 'em explicitly
 		if(obj.is_node() && !F->stores_node)
@@ -319,11 +228,6 @@ struct tree_fs_input::impl {
 	}); }
 
 	NodeLoad mode_;
-	std::string root_fname_, root_dname_, objects_dname_;
-	fs::path root_path_, cur_path_, objects_path_;
-
-	std::list<std::ifstream> necks_;
-	std::list<cereal::JSONInputArchive> heads_;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

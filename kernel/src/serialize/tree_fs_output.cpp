@@ -7,128 +7,46 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include "tree_fs_impl.h"
+
+#include <bs/actor_common.h>
+#include <bs/log.h>
+#include <bs/tree/errors.h>
+#include <bs/tree/node.h>
+#include <bs/kernel/radio.h>
+
 #include <bs/serialize/tree_fs_output.h>
 #include <bs/serialize/object_formatter.h>
-#include <bs/serialize/serialize_decl.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
-#include <bs/tree/node.h>
-#include <bs/log.h>
-#include <bs/kernel/radio.h>
-#include "../tree/actor_common.h"
+#include <boost/uuid/uuid_io.hpp>
 
 #include <cereal/types/vector.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
 #include <caf/all.hpp>
 
-#include <filesystem>
-#include <fstream>
-#include <list>
-
-namespace fs = std::filesystem;
-
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::sp_cobj)
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::error::box)
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(std::vector<blue_sky::error::box>)
 
-template<typename T> struct TD;
-
 NAMESPACE_BEGIN(blue_sky)
+namespace fs = std::filesystem;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  tree_fs_output::impl
 //
-struct tree_fs_output::impl {
+struct tree_fs_output::impl : detail::file_heads_manager<true> {
+	using heads_mgr_t = detail::file_heads_manager<true>;
+	using Error = tree::Error;
 
 	impl(std::string root_fname, std::string objects_dirname) :
-		root_fname_(std::move(root_fname)), objects_dname_(std::move(objects_dirname)),
+		heads_mgr_t{ std::move(root_fname), std::move(objects_dirname) },
 		manager_(kernel::radio::system().spawn<savers_manager>())
-	{
-		// try convert root filename to absolute
-		auto root_path = fs::path(root_fname_);
-		auto abs_root = fs::path{};
-		auto er = error::eval_safe([&]{ abs_root = fs::absolute(root_path); });
-		if(!er) {
-			// extract root dir from absolute filename
-			root_dname_ = abs_root.parent_path().string();
-			root_fname_ = abs_root.filename().string();
-		}
-		else if(root_path.has_parent_path()) {
-			// could not make abs path
-			root_dname_ = root_path.parent_path().string();
-			root_fname_ = root_path.filename().string();
-		}
-		else {
-			// best we can do
-			error::eval_safe([&]{ root_dname_ = fs::current_path().string(); });
-		}
-	}
-
-	// if entering `src_path` is successfull, set `tar_path` to src_path
-	// if `tar_path` already equals `src_path` return success
-	template<typename Path>
-	auto enter_dir(Path src_path, fs::path& tar_path) -> error {
-		auto path = fs::path(std::move(src_path));
-		//if(path == tar_path) return perfect;
-		if(path.empty()) return error{"Cannot enter empty path"};
-
-		EVAL_SAFE
-			// create folders along specified path if not created yet
-			[&]{ if(!fs::exists(path)) fs::create_directories(path); },
-			// check that path is a directory
-			[&]{ return fs::is_directory(path) ? perfect : error{"Tree path is not a directory"}; }
-		RETURN_EVAL_ERR
-
-		tar_path = std::move(path);
-		return perfect;
-	}
-
-	auto enter_root() -> error {
-		if(root_path_.empty())
-			if(auto er = enter_dir(root_dname_, root_path_)) return er;
-		if(cur_path_.empty()) cur_path_ = root_path_;
-		return perfect;
-	}
-
-	auto add_head(const fs::path& head_path) -> error {
-	return error::eval_safe(
-		// enter parent dir
-		[&] { return enter_dir(head_path.parent_path(), cur_path_); },
-		// open head file
-		[&] {
-			if(auto neck = std::ofstream(head_path, std::ios::out | std::ios::trunc)) {
-				necks_.push_back(std::move(neck));
-				heads_.emplace_back(necks_.back());
-				return success();
-			}
-			return error{ fmt::format("Can't open file '{}' for writing", head_path) };
-		}
-	); }
-
-	auto pop_head() -> void {
-		if(!heads_.empty()) {
-			heads_.pop_back();
-			necks_.pop_back();
-		}
-	}
-
-	auto head() -> result_or_err<cereal::JSONOutputArchive*> {
-		if(heads_.empty()) {
-			if(auto er = error::eval_safe(
-				[&] { return enter_root(); },
-				[&] { return add_head(fs::path(root_path_) / root_fname_); },
-				[&] { // write objects directory
-					heads_.back()( cereal::make_nvp("objects_dir", objects_dname_) );
-				}
-			)) return tl::make_unexpected(std::move(er));
-		}
-		return &heads_.back();
-	}
+	{}
 
 	auto begin_link(const tree::link& L) -> error {
 		if(auto er = enter_root()) return er;
@@ -138,7 +56,6 @@ struct tree_fs_output::impl {
 	}
 
 	auto end_link() -> error {
-		if(heads_.size() == 1) return error::quiet("No link file started");
 		pop_head();
 		return perfect;
 	}
@@ -147,14 +64,14 @@ struct tree_fs_output::impl {
 		return error::eval_safe(
 			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); },
 			[&]{ return enter_root(); },
-			// [NOTE] delay enter node's dit util first head is added
+			// [NOTE] delay enter node's dir until first head is added
 			// this prevents creation of empty dirs (for nodes without leafs)
 			[&]{ cur_path_ /= N.gid(); }
 		);
 	}
 
 	auto end_node(const tree::node& N) -> error {
-		if(cur_path_.empty() || cur_path_ == root_path_) return {"No node saving were started"};
+		if(cur_path_.empty() || cur_path_ == root_path_) return Error::NodeWasntStarted;
 		return error::eval_safe(
 			// write down node's metadata nessessary to load it later
 			[&]{ return head().map( [&](auto* ar) {
@@ -192,11 +109,7 @@ struct tree_fs_output::impl {
 
 		// obtain formatter
 		auto F = get_active_formatter(obj.type_id());
-		if(!F) {
-			// output error to format
-			obj_fmt = fmt::format("Cannot save '{}' - no formatters installed", obj.type_id());
-			return { obj_fmt };
-		}
+		if(!F) return { obj.type_id(), Error::MissingFormatter };
 		obj_fmt = F->name;
 		// write down object formatter name
 		ar(cereal::make_nvp("fmt", obj_fmt));
@@ -225,7 +138,7 @@ struct tree_fs_output::impl {
 				res_fname += "_" + std::to_string(i) + fmt_ext;
 			}
 			if(res_exists)
-				throw error{fmt::format("Cannot find non-existent filename for {}", start_fname)};
+				throw error{ start_fname.generic_u8string(), Error::CantMakeFilename };
 			return res_fname;
 		};
 
@@ -336,7 +249,6 @@ struct tree_fs_output::impl {
 						state.boxed_errs.deliver(cut_save_errors());
 				},
 
-				// 
 				[this](int) -> caf::result<errb_vector> {
 					if(state.nfinished_ == state.nstarted_)
 						return cut_save_errors();
@@ -370,12 +282,6 @@ struct tree_fs_output::impl {
 	///////////////////////////////////////////////////////////////////////////////
 	//  data
 	//
-	std::string root_fname_, objects_dname_, root_dname_;
-	fs::path root_path_, cur_path_, objects_path_;
-
-	std::list<std::ofstream> necks_;
-	std::list<cereal::JSONOutputArchive> heads_;
-
 	// obj_type_id -> formatter name
 	using active_fmt_t = std::map<std::string_view, std::string, std::less<>>;
 	active_fmt_t active_fmt_;

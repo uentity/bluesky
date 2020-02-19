@@ -10,7 +10,7 @@
 
 #include <bs/error.h>
 
-namespace blue_sky { namespace tree {
+NAMESPACE_BEGIN(blue_sky::tree)
 
 enum class Error {
 	OK = 0,
@@ -26,12 +26,23 @@ enum class Error {
 	UnboundSymLink,
 	LinkBusy,
 	NoFusionBridge,
-	KeyMismatch
+	KeyMismatch,
+
+	// Tree FS related errors
+	EmptyPath,
+	PathNotExists,
+	PathNotDirectory,
+	CantReadFile,
+	CantWriteFile,
+	LinkWasntStarted,
+	NodeWasntStarted,
+	MissingFormatter,
+	CantMakeFilename
 };
 
 BS_API std::error_code make_error_code(Error);
 
-}} /* namespace blue_sky::tree */
+NAMESPACE_END(blue_sky::tree)
 
 BS_REGISTER_ERROR_ENUM(blue_sky::tree::Error)
 

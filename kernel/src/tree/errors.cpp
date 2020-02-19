@@ -44,6 +44,33 @@ BS_API std::error_code make_error_code(Error e) {
 			case Error::KeyMismatch :
 				return "Given key is not found";
 
+			case Error::EmptyPath :
+				return "Path is empty";
+
+			case Error::PathNotExists :
+				return "Path doesn't exist";
+
+			case Error::PathNotDirectory :
+				return "Path is not a directory";
+
+			case Error::CantReadFile :
+				return "Can't open file for reading";
+
+			case Error::CantWriteFile :
+				return "Can't open file for writing";
+
+			case Error::LinkWasntStarted :
+				return "BS tree::link save/load wasn't started";
+
+			case Error::NodeWasntStarted :
+				return "BS tree::node save/load wasn't started";
+
+			case Error::MissingFormatter :
+				return "Formatter isn't installed for given object type";
+
+			case Error::CantMakeFilename :
+				return "Couldn't generate unique filename";
+
 			default:
 				return "";
 			}
