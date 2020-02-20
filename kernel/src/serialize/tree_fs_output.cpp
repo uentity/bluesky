@@ -94,7 +94,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		// open node
 		auto cur_head = head();
 		if(!cur_head) return cur_head.error();
-		prologue(*cur_head.value(), obj);
+		prologue(**cur_head, obj);
 
 		std::string obj_fmt, obj_filename = "<error>";
 		bool fmt_ok = false, filename_ok = false;
@@ -104,7 +104,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			if(!fmt_ok) ar(cereal::make_nvp("fmt", obj_fmt));
 			if(!filename_ok) ar(cereal::make_nvp("filename", obj_filename));
 			// ... and close node
-			epilogue(*cur_head.value(), obj);
+			epilogue(**cur_head, obj);
 		} };
 
 		// obtain formatter
@@ -116,9 +116,12 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		fmt_ok = true;
 
 		// if object is node and formatter don't store leafs, then save 'em explicitly
+		// otherwise store object's metadata (objbase)
 		auto is_node = obj.is_node();
 		if(is_node && !F->stores_node)
 			ar(cereal::make_nvp( "node", static_cast<const tree::node&>(obj) ));
+		else
+			(**cur_head)(cereal::make_nvp( "object", obj ));
 
 		// enter objects directory
 		EVAL
@@ -129,16 +132,20 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		RETURN_EVAL_ERR
 
 		// generate unique object filename from it's ID
-		const auto find_free_filename = [&](const auto& start_fname, const auto& fmt_ext) {
+		const auto find_free_filename = [&](const auto& start_fname, const auto& fmt_ext)
+		-> result_or_err<fs::path> {
 			auto res_fname = start_fname;
 			res_fname += fmt_ext;
 			bool res_exists = false;
-			for(int i = 0; (res_exists = fs::exists(res_fname)) && i < 100000; ++i) {
-				res_fname = start_fname;
-				res_fname += "_" + std::to_string(i) + fmt_ext;
-			}
+			if(auto er = error::eval([&] {
+				for(int i = 0; (res_exists = fs::exists(res_fname)) && i < 100000; ++i) {
+					res_fname = start_fname;
+					res_fname += "_" + std::to_string(i) + fmt_ext;
+				}
+			})) return tl::make_unexpected(std::move(er));
+
 			if(res_exists)
-				throw error{ start_fname.generic_u8string(), Error::CantMakeFilename };
+				return tl::make_unexpected(error{ start_fname.generic_u8string(), Error::CantMakeFilename });
 			return res_fname;
 		};
 
@@ -149,11 +156,12 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 				objects_path_ / obj.id(),
 			std::string(".") + obj_fmt
 		);
-		obj_filename = obj_path.filename().generic_u8string();
+		if(!obj_path) return obj_path.error();
+		obj_filename = obj_path->filename().generic_u8string();
 		ar(cereal::make_nvp("filename", obj_filename));
 		filename_ok = true;
 
-		auto abs_obj_path = fs::absolute(obj_path);
+		auto abs_obj_path = fs::absolute(*obj_path);
 
 		// and actually save object data to file
 		// spawn object save actor

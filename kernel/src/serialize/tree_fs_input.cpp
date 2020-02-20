@@ -210,6 +210,8 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		// if object is node and formatter don't store leafs, then load 'em explicitly
 		if(obj.is_node() && !F->stores_node)
 			ar(cereal::make_nvp( "node", static_cast<tree::node&>(obj) ));
+		else
+			(**cur_head)(cereal::make_nvp( "object", obj ));
 
 		// read object data from specified file
 		EVAL
