@@ -111,17 +111,10 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		auto F = get_active_formatter(obj.type_id());
 		if(!F) return { obj.type_id(), Error::MissingFormatter };
 		obj_fmt = F->name;
-		// write down object formatter name
+
+		// 1. write down object formatter name
 		ar(cereal::make_nvp("fmt", obj_fmt));
 		fmt_ok = true;
-
-		// if object is node and formatter don't store leafs, then save 'em explicitly
-		// otherwise store object's metadata (objbase)
-		auto is_node = obj.is_node();
-		if(is_node && !F->stores_node)
-			ar(cereal::make_nvp( "node", static_cast<const tree::node&>(obj) ));
-		else
-			(**cur_head)(cereal::make_nvp( "object", obj ));
 
 		// enter objects directory
 		EVAL
@@ -149,7 +142,8 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			return res_fname;
 		};
 
-		// write down object filename
+		// 2. write down object filename
+		auto is_node = obj.is_node();
 		auto obj_path = find_free_filename(
 			is_node ?
 				objects_path_ / static_cast<const tree::node&>(obj).gid() :
@@ -161,9 +155,14 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		ar(cereal::make_nvp("filename", obj_filename));
 		filename_ok = true;
 
-		auto abs_obj_path = fs::absolute(*obj_path);
+		// 3. if object is node and formatter don't store leafs, then save 'em explicitly
+		// otherwise store object's metadata (objbase)
+		if(is_node && !F->stores_node)
+			ar(cereal::make_nvp( "node", static_cast<const tree::node&>(obj) ));
+		else
+			(**cur_head)(cereal::make_nvp( "object", obj ));
 
-		// and actually save object data to file
+		// 4. and actually save object data to file
 		// spawn object save actor
 		auto A = kernel::radio::system().spawn(async_saver, F, manager_);
 		auto pm = caf::actor_cast<savers_manager_ptr>(manager_);
@@ -175,6 +174,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		// inc started counter
 		++pm->state.nstarted_;
 		// post invoke save mesage
+		auto abs_obj_path = fs::absolute(*obj_path);
 		pm->send(A, obj.shared_from_this(), abs_obj_path.generic_u8string());
 		return perfect;
 	}); }

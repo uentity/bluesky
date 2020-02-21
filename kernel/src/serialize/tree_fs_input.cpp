@@ -196,7 +196,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		prologue(*cur_head.value(), obj);
 		auto finally = scope_guard{ [&]{ epilogue(*cur_head.value(), obj); } };
 
-		// read object format & filename
+		// 1, 2. read object format & filename
 		std::string obj_filename, obj_frm;
 		ar(
 			cereal::make_nvp("fmt", obj_frm),
@@ -207,13 +207,13 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		auto F = get_formatter(obj.type_id(), obj_frm);
 		if(!F) return { fmt::format("{} -> {}", obj.type_id(), obj_frm), Error::MissingFormatter };
 
-		// if object is node and formatter don't store leafs, then load 'em explicitly
+		// 3. if object is node and formatter don't store leafs, then load 'em explicitly
 		if(obj.is_node() && !F->stores_node)
 			ar(cereal::make_nvp( "node", static_cast<tree::node&>(obj) ));
 		else
 			(**cur_head)(cereal::make_nvp( "object", obj ));
 
-		// read object data from specified file
+		// 4. read object data from specified file
 		EVAL
 			[&]{ return enter_root(); },
 			[&]{ return objects_path_.empty() ?
