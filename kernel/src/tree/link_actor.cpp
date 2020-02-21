@@ -50,12 +50,6 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
 	impl.self_grp = std::move(lgrp);
 	adbg(this) << "joined self group " << impl.self_grp.get()->identifier() << std::endl;
 
-	// on exit say goodbye to self group
-	set_exit_handler([this](caf::exit_msg& er) {
-		goodbye();
-		default_exit_handler(this, er);
-	});
-
 	// prevent termination in case some errors happens in group members
 	// for ex. if they receive unexpected messages (translators normally do)
 	set_error_handler([this](caf::error er) {
@@ -72,12 +66,11 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
 
 link_actor::~link_actor() = default;
 
-auto link_actor::name() const -> const char* {
-	return "link_actor";
-}
-
 auto link_actor::on_exit() -> void {
 	adbg(this) << "dies" << std::endl;
+
+	// be polite with everyone
+	goodbye();
 	// force release strong ref to link's impl
 	pimpl_.reset();
 }
@@ -91,6 +84,10 @@ auto link_actor::goodbye() -> void {
 		adbg(this) << "left self group " << impl.self_grp.get()->identifier() << std::endl;
 		//	<< "\n" << kernel::tools::get_backtrace(30, 4) << std::endl;
 	}
+}
+
+auto link_actor::name() const -> const char* {
+	return "link_actor";
 }
 
 auto link_actor::rename(std::string new_name, bool silent) -> void {

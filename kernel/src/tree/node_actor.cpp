@@ -56,12 +56,6 @@ node_actor::node_actor(caf::actor_config& cfg, caf::group ngrp, sp_nimpl Nimpl)
 	// remember link's local group
 	impl.self_grp = std::move(ngrp);
 
-	// on exit say goodbye to self group
-	set_exit_handler([this](caf::exit_msg& er) {
-		goodbye();
-		default_exit_handler(this, er);
-	});
-
 	// prevent termination in case some errors happens in group members
 	// for ex. if they receive unexpected messages (translators normally do)
 	set_error_handler([this](caf::error er) {
@@ -78,6 +72,17 @@ node_actor::node_actor(caf::actor_config& cfg, caf::group ngrp, sp_nimpl Nimpl)
 
 node_actor::~node_actor() = default;
 
+auto node_actor::on_exit() -> void {
+	adbg(this) << "dies" << std::endl;
+
+	// be polite with everyone
+	goodbye();
+	// [IMPORTANT] manually reset pimpl, otherwise cycle won't break:
+	// actor dtor never called until at least one strong ref to it still exists
+	// (even though behavior is terminated by sending `exit` message)
+	pimpl_.reset();
+}
+
 auto node_actor::goodbye() -> void {
 	adbg(this) << "goodbye" << std::endl;
 	if(impl.self_grp) {
@@ -87,6 +92,10 @@ auto node_actor::goodbye() -> void {
 
 	// unload retranslators from leafs
 	disconnect();
+}
+
+auto node_actor::name() const -> const char* {
+	return "node_actor";
 }
 
 auto node_actor::disconnect() -> void {
@@ -102,18 +111,6 @@ auto node_actor::disconnect() -> void {
 			send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(*rs.second)), a_bye());
 	}
 	axons_.clear();
-}
-
-auto node_actor::name() const -> const char* {
-	return "node_actor";
-}
-
-auto node_actor::on_exit() -> void {
-	adbg(this) << "dies" << std::endl;
-	// [IMPORTANT] manually reset pimpl, otherwise cycle won't break:
-	// actor dtor never called until at least one strong ref to it still exists
-	// (even though behavior is terminated by sending `exit` message)
-	pimpl_.reset();
 }
 
 auto node_actor::retranslate_from(const link& L) -> void {
