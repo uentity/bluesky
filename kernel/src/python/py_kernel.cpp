@@ -18,12 +18,46 @@
 
 PYBIND11_MAKE_OPAQUE(blue_sky::str_any_array)
 PYBIND11_MAKE_OPAQUE(blue_sky::idx_any_array)
+PYBIND11_MAKE_OPAQUE(caf::settings)
+
+NAMESPACE_BEGIN(pybind11::detail)
+
+// bind `caf::variant` as variant-like type
+template<typename... Ts>
+struct type_caster<caf::variant<Ts...>> : variant_caster<caf::variant<Ts...>> {};
+
+// transparent binder for `caf::config_value` that basically forwards to `caf::variant`
+template<>
+struct type_caster<caf::config_value> {
+	using Type = caf::config_value;
+	using variant_type = typename Type::variant_type;
+
+	PYBIND11_TYPE_CASTER(Type, _("config_value"));
+
+	auto load(handle src, bool convert) -> bool {
+		auto variant_caster = make_caster<variant_type>();
+		if(variant_caster.load(src, convert)) {
+			visit_helper<caf::variant>::call(
+				[&](auto&& v) { value = std::forward<decltype(v)>(v); },
+				cast_op<variant_type>(std::move(variant_caster))
+			);
+			return true;
+		}
+		return false;
+	}
+
+	template<typename T>
+	static auto cast(T&& src, return_value_policy pol, handle parent) {
+		return make_caster<variant_type>::cast( std::forward<T>(src).get_data(), pol, parent );
+	}
+};
+
+NAMESPACE_END(pybind11::detail)
 
 NAMESPACE_BEGIN(blue_sky::python)
 using type_tuple = kernel::tfactory::type_tuple;
 
 NAMESPACE_BEGIN()
-
 ///////////////////////////////////////////////////////////////////////////////
 //  bind kernel subsystems API
 //
@@ -65,7 +99,7 @@ auto bind_config_api(py::module& m) -> void {
 		"cli_args"_a = std::vector<std::string>(), "ini_fname"_a = "", "force"_a = false
 	);
 	m.def("is_configured", &kernel::config::is_configured);
-	m.def("config", &kernel::config::config, py::return_value_policy::reference);
+	m.def("settings", &kernel::config::config, py::return_value_policy::reference);
 }
 
 auto bind_misc_api(py::module& m) {
@@ -115,8 +149,7 @@ auto bind_kernel_api(py::module& m) -> void {
 	bind_any_array<str_any_traits>(m, "str_any_array");
 	bind_any_array<idx_any_traits>(m, "idx_any_array");
 
-	py::class_<caf::config_value>(m, "config_value");
-	bind_rich_map<caf::settings>(m, "settings");
+	bind_rich_map<caf::settings>(m, "settings", py::module_local(false));
 
 	bind_misc_api(m);
 
@@ -139,9 +172,8 @@ auto bind_kernel_api(py::module& m) -> void {
 NAMESPACE_END() // eof hodden namespace
 
 /*-----------------------------------------------------------------------------
- *  main kernel binding fcn
+ *  main kernel binding fns
  *-----------------------------------------------------------------------------*/
-
 auto py_bind_adapters(py::module& m) -> void;
 
 auto py_bind_kernel(py::module& m) -> void {
