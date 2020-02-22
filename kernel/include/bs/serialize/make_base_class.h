@@ -32,7 +32,7 @@ template<typename Base, typename Derived, typename Archive>
 inline auto make_base_class(Archive& ar, Derived const* derived) {
 	if constexpr(std::is_same_v<Base, objbase> || std::is_same_v<Base, tree::node>) {
 		// get registered formatter for given object
-		bool stores_node = false;
+		bool stores_node = true;
 		if(auto frm = get_obj_formatter(static_cast<objbase const*>(derived))) {
 			// formatter registered => we're in process of tree save/load via Tee FS archive =>
 			// objbase metadata is already saved
@@ -49,7 +49,7 @@ template<typename Base, typename Derived, typename Archive>
 inline auto make_virtual_base_class(Archive& ar, Derived const* derived) {
 	if constexpr(std::is_same_v<Base, objbase> || std::is_same_v<Base, tree::node>) {
 		// get registered formatter for given object
-		bool stores_node = false;
+		bool stores_node = true;
 		if(auto frm = get_obj_formatter(static_cast<objbase const*>(derived))) {
 			// formatter registered => we're in process of tree save/load via Tee FS archive =>
 			// objbase metadata is already saved
