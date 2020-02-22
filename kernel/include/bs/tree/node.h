@@ -217,14 +217,11 @@ private:
 	// scoped actor for requests
 	caf::scoped_actor factor_;
 
-	/// accept link impl and optionally start internal actor
-	node(bool start_actor, std::string custom_oid = "");
-
 	/// return node's raw (dynamic-typed) actor handle
 	auto raw_actor() const -> const caf::actor&;
 
 	/// maually start internal actor (if not started already)
-	auto start_engine(const std::string& gid = "") -> bool;
+	auto start_engine(std::string gid = "") -> void;
 
 	// set node's handle
 	auto set_handle(const link& handle) -> void;

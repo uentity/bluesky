@@ -47,8 +47,8 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
 	}())
 {
 	// remember link's local group
-	impl.self_grp = std::move(lgrp);
-	adbg(this) << "joined self group " << impl.self_grp.get()->identifier() << std::endl;
+	impl.home = std::move(lgrp);
+	adbg(this) << "joined self group " << impl.home.get()->identifier() << std::endl;
 
 	// prevent termination in case some errors happens in group members
 	// for ex. if they receive unexpected messages (translators normally do)
@@ -77,11 +77,11 @@ auto link_actor::on_exit() -> void {
 
 auto link_actor::goodbye() -> void {
 	adbg(this) << "goodbye" << std::endl;
-	if(impl.self_grp) {
+	if(impl.home) {
 		// say goodbye to self group
-		send(impl.self_grp, a_bye());
-		leave(impl.self_grp);
-		adbg(this) << "left self group " << impl.self_grp.get()->identifier() << std::endl;
+		send(impl.home, a_bye());
+		leave(impl.home);
+		adbg(this) << "left self group " << impl.home.get()->identifier() << std::endl;
 		//	<< "\n" << kernel::tools::get_backtrace(30, 4) << std::endl;
 	}
 }
@@ -98,7 +98,7 @@ auto link_actor::rename(std::string new_name, bool silent) -> void {
 	impl.name_ = std::move(new_name);
 	// send rename ack message
 	if(!silent)
-		send<high_prio>(impl.self_grp, a_ack(), a_lnk_rename(), impl.name_, std::move(old_name));
+		send<high_prio>(impl.home, a_ack(), a_lnk_rename(), impl.name_, std::move(old_name));
 }
 
 
@@ -191,7 +191,7 @@ auto link_actor::make_behavior() -> behavior_type {
 			return impl.rs_reset(
 				req, cond, new_rs, prev_rs,
 				[=](Req req, ReqStatus new_s, ReqStatus old_s) {
-					send<high_prio>(impl.self_grp, a_ack(), a_lnk_status(), req, new_s, old_s);
+					send<high_prio>(impl.home, a_ack(), a_lnk_status(), req, new_s, old_s);
 				}
 			);
 		},
@@ -256,7 +256,7 @@ auto link_actor::make_behavior() -> behavior_type {
 					silent ?
 						function_view{ link_impl::on_rs_changed_noop } :
 						[=](Req req, ReqStatus new_s, ReqStatus old_s) {
-							send<high_prio>(impl.self_grp, a_ack(), a_lnk_status(), req, new_s, old_s);
+							send<high_prio>(impl.home, a_ack(), a_lnk_status(), req, new_s, old_s);
 						}
 				);
 				// deliver error back to callee

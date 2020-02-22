@@ -38,8 +38,8 @@ public:
 	using axon_t = std::pair<std::uint64_t, std::optional<std::uint64_t>>;
 	std::unordered_map<lid_type, axon_t> axons_;
 
-	node_actor(caf::actor_config& cfg, caf::group ngrp, sp_nimpl Nimpl);
-	virtual ~node_actor();
+	node_actor(caf::actor_config& cfg, sp_nimpl Nimpl);
+	~node_actor();
 
 	// return typed actor handle to this
 	node_impl::actor_type handle() const {
@@ -52,8 +52,18 @@ public:
 
 	auto name() const -> const char* override;
 
-	// say goodbye to others & leave self group
+	// say goodbye to others & leave home
 	auto goodbye() -> void;
+
+	// get/set home group ID + optionally invite actor
+	auto home() -> caf::group&;
+	auto home(std::string gid) -> caf::group&;
+	// 'unsafe' means read-only direct access to stored group memeber
+	auto home(unsafe_t) const -> caf::group&;
+
+	// get node's group ID
+	auto gid() -> const std::string&;
+	auto gid(unsafe_t) const -> std::string;
 
 	auto insert(
 		link L, const InsertPolicy pol, bool silent = false
@@ -75,11 +85,12 @@ public:
 template<typename Actor = node_actor, caf::spawn_options Os = caf::no_spawn_options, class... Ts>
 inline auto spawn_nactor(std::shared_ptr<node_impl> nimpl, const std::string& gid, Ts&&... args) {
 	auto& AS = kernel::radio::system();
-	// create unique UUID for node's group because object IDs can be non-unique
-	auto ngrp = AS.groups().get_local(gid);
-	return AS.spawn_in_group<Actor, Os>(
-		ngrp, ngrp, std::move(nimpl), std::forward<Ts>(args)...
-	);
+	if(!gid.empty())
+		return AS.spawn_in_group<Actor, Os>(
+			AS.groups().get_local(gid), std::move(nimpl), std::forward<Ts>(args)...
+		);
+	else // delayed self group creation
+		return AS.spawn<Actor, Os>(std::move(nimpl), std::forward<Ts>(args)...);
 }
 
 NAMESPACE_END(blue_sky::tree)

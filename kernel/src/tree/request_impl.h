@@ -43,7 +43,7 @@ auto request_impl(
 				req, ReqReset::Always,
 				obj ? (obj.value() ? ReqStatus::OK : ReqStatus::Void) : ReqStatus::Error, prev_rs,
 				[&LA](Req req, ReqStatus new_rs, ReqStatus prev_rs) {
-					LA.send<high_prio>(LA.impl.self_grp, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
+					LA.send<high_prio>(LA.impl.home, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
 				}
 			);
 

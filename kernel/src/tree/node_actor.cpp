@@ -35,8 +35,8 @@ using namespace std::chrono_literals;
 static auto adbg(node_actor* A) -> caf::actor_ostream {
 	auto res = caf::aout(A);
 	res << "[N] ";
-	if(auto pgrp = A->impl.self_grp.get())
-		res << "[" << A->impl.self_grp.get()->identifier() << "]";
+	if(auto pgrp = A->home(unsafe).get())
+		res << "[" << pgrp->identifier() << "]";
 	else
 		res << "[null grp]";
 	return res <<  ": ";
@@ -47,15 +47,12 @@ static auto adbg(node_actor* A) -> caf::actor_ostream {
 /*-----------------------------------------------------------------------------
  *  node_actor
  *-----------------------------------------------------------------------------*/
-node_actor::node_actor(caf::actor_config& cfg, caf::group ngrp, sp_nimpl Nimpl)
+node_actor::node_actor(caf::actor_config& cfg, sp_nimpl Nimpl)
 	: super(cfg), pimpl_(std::move(Nimpl)), impl([this]() -> node_impl& {
 		if(!pimpl_) throw error{"node actor: bad (null) node impl passed"};
 		return *pimpl_;
 	}())
 {
-	// remember link's local group
-	impl.self_grp = std::move(ngrp);
-
 	// prevent termination in case some errors happens in group members
 	// for ex. if they receive unexpected messages (translators normally do)
 	set_error_handler([this](caf::error er) {
@@ -85,9 +82,9 @@ auto node_actor::on_exit() -> void {
 
 auto node_actor::goodbye() -> void {
 	adbg(this) << "goodbye" << std::endl;
-	if(impl.self_grp) {
-		send(impl.self_grp, a_bye());
-		leave(impl.self_grp);
+	if(auto& H = home(unsafe)) {
+		send(H, a_bye());
+		leave(H);
 	}
 
 	// unload retranslators from leafs
@@ -96,6 +93,26 @@ auto node_actor::goodbye() -> void {
 
 auto node_actor::name() const -> const char* {
 	return "node_actor";
+}
+
+auto node_actor::home() -> caf::group& {
+	return impl.home_ ? impl.home_ : home({});
+}
+auto node_actor::home(unsafe_t) const -> caf::group& {
+	return impl.home_;
+}
+
+auto node_actor::home(std::string gid) -> caf::group& {
+	// [IMPORTANT] pass silent = true to prevent feedback
+	join(impl.home( std::move(gid), true ));
+	return impl.home_;
+}
+
+auto node_actor::gid() -> const std::string& {
+	return home().get()->identifier();
+}
+auto node_actor::gid(unsafe_t) const -> std::string {
+	return impl.home_ ? impl.home_.get()->identifier() : "";
 }
 
 auto node_actor::disconnect() -> void {
@@ -119,12 +136,12 @@ auto node_actor::retranslate_from(const link& L) -> void {
 
 	// spawn link retranslator first
 	auto axon = axon_t{
-		AS.spawn(link_retranslator, impl.self_grp, lid).id(), {}
+		AS.spawn(link_retranslator, home(), lid).id(), {}
 	};
 	// for hard links also listen to subtree
 	// [TODO] move this part to `link::propagate_handle()`
 	if(L.type_id() == hard_link::type_id_())
-		axon.second = AS.spawn(node_retranslator, impl.self_grp, lid, link::actor(L)).id();
+		axon.second = AS.spawn(node_retranslator, home(), lid, link::actor(L)).id();
 
 	axons_[lid] = std::move(axon);
 	//adbg(this) << "*-* node: retranslating events from link " << L->name() << std::endl;
@@ -159,7 +176,7 @@ auto node_actor::insert(
 		retranslate_from(child_L);
 		// send message that link inserted (with position)
 		if(!silent) send<high_prio>(
-			impl.self_grp, a_ack(), a_node_insert(),
+			home(unsafe), a_ack(), a_node_insert(),
 			child_L.id(), impl.to_index(impl.find<Key::ID>(child_L.id())), pol
 		);
 	});
@@ -186,11 +203,11 @@ auto node_actor::insert(
 	if(!silent) {
 		if(res.second) // normal insert
 			send<high_prio>(
-				impl.self_grp, a_ack(), a_node_insert(), std::move(lid), to_idx, pol
+				home(unsafe), a_ack(), a_node_insert(), std::move(lid), to_idx, pol
 			);
 		else if(to != from) // move
 			send<high_prio>(
-				impl.self_grp, a_ack(), a_node_insert(), std::move(lid), to_idx, *res_idx
+				home(unsafe), a_ack(), a_node_insert(), std::move(lid), to_idx, *res_idx
 			);
 	}
 	return { to_idx, res.second };
@@ -217,7 +234,7 @@ auto on_erase(const link& L, node_actor& self) {
 
 	// send message that link erased
 	self.send<high_prio>(
-		self.impl.self_grp, a_ack(), a_node_erase(), std::move(lids), std::move(oids)
+		self.home(unsafe), a_ack(), a_node_erase(), std::move(lids), std::move(oids)
 	);
 }
 
@@ -239,13 +256,13 @@ auto node_actor::make_behavior() -> behavior_type {
 	using typed_behavior = typename node_impl::actor_type::behavior_type;
 
 	return typed_behavior{
-		// 0.
-		[=](a_node_gid) -> std::string {
-			return impl.gid();
-		},
+		// unconditionally join home group - used after deserialization
+		[=](a_hi) { join(home()); },
 
-		// 0, skip `bye` (should always come from myself)
+		// skip `bye` (should always come from myself)
 		[=](a_bye) {},
+
+		[=](a_node_gid) -> std::string { return gid(); },
 
 		[=](a_node_disconnect) { disconnect(); },
 

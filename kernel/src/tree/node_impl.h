@@ -23,8 +23,6 @@
 #include <iterator>
 #include <set>
 #include <unordered_map>
-#include <algorithm>
-#include <utility>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;
@@ -57,15 +55,17 @@ public:
 
 	// timeout for most queries
 	const caf::duration timeout;
+
 	// strong ref to node's actor
 	caf::actor actor_;
-
 	// local node group
-	caf::group self_grp;
+	caf::group home_;
 
 	// append private behavior to public iface
 	using actor_type = node::actor_type::extend<
-		// terminate actor
+		// join self group
+		caf::reacts_to<a_hi>,
+		// noop - sent by self to terminate siblings in group
 		caf::reacts_to<a_bye>,
 		// stop all retranslators
 		caf::reacts_to<a_node_disconnect>,
@@ -106,9 +106,9 @@ public:
 		);
 	}
 
-	virtual auto spawn_actor(std::shared_ptr<node_impl> nimpl, const std::string& gid) const -> caf::actor;
+	auto spawn_actor(std::shared_ptr<node_impl> nimpl, const std::string& gid) const -> caf::actor;
 
-	auto start_engine(std::shared_ptr<node_impl> nimpl, const std::string& gid = "") -> bool;
+	auto start_engine(std::shared_ptr<node_impl> nimpl, std::string gid = "") -> void;
 
 	// default & copy ctor
 	node_impl(node* super);
@@ -299,8 +299,9 @@ public:
 
 	// obtain pointer to owner node
 	auto super() const -> sp_node;
-	// get node's group ID
-	auto gid() const -> std::string;
+
+	// setup home group ID + optionally invite actor
+	auto home(std::string gid, bool silent = false) -> caf::group&;
 
 private:
 	node* super_;

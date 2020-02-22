@@ -40,8 +40,7 @@ BSS_FCN_BEGIN(serialize, blue_sky::objbase)
 	//}
 
 	ar(
-		make_nvp("id", t.id_),
-		make_nvp("is_node", t.is_node_)
+		make_nvp("id", t.id_)
 	);
 BSS_FCN_END
 

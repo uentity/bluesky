@@ -346,7 +346,7 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 
 	// make baby event handler actor
 	auto baby = system().spawn_in_group<baby_t>(
-		pimpl_->self_grp, pimpl_->self_grp, std::move(f), std::move(make_ev_character)
+		pimpl_->home, pimpl_->home, std::move(f), std::move(make_ev_character)
 	);
 	// return baby ID
 	return baby.id();

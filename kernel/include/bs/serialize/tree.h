@@ -20,10 +20,10 @@ BSS_FCN_DECL(serialize, blue_sky::tree::link)
 
 // node
 BSS_FCN_DECL(serialize, blue_sky::tree::node)
-BSS_FCN_DECL(load_and_construct, blue_sky::tree::node)
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
+// derived links are serialized as base link
 template<typename Archive, typename T>
 auto serialize(Archive& ar, T& t, const std::uint32_t ver)
 -> std::enable_if_t<std::is_base_of_v<link, T> && !std::is_same_v<T, link>, void> {

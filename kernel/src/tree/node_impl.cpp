@@ -42,7 +42,7 @@ node_impl::node_impl(const node_impl& rhs, node* super)
 
 node_impl::node_impl(node_impl&& rhs, node* super)
 	: links_(std::move(rhs.links_)), handle_(std::move(rhs.handle_)),
-	timeout(std::move(rhs.timeout)), actor_(std::move(rhs.actor_)), self_grp(std::move(rhs.self_grp)),
+	timeout(std::move(rhs.timeout)), actor_(std::move(rhs.actor_)), home_(std::move(rhs.home_)),
 	super_(super)
 {}
 
@@ -52,19 +52,24 @@ auto node_impl::spawn_actor(sp_nimpl nimpl, const std::string& gid) const -> caf
 	return spawn_nactor(std::move(nimpl), gid);
 }
 
-auto node_impl::start_engine(sp_nimpl nimpl, const std::string& gid) -> bool {
-	static auto uuid_gen = boost::uuids::random_generator{};
-	if(!actor_) {
-		// generate random UUID for actor groud if passed GID is empty
-		actor_ = spawn_actor(std::move(nimpl), gid.empty() ? to_string(uuid_gen()) : gid);
-		return true;
-	}
-	return false;
+auto node_impl::start_engine(sp_nimpl nimpl, std::string gid) -> void {
+	if(!actor_)
+		actor_ = spawn_actor(std::move(nimpl), std::move(gid));
+	else // just enter group
+		home(std::move(gid));
 }
 
-auto node_impl::gid() const -> std::string {
-	// `self_grp` cannot change after being set
-	return self_grp ? self_grp.get()->identifier() : "";
+auto node_impl::home(std::string gid, bool silent) -> caf::group& {
+	// generate random UUID for actor groud if passed GID is empty
+	if(gid.empty()) {
+		static auto uuid_gen = boost::uuids::random_generator{};
+		gid = to_string(uuid_gen());
+	}
+	// make node's group & invite actor
+	home_ = system().groups().get_local(gid);
+	if(!silent)
+		caf::anon_send<high_prio>(actor(), a_hi());
+	return home_;
 }
 
 auto node_impl::super() const -> sp_node {

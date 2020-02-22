@@ -76,7 +76,7 @@ public:
 	const caf::duration timeout;
 
 	// keep local link group
-	caf::group self_grp;
+	caf::group home;
 
 	/// owner node
 	std::weak_ptr<tree::node> owner_;

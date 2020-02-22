@@ -23,16 +23,12 @@ NAMESPACE_BEGIN(tree)
 /*-----------------------------------------------------------------------------
  *  node
  *-----------------------------------------------------------------------------*/
-node::node(bool start_actor, std::string custom_id)
+node::node(std::string custom_id)
 	: objbase(true, std::move(custom_id)), pimpl_(std::make_shared<node_impl>(this)),
 	factor_(system())
 {
-	if(start_actor) start_engine();
+	start_engine();
 }
-
-node::node(std::string custom_id)
-	: node(true, std::move(custom_id))
-{}
 
 node::node(const node& src)
 	: objbase(src), pimpl_(std::make_shared<node_impl>(*src.pimpl_, this)),
@@ -48,13 +44,17 @@ node::~node() {
 	caf::anon_send_exit(actor(), caf::exit_reason::user_shutdown);
 }
 
-auto node::start_engine(const std::string& gid) -> bool {
-	return pimpl_->start_engine(pimpl_, gid);
+auto node::start_engine(std::string gid) -> void {
+	pimpl_->start_engine(pimpl_, std::move(gid));
 }
 
 auto node::raw_actor() const -> const caf::actor& { return pimpl_->actor_; }
 
-auto node::gid() const -> std::string { return pimpl_->gid(); }
+auto node::gid() const -> std::string {
+	return pimpl_->actorf<std::string>(
+		*this, a_node_gid()
+	).value_or("");
+}
 
 auto node::disconnect(bool deep) -> void {
 	// disconnect self
@@ -370,7 +370,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 
 	// make shiny new subscriber actor and place into parent's room
 	auto baby = kernel::radio::system().spawn_in_group<baby_t>(
-		pimpl_->self_grp, pimpl_->self_grp, std::move(f), std::move(make_ev_character)
+		pimpl_->home_, pimpl_->home_, std::move(f), std::move(make_ev_character)
 	);
 	// and return ID
 	return baby.id();

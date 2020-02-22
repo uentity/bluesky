@@ -12,7 +12,6 @@
 #include <bs/serialize/tree.h>
 #include "../tree/node_actor.h"
 
-#include <fstream>
 #include <cereal/types/vector.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -71,31 +70,30 @@ BSS_FCN_INL_END(save, node_impl)
  *  node
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, node)
+	// properly save & restore node's group BEFORE any other actions
+	if constexpr(Archive::is_saving::value) {
+		// save actor group's ID
+		ar(make_nvp("gid", t.gid()));
+	}
+	else {
+		// load gid
+		std::string ngid;
+		ar(make_nvp("gid", ngid));
+		// and start engine
+		t.start_engine(ngid);
+	}
+
 	ar(
 		make_nvp("objbase", base_class<objbase>(&t)),
 		make_nvp("node_impl", *t.pimpl_)
 	);
-	// save actor group's ID
-	if constexpr(Archive::is_saving::value) {
-		const auto& ngrp = t.pimpl_->self_grp;
-		ar(make_nvp("gid", ngrp ? ngrp.get()->identifier() : ""));
-	}
-BSS_FCN_END
 
-BSS_FCN_BEGIN(load_and_construct, node)
-	construct(false);
-	auto& t = *construct.ptr();
-	::cereal::serialize(ar, t, version);
-	// start actor (load group ID first)
-	std::string gid;
-	ar(make_nvp("gid", gid));
-	t.start_engine(gid);
 	// correct owner of all loaded links
-	t.propagate_owner();
+	if constexpr(Archive::is_loading::value)
+		t.propagate_owner();
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, node)
-BSS_FCN_EXPORT(load_and_construct, node)
 
 NAMESPACE_END(blue_sky)
 
