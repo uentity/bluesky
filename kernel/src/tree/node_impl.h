@@ -159,7 +159,7 @@ public:
 	// same as find, but returns link (null if not found)
 	template<Key K>
 	auto search(const Key_type<K>& key) const -> link {
-		if(auto p = find<K, K>(key); p != links_.get<Key_tag<K>>().end())
+		if(auto p = find<K, K>(key); p != end<K>())
 			return *p;
 		return {};
 	}
@@ -236,8 +236,11 @@ public:
 		const Key_type<K>& key, leaf_postproc_fn ppf = noop_postproc_f,
 		bool dont_reset_owner = false
 	) -> size_t {
-		if constexpr(K == Key::ID || K == Key::AnyOrder)
-			return erase_impl(find<K, Key::ID>(key), std::move(ppf), dont_reset_owner);
+		if constexpr(K == Key::ID || K == Key::AnyOrder) {
+			if(auto victim = find<K, Key::ID>(key); victim != end<Key::ID>())
+				return erase_impl(std::move(victim), std::move(ppf), dont_reset_owner);
+			return 0;
+		}
 		else
 			return erase<K>(equal_range<K>(key), std::move(ppf), dont_reset_owner);
 	}
