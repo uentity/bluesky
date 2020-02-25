@@ -151,54 +151,57 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 	if(!source) return py::none();
 	auto solo = std::lock_guard{ guard_ };
 
-	// check if adapter already created for given object
-	auto Lid = L.id();
-	if(auto cached_A = acache_.find(source.get()); cached_A != acache_.end()) {
-		// inc ref counter for new link
-		if(lnk2obj_.try_emplace(to_string(Lid), cached_A->first).second)
-			++cached_A->second.second;
-		py::gil_scoped_acquire();
-		return cached_A->second.first;
-	}
+	// registers link and returns whether link is met for the first time
+	const auto remember_link = [&](auto* data_ptr) {
+		// handler for link erased event responsible for deleting cached adapters
+		[[maybe_unused]] static auto on_link_delete = [](tree::link, tree::Event, prop::propdict params) {
+			const auto* lid = prop::get_if<std::string>(&params, "lid");
+			if(!lid) return;
 
-	// handler for link erased event responsible for deleting cached adapters
-	[[maybe_unused]] static auto on_link_delete = [](tree::link, tree::Event, prop::propdict params) {
-		auto& self = python_subsyst_impl::self();
-		auto solo = std::lock_guard{ self.guard_ };
-		if(const auto* lid = prop::get_if<std::string>(&params, "lid")) {
+			auto& self = python_subsyst_impl::self();
+			auto solo = std::lock_guard{ self.guard_ };
+
 			auto cached_L = self.lnk2obj_.find(*lid);
 			if(cached_L == self.lnk2obj_.end()) return;
 
 			// kill cache entry if ref counter reaches zero
 			if(auto cached_A = self.acache_.find(cached_L->second); cached_A != self.acache_.end()) {
 				if(--cached_A->second.second == 0) {
-					py::gil_scoped_acquire();
+					auto py_guard = py::gil_scoped_acquire();
 					self.acache_.erase(cached_A);
 				}
 			}
 			self.lnk2obj_.erase(cached_L);
+		};
+
+		// inc ref counter for new link
+		if(lnk2obj_.try_emplace(to_string(L.id()), data_ptr).second) {
+			// install erased event handler
+			L.subscribe(on_link_delete, tree::Event::LinkDeleted);
+			return true;
 		}
+		return false;
 	};
+
+	// check if adapter already created for given object
+	auto* data_ptr = source.get();
+	if(auto cached_A = acache_.find(data_ptr); cached_A != acache_.end()) {
+		// inc ref counter for new link
+		auto& [pyobj, use_count] = cached_A->second;
+		if(remember_link(data_ptr))
+			++use_count;
+		return pyobj;
+	}
 
 	// adapt or passthrough
 	const auto adapt_and_cache = [&](auto&& afn) {
-		auto* obj_ptr = source.get();
-
-		// install erased event handler
-		// [NOTE] disabled because of issues with Python GC (?)
-		// [FIXME] fix when real cause of problem is found
-		//L.subscribe(on_link_delete, tree::Event::LinkDeleted);
-
-		// remember link
-		lnk2obj_[to_string(Lid)] = obj_ptr;
 		// cache adapter with ref counter = 1
 		return acache_.try_emplace(
-			obj_ptr, afn(std::move(source)), 1
+			data_ptr, afn(std::move(source)), size_t{ remember_link(data_ptr) }
 		).first->second.first;
 	};
 
 	auto pf = adapters_.find(source->type_id());
-	py::gil_scoped_acquire();
 	return pf != adapters_.end() ?
 		adapt_and_cache(pf->second) :
 		( def_adapter_ ? adapt_and_cache(def_adapter_) : py::cast(source) );
@@ -253,20 +256,20 @@ auto py_bind_adapters(py::module& m) -> void {
 	// called with GIL released
 	m.def("register_adapter", [](std::string obj_type_id, adapter_fn f) {
 			py_kernel().register_adapter(std::move(obj_type_id), std::move(f));
-		}, "obj_type_id"_a, "adapter_fn"_a, "Register adapter for specified BS type", nogil
+		}, "obj_type_id"_a, "adapter_fn"_a, "Register adapter for specified BS type"
 	);
 	m.def("register_default_adapter", [](adapter_fn f) {
 			py_kernel().register_default_adapter(std::move(f));
-		}, "adapter_fn"_a, "Register default adapter for all BS types with no adapter registered", nogil
+		}, "adapter_fn"_a, "Register default adapter for all BS types with no adapter registered"
 	);
 	m.def("adapted_types", []() { return py_kernel().adapted_types(); },
-		"Return list of types with registered adapters ('*' denotes default adapter)", nogil
+		"Return list of types with registered adapters ('*' denotes default adapter)"
 	);
 	// [NOTE] containes fine-grained GIL acquire, so can be called w/o GIL
 	m.def("adapt", [](sp_obj source, const tree::link& L) {
 			return py_kernel().adapt(std::move(source), L);
 		}, "source"_a, "lnk"_a,
-		"Make adapter for given object", nogil
+		"Make adapter for given object"
 	);
 
 	// called normally with captured GIL

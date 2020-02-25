@@ -26,12 +26,14 @@ NAMESPACE_BEGIN()
 inline const auto py_kernel = &kernel::detail::python_subsyst_impl::self;
 
 auto adapt(sp_obj&& source, const link& L) {
+	auto guard = py::gil_scoped_acquire();
 	return py_kernel().adapt(std::move(source), L);
 }
 
 template<typename T>
 auto adapt(result_or_err<T>&& source, const link& L) {
 	return std::move(source).map([&](T&& obj) {
+		auto guard = py::gil_scoped_acquire();
 		if constexpr(std::is_same_v<T, sp_obj>)
 			return py_kernel().adapt( std::move(obj), L );
 		else
@@ -41,7 +43,7 @@ auto adapt(result_or_err<T>&& source, const link& L) {
 
 using adapted_data_cb = std::function<void(result_or_err<py::object>, link)>;
 
-auto adapt(adapted_data_cb&& f) {
+inline auto adapt(adapted_data_cb&& f) {
 	return [f = std::move(f)](result_or_err<sp_obj> obj, link L) {
 		if(L)
 			f(adapt(std::move(obj), L), L);
