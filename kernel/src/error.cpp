@@ -216,7 +216,18 @@ error::box::box(int ec_, std::string domain_, std::string message_) noexcept
 //  CAF errors passthrough
 //
 auto forward_caf_error(const caf::error& er) -> error {
-	return error{er.code(), kernel::radio::system().render(er)};
+	// produce std::error_code from CAF error
+	static const auto caf_error_code = [](const caf::error& er) -> std::error_code {
+		struct caf_category : error::category<caf_category> {
+			const char* name() const noexcept override { return "CAF"; }
+
+			std::string message(int ec) const override { return ""; }
+		};
+
+		return { er.code(), caf_category::self() };
+	};
+
+	return { kernel::radio::system().render(er), caf_error_code(er) };
 }
 
 NAMESPACE_END(blue_sky)
