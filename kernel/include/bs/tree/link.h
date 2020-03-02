@@ -50,6 +50,14 @@ public:
 		weak_ptr(const link& src);
 		auto operator=(const link& rhs) -> weak_ptr&;
 
+		/// comparison
+		auto operator==(const weak_ptr& rhs) const -> bool;
+		auto operator!=(const weak_ptr& rhs) const -> bool;
+		auto operator==(const link& rhs) const -> bool;
+		auto operator!=(const link& rhs) const -> bool;
+		// sorting
+		auto operator<(const weak_ptr& rhs) const -> bool;
+
 		/// obtain 'normal' link
 		auto lock() const -> link;
 
@@ -67,43 +75,43 @@ public:
 
 	/// Interface of link actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
-        // terminate actor
+		// terminate actor
 		caf::reacts_to<a_bye>,
-        // get link ID
+		// get link ID
 		caf::replies_to<a_lnk_id>::with<lid_type>,
-        // get pointee OID
+		// get pointee OID
 		caf::replies_to<a_lnk_oid>::with<std::string>,
-        // get pointee type ID
+		// get pointee type ID
 		caf::replies_to<a_lnk_otid>::with<std::string>,
-        // get pointee node group ID
+		// get pointee node group ID
 		caf::replies_to<a_node_gid>::with<result_or_errbox<std::string>>,
 
-        // get link name
+		// get link name
 		caf::replies_to<a_lnk_name>::with<std::string>,
-        // rename link
+		// rename link
 		caf::reacts_to<a_lnk_rename, std::string, bool>,
-        // ack rename
+		// ack rename
 		caf::reacts_to<a_ack, a_lnk_rename, std::string, std::string>,
 
-        // get request status
+		// get request status
 		caf::replies_to<a_lnk_status, Req>::with<ReqStatus>,
-        // reset request status
+		// reset request status
 		caf::replies_to<a_lnk_status, Req, ReqReset, ReqStatus, ReqStatus>::with<ReqStatus>,
-        // request status change ack
+		// request status change ack
 		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>,
 
-        // get link flags
+		// get link flags
 		caf::replies_to<a_lnk_flags>::with<Flags>,
-        // set link flags
+		// set link flags
 		caf::reacts_to<a_lnk_flags, Flags>,
 
-        // get inode
+		// get inode
 		caf::replies_to<a_lnk_inode>::with<result_or_errbox<inodeptr>>,
-        // get data
+		// get data
 		caf::replies_to<a_lnk_data, bool>::with<result_or_errbox<sp_obj>>,
-        // get data node
+		// get data node
 		caf::replies_to<a_lnk_dnode, bool>::with<result_or_errbox<sp_node>>,
-        // modify data
+		// modify data
 		caf::replies_to<a_apply, data_modificator_f, bool>::with<error::box>
 	>;
 
@@ -125,14 +133,11 @@ public:
 	/// makes link nil
 	auto reset() -> void;
 
-	/// links are compared by ID
-	friend auto operator==(const link& lhs, const link& rhs) -> bool {
-		return lhs.id() == rhs.id();
-	}
-
-	friend auto operator<(const link& lhs, const link& rhs) -> bool {
-		return lhs.id() < rhs.id();
-	}
+	/// links are comparison
+	auto operator==(const link& lhs) const -> bool;
+	auto operator!=(const link& lhs) const -> bool;
+	/// and sorting
+	auto operator<(const link& rhs) const -> bool;
 
 	/// get link's typed actor handle
 	template<typename Link>

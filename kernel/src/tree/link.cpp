@@ -66,6 +66,26 @@ auto link::weak_ptr::reset() -> void {
 	actor_.reset();
 }
 
+auto link::weak_ptr::operator==(const weak_ptr& rhs) const -> bool {
+	return pimpl_.lock() == rhs.pimpl_.lock();
+}
+
+auto link::weak_ptr::operator!=(const weak_ptr& rhs) const -> bool {
+	return !(*this == rhs);
+}
+
+auto link::weak_ptr::operator==(const link& rhs) const -> bool {
+	return pimpl_.lock() == rhs.pimpl_;
+}
+
+auto link::weak_ptr::operator!=(const link& rhs) const -> bool {
+	return !(*this == rhs);
+}
+
+auto link::weak_ptr::operator<(const weak_ptr& rhs) const -> bool {
+	return pimpl_.lock() < rhs.pimpl_.lock();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //  link
 //
@@ -113,6 +133,18 @@ auto link::start_engine() -> bool {
 		return true;
 	}
 	return false;
+}
+
+auto link::operator==(const link& rhs) const -> bool {
+	return pimpl_ == rhs.pimpl_;
+}
+
+auto link::operator!=(const link& rhs) const -> bool {
+	return !(*this == rhs);
+}
+
+auto link::operator<(const link& rhs) const -> bool {
+	return id() < rhs.id();
 }
 
 auto link::is_nil() const -> bool {

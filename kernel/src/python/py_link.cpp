@@ -82,6 +82,7 @@ void py_bind_link(py::module& m) {
 	link_pyface
 		.def(py::init())
 		.def(py::self == py::self)
+		.def(py::self != py::self)
 		.def(py::self < py::self)
 		.def("__bool__", [](const link& self) { return (bool)self; }, py::is_operator())
 		.def_property_readonly("is_nil", [](const link& self) { return self.is_nil(); })
@@ -154,9 +155,30 @@ void py_bind_link(py::module& m) {
 		.def("info", py::overload_cast<>(&link::info, py::const_), nogil)
 		.def("info", py::overload_cast<unsafe_t>(&link::info, py::const_))
 
+		.def("is_node", &link::is_node, "Check if pointee is a node")
+		.def("data_node_gid", &link::data_node_gid, "If pointee is a node, return node's actor group ID")
+
 		// events subscrition
 		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
 		.def("unsubscribe", &link::unsubscribe, "event_cb_id"_a, nogil)
+	;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  link::weak_ptr
+	//
+	py::class_<link::weak_ptr>(link_pyface, "weak_ptr")
+		.def(py::init())
+		.def(py::init<link>())
+
+		.def(py::self == py::self)
+		.def(py::self != py::self)
+		.def(py::self < py::self)
+		.def("__eq__", [](const link::weak_ptr& self, const link& other){ return self == other; })
+		.def("__neq__", [](const link::weak_ptr& self, const link& other){ return self != other; })
+
+		.def("lock", &link::weak_ptr::lock, "Obtain strong link reference")
+		.def("expired", &link::weak_ptr::expired, "Check if this ptr is expired")
+		.def("reset", &link::weak_ptr::reset, "Resets this ptr (makes it expired)")
 	;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -165,11 +187,13 @@ void py_bind_link(py::module& m) {
 	py::class_<hard_link, link>(m, "hard_link")
 		.def(py::init<std::string, sp_obj, Flags>(),
 			"name"_a, "data"_a, "flags"_a = Flags::Plain)
+		.def(py::init<const link&>())
 	;
 
 	py::class_<weak_link, link>(m, "weak_link")
 		.def(py::init<std::string, const sp_obj&, Flags>(),
 			"name"_a, "data"_a, "flags"_a = Flags::Plain)
+		.def(py::init<const link&>())
 	;
 
 	py::class_<sym_link, link>(m, "sym_link")
@@ -177,6 +201,7 @@ void py_bind_link(py::module& m) {
 			"name"_a, "path"_a, "flags"_a = Flags::Plain)
 		.def(py::init<std::string, const link&, Flags>(),
 			"name"_a, "source"_a, "flags"_a = Flags::Plain)
+		.def(py::init<const link&>())
 
 		.def_property_readonly("check_alive", &sym_link::check_alive, nogil)
 		.def("src_path", &sym_link::src_path, "human_readable"_a = false, nogil)
@@ -190,6 +215,8 @@ void py_bind_link(py::module& m) {
 			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = Flags::Plain)
 		.def(py::init<std::string, const char*, std::string, sp_fusion, Flags>(),
 			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = Flags::Plain)
+		.def(py::init<const link&>())
+
 		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge, nogil)
 		.def("populate",
 			py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),
