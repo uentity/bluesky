@@ -17,6 +17,7 @@
 #include <caf/fwd.hpp>
 #include <caf/function_view.hpp>
 #include <caf/event_based_actor.hpp>
+#include <caf/typed_behavior.hpp>
 
 #include <optional>
 
@@ -115,6 +116,21 @@ auto anon_request(Actor A, caf::duration timeout, bool high_priority, F f, Args&
 
 		return {};
 	});
+}
+
+/// @brief models 'or_else' for typed behaviors - make unified behavior from `first` and `second`
+template<typename... SigsA, typename... SigsB>
+auto first_then_second(caf::typed_behavior<SigsA...> first, caf::typed_behavior<SigsB...> second) {
+	using namespace caf::detail;
+
+	using SigsAB = type_list<SigsA..., SigsB...>;
+	using result_t = tl_apply_t<tl_distinct_t<SigsAB>, caf::typed_behavior>;
+
+	return result_t{
+		typename result_t::unsafe_init(),
+		caf::message_handler{ first.unbox().as_behavior_impl() }
+		.or_else( second.unbox() )
+	};
 }
 
 NAMESPACE_END(blue_sky)
