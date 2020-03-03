@@ -29,7 +29,9 @@ enum class ReqOpts {
 class BS_HIDDEN_API link_actor : public caf::event_based_actor {
 public:
 	using super = caf::event_based_actor;
+	using actor_type = link::actor_type;
 	using behavior_type = super::behavior_type;
+	using typed_behavior = actor_type::behavior_type;
 
 	link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl);
 	// virtual dtor
@@ -54,6 +56,7 @@ public:
 	auto rename(std::string new_name, bool silent = false) -> void;
 
 	// returns generic link behavior
+	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;
 
 	auto on_exit() -> void override;
@@ -71,19 +74,37 @@ struct BS_HIDDEN_API cached_link_actor : public link_actor {
 	using super = link_actor;
 	using super::super;
 
+	using actor_type = cached_link_actor_type;
+	using typed_behavior = cached_link_actor_type::behavior_type;
+
 	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
 	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override;
 };
 
 /// 1) contains direct ptr to object (data)
 /// 2) access to object's data & node is always fast, s.t. we don't need to manage req status
-struct BS_HIDDEN_API fast_link_actor : public link_actor {
-	using super = link_actor;
+struct BS_HIDDEN_API fast_link_actor : public cached_link_actor {
+	using super = cached_link_actor;
 	using super::super;
+
+	using actor_type = super::actor_type;
+	using typed_behavior = actor_type::behavior_type;
+	// part of behavior overloaded by this actor
+	using typed_behavior_overload = caf::typed_behavior<
+		// get inode
+		caf::replies_to<a_lnk_inode>::with<result_or_errbox<inodeptr>>,
+		// get data
+		caf::replies_to<a_lnk_data, bool>::with<result_or_errbox<sp_obj>>,
+		// get data node
+		caf::replies_to<a_lnk_dnode, bool>::with<result_or_errbox<sp_node>>,
+		// get data cache
+		caf::replies_to<a_lnk_dcache>::with<sp_obj>
+	>;
 
 	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
 	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override;
 
+	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;
 };
 

@@ -105,9 +105,7 @@ auto link_actor::rename(std::string new_name, bool silent) -> void {
 ///////////////////////////////////////////////////////////////////////////////
 //  behavior
 //
-auto link_actor::make_behavior() -> behavior_type {
-	using typed_behavior = typename link::actor_type::behavior_type;
-
+auto link_actor::make_typed_behavior() -> typed_behavior {
 	return typed_behavior{
 		// skip `bye` message (should always come from myself)
 		[=](a_bye) -> void {
@@ -263,8 +261,12 @@ auto link_actor::make_behavior() -> behavior_type {
 				res.deliver(er.pack());
 			});
 			return const_cast<const caf::response_promise&>(res);
-		},
-	}.unbox();
+		}
+	};
+}
+
+auto link_actor::make_behavior() -> behavior_type {
+	return make_typed_behavior().unbox();
 }
 
 /*-----------------------------------------------------------------------------
@@ -272,8 +274,8 @@ auto link_actor::make_behavior() -> behavior_type {
  *-----------------------------------------------------------------------------*/
 // for fast link we can assume that requests are invoked directly
 // => override slow API to exclude extra delivery messages
-auto fast_link_actor::make_behavior() -> behavior_type {
-	return caf::message_handler{
+auto fast_link_actor::make_typed_behavior() -> typed_behavior {
+	return first_then_second( typed_behavior_overload{
 		// obtain inode
 		[=](a_lnk_inode) -> result_or_errbox<inodeptr> {
 			adbg(this) << "<- a_lnk_inode" << std::endl;
@@ -319,7 +321,15 @@ auto fast_link_actor::make_behavior() -> behavior_type {
 			//);
 			//return res;
 		},
-	}.or_else(super::make_behavior());
+
+		[=](a_lnk_dcache) -> sp_obj {
+			return static_cast<hard_link_impl&>(impl).data_;
+		}
+	}, super::make_typed_behavior() );
+}
+
+auto fast_link_actor::make_behavior() -> behavior_type {
+	return make_typed_behavior().unbox();
 }
 
 /*-----------------------------------------------------------------------------
