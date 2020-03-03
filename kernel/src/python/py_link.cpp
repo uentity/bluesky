@@ -128,7 +128,6 @@ void py_bind_link(py::module& m) {
 		//	"Execute given modificator `m` inside link context and wait until it's done", nogil
 		//)
 
-		.def("type_id", &link::type_id)
 		.def("oid", &link::oid, nogil)
 		.def("obj_type_id", &link::obj_type_id, nogil)
 		.def("rename", &link::rename, nogil)
@@ -146,17 +145,23 @@ void py_bind_link(py::module& m) {
 			"Set status of given request if it is NOT equal to given value, returns prev status", nogil
 		)
 
+		.def_property_readonly("type_id", &link::type_id)
 		.def_property_readonly("id", [](const link& L) { return to_string(L.id()); })
 		.def_property_readonly("owner", &link::owner)
-		.def_property_readonly("name", py::overload_cast<>(&link::name, py::const_), nogil)
-		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
-		.def_property("flags", py::overload_cast<>(&link::flags, py::const_), &link::set_flags, nogil)
-		.def_property_readonly("flags_unsafe", [](const link& L) { return L.flags(unsafe); })
-		.def("info", py::overload_cast<>(&link::info, py::const_), nogil)
-		.def("info", py::overload_cast<unsafe_t>(&link::info, py::const_))
 
-		.def("is_node", &link::is_node, "Check if pointee is a node")
-		.def("data_node_gid", &link::data_node_gid, "If pointee is a node, return node's actor group ID")
+		.def("name", py::overload_cast<>(&link::name, py::const_), nogil)
+		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
+
+		.def("flags", py::overload_cast<>(&link::flags, py::const_), nogil)
+		.def_property_readonly("flags_unsafe", [](const link& L) { return L.flags(unsafe); })
+		.def("set_flags", &link::set_flags)
+
+		.def("info", py::overload_cast<>(&link::info, py::const_), nogil)
+		.def_property_readonly("info_unsafe", [](const link& L) { return L.info(unsafe); })
+
+		.def("is_node", &link::is_node, "Check if pointee is a node", nogil)
+		.def("data_node_gid", &link::data_node_gid,
+			"If pointee is a node, return node's actor group ID", nogil)
 
 		// events subscrition
 		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
@@ -188,12 +193,20 @@ void py_bind_link(py::module& m) {
 		.def(py::init<std::string, sp_obj, Flags>(),
 			"name"_a, "data"_a, "flags"_a = Flags::Plain)
 		.def(py::init<const link&>())
+		.def_property_readonly_static("type_id_", [](const py::object&) { return hard_link::type_id_(); })
+
+		.def("cache", py::overload_cast<unsafe_t>(&hard_link::cache, py::const_),
+			"Unsafe direct access to link's data cache")
 	;
 
 	py::class_<weak_link, link>(m, "weak_link")
 		.def(py::init<std::string, const sp_obj&, Flags>(),
 			"name"_a, "data"_a, "flags"_a = Flags::Plain)
 		.def(py::init<const link&>())
+		.def_property_readonly_static("type_id_", [](const py::object&) { return weak_link::type_id_(); })
+
+		.def("cache", py::overload_cast<unsafe_t>(&weak_link::cache, py::const_),
+			"Unsafe direct access to link's data cache")
 	;
 
 	py::class_<sym_link, link>(m, "sym_link")
@@ -202,6 +215,7 @@ void py_bind_link(py::module& m) {
 		.def(py::init<std::string, const link&, Flags>(),
 			"name"_a, "source"_a, "flags"_a = Flags::Plain)
 		.def(py::init<const link&>())
+		.def_property_readonly_static("type_id_", [](const py::object&) { return sym_link::type_id_(); })
 
 		.def_property_readonly("check_alive", &sym_link::check_alive, nogil)
 		.def("src_path", &sym_link::src_path, "human_readable"_a = false, nogil)
@@ -216,8 +230,13 @@ void py_bind_link(py::module& m) {
 		.def(py::init<std::string, const char*, std::string, sp_fusion, Flags>(),
 			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = Flags::Plain)
 		.def(py::init<const link&>())
+		.def_property_readonly_static("type_id_", [](const py::object&) { return fusion_link::type_id_(); })
 
 		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge, nogil)
+		.def("cache", py::overload_cast<>(&fusion_link::cache, py::const_), "Direct access to link's data cache")
+		.def("cache", py::overload_cast<unsafe_t>(&fusion_link::cache, py::const_),
+			"Unsafe direct access to link's data cache")
+
 		.def("populate",
 			py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),
 			"child_type_id"_a, "wait_if_busy"_a = true, nogil
