@@ -323,7 +323,7 @@ auto fast_link_actor::make_typed_behavior() -> typed_behavior {
 		},
 
 		[=](a_lnk_dcache) -> sp_obj {
-			return static_cast<hard_link_impl&>(impl).data_;
+			return impl.data().value_or(nullptr);
 		}
 	}, super::make_typed_behavior() );
 }

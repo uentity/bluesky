@@ -96,6 +96,10 @@ auto fusion_link::cache() const -> sp_node {
 	);
 }
 
+auto fusion_link::cache(unsafe_t) const -> sp_node {
+	return FIMPL.data_;
+}
+
 LINK_CONVERT_TO(fusion_link)
 LINK_TYPE_DEF(fusion_link, fusion_link_impl, "fusion_link")
 

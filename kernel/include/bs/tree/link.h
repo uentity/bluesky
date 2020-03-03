@@ -331,6 +331,10 @@ public:
 	/// convert from base link
 	hard_link(const link& rhs);
 
+	/// unsafe access to internal object cache
+	/// safe access is equivalent to `data()`
+	auto cache(unsafe_t) const -> sp_obj;
+
 	static auto type_id_() -> std::string_view;
 
 private:
@@ -354,6 +358,10 @@ public:
 	weak_link(std::string name, const sp_obj& data, Flags f = Plain);
 	/// convert from base link
 	weak_link(const link& rhs);
+
+	/// unsafe access to internal object cache
+	/// safe access is equivalent to `data()`
+	auto cache(unsafe_t) const -> sp_obj;
 
 	static auto type_id_() -> std::string_view;
 

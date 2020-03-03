@@ -72,6 +72,10 @@ hard_link::hard_link() :
 	super(std::make_shared<hard_link_impl>(), false)
 {}
 
+auto hard_link::cache(unsafe_t) const -> sp_obj {
+	return static_cast<hard_link_impl*>(pimpl())->data_;
+}
+
 LINK_CONVERT_TO(hard_link)
 LINK_TYPE_DEF(hard_link, hard_link_impl, "hard_link")
 
@@ -90,6 +94,10 @@ weak_link_impl::weak_link_impl(std::string name, const sp_obj& obj, Flags f)
 weak_link_impl::weak_link_impl()
 	: super()
 {}
+
+auto weak_link::cache(unsafe_t) const -> sp_obj {
+	return static_cast<weak_link_impl*>(pimpl())->data_.lock();
+}
 
 auto weak_link_impl::data() -> result_or_err<sp_obj> {
 	using result_t = result_or_err<sp_obj>;

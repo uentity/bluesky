@@ -73,8 +73,8 @@ public:
 	auto reset_bridge(sp_fusion new_bridge = nullptr) -> void;
 
 	// access to internal object cache
-	// this method never involves time-consuming operations and directly returns cached object
 	auto cache() const -> sp_node;
+	auto cache(unsafe_t) const -> sp_node;
 
 private:
 	// don't start internal actor
