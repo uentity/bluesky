@@ -40,7 +40,7 @@ public:
 		// populate pointee with given children types
 		caf::replies_to<a_flnk_populate, std::string, bool>::with<result_or_errbox<sp_node>>,
 		// get link's bridge
-		caf::replies_to<a_flnk_bridge>::with<result_or_errbox<sp_fusion>>,
+		caf::replies_to<a_flnk_bridge>::with<sp_fusion>,
 		// set link's bridge
 		caf::reacts_to<a_flnk_bridge, sp_fusion>
 	>;

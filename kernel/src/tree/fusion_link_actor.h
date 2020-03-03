@@ -32,6 +32,8 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	// contained object
 	sp_node data_;
 
+	using actor_type = fusion_link::actor_type;
+
 	using super = ilink_impl;
 	using super::owner_;
 
@@ -100,9 +102,29 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 /*-----------------------------------------------------------------------------
  *  fusion_link_actor
  *-----------------------------------------------------------------------------*/
-struct BS_HIDDEN_API fusion_link_actor : public link_actor {
-	using super = link_actor;
+struct BS_HIDDEN_API fusion_link_actor : public cached_link_actor {
+	using super = cached_link_actor;
 	using super::super;
+
+	using actor_type = fusion_link_impl::actor_type;
+	using typed_behavior = actor_type::behavior_type;
+	// part of behavior overloaded/added from super actor type
+	using typed_behavior_overload = caf::typed_behavior<
+		caf::replies_to<a_flnk_populate, std::string, bool>::with<result_or_errbox<sp_node>>,
+		caf::replies_to<a_flnk_bridge>::with<sp_fusion>,
+		caf::reacts_to<a_flnk_bridge, sp_fusion>,
+
+		// get pointee OID
+		caf::replies_to<a_lnk_oid>::with<std::string>,
+		// get pointee type ID
+		caf::replies_to<a_lnk_otid>::with<std::string>,
+		// get pointee node group ID
+		caf::replies_to<a_node_gid>::with<result_or_errbox<std::string>>,
+		// get data cache
+		caf::replies_to<a_lnk_dcache>::with<sp_obj>
+	>;
+
+	auto fimpl() -> fusion_link_impl& { return static_cast<fusion_link_impl&>(impl); }
 
 	// both Data & DataNode executes with `HasDataCache` flag set
 	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override {
@@ -122,46 +144,58 @@ struct BS_HIDDEN_API fusion_link_actor : public link_actor {
 		);
 	}
 
-	auto make_behavior() -> behavior_type override {
-		auto L = static_cast<fusion_link_impl*>(pimpl_.get());
-		return caf::message_handler {
+	auto make_typed_behavior() -> typed_behavior {
+		return first_then_second( typed_behavior_overload{
 			// add handler to invoke populate with specified child type
-			[this](a_flnk_populate, std::string child_type_id, bool wait_if_busy)
+			[=](a_flnk_populate, std::string child_type_id, bool wait_if_busy)
 			-> caf::result< result_or_errbox<sp_node> > {
 				auto res = make_response_promise< result_or_errbox<sp_node> >();
 				request_impl(
 					*this, Req::DataNode,
 					ReqOpts::Detached | ReqOpts::HasDataCache |
 						(wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
-					[Limpl = pimpl_, cti = std::move(child_type_id)] {
-						return std::static_pointer_cast<fusion_link_impl>(Limpl)->populate(cti);
+					[&I = fimpl(), cti = std::move(child_type_id)] {
+						return I.populate(cti);
 					},
 					[=](result_or_errbox<sp_node> N) mutable { res.deliver(std::move(N)); }
 				);
 				return res;
 			},
 
-			[L](a_flnk_bridge) { return L->bridge(); },
-			[L](a_flnk_bridge, sp_fusion new_bridge) { L->reset_bridge(std::move(new_bridge)); },
+			// [NOTE] idea is to delegate delivery to parent actor instead of calling
+			[=](a_flnk_bridge) -> caf::result<sp_fusion> {
+				if(fimpl().bridge_) return fimpl().bridge_;
+				// try to look up in parent link
+				if(auto parent = impl.owner_.lock()) {
+					if(auto phandle = fusion_link{ parent->handle() })
+						return delegate(link::actor(phandle), a_flnk_bridge());
+				}
+				return nullptr;
+			},
+
+			[=](a_flnk_bridge, sp_fusion new_bridge) { fimpl().reset_bridge(std::move(new_bridge)); },
 
 			// direct return cached data
-			[L](a_lnk_dcache) -> sp_obj { return L->data_; },
+			[=](a_lnk_dcache) -> sp_obj { return fimpl().data_; },
 
 			// easier obj ID & object type id retrival
-			[L](a_lnk_otid) {
-				return L->data_ ? L->data_->type_id() : nil_otid;
+			[&I = fimpl()](a_lnk_otid) {
+				return I.data_ ? I.data_->type_id() : nil_otid;
 			},
-			[L](a_lnk_oid) {
-				return L->data_ ? L->data_->id() : nil_oid;
+			[&I = fimpl()](a_lnk_oid) {
+				return I.data_ ? I.data_->id() : nil_oid;
 			},
 
 			// fusion link always contain a node, so directly return it's GID
-			[L](a_node_gid) -> result_or_errbox<std::string> {
+			[&I = fimpl()](a_node_gid) -> result_or_errbox<std::string> {
 				using R = result_or_errbox<std::string>;
-				return L->data_ ? R{L->data_->gid()} : tl::make_unexpected(error::quiet(Error::EmptyData));
-				//return L->data_ ? R{ L->data_->gid() } : R{ tl::unexpect, error::quiet(Error::EmptyData) };
+				return I.data_ ? R{I.data_->gid()} : tl::make_unexpected(error::quiet(Error::EmptyData));
 			}
-		}.or_else(super::make_behavior());
+		}, super::make_typed_behavior());
+	}
+
+	auto make_behavior() -> behavior_type override {
+		return make_typed_behavior().unbox();
 	}
 };
 

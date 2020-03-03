@@ -81,7 +81,7 @@ auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) c
 }
 
 auto fusion_link::bridge() const -> sp_fusion {
-	return pimpl()->actorf<result_or_errbox<sp_fusion>>(
+	return pimpl()->actorf<sp_fusion>(
 		*this, a_flnk_bridge()
 	).value_or(nullptr);
 }
