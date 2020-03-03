@@ -6,14 +6,10 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include <bs/tree/tree.h>
 #include <boost/algorithm/string.hpp>
-
-#define CAN_CALL_DNODE(L) \
-( !((L).flags() & link::LazyLoad) || (L).req_status(link::Req::DataNode) == ReqStatus::OK )
 
 NAMESPACE_BEGIN(blue_sky::tree::detail)
 
@@ -33,7 +29,7 @@ NAMESPACE_END()
 
 // find out if we can call `data_node()` honoring LazyLoad flag
 inline auto can_call_dnode(const link& L) -> bool {
-	return !(L.flags() & LazyLoad) || L.req_status(Req::DataNode) == ReqStatus::OK;
+	return L.req_status(Req::DataNode) == ReqStatus::OK || !(L.flags() & LazyLoad);
 }
 
 // If `DerefControlElements` == true, processing function will be invoked for all path parts
