@@ -10,6 +10,7 @@
 #include <bs/python/common.h>
 #include <bs/python/list.h>
 #include <bs/tree/tree.h>
+#include <bs/tree/context.h>
 
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
@@ -18,6 +19,7 @@
 PYBIND11_MAKE_OPAQUE(blue_sky::tree::links_v);
 PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::link>);
 PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_node>);
+PYBIND11_MAKE_OPAQUE(blue_sky::tree::context::item_tag);
 
 NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
@@ -192,6 +194,48 @@ void py_bind_tree(py::module& m) {
 		"filename"_a, "ar"_a = TreeArchive::FS, nogil);
 	m.def("load_tree", py::overload_cast<on_serialized_f, std::string, TreeArchive>(&load_tree),
 		"callback"_a, "filename"_a, "ar"_a = TreeArchive::FS, nogil);
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  Qt model helper
+	//
+	using item_tag = context::item_tag;
+	using existing_tag = context::existing_tag;
+
+	auto py_qth = py::class_<context>(m, "tree_context")
+		.def(py::init<sp_node>(), "root"_a = nullptr)
+		.def(py::init<link>(), "root"_a)
+		.def("root", &context::root)
+		.def_property_readonly("root_link", &context::root_link)
+		.def_property_readonly("root_path", &context::root_path)
+
+		// [NOTE] it's essential to keep returned tags in Python as long as context exists
+		// use combined return value policy:
+		// py::keep_alive<1, 0>() - keeps returned value while context exists
+		// py::return_value_policy::reference - don't destruct C++ tag insatance on cleanup
+		.def("__call__", py::overload_cast<const std::string&, bool>(&context::operator()),
+			"path"_a, "nonexact_match"_a = false,
+			py::keep_alive<1, 0>(), py::return_value_policy::reference
+		)
+		.def("__call__", py::overload_cast<const link&, std::string>(&context::operator()),
+			"path"_a, "path_hint"_a = "/",
+			py::keep_alive<1, 0>(), py::return_value_policy::reference
+		)
+		.def("__call__", py::overload_cast<std::int64_t, existing_tag>(&context::operator()),
+			"row"_a, "parent"_a = existing_tag{},
+			py::keep_alive<1, 0>(), py::return_value_policy::reference
+		)
+		.def("__call__", py::overload_cast<existing_tag>(&context::operator()),
+			"child"_a,
+			py::keep_alive<1, 0>(), py::return_value_policy::reference
+		)
+
+		.def("dump", &context::dump)
+	;
+
+	py::class_<item_tag>(py_qth, "item_tag")
+		.def_property_readonly("path", [](const item_tag& t) { return to_string(t.first); })
+		.def_property_readonly("link", [](const item_tag& t) { return t.second.lock(); })
+	;
 }
 
 NAMESPACE_END(blue_sky::python)

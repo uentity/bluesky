@@ -84,7 +84,8 @@ kernel_cpp_list = [
 	"src/tree/tree.cpp",
 	"src/tree/tree_async.cpp",
 	"src/tree/fusion_link.cpp",
-	"src/tree/errors.cpp"
+	"src/tree/errors.cpp",
+	"src/tree/context.cpp"
 ];
 #print kernel_cpp_list;
 
