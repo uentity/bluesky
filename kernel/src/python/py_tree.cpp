@@ -208,6 +208,10 @@ void py_bind_tree(py::module& m) {
 		.def_property_readonly("root_link", &context::root_link)
 		.def_property_readonly("root_path", &context::root_path)
 
+		.def("reset", py::overload_cast<link>(&context::reset), "root"_a, "Reset context to new root")
+		.def("reset", py::overload_cast<sp_node, link>(&context::reset),
+			"root"_a, "root_handle"_a = link{}, "Reset context to new root")
+
 		// [NOTE] it's essential to keep returned tags in Python as long as context exists
 		// use combined return value policy:
 		// py::keep_alive<1, 0>() - keeps returned value while context exists

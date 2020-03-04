@@ -31,6 +31,10 @@ public:
 	// for unique_ptr
 	~context();
 
+	/// reset context to new root
+	auto reset(link root) -> void;
+	auto reset(sp_node root, link root_handle = {}) -> void;
+
 	/// simple accessors to model's data
 	auto root() const -> sp_node;
 	auto root_link() const -> link;

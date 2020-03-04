@@ -87,7 +87,7 @@ struct BS_HIDDEN_API context::impl {
 	//  ctors
 	//
 	impl(link root) :
-		root_(data_node(root)), root_lnk_(std::move(root))
+		root_(data_node(root)), root_lnk_(root)
 	{
 		verify();
 	}
@@ -100,11 +100,21 @@ struct BS_HIDDEN_API context::impl {
 
 	auto verify() -> void {
 		if(!root_) {
-			root_ = std::make_shared<node>();
-			root_lnk_.reset();
+			if(root_lnk_) root_ = data_node(root_lnk_);
+			if(!root_) {
+				root_ = std::make_shared<node>();
+				root_lnk_.reset();
+			}
 		}
 		if(!root_lnk_)
 			root_lnk_ = link::make_root<hard_link>("/", root_);
+	}
+
+	auto reset(sp_node root, link root_handle) {
+		idata_.clear();
+		root_ = std::move(root);
+		root_lnk_ = root_handle;
+		verify();
 	}
 
 	auto push(path_t path, const link& item = {}) -> item_tag& {
@@ -311,6 +321,14 @@ context::context(link root) :
 {}
 
 context::~context() = default;
+
+auto context::reset(link root) -> void {
+	pimpl_->reset(nullptr, root);
+}
+
+auto context::reset(sp_node root, link root_handle) -> void {
+	pimpl_->reset(std::move(root), root_handle);
+}
 
 auto context::root() const -> sp_node {
 	return pimpl_->root_;
