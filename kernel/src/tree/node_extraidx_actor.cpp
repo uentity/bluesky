@@ -112,6 +112,19 @@ auto equal_range(const std::string& key, Key meaning, const links_v& leafs) {
 	}
 }
 
+// [NOTE] this overload set is a replacement of nice 'constexpr if' for VS2017
+// It still tries to check discarded 'if constexpr' path even in templated context
+template<Key K>
+auto call_find(const caf::scoped_actor& f, const node::actor_type& Nactor, Key_type<K> key)
+-> std::enable_if_t<K == Key::ID, link> {
+	return actorf<link>(f, Nactor, infinite, a_node_find(), std::move(key)).value_or(link{});
+};
+template<Key K>
+auto call_find(const caf::scoped_actor& f, const node::actor_type& Nactor, Key_type<K> key)
+-> std::enable_if_t<K != Key::ID, link> {
+	return actorf<link>(f, Nactor, infinite, a_node_find(), std::move(key), K).value_or(link{});
+};
+
 // deep search
 template<Key K = Key::ID>
 auto deep_search(
@@ -119,12 +132,7 @@ auto deep_search(
 	std::set<lid_type> active_symlinks = {}
 ) -> link {
 	// first do direct search in leafs
-	link r;
-	if constexpr(K == Key::ID)
-		r = actorf<link>(f, Nactor, infinite, a_node_find(), key).value_or(link{});
-	else
-		r = actorf<link>(f, Nactor, infinite, a_node_find(), key, K).value_or(link{});
-	if(r) return r;
+	if(auto r = call_find<K>(f, Nactor, key)) return r;
 
 	// if not succeeded search in children nodes
 	auto leafs = actorf<links_v>(f, Nactor, infinite, a_node_leafs(), Key::AnyOrder).value_or(links_v{});
