@@ -110,7 +110,9 @@ struct file_heads_manager {
 	auto add_head(const fs::path& head_path) -> error {
 	return error::eval_safe(
 		// enter parent dir
-		[&] {
+		// [NOTE] explicit capture `head_path` because VS doesn't capture it with simple '&'
+		// because of constexpr if?
+		[this, &head_path] {
 			// [NOTE] don't enter parent dir (and reset `cur_path_`) when loading because:
 			// 1. we already antered parent dir on all usage conditions
 			// 2. resetting `cur_path_` is an error, because ther's an optimization for not creating

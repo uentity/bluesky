@@ -25,7 +25,7 @@ template<typename T>
 inline auto install_bin_formatter(bool store_node = false, bool force = false) {
 	static_assert(std::is_base_of_v<objbase, T>, "Formatters applicable only to BS objects");
 	const auto& td = T::bs_type();
-	if(!force && formatter_installed(td.name, detail::bin_fmt_name)) return false;
+	if(!force && formatter_installed(td.name, blue_sky::detail::bin_fmt_name)) return false;
 
 	auto bin_saver = [](const objbase& obj, std::string obj_fname, std::string_view) -> error {
 		auto objf = std::ofstream{obj_fname, std::ios::out | std::ios::trunc | std::ios::binary};
@@ -48,7 +48,7 @@ inline auto install_bin_formatter(bool store_node = false, bool force = false) {
 	};
 
 	return install_formatter(
-		td, { detail::bin_fmt_name, std::move(bin_saver), std::move(bin_loader), store_node }
+		td, { blue_sky::detail::bin_fmt_name, std::move(bin_saver), std::move(bin_loader), store_node }
 	);
 }
 
@@ -70,7 +70,7 @@ public:
 	using archive_t = Archive;
 	/// make sure that `custom_node_serialization` is the same in both input and output archives
 	static_assert(
-		detail::custom_node_serialization_v<Archive> == detail::custom_node_serialization_v<sibling_archive_t>,
+		blue_sky::detail::custom_node_serialization_v<Archive> == blue_sky::detail::custom_node_serialization_v<sibling_archive_t>,
 		"Custom node serialization switch must be the same for both Input and Output archives"
 	);
 

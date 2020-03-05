@@ -61,11 +61,14 @@ public:
 	public:
 		// create instance of Category & auto-register it
 		static auto self() -> Category const& {
-			const auto& self_ = []() -> const auto& {
-				static const auto self_ = Category{};
-				error::register_category(&self_);
-				return self_;
-			}();
+			static const auto& self_ = make_registered_self();
+			return self_;
+		}
+
+	private:
+		static auto make_registered_self() -> Category const& {
+			static const auto self_ = Category{};
+			error::register_category(&self_);
 			return self_;
 		}
 	};

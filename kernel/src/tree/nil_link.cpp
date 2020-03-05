@@ -96,7 +96,7 @@ struct nil_link_impl : link_impl {
 			static auto buf = std::array<char, 36>{}; // length of UUID string
 			auto x = to_string(boost::uuids::random_generator()());
 			std::copy(x.begin(), x.end(), buf.begin());
-			return {buf.begin(), buf.size()};
+			return { buf.data(), buf.size() };
 		}();
 
 		return session_nil;
