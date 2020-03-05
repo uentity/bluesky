@@ -104,6 +104,8 @@
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
     <ClInclude Include="kernel\include\bs\timetypes.h" />
+    <ClInclude Include="kernel\include\bs\tree\common.h" />
+    <ClInclude Include="kernel\include\bs\tree\context.h" />
     <ClInclude Include="kernel\include\bs\tree\errors.h" />
     <ClInclude Include="kernel\include\bs\tree\fusion.h" />
     <ClInclude Include="kernel\include\bs\tree\inode.h" />
@@ -122,14 +124,21 @@
     <ClInclude Include="kernel\src\kernel\plugins_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\python_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\radio_subsyst.h" />
+    <ClInclude Include="kernel\src\serialize\tree_fs_impl.h" />
     <ClInclude Include="kernel\src\tree\actor_common.h" />
+    <ClInclude Include="kernel\src\tree\actor_debug.h" />
+    <ClInclude Include="kernel\src\tree\ev_listener_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
     <ClInclude Include="kernel\src\tree\link_actor.h" />
     <ClInclude Include="kernel\src\tree\link_impl.h" />
-    <ClInclude Include="kernel\src\tree\link_invoke.h" />
+    <ClInclude Include="kernel\src\tree\nil_link.h" />
     <ClInclude Include="kernel\src\tree\node_actor.h" />
+    <ClInclude Include="kernel\src\tree\node_extraidx_actor.h" />
     <ClInclude Include="kernel\src\tree\node_impl.h" />
+    <ClInclude Include="kernel\src\tree\node_leafs_storage.h" />
+    <ClInclude Include="kernel\src\tree\node_retranslators.h" />
+    <ClInclude Include="kernel\src\tree\request_impl.h" />
     <ClInclude Include="kernel\src\tree\tree_impl.h" />
   </ItemGroup>
   <ItemGroup>
@@ -166,6 +175,7 @@
     <ClCompile Include="kernel\src\serialize\array.cpp" />
     <ClCompile Include="kernel\src\serialize\base_types.cpp" />
     <ClCompile Include="kernel\src\serialize\link.cpp" />
+    <ClCompile Include="kernel\src\serialize\node.cpp" />
     <ClCompile Include="kernel\src\serialize\object_formatter.cpp" />
     <ClCompile Include="kernel\src\serialize\python.cpp" />
     <ClCompile Include="kernel\src\serialize\tree.cpp" />
@@ -173,14 +183,21 @@
     <ClCompile Include="kernel\src\serialize\tree_fs_output.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
     <ClCompile Include="kernel\src\timetypes.cpp" />
+    <ClCompile Include="kernel\src\tree\context.cpp" />
     <ClCompile Include="kernel\src\tree\errors.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
     <ClCompile Include="kernel\src\tree\hard_link.cpp" />
     <ClCompile Include="kernel\src\tree\inode.cpp" />
     <ClCompile Include="kernel\src\tree\link.cpp" />
     <ClCompile Include="kernel\src\tree\link_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\link_actor_data.cpp" />
+    <ClCompile Include="kernel\src\tree\link_impl.cpp" />
+    <ClCompile Include="kernel\src\tree\nil_link.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
     <ClCompile Include="kernel\src\tree\node_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\node_extraidx_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\node_impl.cpp" />
+    <ClCompile Include="kernel\src\tree\node_retranslators.cpp" />
     <ClCompile Include="kernel\src\tree\sym_link.cpp" />
     <ClCompile Include="kernel\src\tree\tree.cpp" />
     <ClCompile Include="kernel\src\tree\tree_async.cpp" />

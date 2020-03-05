@@ -249,9 +249,6 @@
     <ClInclude Include="kernel\src\tree\link_impl.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\src\tree\link_invoke.h">
-      <Filter>Файлы исходного кода\tree</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\include\bs\tree\errors.h">
       <Filter>Заголовочные файлы\bs\tree</Filter>
     </ClInclude>
@@ -431,6 +428,48 @@
     </ClInclude>
     <ClInclude Include="kernel\include\bs\detail\sharded_mutex.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\common.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\context.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\python\any_array.h">
+      <Filter>Заголовочные файлы\bs\python</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\python\container_iterator.h">
+      <Filter>Заголовочные файлы\bs\python</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\python\map.h">
+      <Filter>Заголовочные файлы\bs\python</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\python\timetypes.h">
+      <Filter>Заголовочные файлы\bs\python</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\python\vector.h">
+      <Filter>Заголовочные файлы\bs\python</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\serialize\tree_fs_impl.h">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\actor_debug.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\ev_listener_actor.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\nil_link.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\node_extraidx_actor.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\node_leafs_storage.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\node_retranslators.h">
+      <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -634,6 +673,18 @@
     </ClCompile>
     <ClCompile Include="kernel\src\serialize\node.cpp">
       <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\context.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\nil_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\node_extraidx_actor.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\node_retranslators.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
