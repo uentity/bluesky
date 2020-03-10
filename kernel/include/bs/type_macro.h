@@ -6,7 +6,6 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include <boost/preprocessor/cat.hpp>
@@ -18,14 +17,8 @@
 #include <boost/preprocessor/facilities/expand.hpp>
 
 #include <boost/preprocessor/seq/for_each.hpp>
-//#include <boost/preprocessor/seq/for_each_i.hpp>
-
 #include <boost/preprocessor/tuple/to_seq.hpp>
 #include <boost/preprocessor/tuple/enum.hpp>
-
-// trick to overcome M$VC c4003 warnings
-//#include <boost/preprocessor/array/data.hpp>
-//#include <boost/preprocessor/tuple/rem.hpp>
 
 /*-----------------------------------------------------------------
  * helpers
@@ -35,22 +28,13 @@
 #define BS_FMT_TYPE_SPEC(T, is_decl) \
 BOOST_PP_TUPLE_ENUM(BOOST_PP_IIF(is_decl, (), T))BOOST_PP_EXPR_IIF(BOOST_PP_COMPL(is_decl), ::)
 
-// helper to generate templated type specification
-// from type name T and tuple of template arguments
-//#define BS_CLIST_CHOKER(r, data, i, elem) BOOST_PP_COMMA_IF(i) BOOST_PP_CAT(A, i)
-//#define BS_CLIST_FORMER(tp_seq) BOOST_PP_SEQ_FOR_EACH_I(BS_CLIST_CHOKER, _, tp_seq)
-//
-//#define BS_TLIST_NAMER(r, data, i, elem) BOOST_PP_COMMA_IF(i) elem BOOST_PP_CAT(A, i)
-//#define BS_TLIST_FORMER(tp_seq) BOOST_PP_SEQ_FOR_EACH_I(BS_TLIST_NAMER, _, tp_seq)
-
-
 /*-----------------------------------------------------------------
  * declarations
  *----------------------------------------------------------------*/
 // only declare functions, bs_resolve_type() is always inline
-#define BS_TYPE_DECL                                       \
-BS_RESOLVE_TYPE_IMPL_INL                                   \
-public: static const blue_sky::type_descriptor& bs_type(); \
+#define BS_TYPE_DECL                                                       \
+public: static const blue_sky::type_descriptor& bs_type();                 \
+auto bs_resolve_type() const -> const blue_sky::type_descriptor& override; \
 private: friend class blue_sky::type_descriptor;
 
 // inline standard implementation that automates type name generation for templated types
@@ -87,7 +71,8 @@ blue_sky::type_descriptor td(blue_sky::identity< BOOST_PP_TUPLE_ENUM(T_tup) >(),
 // prefix is also a tuple
 #define BS_TYPE_IMPL_(prefix_tup, T_tup, base_tup, type_name, descr, add_def_create, add_def_copy, is_decl) \
 BOOST_PP_TUPLE_ENUM(prefix_tup) const blue_sky::type_descriptor& BS_FMT_TYPE_SPEC(T_tup, is_decl) bs_type() \
-{ static BS_TD_IMPL(T_tup, base_tup, type_name, descr, add_def_create, add_def_copy); return td; }
+{ static BS_TD_IMPL(T_tup, base_tup, type_name, descr, add_def_create, add_def_copy); return td; }          \
+BS_RESOLVE_TYPE_IMPL_(prefix_tup, T_tup, 0)
 
 // here T ans base are type names, not tuples
 // implementation for non-template types
@@ -153,8 +138,6 @@ bs_resolve_type() const { return bs_type(); }
 #define BS_RESOLVE_TYPE_IMPL_INL \
 BS_RESOLVE_TYPE_IMPL_((public:), BS_SEQ_NIL(), 1)
 
-// bs_resolve_type() is defined in class body in *_DECL macro family
-// so the following macro are included only to make system more "complete"
 // implementation for non-template types
 #define BS_RESOLVE_TYPE_IMPL(T) \
 BS_RESOLVE_TYPE_IMPL_(BS_SEQ_NIL(), (T), 0)
