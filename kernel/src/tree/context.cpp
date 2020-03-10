@@ -208,7 +208,7 @@ struct BS_HIDDEN_API context::impl {
 			auto R_path = path_t{};
 			if(auto R_tag = find(R))
 				R_path = (**R_tag).first;
-			else {
+			else if(R != root_lnk_) {
 				nodes.clear();
 				return;
 			}
