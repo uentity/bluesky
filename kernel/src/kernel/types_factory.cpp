@@ -38,20 +38,4 @@ auto clone_object(bs_type_copy_param source) -> type_descriptor::shared_ptr_cast
 	return source->bs_resolve_type().clone(source);
 }
 
-auto register_instance(sp_cobj obj) -> int {
-	return KIMPL.register_instance(std::move(obj));
-}
-
-auto free_instance(sp_cobj obj) -> int {
-	return KIMPL.free_instance(std::move(obj));
-}
-
-auto instances(const type_descriptor& ti) -> instances_enum {
-	return KIMPL.instances(ti.name);
-}
-
-auto instances(std::string_view type_id) -> instances_enum {
-	return KIMPL.instances(type_id);
-}
-
 NAMESPACE_END(blue_sky::kernel::tfactory)

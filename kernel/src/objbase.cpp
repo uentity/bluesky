@@ -73,14 +73,6 @@ const type_descriptor& objbase::bs_resolve_type() const {
 	return bs_type();
 }
 
-int objbase::bs_register_this() const {
-	return kernel::tfactory::register_instance(shared_from_this());
-}
-
-int objbase::bs_free_this() const {
-	return kernel::tfactory::free_instance(shared_from_this());
-}
-
 std::string objbase::type_id() const {
 	return bs_resolve_type().name;
 }

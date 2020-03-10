@@ -26,8 +26,6 @@ void py_bind_objbase(py::module& m) {
 		}), "custom_oid"_a = "")
 
 		.def("bs_resolve_type", &objbase::bs_resolve_type, py::return_value_policy::reference)
-		.def("bs_register_this", &objbase::bs_register_this)
-		.def("bs_free_this", &objbase::bs_free_this)
 		.def("swap", &objbase::swap)
 		.def("type_id", &objbase::type_id)
 		.def("id", &objbase::id)

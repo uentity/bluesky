@@ -41,38 +41,4 @@ auto create_object(Obj_type_spec&& obj_type, Args&&... ctor_args) {
 // clone object
 BS_API auto clone_object(bs_type_copy_param source) -> type_descriptor::shared_ptr_cast;
 
-// store and access instances of BS types
-BS_API auto register_instance(sp_cobj obj) -> int;
-
-template< class T >
-auto register_instance(T* obj) {
-	// check that T is inherited from objbase
-	static_assert(
-		std::is_base_of< objbase, T >::value,
-		"Only blue_sky::objbase derived instances can be registered!"
-	);
-	return register_instance(obj->shared_from_this());
-}
-
-BS_API auto free_instance(sp_cobj obj) -> int;
-
-template< class T >
-auto free_instance(T* obj) {
-	// check that T is inherited from objbase
-	static_assert(
-		std::is_base_of< objbase, T >::value,
-		"Only blue_sky::objbase derived instances can be registered!"
-	);
-	return free_instance(obj->shared_from_this());
-}
-
-using instances_enum = std::vector< sp_cobj >;
-BS_API auto instances(const type_descriptor& obj_t) -> instances_enum;
-BS_API auto instances(std::string_view type_id) -> instances_enum;
-
-template< typename T >
-auto instances() {
-	return instances(T::bs_type());
-}
-
 NAMESPACE_END(blue_sky::kernel::tfactory)

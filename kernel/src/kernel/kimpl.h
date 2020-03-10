@@ -12,7 +12,6 @@
 #include <bs/any_array.h>
 #include "logging_subsyst.h"
 #include "plugins_subsyst.h"
-#include "instance_subsyst.h"
 #include "config_subsyst.h"
 
 #include <caf/fwd.hpp>
@@ -33,7 +32,6 @@ NAMESPACE_END(detail)
 class BS_HIDDEN_API kimpl :
 	public detail::config_subsyst,
 	public detail::plugins_subsyst,
-	public detail::instance_subsyst,
 	public detail::logging_subsyst
 {
 public:

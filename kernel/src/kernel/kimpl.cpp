@@ -107,10 +107,6 @@ template<> auto singleton<plugins_subsyst>::Instance() -> plugins_subsyst& {
 	return static_cast<plugins_subsyst&>(KIMPL);
 }
 
-template<> auto singleton<instance_subsyst>::Instance() -> instance_subsyst& {
-	return static_cast<instance_subsyst&>(KIMPL);
-}
-
 template<> auto singleton<logging_subsyst>::Instance() -> logging_subsyst& {
 	return static_cast<logging_subsyst&>(KIMPL);
 }

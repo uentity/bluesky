@@ -80,12 +80,6 @@ public:
 	/// derived types must override this and return correct `type_descriptor`
 	virtual auto bs_resolve_type() const -> const type_descriptor&;
 
-	// [TODO] remove these outdated methods
-	// register this instance in kernel instances list
-	int bs_register_this() const;
-	// remove this instance from kernel instances list
-	int bs_free_this() const;
-
 protected:
 	/// string ID storage
 	std::string id_;

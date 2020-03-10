@@ -82,12 +82,6 @@ auto bind_tfactory_api(py::module& m) -> void {
 		py::overload_cast<const type_descriptor&, const std::string&>(&kernel::tfactory::register_type),
 		"type_descriptor"_a, "plugin_name"_a);
 	m.def("find_type", &kernel::tfactory::find_type, "type_name"_a);
-	m.def("register_instance", (int (*)(sp_cobj)) &kernel::tfactory::register_instance);
-	m.def("free_instance", (int (*)(sp_cobj)) &kernel::tfactory::free_instance);
-	m.def("instances",
-		(auto (*)(const type_descriptor&) -> kernel::tfactory::instances_enum) &kernel::tfactory::instances);
-	m.def("instances",
-		(auto (*)(std::string_view) -> kernel::tfactory::instances_enum) &kernel::tfactory::instances);
 	m.def("clone_object", [](bs_type_copy_param src) -> sp_obj {
 		return kernel::tfactory::clone_object(src);
 	}, "src"_a, "Make object copy");
