@@ -32,9 +32,10 @@ node_impl::node_impl(node* super)
 node_impl::node_impl(const node_impl& rhs, node* super)
 	: timeout(rhs.timeout), super_(super)
 {
+	// [TODO] fix this in safer way after node is refactored
+	auto& tgt = links_.get<Key_tag<Key::AnyOrder>>();
 	for(const auto& plink : rhs.links_.get<Key_tag<Key::AnyOrder>>()) {
-		// non-deep clone can result in unconditional moving nodes from source
-		insert(plink.clone(true), InsertPolicy::AllowDupNames);
+		tgt.insert(tgt.end(), plink.clone(true));
 	}
 	// [NOTE] links are in invalid state (no owner set) now
 	// correct this by manually calling `node::propagate_owner()` after copy is constructed
