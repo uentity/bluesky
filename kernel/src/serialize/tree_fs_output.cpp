@@ -138,7 +138,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			})) return tl::make_unexpected(std::move(er));
 
 			if(res_exists)
-				return tl::make_unexpected(error{ start_fname.generic_u8string(), Error::CantMakeFilename });
+				return tl::make_unexpected(error{ start_fname.u8string(), Error::CantMakeFilename });
 			return res_fname;
 		};
 
@@ -151,7 +151,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			std::string(".") + obj_fmt
 		);
 		if(!obj_path) return obj_path.error();
-		obj_filename = obj_path->filename().generic_u8string();
+		obj_filename = obj_path->filename().u8string();
 		ar(cereal::make_nvp("filename", obj_filename));
 		filename_ok = true;
 
@@ -175,7 +175,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		++pm->state.nstarted_;
 		// post invoke save mesage
 		auto abs_obj_path = fs::absolute(*obj_path);
-		pm->send(A, obj.shared_from_this(), abs_obj_path.generic_u8string());
+		pm->send(A, obj.shared_from_this(), abs_obj_path.u8string());
 		return perfect;
 	}); }
 

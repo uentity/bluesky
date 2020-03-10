@@ -50,23 +50,29 @@ struct file_heads_manager {
 	file_heads_manager(std::string root_fname, std::string objects_dirname = {})
 		: root_fname_(std::move(root_fname)), objects_dname_(std::move(objects_dirname))
 	{
+		// for Windows add '\\?\' prefix for long names support
+#ifdef _WIN32
+		static constexpr auto magic_prefix = std::string_view{ "\\\\?\\" };
+		if(magic_prefix.compare(0, magic_prefix.size(), root_fname_.data()) != 0)
+			root_fname_.insert(0, magic_prefix);
+#endif
 		// try convert root filename to absolute
 		auto root_path = fs::path(root_fname_);
 		auto abs_root = fs::path{};
 		auto er = error::eval_safe([&]{ abs_root = fs::absolute(root_path); });
 		if(!er) {
 			// extract root dir from absolute filename
-			root_dname_ = abs_root.parent_path().generic_u8string();
-			root_fname_ = abs_root.filename().generic_u8string();
+			root_dname_ = abs_root.parent_path().u8string();
+			root_fname_ = abs_root.filename().u8string();
 		}
 		else if(root_path.has_parent_path()) {
 			// could not make abs path
-			root_dname_ = root_path.parent_path().generic_u8string();
-			root_fname_ = root_path.filename().generic_u8string();
+			root_dname_ = root_path.parent_path().u8string();
+			root_fname_ = root_path.filename().u8string();
 		}
 		else {
 			// best we can do
-			error::eval_safe([&]{ root_dname_ = fs::current_path().generic_u8string(); });
+			error::eval_safe([&]{ root_dname_ = fs::current_path().u8string(); });
 		}
 	}
 
@@ -76,7 +82,7 @@ struct file_heads_manager {
 	auto enter_dir(Path src_path, fs::path& tar_path) -> error {
 		auto path = fs::path(std::move(src_path));
 		//if(path == tar_path) return perfect;
-		if(path.empty()) return { path.generic_u8string(), Error::EmptyPath };
+		if(path.empty()) return { path.u8string(), Error::EmptyPath };
 
 		EVAL_SAFE
 			// do something when path doesn't exist
@@ -85,14 +91,14 @@ struct file_heads_manager {
 					if constexpr(Saving)
 						fs::create_directories(path);
 					else
-						return error{ path.generic_u8string(), Error::PathNotExists };
+						return error{ path.u8string(), Error::PathNotExists };
 				}
 				return success();
 			},
 			// check that path is a directory
 			[&] {
 				return fs::is_directory(path) ?
-					success() : error{ path.generic_u8string(), Error::PathNotDirectory };
+					success() : error{ path.u8string(), Error::PathNotDirectory };
 			}
 		RETURN_EVAL_ERR
 
@@ -127,7 +133,7 @@ struct file_heads_manager {
 				heads_.emplace_back(necks_.back());
 				return success();
 			}
-			return error{ head_path.generic_u8string(), Saving ? Error::CantWriteFile : Error::CantReadFile };
+			return error{ head_path.u8string(), Saving ? Error::CantWriteFile : Error::CantReadFile };
 		}
 	); }
 
