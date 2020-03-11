@@ -9,8 +9,7 @@
 
 #include <bs/type_info.h>
 #include <bs/type_descriptor.h>
-
-constexpr auto BS_NIL_TYPE_TAG = "__blue_sky_nil_type__";
+#include <bs/defaults.h>
 
 namespace blue_sky {
 /*-----------------------------------------------------------------------------
@@ -21,11 +20,6 @@ class nil {};
 const std::type_index& nil_type_info() {
 	static const auto nil_ti = BS_GET_TI(nil);
 	return nil_ti;
-}
-
-const std::string& nil_type_name() {
-	static const auto nil_name = std::string(BS_NIL_TYPE_TAG);
-	return nil_name;
 }
 
 bool is_nil(const std::type_index& t) {
@@ -52,7 +46,7 @@ type_descriptor::type_descriptor(
 // obtain Nil type_descriptor instance
 const type_descriptor& type_descriptor::nil() {
 	static const auto nil_td = type_descriptor(
-		nil_type_name(), nullptr, &nil, "Nil type descriptor"
+		defaults::nil_type_name, nullptr, &nil, "Nil type"
 	);
 	return nil_td;
 }

@@ -10,6 +10,7 @@
 #include "nil_link.h"
 #include "link_actor.h"
 
+#include <bs/defaults.h>
 #include <bs/kernel/radio.h>
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
@@ -22,7 +23,7 @@ OMIT_OBJ_SERIALIZATION
 NAMESPACE_BEGIN(blue_sky::tree)
 NAMESPACE_BEGIN()
 ///////////////////////////////////////////////////////////////////////////////
-//  nil actor
+//  nil link actor
 //
 struct BS_HIDDEN_API nil_link_actor : link_actor {
 	using link_actor::link_actor;
@@ -71,7 +72,7 @@ struct nil_link_impl : link_impl {
 	using super::super;
 
 	nil_link_impl()
-		: super("__nil_link__", Flags::Plain)
+		: super(defaults::tree::nil_link_name, Flags::Plain)
 	{
 		id_ = nil_uid;
 	}
@@ -91,7 +92,7 @@ struct nil_link_impl : link_impl {
 	auto type_id() const -> std::string_view override { return type_id_(); }
 
 	static auto type_id_() -> std::string_view {
-		// generate ranom type ID (UUID string)
+		// generate random type ID (UUID string)
 		static const auto session_nil = []() -> std::string_view {
 			static auto buf = std::array<char, 36>{}; // length of UUID string
 			auto x = to_string(boost::uuids::random_generator()());
@@ -103,12 +104,11 @@ struct nil_link_impl : link_impl {
 	}
 };
 
+NAMESPACE_END()
+
 ///////////////////////////////////////////////////////////////////////////////
 //  nil link
 //
-
-NAMESPACE_END()
-
 nil_link::nil_link(sp_limpl pimpl) :
 	pimpl_(pimpl),
 	// auto start nil link service

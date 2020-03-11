@@ -10,6 +10,7 @@
 
 #include <bs/tree/node.h>
 #include <bs/actor_common.h>
+#include <bs/defaults.h>
 #include <bs/kernel/radio.h>
 #include <bs/detail/enumops.h>
 #include <bs/detail/function_view.h>
@@ -40,9 +41,9 @@ lnk_class::lnk_class(const link& rhs) : link(rhs, type_id_()) {}
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;
 
-inline const auto nil_uid = boost::uuids::nil_uuid();
-inline const auto nil_oid = to_string(nil_uid);
-inline const auto nil_otid = type_descriptor::nil().name;
+using defaults::tree::nil_uid;
+using defaults::tree::nil_oid;
+inline const auto nil_otid = blue_sky::defaults::nil_type_name;
 
 using link_impl_mutex = std::mutex;
 

@@ -9,6 +9,7 @@
 
 #include <bs/error.h>
 #include <bs/kernel/errors.h>
+#include <bs/defaults.h>
 #include <bs/log.h>
 #include <bs/detail/scope_guard.h>
 #include <bs/detail/is_container.h>
@@ -16,8 +17,6 @@
 
 #include "plugins_subsyst.h"
 #include "python_subsyst.h"
-
-inline constexpr auto BS_KERNEL_VERSION = "1.3.1";
 
 #define PYSS singleton<python_subsyst>::Instance()
 
@@ -29,6 +28,8 @@ BS_C_API blue_sky::plugin_descriptor* bs_get_plugin_descriptor() {
 }
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
+// import defaults
+using defaults::kernel::version;
 
 // hide implementation
 NAMESPACE_BEGIN()
@@ -42,8 +43,8 @@ NAMESPACE_END() // eof hidden namespace
 // init kernel plugin descriptors
 auto plugins_subsyst::kernel_pd() -> plugin_descriptor& {
 	static plugin_descriptor kernel_pd(
-		BS_GET_TI(__kernel_types_pd_tag__), "kernel", BS_KERNEL_VERSION,
-		"BlueSky virtual kernel plugin", "bs",
+		BS_GET_TI(__kernel_types_pd_tag__), defaults::kernel::plugin_name, defaults::kernel::version,
+		"BlueSky kernel", defaults::kernel::py_namespace,
 		(void*)&cereal::detail::StaticObject<cereal::detail::InputBindingMap>::getInstance(),
 		(void*)&cereal::detail::StaticObject<cereal::detail::OutputBindingMap>::getInstance(),
 		(void*)&cereal::detail::StaticObject<cereal::detail::PolymorphicCasters>::getInstance()
@@ -53,8 +54,8 @@ auto plugins_subsyst::kernel_pd() -> plugin_descriptor& {
 
 auto plugins_subsyst::runtime_pd() -> plugin_descriptor& {
 	static plugin_descriptor runtime_pd(
-		BS_GET_TI(__runtime_types_pd_tag__), "runtime", BS_KERNEL_VERSION,
-		"BlueSky virtual plugin for runtime types", "bs"
+		BS_GET_TI(__runtime_types_pd_tag__), defaults::kernel::rt_plugin_name, defaults::kernel::version,
+		"BlueSky runtime types", defaults::kernel::py_namespace
 	);
 	return runtime_pd;
 }
@@ -94,88 +95,74 @@ void plugins_subsyst::unload_plugins() {
 }
 
 auto plugins_subsyst::load_plugin(const std::string& fname) -> error {
-	using namespace std;
-
+return error::eval_safe([&]() -> error {
 	// DLL handle
 	lib_descriptor lib;
 	auto unload_on_error = scope_guard{ [&lib]{ lib.unload(); } };
 
-	static auto who = "load_plugins";
 	plugin_initializer plugin_init;
 	BS_GET_PLUGIN_DESCRIPTOR bs_plugin_descriptor;
 	bs_register_plugin_fn bs_register_plugin;
 	plugin_descriptor* p_descr = nullptr;
 
-	try {
-		// load library
-		lib.load(fname.c_str());
+	// load library
+	if(!lib.load(fname.c_str()))
+		return {lib.dll_error_message(), kernel::Error::CantLoadDLL};
 
-		// check for plugin descriptor presence
-		lib.load_sym("bs_get_plugin_descriptor", bs_plugin_descriptor);
-		if(!bs_plugin_descriptor)
-			return {lib.fname_, kernel::Error::BadBSplugin};
+	// check for plugin descriptor presence
+	lib.load_sym("bs_get_plugin_descriptor", bs_plugin_descriptor);
+	if(!bs_plugin_descriptor)
+		return {lib.fname_, kernel::Error::BadBSplugin};
 
-		// retrieve descriptor from plugin
-		if(!(p_descr = dynamic_cast< plugin_descriptor* >(bs_plugin_descriptor())))
-			return {lib.fname_, kernel::Error::BadPluginDescriptor};
+	// retrieve descriptor from plugin
+	if(!(p_descr = dynamic_cast< plugin_descriptor* >(bs_plugin_descriptor())))
+		return {lib.fname_, kernel::Error::BadPluginDescriptor};
 
-		// check if loaded lib is really a blue-sky kernel
-		if(*p_descr == kernel_pd())
-			return error::quiet("load_plugin: cannot load kernel (already loaded)");
+	// check if loaded lib is really a blue-sky kernel
+	if(*p_descr == kernel_pd())
+		return error::quiet("load_plugin: cannot load kernel (already loaded)");
 
-		// check if bs_register_plugin function present in library
-		lib.load_sym("bs_register_plugin", bs_register_plugin);
-		if(!bs_register_plugin)
-			return {lib.fname_ + ": missing bs_register_plugin)", kernel::Error::BadBSplugin};
+	// check if bs_register_plugin function present in library
+	lib.load_sym("bs_register_plugin", bs_register_plugin);
+	if(!bs_register_plugin)
+		return {lib.fname_ + ": missing bs_register_plugin)", kernel::Error::BadBSplugin};
 
-		// check if plugin was already registered earlier
-		if(!register_plugin(p_descr, lib).second)
-			return {lib.fname_, kernel::Error::PluginAlreadyRegistered};
+	// check if plugin was already registered earlier
+	if(!register_plugin(p_descr, lib).second)
+		return {lib.fname_, kernel::Error::PluginAlreadyRegistered};
 
-		// TODO: enable versions checking
-		// check version
-		//if(version.size() && version_comparator(p_descr->version.c_str(), version.c_str()) < 0) {
-		//	delay_unload killer(&lib, LU);
-		//	bsout() << log::E("{}: BlueSky plugin {} has wrong version") << who << lib.fname_ << log::end;
-		//	return retval;
-		//}
+	// TODO: enable versions checking
+	// check version
+	//if(version.size() && version_comparator(p_descr->version.c_str(), version.c_str()) < 0) {
+	//	delay_unload killer(&lib, LU);
+	//	bsout() << log::E("{}: BlueSky plugin {} has wrong version") << who << lib.fname_ << log::end;
+	//	return retval;
+	//}
 
-		// invoke bs_register_plugin
-		plugin_init.pd = p_descr;
-		if(!bs_register_plugin(plugin_init)) {
-			unload_plugin(*p_descr);
-			return {lib.fname_, kernel::Error::PluginRegisterFail};
-		}
-
-		// init Python subsystem
-		auto py_scope = PYSS.py_init_plugin(lib, *p_descr).value_or("");
-
-		// print status
-		std::string msg = "BlueSky plugin {} loaded";
-		if(py_scope.size())
-			msg += ", Python subsystem initialized, namespace: {}";
-		auto log_msg = bsout() << log::I(msg.c_str()) << lib.fname_;
-		if(py_scope.size())
-			log_msg << py_scope << log::end;
-		else
-			log_msg << log::end;
+	// invoke bs_register_plugin
+	plugin_init.pd = p_descr;
+	if(!bs_register_plugin(plugin_init)) {
+		unload_plugin(*p_descr);
+		return {lib.fname_, kernel::Error::PluginRegisterFail};
 	}
-	catch(const error& ex) {
-		return ex;
-	}
-	catch(const std::exception& ex) {
-		return error(ex.what());
-	}
-	catch(...) {
-		BSERROR << log::E("[Unknown Exception] {}: Unknown error happened during plugins loading")
-			<< who << bs_end;
-		throw;
-	}
+
+	// init Python subsystem
+	auto py_scope = PYSS.py_init_plugin(lib, *p_descr).value_or("");
+
+	// print status
+	std::string msg = "BlueSky plugin {} loaded";
+	if(py_scope.size())
+		msg += ", Python subsystem initialized, namespace: {}";
+	auto log_msg = bsout() << log::I(msg.c_str()) << lib.fname_;
+	if(py_scope.size())
+		log_msg << py_scope << log::end;
+	else
+		log_msg << log::end;
 
 	// don't unload sucessfully loaded plugin
 	unload_on_error.disable();
-	return success();
-}
+	return perfect;
+}); }
 
 auto plugins_subsyst::load_plugins() -> error {
 	// discover plugins

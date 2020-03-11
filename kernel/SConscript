@@ -24,6 +24,7 @@ if build_kind == "init" :
 #kernel_cpp_list = files(["src"], recursive = False).sources;
 kernel_cpp_list = [
 	"src/assert.cpp",
+	"src/defaults.cpp",
 	"src/type_info.cpp",
 	"src/plugin_descriptor.cpp",
 	"src/objbase.cpp",
