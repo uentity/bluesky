@@ -101,8 +101,16 @@ void py_bind_tree(py::module& m) {
 
 	// bind lists of links & nodes as opaque types
 	bind_rich_vector<links_v>(m, "links_vector", py::module_local(false));
-	bind_list<links_l>(m, "links_list", py::module_local(false));
 	bind_list<nodes_l>(m, "nodes_list", py::module_local(false));
+	bind_list<links_l>(m, "links_list", py::module_local(false));
+	// add implicit conversion from Python list
+	py::implicitly_convertible<py::list, links_v>();
+	py::implicitly_convertible<py::list, links_l>();
+	py::implicitly_convertible<py::list, nodes_l>();
+	// ... and tuple
+	py::implicitly_convertible<py::tuple, links_v>();
+	py::implicitly_convertible<py::tuple, links_l>();
+	py::implicitly_convertible<py::tuple, nodes_l>();
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  link & node
