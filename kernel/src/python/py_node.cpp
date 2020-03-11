@@ -245,6 +245,9 @@ void py_bind_node(py::module& m) {
 			return N.insert(std::move(name), std::move(obj), pol).second;
 		}, "name"_a, "obj"_a, "pol"_a = InsertPolicy::AllowDupNames,
 		"Insert hard link to given object", nogil)
+		.def("insert", [](node& N, links_v ls, InsertPolicy pol) {
+			return N.insert(std::move(ls), pol);
+		}, "ls"_a, "pol"_a = InsertPolicy::AllowDupNames, "insert bunch of links at once", nogil)
 
 		// erase by given index
 		.def("__delitem__", &erase_idx, "idx"_a, nogil)
