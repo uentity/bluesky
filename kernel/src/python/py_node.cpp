@@ -7,20 +7,16 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/python/common.h>
+#include <bs/python/tree.h>
 #include <bs/python/container_iterator.h>
-#include <bs/tree/node.h>
 
 #include <boost/uuid/uuid_io.hpp>
-//#include <boost/uuid/string_generator.hpp>
 
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
-
-//const auto uuid_from_str = boost::uuids::string_generator{};
 
 /*-----------------------------------------------------------------------------
  *  hidden details

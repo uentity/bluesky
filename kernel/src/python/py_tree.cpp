@@ -7,7 +7,7 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/python/common.h>
+#include <bs/python/tree.h>
 #include <bs/python/list.h>
 #include <bs/tree/tree.h>
 #include <bs/tree/context.h>
@@ -15,10 +15,6 @@
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 
-// make it possible to bind opaque std::list & std::vector (w/o content copying)
-PYBIND11_MAKE_OPAQUE(blue_sky::tree::links_v);
-PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::link>);
-PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_node>);
 PYBIND11_MAKE_OPAQUE(blue_sky::tree::context::item_tag);
 
 NAMESPACE_BEGIN(blue_sky::python)
@@ -103,6 +99,11 @@ void py_bind_tree(py::module& m) {
 	py::class_<unsafe_t>(m, "unsafe_t");
 	m.attr("unsafe") = unsafe;
 
+	// bind lists of links & nodes as opaque types
+	bind_rich_vector<links_v>(m, "links_vector", py::module_local(false));
+	bind_list<links_l>(m, "links_list", py::module_local(false));
+	bind_list<nodes_l>(m, "nodes_list", py::module_local(false));
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  link & node
 	//
@@ -142,11 +143,6 @@ void py_bind_tree(py::module& m) {
 		"follow_lazy_links"_a = true, "high_priority"_a = false,
 		"Async quick link search by given path relative to `start`", nogil
 	);
-
-	// bind lists of links & nodes as opaque types
-	bind_rich_vector<links_v>(m, "links_vector", py::module_local(false));
-	bind_list<links_l>(m, "links_list", py::module_local(false));
-	bind_list<nodes_l>(m, "nodes_list", py::module_local(false));
 
 	// walk
 	// [HINT] pass vectors to be modified as pointers - in this case pybind11 applies reference policy

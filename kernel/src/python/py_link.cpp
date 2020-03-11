@@ -7,13 +7,11 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/python/common.h>
 #include <bs/python/tree.h>
-#include <bs/tree/link.h>
-#include <bs/tree/node.h>
 #include "../kernel/python_subsyst_impl.h"
 
 #include <boost/uuid/uuid_io.hpp>
+
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 #include <pybind11/operators.h>

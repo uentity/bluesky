@@ -8,9 +8,15 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <pybind11/pybind11.h>
+#include "common.h"
 #include <bs/tree/link.h>
+#include <bs/tree/node.h>
 #include <bs/tree/fusion.h>
+
+// make it possible to bind opaque std::list & std::vector (w/o content copying)
+PYBIND11_MAKE_OPAQUE(blue_sky::tree::links_v);
+PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::link>);
+PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::sp_node>);
 
 NAMESPACE_BEGIN(blue_sky::python)
 
