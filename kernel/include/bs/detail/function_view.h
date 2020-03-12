@@ -22,6 +22,7 @@ template<typename F> class function_view;
 template<typename R, typename... Args>
 class function_view<R (Args...)> {
 public:
+	using result_t = R;
 	using callable_t = R (Args...);
 	using pointer_t = R (*)(Args...);
 	using stdfn_t = std::function<callable_t>;
@@ -107,23 +108,29 @@ template<typename F> using deduce_callable_t = typename deduce_callable<std::rem
 template<typename R, typename... Args>
 struct deduce_callable<R (Args...), void> {
 	using type = R (Args...);
+	using result = R;
 };
 template<typename R, typename... Args>
 struct deduce_callable<R (*)(Args...), void> {
 	using type = R (Args...);
+	using result = R;
 };
 template<typename C, typename R, typename... Args>
 struct deduce_callable<R (C::*)(Args...), void> {
 	using type = R (Args...);
+	using result = R;
 };
 template<typename C, typename R, typename... Args>
 struct deduce_callable<R (C::*)(Args...) const, void> {
 	using type = R (Args...);
+	using result = R;
 };
 
 template<typename F>
 struct deduce_callable<F, std::void_t< decltype(&F::operator()) >> {
-	using type = deduce_callable_t< decltype(&F::operator()) >;
+	using deducer = deduce_callable< std::remove_reference_t<decltype(&F::operator())> >;
+	using type = typename deducer::type;
+	using result = typename deducer::result;
 };
 
 } // eof blue_sky::detail
