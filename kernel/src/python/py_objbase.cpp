@@ -11,11 +11,14 @@
 #include <bs/tree/inode.h>
 #include <bs/python/common.h>
 #include <bs/python/expected.h>
+#include <bs/python/result_converter.h>
 #include <bs/serialize/object_formatter.h>
 
 #include <pybind11/functional.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
+
+using py_modificator_f = std::function< py::object(sp_obj) >;
 
 void py_bind_objbase(py::module& m) {
 	// objebase binding
@@ -31,8 +34,14 @@ void py_bind_objbase(py::module& m) {
 		.def("id", &objbase::id)
 		.def_property_readonly("is_node", &objbase::is_node)
 		.def_property_readonly("info", &objbase::info)
-		// DEBUG
-		.def_property_readonly("refs", [](objbase& src) { return src.shared_from_this().use_count(); })
+		// [NOTE] export only async overload, because otherwise Python will hang when moving
+		// callback into actor
+		.def("apply",
+			[](objbase& obj, py_modificator_f m) {
+				obj.apply(launch_async, make_result_converter<error>(std::move(m), perfect));
+			},
+			"m"_a, "Place given modificator `m` to object's queue and return immediately", nogil
+		)
 	;
 
 	// object formatters

@@ -30,23 +30,31 @@ static boost::uuids::random_generator gen;
 
 objbase::objbase(std::string custom_oid)
 	: objbase(false, custom_oid)
-{}
+{
+	start_engine();
+}
 
 objbase::objbase(bool is_node, std::string custom_oid)
 	: id_(custom_oid.size() ? std::move(custom_oid) : boost::uuids::to_string(gen())),
 	is_node_(is_node)
-{}
+{
+	start_engine();
+}
 
 objbase::objbase(const objbase& obj)
 	: enable_shared_from_this(obj), id_(boost::uuids::to_string(gen())), is_node_(obj.is_node_)
-{}
+{
+	start_engine();
+}
 
 void objbase::swap(objbase& rhs) {
 	std::swap(is_node_, rhs.is_node_);
 	std::swap(id_, rhs.id_);
+	std::swap(inode_, rhs.inode_);
+	std::swap(actor_, rhs.actor_);
 }
 
-objbase::~objbase() {}
+objbase::~objbase() = default;
 
 objbase& objbase::operator=(const objbase& rhs) {
 	objbase(rhs).swap(*this);
@@ -83,6 +91,10 @@ std::string objbase::id() const {
 
 bool objbase::is_node() const {
 	return is_node_;
+}
+
+auto objbase::raw_actor() const -> const caf::actor& {
+	return actor_;
 }
 
 auto objbase::info() const -> result_or_err<tree::inode> {
