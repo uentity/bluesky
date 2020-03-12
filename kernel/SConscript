@@ -28,6 +28,7 @@ kernel_cpp_list = [
 	"src/type_info.cpp",
 	"src/plugin_descriptor.cpp",
 	"src/objbase.cpp",
+	"src/objbase_actor.cpp",
 	"src/misc.cpp",
 	"src/str_utils.cpp",
 	"src/error.cpp",

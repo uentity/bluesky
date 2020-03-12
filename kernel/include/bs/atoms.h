@@ -11,6 +11,15 @@
 #include <caf/atom.hpp>
 
 namespace blue_sky {
+
+/// denote that we don't want to wait until invoke result is available
+struct launch_async_t {};
+inline constexpr auto launch_async = launch_async_t{};
+
+/// denote operation that is thread-unsafe and can cause data race
+struct unsafe_t {};
+inline constexpr auto unsafe = unsafe_t{};
+
 ///////////////////////////////////////////////////////////////////////////////
 //  common
 //

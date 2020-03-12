@@ -39,6 +39,9 @@ inline constexpr auto high_prio = caf::message_priority::high;
 
 BS_API auto forward_caf_error(const caf::error& er) -> error;
 
+/// obtain configured timeout for queries
+BS_API auto def_timeout(bool for_long_task = false) -> caf::duration;
+
 /// @brief blocking invoke actor & return response like a function
 /// @return always return `result_or_errbox<R>`
 template<typename R, typename Actor, typename... Args>
@@ -77,9 +80,8 @@ auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 /// constructs function_view inside from passed handle & timeout
 template<typename R, typename Actor, typename T, typename... Args>
 auto actorf(const Actor& tgt, T timeout, Args&&... args) {
-	return actorf<R>(
-		caf::make_function_view(tgt, detail::cast_timeout(timeout)), std::forward<Args>(args)...
-	);
+	auto inplace_fv = caf::make_function_view(tgt, detail::cast_timeout(timeout));
+	return actorf<R>(inplace_fv, std::forward<Args>(args)...);
 }
 
 /// operates on passed `scoped_actor` instead of function view

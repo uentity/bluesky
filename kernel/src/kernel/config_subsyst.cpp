@@ -123,8 +123,8 @@ config_subsyst::config_subsyst() {
 	opt_group(confopt_, "radio")
 		.add<std::uint16_t>("port", "Port number for main BS network interface")
 		.add<std::uint16_t>("groups-port", "Port number for publishing actor groups")
-		.add<timespan>("timeout", "General timeout for remote operations")
-		.add<timespan>("data-timeout", "Timeout for tree::link `data()` and `data_node()`")
+		.add<timespan>("timeout", "Generic default timeout for actor operations")
+		.add<timespan>("long-timeout", "Timeout for long resource-consuming tasks")
 	;
 
 	/*-----------------------------------------------------------------------------

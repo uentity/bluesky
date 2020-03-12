@@ -29,7 +29,4 @@ NAMESPACE_BEGIN(blue_sky::tree)
 inline constexpr auto def_data_timeout = timespan{ std::chrono::seconds(3) };
 inline const std::string nil_grp_id = "<null>";
 
-/// obtain configured timeout for queries
-BS_API auto def_timeout(bool for_data = false) -> caf::duration;
-
 NAMESPACE_END(blue_sky::tree)
