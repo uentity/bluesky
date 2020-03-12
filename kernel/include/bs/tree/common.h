@@ -57,7 +57,7 @@ enum class InsertPolicy {
 /// link's unique ID type
 using lid_type = boost::uuids::uuid;
 /// function that modifies link's pointee
-using data_modificator_f = std::function< error(sp_obj) >;
+using data_modificator_f = objbase::modificator_f;
 
 /// forward declare major types
 class link;

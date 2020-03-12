@@ -239,8 +239,8 @@ public:
 	}
 
 	/// make pointee data modification atomically
-	auto modify_data(data_modificator_f m, bool silent = false) const -> error;
-	auto modify_data(launch_async_t, data_modificator_f m, bool silent = false) const -> void;
+	auto data_apply(data_modificator_f m, bool silent = false) const -> error;
+	auto data_apply(launch_async_t, data_modificator_f m, bool silent = false) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Async API

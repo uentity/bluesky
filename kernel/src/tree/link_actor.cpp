@@ -244,21 +244,39 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 
 			request(caf::actor{this}, caf::duration{def_timeout(true)}, a_lnk_data(), true)
 			.then([=, m = std::move(m)](result_or_errbox<sp_obj> obj) mutable {
+
+				auto finally = [=](auto&& er) mutable {
+					// set status after modificator ivoked
+					pimpl_->rs_reset(
+						Req::Data, ReqReset::Always,
+						er.ok() ? ReqStatus::OK : ReqStatus::Error, ReqStatus::Void,
+						silent ?
+							function_view{ link_impl::on_rs_changed_noop } :
+							[=](Req req, ReqStatus new_s, ReqStatus old_s) {
+								send<high_prio>(impl.home, a_ack(), a_lnk_status(), req, new_s, old_s);
+							}
+					);
+					// deliver error to callee
+					res.deliver(er.pack());
+				};
+
+				// deliver error if couldn't obtain link's data
+				if(!obj) {
+					finally(error::unpack(obj.error()));
+					return;
+				}
+
 				// invoke modificator
-				auto er = obj ?
-					error::eval_safe( [&]{ return m(std::move(obj.value())); } ) :
-					error::unpack(obj.error());
-				// set status
-				pimpl_->rs_reset(
-					Req::Data, ReqReset::Always, er.ok() ? ReqStatus::OK : ReqStatus::Error, ReqStatus::Void,
-					silent ?
-						function_view{ link_impl::on_rs_changed_noop } :
-						[=](Req req, ReqStatus new_s, ReqStatus old_s) {
-							send<high_prio>(impl.home, a_ack(), a_lnk_status(), req, new_s, old_s);
-						}
+				(*obj)->apply(
+					launch_async,
+					[m = std::move(m), finally = std::move(finally)](sp_obj obj) mutable -> error {
+						finally(error::eval_safe(
+							[&]{ return m(std::move(obj)); }
+						));
+						return perfect;
+					}
 				);
-				// deliver error back to callee
-				res.deliver(er.pack());
+
 			});
 			return const_cast<const caf::response_promise&>(res);
 		}
@@ -330,18 +348,6 @@ auto fast_link_actor::make_typed_behavior() -> typed_behavior {
 
 auto fast_link_actor::make_behavior() -> behavior_type {
 	return make_typed_behavior().unbox();
-}
-
-/*-----------------------------------------------------------------------------
- *  other
- *-----------------------------------------------------------------------------*/
-// extract timeout from kernel config
-auto def_timeout(bool for_data) -> caf::duration {
-	using namespace kernel::config;
-	return caf::duration{ for_data ?
-		get_or( config(), "radio.data-timeout", def_data_timeout ) :
-		get_or( config(), "radio.timeout", timespan{100ms} )
-	};
 }
 
 NAMESPACE_END(blue_sky::tree)

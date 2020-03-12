@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/python/tree.h>
+#include <bs/python/result_converter.h>
 #include "../kernel/python_subsyst_impl.h"
 
 #include <boost/uuid/uuid_io.hpp>
@@ -76,6 +77,8 @@ void py_bind_link(py::module& m) {
 	link_pyface.attr("Req") = m.attr("Req");
 	link_pyface.attr("ReqStatus") = m.attr("ReqStatus");
 
+	using py_modificator_f = std::function< py::object(sp_obj) >;
+
 	// link base class
 	link_pyface
 		.def(py::init())
@@ -108,23 +111,13 @@ void py_bind_link(py::module& m) {
 
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
-		.def("modify_data",
-			[](const link& L, data_modificator_f m, bool silent) {
-				L.modify_data(launch_async, std::move(m), silent);
+		.def("data_apply",
+			[](const link& L, py_modificator_f m, bool silent) {
+				L.data_apply(launch_async, make_result_converter<error>(std::move(m), perfect), silent);
 			},
 			"m"_a, "silent"_a = false,
-			"Place given modificator `m` to link's events loop and return immediately", nogil
+			"Place given modificator `m` to object's queue and return immediately", nogil
 		)
-		//.def("modify_data",
-		//	py::overload_cast<launch_async_t, data_modificator_f, bool>(&link::modify_data, py::const_),
-		//	"launch_async"_a, "m"_a, "silent"_a = false,
-		//	"Place given modificator `m` to link's events loop and return immediately", nogil
-		//)
-		//.def("modify_data",
-		//	py::overload_cast<data_modificator_f, bool>(&link::modify_data, py::const_),
-		//	"m"_a, "silent"_a = false,
-		//	"Execute given modificator `m` inside link context and wait until it's done", nogil
-		//)
 
 		.def("oid", &link::oid, nogil)
 		.def("obj_type_id", &link::obj_type_id, nogil)

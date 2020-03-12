@@ -284,11 +284,11 @@ auto link::data_node_ex(bool wait_if_busy) const -> result_or_err<sp_node> {
 	return pimpl_->actorf<result_or_errbox<sp_node>>(*this, a_lnk_dnode(), wait_if_busy);
 }
 
-auto link::modify_data(data_modificator_f m, bool silent) const -> error {
+auto link::data_apply(data_modificator_f m, bool silent) const -> error {
 	auto res = pimpl_->actorf<error::box>(*this, a_apply(), std::move(m), silent);
 	return res ? error::unpack(res.value()) : res.error();
 }
-auto link::modify_data(launch_async_t, data_modificator_f m, bool silent) const -> void {
+auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -> void {
 	caf::anon_send(actor(*this), a_apply(), std::move(m), silent);
 }
 
