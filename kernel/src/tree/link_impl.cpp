@@ -92,6 +92,10 @@ auto link_impl::rs_reset(
 	return self;
 }
 
+auto link_impl::data(unsafe_t) -> sp_obj {
+	return data().value_or(nullptr);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //  inode
 //

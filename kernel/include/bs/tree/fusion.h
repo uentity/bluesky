@@ -72,10 +72,6 @@ public:
 	auto bridge() const -> sp_fusion;
 	auto reset_bridge(sp_fusion new_bridge = nullptr) -> void;
 
-	// access to internal object cache
-	auto cache() const -> sp_node;
-	auto cache(unsafe_t) const -> sp_node;
-
 private:
 	// don't start internal actor
 	fusion_link();

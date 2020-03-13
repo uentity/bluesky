@@ -115,8 +115,10 @@ public:
 	/// clone this impl
 	virtual auto clone(bool deep = false) const -> sp_limpl = 0;
 
-	/// [NOTE] download pointee data - must be implemented by derived links
+	/// download pointee data
 	virtual auto data() -> result_or_err<sp_obj> = 0;
+	/// return cached pointee data (if any) - be default calls data()
+	virtual auto data(unsafe_t) -> sp_obj;
 
 	/// obtain inode pointer
 	/// default impl do it via `data_ex()` call

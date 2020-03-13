@@ -229,6 +229,8 @@ public:
 	auto data() const -> sp_obj {
 		return data_ex().value_or(nullptr);
 	}
+	/// directly return cached value (if any)
+	auto data(unsafe_t) const -> sp_obj;
 
 	/// return tree::node if contained object is a node -- slow, never returns invalid (NULL) sp_obj
 	/// derived class can return cached node info
@@ -237,6 +239,8 @@ public:
 	auto data_node() const -> sp_node {
 		return data_node_ex().value_or(nullptr);
 	}
+	/// directly return cached value (if any)
+	auto data_node(unsafe_t) const -> sp_node;
 
 	/// make pointee data modification atomically
 	auto data_apply(data_modificator_f m, bool silent = false) const -> error;

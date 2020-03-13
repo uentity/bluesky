@@ -102,12 +102,14 @@ void py_bind_link(py::module& m) {
 				return L.data(adapt(std::move(f)), high_priority);
 			}, "f"_a, "high_priority"_a = false, nogil
 		)
+		.def("data", py::overload_cast<unsafe_t>(&link::data, py::const_), "Direct access to link's data cache")
 
 		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = true, nogil)
 		.def("data_node", py::overload_cast<>(&link::data_node, py::const_), nogil)
 		.def("data_node", py::overload_cast<link::process_data_cb, bool>(&link::data_node, py::const_),
 			"f"_a, "high_priority"_a = false, nogil
 		)
+		.def("data_node", py::overload_cast<unsafe_t>(&link::data_node, py::const_), "Direct access to link's data node cache")
 
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
@@ -224,11 +226,6 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly_static("type_id_", [](const py::object&) { return fusion_link::type_id_(); })
 
 		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge, nogil)
-		.def("cache", py::overload_cast<>(&fusion_link::cache, py::const_), "Direct access to link's data cache")
-		.def_property_readonly("cache_unsafe",
-			[](const fusion_link& L) { return L.cache(unsafe); },
-			"Unsafe direct access to link's data cache"
-		)
 
 		.def("populate",
 			py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),

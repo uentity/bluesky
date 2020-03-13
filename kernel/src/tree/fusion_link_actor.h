@@ -74,6 +74,11 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 		return tl::make_unexpected(error{Error::NoFusionBridge});
 	}
 
+	// unsafe version returns cached value
+	auto data(unsafe_t) -> sp_obj override {
+		return data_;
+	}
+
 	// populate with specified child type
 	auto populate(const std::string& child_type_id = "", bool wait_if_busy = true)
 	-> result_or_err<sp_node> {

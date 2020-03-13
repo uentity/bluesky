@@ -280,8 +280,19 @@ auto link::data_ex(bool wait_if_busy) const -> result_or_err<sp_obj> {
 	return pimpl_->actorf<result_or_errbox<sp_obj>>(*this, a_lnk_data(), wait_if_busy);
 }
 
+auto link::data(unsafe_t) const -> sp_obj {
+	return pimpl_->data(unsafe);
+}
+
 auto link::data_node_ex(bool wait_if_busy) const -> result_or_err<sp_node> {
 	return pimpl_->actorf<result_or_errbox<sp_node>>(*this, a_lnk_dnode(), wait_if_busy);
+}
+
+auto link::data_node(unsafe_t) const -> sp_node {
+	if(auto obj = pimpl_->data(unsafe)) {
+		if(obj->is_node()) return std::static_pointer_cast<node>(obj);
+	}
+	return nullptr;
 }
 
 auto link::data_apply(data_modificator_f m, bool silent) const -> error {

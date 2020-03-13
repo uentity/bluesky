@@ -90,16 +90,6 @@ auto fusion_link::reset_bridge(sp_fusion new_bridge) -> void {
 	caf::anon_send(actor(*this), a_flnk_bridge(), std::move(new_bridge));
 }
 
-auto fusion_link::cache() const -> sp_node {
-	return std::static_pointer_cast<tree::node>(
-		pimpl()->actorf<sp_obj>(*this, a_lnk_dcache()).value_or(nullptr)
-	);
-}
-
-auto fusion_link::cache(unsafe_t) const -> sp_node {
-	return FIMPL.data_;
-}
-
 LINK_CONVERT_TO(fusion_link)
 LINK_TYPE_DEF(fusion_link, fusion_link_impl, "fusion_link")
 
