@@ -225,8 +225,10 @@ void py_bind_link(py::module& m) {
 
 		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge, nogil)
 		.def("cache", py::overload_cast<>(&fusion_link::cache, py::const_), "Direct access to link's data cache")
-		.def("cache", py::overload_cast<unsafe_t>(&fusion_link::cache, py::const_),
-			"Unsafe direct access to link's data cache")
+		.def_property_readonly("cache_unsafe",
+			[](const fusion_link& L) { return L.cache(unsafe); },
+			"Unsafe direct access to link's data cache"
+		)
 
 		.def("populate",
 			py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),

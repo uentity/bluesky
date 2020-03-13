@@ -37,12 +37,12 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	using super = ilink_impl;
 	using super::owner_;
 
-	fusion_link_impl(std::string name, sp_node data, sp_fusion bridge, Flags f)
-		: super(std::move(name), data, f), bridge_(std::move(bridge)), data_(std::move(data))
+	fusion_link_impl(std::string name, sp_node data, sp_fusion bridge, Flags f) :
+		super(std::move(name), data, f), bridge_(std::move(bridge)), data_(std::move(data))
 	{}
 
-	fusion_link_impl()
-		: super()
+	fusion_link_impl() :
+		super()
 	{}
 
 	// search for valid (non-null) bridge up the tree
@@ -65,6 +65,7 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 		if(req_status(Req::Data) == ReqStatus::OK)
 			return data_;
 		if(const auto B = bridge()) {
+			if(!data_) data_ = std::make_shared<node>();
 			auto err = B->pull_data(data_);
 			if(err.code == obj_fully_loaded)
 				rs_reset(Req::DataNode, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
@@ -81,6 +82,7 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 		if(child_type_id.empty() && req_status(Req::DataNode) == ReqStatus::OK)
 			return data_;
 		if(const auto B = bridge()) {
+			if(!data_) data_ = std::make_shared<node>();
 			auto err = B->populate(data_, child_type_id);
 			if(err.code == obj_fully_loaded)
 				rs_reset(Req::Data, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
