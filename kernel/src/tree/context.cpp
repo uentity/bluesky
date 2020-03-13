@@ -50,9 +50,7 @@ static auto to_lids_v(const std::string& path) -> lids_v {
 
 // enters data node only if allowed to (don't auto-expand lazy links)
 static auto data_node(const link& L) -> sp_node {
-	if( L.req_status(Req::DataNode) == ReqStatus::OK || !(L.flags(unsafe) & LazyLoad) )
-		return L.data_node();
-	return nullptr;
+	return L.data_node(unsafe);
 }
 
 // simple `deref_path` impl for vector of lids
