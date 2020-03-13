@@ -45,7 +45,8 @@ public:
 
 		// deep search
 		caf::replies_to<a_node_deep_search, lid_type>::with<link>,
-		caf::replies_to<a_node_deep_search, std::string, Key>::with<link>,
+		// if last arg == true, then collects matching links over node's subtree
+		caf::replies_to<a_node_deep_search, std::string, Key, bool /* search_all */>::with<links_v>,
 
 		// return link index
 		caf::replies_to<a_node_index, lid_type>::with<existing_index>,
@@ -123,6 +124,8 @@ public:
 	auto deep_search(lid_type id) const -> link;
 	/// deep search by given key with specified treatment
 	auto deep_search(std::string key, Key key_meaning) const -> link;
+	/// collect matching links over node's subtree
+	auto deep_equal_range(std::string key, Key key_meaning) const -> links_v;
 
 	/// get integer index of a link relative to beginning
 	auto index(lid_type lid) const -> existing_index;

@@ -14,6 +14,8 @@
 #include "actor_common.h"
 #include "link_impl.h"
 
+#include <boost/uuid/uuid_io.hpp>
+
 #include <caf/actor_system.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)

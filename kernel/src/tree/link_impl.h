@@ -19,9 +19,6 @@
 #include <bs/detail/spinlock.h>
 #endif
 
-#include <boost/uuid/nil_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
-
 // helper macro to inject link type ids
 #define LIMPL_TYPE_DECL                            \
 static auto type_id_() -> std::string_view;        \

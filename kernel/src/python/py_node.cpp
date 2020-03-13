@@ -223,6 +223,12 @@ void py_bind_node(py::module& m) {
 		// deep search by object ID
 		.def("deep_search_oid", &deep_search<Key::OID>, "oid"_a,
 			"Deep search for link to object with given ID", nogil)
+		// deep serach by specified key type
+		.def("deep_search", py::overload_cast<std::string, Key>(&node::deep_search, py::const_),
+			"key"_a, "key_meaning"_a, "Deep search by key with specified treatment", nogil)
+		// deep equal range
+		.def("deep_equal_range", &node::deep_equal_range,
+			"key"_a, "key_meaning"_a, "Deep search all links with given key & treatment", nogil)
 
 		.def("equal_range", &equal_range<Key::Name>, "link_name"_a, nogil)
 		.def("equal_range_oid", &equal_range<Key::OID>, "OID"_a, nogil)

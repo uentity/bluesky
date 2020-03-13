@@ -163,9 +163,16 @@ auto node::deep_search(lid_type id) const -> link {
 }
 
 auto node::deep_search(std::string key, Key key_meaning) const -> link {
-	return pimpl_->actorf<link>(
-		*this, a_node_deep_search(), std::move(key), key_meaning
-	).value_or(link{});
+	auto res = pimpl_->actorf<links_v>(
+		*this, a_node_deep_search(), std::move(key), key_meaning, false
+	).value_or(links_v{});
+	return res.empty() ? link{} : res[0];
+}
+
+auto node::deep_equal_range(std::string key, Key key_meaning) const -> links_v {
+	return pimpl_->actorf<links_v>(
+		*this, a_node_deep_search(), std::move(key), key_meaning, true
+	).value_or(links_v{});
 }
 
 // ---- index

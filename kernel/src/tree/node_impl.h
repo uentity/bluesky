@@ -16,13 +16,7 @@
 #include "node_leafs_storage.h"
 #include "link_impl.h"
 
-#include <boost/uuid/uuid_hash.hpp>
-
 #include <cereal/types/vector.hpp>
-
-#include <iterator>
-#include <set>
-#include <unordered_map>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;

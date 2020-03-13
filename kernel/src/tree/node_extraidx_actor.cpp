@@ -14,11 +14,14 @@
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
 
+#include <boost/uuid/string_generator.hpp>
+
 #include <caf/typed_event_based_actor.hpp>
 //#include <caf/actor_ostream.hpp>
 //#include <bs/log.h>
 
 #include <algorithm>
+#include <iterator>
 #include <unordered_map>
 
 OMIT_OBJ_SERIALIZATION
@@ -28,16 +31,16 @@ using namespace kernel::radio;
 
 NAMESPACE_BEGIN()
 
+const auto uuid_from_str = boost::uuids::string_generator{};
+
 // returns memoized key extractor
 template<Key K>
 auto memo_kex() {
 	return [kex = Key_tag<K>(), memo = std::unordered_map<const link*, Key_type<K>>{}](
 		const link& L
-	) mutable {
+	) mutable -> decltype(auto) {
 		if(auto p = memo.find(&L); p != memo.end()) return p->second;
-		auto k = kex(L);
-		memo[&L] = k;
-		return k;
+		return memo.emplace(&L, kex(L)).first->second;
 	};
 }
 
@@ -114,32 +117,37 @@ auto equal_range(const std::string& key, Key meaning, const links_v& leafs) {
 
 // [NOTE] this overload set is a replacement of nice 'constexpr if' for VS2017
 // It still tries to check discarded 'if constexpr' path even in templated context
-template<Key K>
-auto call_find(const caf::scoped_actor& f, const node::actor_type& Nactor, Key_type<K> key)
--> std::enable_if_t<K == Key::ID, link> {
-	return actorf<link>(f, Nactor, infinite, a_node_find(), std::move(key)).value_or(link{});
+auto call_find(Key, const caf::scoped_actor& f, const node::actor_type& Nactor, lid_type key, bool)
+-> links_v {
+	auto r = actorf<link>(f, Nactor, infinite, a_node_find(), std::move(key)).value_or(link{});
+	return r ? links_v{r} : links_v{};
 };
-template<Key K>
-auto call_find(const caf::scoped_actor& f, const node::actor_type& Nactor, Key_type<K> key)
--> std::enable_if_t<K != Key::ID, link> {
-	return actorf<link>(f, Nactor, infinite, a_node_find(), std::move(key), K).value_or(link{});
+
+auto call_find(Key K, const caf::scoped_actor& f, const node::actor_type& Nactor, std::string key, bool single)
+-> links_v {
+	if(single || K == Key::ID) {
+		auto r = actorf<link>(f, Nactor, infinite, a_node_find(), std::move(key), K).value_or(link{});
+		return r ? links_v{r} : links_v{};
+	}
+	return actorf<links_v>(f, Nactor, infinite, a_node_equal_range(), std::move(key), K).value_or(links_v{});
 };
 
 // deep search
 template<Key K = Key::ID>
 auto deep_search(
 	const caf::scoped_actor& f, node::actor_type Nactor, const Key_type<K>& key,
-	std::set<lid_type> active_symlinks = {}
-) -> link {
+	bool return_first, std::set<lid_type> active_symlinks = {}
+) -> links_v {
 	// first do direct search in leafs
-	if(auto r = call_find<K>(f, Nactor, key)) return r;
+	auto res = call_find(K, f, Nactor, key, return_first);
+	if(return_first && !res.empty()) return res;
 
 	// if not succeeded search in children nodes
 	auto leafs = actorf<links_v>(f, Nactor, infinite, a_node_leafs(), Key::AnyOrder).value_or(links_v{});
 	for(const auto& l : leafs) {
 		// remember symlink
 		const auto is_symlink = l.type_id() == sym_link::type_id_();
-		if(is_symlink){
+		if(is_symlink) {
 			if(active_symlinks.find(l.id()) == active_symlinks.end())
 				active_symlinks.insert(l.id());
 			else continue;
@@ -149,14 +157,15 @@ auto deep_search(
 			continue;
 		// search on next level
 		if(auto next_n = l.data_node()) {
-			auto next_l = deep_search<K>(f, next_n->actor(), key, active_symlinks);
-			if(next_l) return next_l;
+			auto next_l = deep_search<K>(f, next_n->actor(), key, return_first, active_symlinks);
+			std::copy(next_l.begin(), next_l.end(), std::back_inserter(res));
+			if(return_first && !res.empty()) return res;
 		}
 		// remove symlink
 		if(is_symlink)
 			active_symlinks.erase(l.id());
 	}
-	return {};
+	return res;
 }
 
 NAMESPACE_END()
@@ -196,20 +205,29 @@ auto extraidx_deep_search_actor(extraidx_deep_search_api::pointer self, node_imp
 	// deep search
 	[=](a_node_deep_search, const lid_type& key) -> link {
 		//caf::aout(self) << "==> a_node_deep_search extra" << std::endl;
-		return deep_search<Key::ID>(caf::scoped_actor{system()}, Nactor, key);
+		auto res = deep_search<Key::ID>(caf::scoped_actor{system()}, Nactor, key, true);
+		return res.empty() ? link{} : res[0];
 	},
 
-	[=](a_node_deep_search, const std::string& key, Key meaning) -> link {
+	[=](a_node_deep_search, const std::string& key, Key meaning, bool search_all) -> links_v {
 		auto f = caf::scoped_actor{system()};
-		switch(meaning) {
-		default:
-		case Key::Name:
-			return deep_search<Key::Name>(f, Nactor, key);
-		case Key::OID:
-			return deep_search<Key::OID>(f, Nactor, key);
-		case Key::Type:
-			return deep_search<Key::Type>(f, Nactor, key);
+		if(meaning == Key::ID) {
+			lid_type needle;
+			if(error::eval_safe([&]{ needle = uuid_from_str(key); }).ok())
+				return deep_search<Key::ID>(f, Nactor, needle, !search_all);
 		}
+		else {
+			switch(meaning) {
+			case Key::Name:
+				return deep_search<Key::Name>(f, Nactor, key, !search_all);
+			case Key::OID:
+				return deep_search<Key::OID>(f, Nactor, key, !search_all);
+			case Key::Type:
+				return deep_search<Key::Type>(f, Nactor, key, !search_all);
+			default: break;
+			}
+		}
+		return {};
 	}
 }; }
 

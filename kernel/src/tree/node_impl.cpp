@@ -17,6 +17,7 @@
 
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/string_generator.hpp>
 
 OMIT_OBJ_SERIALIZATION
 
@@ -100,13 +101,14 @@ auto node_impl::size() const -> std::size_t {
 
 auto node_impl::leafs(Key order) const -> links_v {
 	switch(order) {
-	default:
 	case Key::AnyOrder:
 		return values<Key::AnyOrder>();
 	case Key::ID:
 		return values<Key::ID>();
 	case Key::Name:
 		return values<Key::Name>();
+	default:
+		return {};
 	}
 }
 
@@ -114,9 +116,10 @@ auto node_impl::search(const std::string& key, Key key_meaning) const -> link {
 	switch(key_meaning) {
 	case Key::ID:
 		return search<Key::ID>(uuid_from_str(key));
-	default:
 	case Key::Name:
 		return search<Key::Name>(key);
+	default:
+		return {};
 	}
 }
 
@@ -124,9 +127,10 @@ auto node_impl::index(const std::string& key, Key key_meaning) const -> existing
 	switch(key_meaning) {
 	case Key::ID:
 		return index<Key::ID>(uuid_from_str(key));
-	default:
 	case Key::Name:
 		return index<Key::Name>(key);
+	default:
+		return {};
 	}
 }
 
@@ -134,9 +138,10 @@ auto node_impl::equal_range(const std::string& key, Key key_meaning) const -> li
 	switch(key_meaning) {
 	case Key::ID:
 		return equal_range<Key::ID>(uuid_from_str(key)).extract_values();
-	default:
 	case Key::Name:
 		return equal_range<Key::Name>(key).extract_values();
+	default:
+		return {};
 	}
 }
 
@@ -261,9 +266,10 @@ auto node_impl::erase(const std::string& key, Key key_meaning, leaf_postproc_fn 
 	switch(key_meaning) {
 	case Key::ID:
 		return erase<Key::ID>(uuid_from_str(key), ppf);
-	default:
 	case Key::Name:
 		return erase<Key::Name>(key, ppf);
+	default:
+		return 0;
 	}
 }
 

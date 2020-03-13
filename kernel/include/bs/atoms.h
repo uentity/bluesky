@@ -13,11 +13,11 @@
 namespace blue_sky {
 
 /// denote that we don't want to wait until invoke result is available
-struct launch_async_t {};
+using launch_async_t = caf::atom_constant<caf::atom("bs lasync")>;
 inline constexpr auto launch_async = launch_async_t{};
 
 /// denote operation that is thread-unsafe and can cause data race
-struct unsafe_t {};
+using unsafe_t = caf::atom_constant<caf::atom("bs unsafe")>;
 inline constexpr auto unsafe = unsafe_t{};
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,6 +64,7 @@ using a_node_find = caf::atom_constant<caf::atom("tn find")>;
 using a_node_index = caf::atom_constant<caf::atom("tn index")>;
 using a_node_deep_search = caf::atom_constant<caf::atom("tn deeps")>;
 using a_node_equal_range = caf::atom_constant<caf::atom("tn eqrng")>;
+using a_node_deep_equal_range = caf::atom_constant<caf::atom("tn deqrng")>;
 using a_node_insert = caf::atom_constant<caf::atom("tn insert")>;
 using a_node_erase = caf::atom_constant<caf::atom("tn erase")>;
 using a_node_clear = caf::atom_constant<caf::atom("tn clear")>;

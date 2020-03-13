@@ -275,7 +275,16 @@ auto node_actor::make_behavior() -> behavior_type {
 		// 4. get size
 		[=](a_node_size) { return impl.size(); },
 
-		[=](a_node_leafs, Key order) { return impl.leafs(order); },
+		[=](a_node_leafs, Key order) -> caf::result<links_v> {
+			adbg(this) << "{a_node_leafs} " << static_cast<int>(order) << std::endl;
+			if(has_builtin_index(order))
+				return impl.leafs(order);
+			else
+				return delegate(
+					system().spawn(extraidx_search_actor),
+					a_node_leafs(), order, impl.leafs(Key::AnyOrder)
+				);
+		},
 
 		// 5.
 		[=](a_node_find, const lid_type& lid) -> link {
@@ -312,11 +321,12 @@ auto node_actor::make_behavior() -> behavior_type {
 			);
 		},
 
-		[=](a_node_deep_search, std::string key, Key key_meaning) -> caf::result<link> {
+		[=](a_node_deep_search, std::string key, Key key_meaning, bool search_all)
+		-> caf::result<links_v> {
 			adbg(this) << "{a_node_deep_search}" << std::endl;
 			return delegate(
 				system().spawn(extraidx_deep_search_actor, handle()),
-				a_node_deep_search(), std::move(key), key_meaning
+				a_node_deep_search(), std::move(key), key_meaning, search_all
 			);
 		},
 

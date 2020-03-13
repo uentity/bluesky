@@ -30,7 +30,7 @@ auto extraidx_search_actor(extraidx_search_api::pointer) -> extraidx_search_api:
 // deep search - requires node actor
 using extraidx_deep_search_api = caf::typed_actor<
 	caf::replies_to<a_node_deep_search, lid_type>::with<link>,
-	caf::replies_to<a_node_deep_search, std::string, Key>::with<link>
+	caf::replies_to<a_node_deep_search, std::string, Key, bool>::with<links_v>
 >;
 
 auto extraidx_deep_search_actor(extraidx_deep_search_api::pointer, node_impl::actor_type Nactor)
