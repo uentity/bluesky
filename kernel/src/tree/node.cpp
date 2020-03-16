@@ -384,10 +384,7 @@ auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
 }
 
 auto node::unsubscribe(std::uint64_t event_cb_id) -> void {
-	auto& AS = kernel::radio::system();
-	const auto ev_actor = AS.registry().get(event_cb_id);
-	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
-	caf::anon_send(caf::actor_cast<caf::actor>(ev_actor), a_bye());
+	kernel::radio::bye_actor(event_cb_id);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

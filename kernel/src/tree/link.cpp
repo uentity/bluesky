@@ -407,10 +407,8 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 	return baby.id();
 }
 
-auto link::unsubscribe(std::uint64_t event_cb_id) const -> void {
-	const auto ev_actor = system().registry().get(event_cb_id);
-	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
-	caf::anon_send(caf::actor_cast<caf::actor>(ev_actor), a_bye());
+auto link::unsubscribe(std::uint64_t event_cb_id) -> void {
+	bye_actor(event_cb_id);
 }
 
 NAMESPACE_END(blue_sky::tree)

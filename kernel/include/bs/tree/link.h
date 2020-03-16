@@ -266,7 +266,7 @@ public:
 
 	/// returns ID of suscriber that is required for unsubscribe
 	auto subscribe(handle_event_cb f, Event listen_to = Event::All) const -> std::uint64_t;
-	auto unsubscribe(std::uint64_t event_cb_id) const -> void;
+	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
 protected:
 	/// accept link impl and optionally start internal actor

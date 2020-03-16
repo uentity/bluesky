@@ -10,12 +10,17 @@
 
 #include "../common.h"
 #include "../error.h"
+
 #include <caf/fwd.hpp>
 
 NAMESPACE_BEGIN(blue_sky::kernel::radio)
 
 /// access actor system
 BS_API auto system() -> caf::actor_system&;
+
+/// obtain actor with given ID from registry and sends it `a_bye` message
+/// returns whether actor was found
+BS_API auto bye_actor(std::uint64_t actor_id) -> bool;
 
 /// starts or stops transmitter
 BS_API auto toggle(bool on = true) -> void;

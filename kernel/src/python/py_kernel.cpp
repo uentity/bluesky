@@ -126,6 +126,7 @@ auto bind_radio(py::module& m) -> void {
 	m.def("start_client", &kr::start_client, "Helper that toggles radio on & starts client", nogil);
 	m.def("publish_link", &kr::publish_link, nogil);
 	m.def("unpublish_link", &kr::unpublish_link, nogil);
+	m.def("bye_actor", &kr::bye_actor, "actor_id"_a, "Send `a_bye` message to registered actor with given ID");
 }
 
 auto bind_kernel_api(py::module& m) -> void {

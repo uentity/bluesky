@@ -183,7 +183,7 @@ public:
 
 	/// returns ID of suscriber that is required for unsubscribe
 	auto subscribe(handle_event_cb f, Event listen_to = Event::All) -> std::uint64_t;
-	auto unsubscribe(std::uint64_t event_cb_id) -> void;
+	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
 	// stops retranslating messages to this node
 	// if `deep` is true, then also disconnect each subtree node

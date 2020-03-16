@@ -163,7 +163,7 @@ void py_bind_link(py::module& m) {
 
 		// events subscrition
 		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
-		.def("unsubscribe", &link::unsubscribe, "event_cb_id"_a, nogil)
+		.def_static("unsubscribe", &link::unsubscribe, "event_cb_id"_a)
 	;
 
 	///////////////////////////////////////////////////////////////////////////////
