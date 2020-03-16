@@ -7,8 +7,10 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <algorithm>
 #include <bs/log.h>
 #include <bs/tree/context.h>
+#include <bs/kernel/radio.h>
 #include "tree_impl.h"
 
 #include <boost/uuid/uuid_io.hpp>
@@ -17,6 +19,7 @@
 #include <boost/container_hash/hash.hpp>
 
 #include <unordered_map>
+#include <unordered_set>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
@@ -78,6 +81,9 @@ struct BS_HIDDEN_API context::impl {
 	using idata_t = std::unordered_map<path_t, link::weak_ptr, path_hash_t>;
 	idata_t idata_;
 
+	using followers_t = std::unordered_set<std::uint64_t>;
+	followers_t followers_;
+
 	sp_node root_;
 	link root_lnk_;
 
@@ -96,6 +102,22 @@ struct BS_HIDDEN_API context::impl {
 		verify();
 	}
 
+	~impl() {
+		goodbye_followers();
+	}
+
+	auto goodbye_followers() -> void {
+		std::for_each(
+			followers_.begin(), followers_.end(),
+			[](auto fid) { kernel::radio::bye_actor(fid); }
+		);
+		followers_.clear();
+	}
+
+	auto farewell_on_exit(std::uint64_t actor_id) -> void {
+		followers_.insert(actor_id);
+	}
+
 	auto verify() -> void {
 		if(!root_) {
 			if(root_lnk_) root_ = data_node(root_lnk_);
@@ -109,7 +131,10 @@ struct BS_HIDDEN_API context::impl {
 	}
 
 	auto reset(sp_node root, link root_handle) {
+		// cleanup
 		idata_.clear();
+		goodbye_followers();
+		// assign new root
 		root_ = std::move(root);
 		root_lnk_ = root_handle;
 		verify();
@@ -326,6 +351,10 @@ auto context::reset(link root) -> void {
 
 auto context::reset(sp_node root, link root_handle) -> void {
 	pimpl_->reset(std::move(root), root_handle);
+}
+
+auto context::farewell_on_exit(std::uint64_t actor_id) -> void {
+	pimpl_->farewell_on_exit(actor_id);
 }
 
 auto context::root() const -> sp_node {

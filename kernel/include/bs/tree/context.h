@@ -50,6 +50,9 @@ public:
 	/// make parent tag from child one
 	auto operator()(existing_tag child) -> item_index;
 
+	/// send `a_bye` message to registered actor with given ID
+	auto farewell_on_exit(std::uint64_t actor_id) -> void;
+
 	/// DEBUG
 	auto dump() const -> void;
 

@@ -213,6 +213,11 @@ void py_bind_tree(py::module& m) {
 		.def_property_readonly("root_link", &context::root_link)
 		.def_property_readonly("root_path", &context::root_path)
 
+		.def(
+			"farewell_on_exit", &context::farewell_on_exit, "actor_id"_a,
+			"Send `a_bye` message to actor with give ID on destruction"
+		)
+
 		.def("reset", py::overload_cast<link>(&context::reset), "root"_a, "Reset context to new root")
 		.def("reset", py::overload_cast<sp_node, link>(&context::reset),
 			"root"_a, "root_handle"_a = link{}, "Reset context to new root")
