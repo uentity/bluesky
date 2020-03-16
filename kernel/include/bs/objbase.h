@@ -119,9 +119,6 @@ protected:
 	/// string ID storage
 	std::string id_;
 
-	/// ctor that can delay engine start
-	objbase(std::string custom_oid, bool start_actor);
-
 	/// return object's raw (dynamic-typed) actor handle
 	auto raw_actor() const -> const caf::actor&;
 
