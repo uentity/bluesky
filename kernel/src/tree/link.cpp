@@ -263,17 +263,23 @@ auto link::name(unsafe_t) const -> std::string {
 std::string link::oid() const {
 	return pimpl_->actorf<std::string>(*this, a_lnk_oid())
 		.value_or(nil_oid);
-	//return pimpl_->data()
-	//	.map([](const sp_obj& obj) { return obj ? obj->id() : nil_oid; })
-	//	.value_or(nil_oid);
+}
+
+std::string link::oid(unsafe_t) const {
+	return pimpl_->data()
+		.map([](const sp_obj& obj) { return obj ? obj->id() : nil_oid; })
+		.value_or(nil_oid);
 }
 
 std::string link::obj_type_id() const {
 	return pimpl_->actorf<std::string>(*this, a_lnk_otid())
 		.value_or( nil_otid );
-	//return pimpl_->data()
-	//	.map([](const sp_obj& obj) { return obj ? obj->type_id() : nil_otid; })
-	//	.value_or(nil_otid);
+}
+
+std::string link::obj_type_id(unsafe_t) const {
+	return pimpl_->data()
+		.map([](const sp_obj& obj) { return obj ? obj->type_id() : nil_otid; })
+		.value_or(nil_otid);
 }
 
 auto link::data_ex(bool wait_if_busy) const -> result_or_err<sp_obj> {
@@ -305,6 +311,12 @@ auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -
 
 auto link::data_node_gid() const -> result_or_err<std::string> {
 	return pimpl_->actorf<result_or_errbox<std::string>>(*this, a_node_gid());
+}
+
+auto link::data_node_gid(unsafe_t) const -> std::string {
+	if(auto me = data_node(unsafe))
+		return me->gid();
+	return {};
 }
 
 auto link::is_node() const -> bool {

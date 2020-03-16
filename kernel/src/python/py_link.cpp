@@ -121,8 +121,12 @@ void py_bind_link(py::module& m) {
 			"Place given modificator `m` to object's queue and return immediately", nogil
 		)
 
-		.def("oid", &link::oid, nogil)
-		.def("obj_type_id", &link::obj_type_id, nogil)
+		.def("oid", py::overload_cast<>(&link::oid, py::const_), nogil)
+		.def("oid", py::overload_cast<unsafe_t>(&link::oid, py::const_))
+
+		.def("obj_type_id", py::overload_cast<>(&link::obj_type_id, py::const_), nogil)
+		.def("obj_type_id", py::overload_cast<unsafe_t>(&link::obj_type_id, py::const_), nogil)
+
 		.def("rename", &link::rename, nogil)
 		.def("req_status", &link::req_status, "Query for given operation status", nogil)
 		.def("rs_reset", &link::rs_reset,
@@ -153,8 +157,9 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("info_unsafe", [](const link& L) { return L.info(unsafe); })
 
 		.def("is_node", &link::is_node, "Check if pointee is a node", nogil)
-		.def("data_node_gid", &link::data_node_gid,
+		.def("data_node_gid", py::overload_cast<>(&link::data_node_gid, py::const_),
 			"If pointee is a node, return node's actor group ID", nogil)
+		.def("data_node_gid", py::overload_cast<unsafe_t>(&link::data_node_gid, py::const_))
 
 		// events subscrition
 		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)

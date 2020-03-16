@@ -200,11 +200,14 @@ public:
 	/// inspect object's inode
 	auto info() const -> result_or_err<inode>;
 	auto info(unsafe_t) const -> result_or_err<inode>;
+
 	/// get link's object ID -- fast, can return empty string
 	auto oid() const -> std::string;
+	auto oid(unsafe_t) const -> std::string;
 
 	/// get link's object type ID -- fast, can return nil type ID
 	auto obj_type_id() const -> std::string;
+	auto obj_type_id(unsafe_t) const -> std::string;
 
 	/// get request status
 	auto req_status(Req request) const -> ReqStatus;
@@ -219,6 +222,7 @@ public:
 	auto is_node() const -> bool;
 	/// if pointee is a node, return node's actor group ID
 	auto data_node_gid() const -> result_or_err<std::string>;
+	auto data_node_gid(unsafe_t) const -> std::string;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Pointee data API
