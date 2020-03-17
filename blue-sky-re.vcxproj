@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="kernel\include\bs\actor_common.h" />
     <ClInclude Include="kernel\include\bs\any_array.h" />
     <ClInclude Include="kernel\include\bs\assert.h" />
     <ClInclude Include="kernel\include\bs\atoms.h" />
@@ -43,6 +44,7 @@
     <ClInclude Include="kernel\include\bs\compat\serialize\text.h" />
     <ClInclude Include="kernel\include\bs\compat\vecbase.h" />
     <ClInclude Include="kernel\include\bs\compat\vecbase_shared.h" />
+    <ClInclude Include="kernel\include\bs\defaults.h" />
     <ClInclude Include="kernel\include\bs\detail\apply.h" />
     <ClInclude Include="kernel\include\bs\detail\args.h" />
     <ClInclude Include="kernel\include\bs\detail\async_api_mixin.h" />
@@ -89,6 +91,7 @@
     <ClInclude Include="kernel\include\bs\python\nparray_serialize.h" />
     <ClInclude Include="kernel\include\bs\python\object_ptr.h" />
     <ClInclude Include="kernel\include\bs\python\property.h" />
+    <ClInclude Include="kernel\include\bs\python\result_converter.h" />
     <ClInclude Include="kernel\include\bs\python\tensor.h" />
     <ClInclude Include="kernel\include\bs\python\timetypes.h" />
     <ClInclude Include="kernel\include\bs\python\tree.h" />
@@ -135,7 +138,6 @@
     <ClInclude Include="kernel\src\kernel\backtrace_tools_unix.h" />
     <ClInclude Include="kernel\src\kernel\backtrace_tools_win.h" />
     <ClInclude Include="kernel\src\kernel\config_subsyst.h" />
-    <ClInclude Include="kernel\src\kernel\instance_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\kimpl.h" />
     <ClInclude Include="kernel\src\kernel\logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\plugins_subsyst.h" />
@@ -164,11 +166,11 @@
     <ClCompile Include="kernel\src\compat\array.cpp" />
     <ClCompile Include="kernel\src\compat\array_serialize.cpp" />
     <ClCompile Include="kernel\src\compat\messaging.cpp" />
+    <ClCompile Include="kernel\src\defaults.cpp" />
     <ClCompile Include="kernel\src\error.cpp" />
     <ClCompile Include="kernel\src\kernel\config.cpp" />
     <ClCompile Include="kernel\src\kernel\config_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\errors.cpp" />
-    <ClCompile Include="kernel\src\kernel\instance_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\kimpl.cpp" />
     <ClCompile Include="kernel\src\kernel\logging_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\misc.cpp" />
@@ -186,6 +188,7 @@
     <ClCompile Include="kernel\src\main.cpp" />
     <ClCompile Include="kernel\src\misc.cpp" />
     <ClCompile Include="kernel\src\objbase.cpp" />
+    <ClCompile Include="kernel\src\objbase_actor.cpp" />
     <ClCompile Include="kernel\src\plugin_descriptor.cpp" />
     <ClCompile Include="kernel\src\propdict.cpp" />
     <ClCompile Include="kernel\src\property.cpp" />
