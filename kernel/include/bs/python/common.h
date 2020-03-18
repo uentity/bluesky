@@ -77,4 +77,12 @@ using namespace pybind11::literals;
 
 [[maybe_unused]] inline static const auto nogil = py::call_guard<py::gil_scoped_release>();
 
+template<typename PyClass>
+auto add_bs_type(PyClass& cl) -> PyClass& {
+	using Class = typename std::decay_t<decltype(cl)>::type;
+	return cl.def_property_readonly_static(
+		"bs_type", [](py::object){return Class::bs_type(); }, py::return_value_policy::reference
+	);
+}
+
 NAMESPACE_END(blue_sky::python)
