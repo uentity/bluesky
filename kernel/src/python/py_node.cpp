@@ -268,6 +268,11 @@ void py_bind_node(py::module& m) {
 		.def("rename", py::overload_cast<lid_type, std::string>(&node::rename),
 			"lid"_a, "new_name"_a, "Rename link with given ID", nogil)
 
+		.def("rearrange", py::overload_cast<lids_v>(&node::rearrange), "new_order"_a,
+			"Apply custom order to node")
+		.def("rearrange", py::overload_cast<std::vector<std::size_t>>(&node::rearrange), "new_order"_a,
+			"Apply custom order to node")
+
 		// misc API
 		.def_property_readonly("handle", &node::handle,
 			"Returns a single link that owns this node in overall tree"
