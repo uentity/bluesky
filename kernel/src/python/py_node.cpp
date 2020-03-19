@@ -138,25 +138,7 @@ void py_bind_node(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  Node
 	//
-	py::class_<node, objbase, std::shared_ptr<node>> node_pyface(m, "node");
-
-	// export node's Key enum
-	py::enum_<Key>(node_pyface, "Key")
-		.value("ID", Key::ID)
-		.value("OID", Key::OID)
-		.value("Name", Key::Name)
-		.value("Type", Key::Type)
-		.value("AnyOrder", Key::AnyOrder)
-	;
-	// export node's insert policy
-	py::enum_<InsertPolicy>(node_pyface, "InsertPolicy", py::arithmetic())
-		.value("AllowDupNames", InsertPolicy::AllowDupNames)
-		.value("DenyDupNames", InsertPolicy::DenyDupNames)
-		.value("RenameDup", InsertPolicy::RenameDup)
-		.value("Merge", InsertPolicy::Merge)
-	;
-
-	node_pyface
+	auto node_pyface = py::class_<node, objbase, std::shared_ptr<node>>(m, "node")
 		BSPY_EXPORT_DEF(node)
 		.def(py::init<>())
 		.def("__len__", &node::size, nogil)
@@ -299,6 +281,10 @@ void py_bind_node(py::module& m) {
 		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
 		.def("disconnect", &node::disconnect, "deep"_a = true, "Stop receiving messages from tree", nogil)
 	;
+
+	// [TODO] remove it later (added for compatibility)
+	node_pyface.attr("Key") = m.attr("Key");
+	node_pyface.attr("InsertPolicy") = m.attr("InsertPolicy");
 }
 
 NAMESPACE_END(blue_sky::python)

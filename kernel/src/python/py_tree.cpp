@@ -84,7 +84,7 @@ void py_bind_tree(py::module& m) {
 	;
 
 	// Events enum
-	py::enum_<Event>(m, "Event")
+	py::enum_<Event>(m, "Event", py::arithmetic())
 		.value("LinkRenamed", Event::LinkRenamed)
 		.value("LinkStatusChanged", Event::LinkStatusChanged)
 		.value("LinkInserted", Event::LinkInserted)
@@ -93,12 +93,21 @@ void py_bind_tree(py::module& m) {
 		.value("All", Event::All)
 	;
 
-	// async tag
-	py::class_<launch_async_t>(m, "launch_async_t");
-	m.attr("launch_async") = launch_async;
-	// unsafe tag
-	py::class_<unsafe_t>(m, "unsafe_t");
-	m.attr("unsafe") = unsafe;
+	// node's index type
+	py::enum_<Key>(m, "Key")
+		.value("ID", Key::ID)
+		.value("OID", Key::OID)
+		.value("Name", Key::Name)
+		.value("Type", Key::Type)
+		.value("AnyOrder", Key::AnyOrder)
+	;
+	// node's insert policy
+	py::enum_<InsertPolicy>(m, "InsertPolicy", py::arithmetic())
+		.value("AllowDupNames", InsertPolicy::AllowDupNames)
+		.value("DenyDupNames", InsertPolicy::DenyDupNames)
+		.value("RenameDup", InsertPolicy::RenameDup)
+		.value("Merge", InsertPolicy::Merge)
+	;
 
 	// bind lists of links & nodes as opaque types
 	bind_rich_vector<links_v>(m, "links_vector", py::module_local(false));

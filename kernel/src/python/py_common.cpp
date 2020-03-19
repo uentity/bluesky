@@ -161,6 +161,14 @@ void py_bind_common(py::module& m) {
 
 	// add marker for infinite timespan
 	m.attr("infinite") = pyinfinte();
+
+	// async tag
+	py::class_<launch_async_t>(m, "launch_async_t");
+	m.attr("launch_async") = launch_async;
+
+	// unsafe tag
+	py::class_<unsafe_t>(m, "unsafe_t");
+	m.attr("unsafe") = unsafe;
 }
 
 NAMESPACE_END(python)
