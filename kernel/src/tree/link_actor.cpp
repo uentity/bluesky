@@ -24,6 +24,7 @@
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::data_modificator_f)
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using namespace allow_enumops;
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 using bs_detail::shared;

@@ -66,6 +66,8 @@ auto link_impl::rs_reset(
 	Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs,
 	on_rs_changed_fn on_rs_changed
 ) -> ReqStatus {
+	using namespace allow_enumops;
+
 	const auto i = (unsigned)request;
 	if(i >= 2) return ReqStatus::Error;
 

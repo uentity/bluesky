@@ -281,6 +281,7 @@ auto node::rearrange(std::vector<std::size_t> new_order) -> void {
 //  events handling
 //
 auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
+	using namespace allow_enumops;
 	using baby_t = ev_listener_actor<sp_node>;
 
 	auto make_ev_character = [N = bs_shared_this<node>(), listen_to](baby_t* self) {

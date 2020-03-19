@@ -69,7 +69,3 @@ class node_impl;
 class node_actor;
 
 NAMESPACE_END(blue_sky::tree)
-
-// allow bitwise operators on some enums
-BS_ALLOW_ENUMOPS(blue_sky::tree::Event)
-BS_ALLOW_ENUMOPS(blue_sky::tree::InsertPolicy)

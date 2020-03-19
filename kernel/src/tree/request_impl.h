@@ -24,6 +24,7 @@ auto request_impl(
 	link_actor& LA, Req req, ReqOpts opts, F&& f_request, C&& res_processor
 ) -> void {
 	using namespace kernel::radio;
+	using namespace allow_enumops;
 	using f_ret_t = std::invoke_result_t<F>;
 	using a_ret_t = result_or_errbox<typename f_ret_t::value_type>;
 	using ret_t = result_or_err<typename f_ret_t::value_type>;

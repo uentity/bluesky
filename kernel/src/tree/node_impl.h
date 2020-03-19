@@ -327,5 +327,3 @@ private:
 using sp_nimpl = std::shared_ptr<node_impl>;
 
 NAMESPACE_END(blue_sky::tree)
-
-BS_ALLOW_ENUMOPS(blue_sky::tree::EraseOpts)

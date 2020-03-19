@@ -11,95 +11,86 @@
 #include <type_traits>
 #include <utility>
 
-#define BS_ALLOW_ENUMOPS(...) \
-template<> struct blue_sky::allow_enumops< __VA_ARGS__ > : std::true_type {};
-
 namespace blue_sky {
+namespace detail {
 
-template<typename T>
-struct allow_enumops : std::false_type {};
+template<typename T, typename R = void>
+using enable_if_enum_t = std::enable_if_t<std::is_enum_v<std::decay_t<T>>, R>;
 
+} // eof namespace blue_sky::detail
+
+///////////////////////////////////////////////////////////////////////////////
+//  extract enum underlying type value
+//
+// allows to optionally specify return type
+template<typename R = void, typename T, typename = detail::enable_if_enum_t<T>>
+constexpr auto enumval(T a) {
+	using R_ = std::conditional_t<std::is_same_v<R, void>, std::underlying_type_t<T>, R>;
+	return static_cast<R_>(a);
+}
+
+namespace allow_enumops {
 ///////////////////////////////////////////////////////////////////////////////
 //  unary ops
 //
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T operator~(T a) {
-	return T(~std::underlying_type_t<T>(a));
+template<typename T>
+constexpr auto operator~(T a) -> detail::enable_if_enum_t<T, T> {
+	return T(~enumval(a));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  binary enum - enum ops
 //
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T operator|(T a, T b) {
-	return T(std::underlying_type_t<T>(a) | std::underlying_type_t<T>(b));
+template<typename T>
+constexpr auto operator|(T a, T b) -> detail::enable_if_enum_t<T, T> {
+	return static_cast<T>(enumval(a) | enumval(b));
 }
 
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T operator&(T a, T b) {
-	return T(std::underlying_type_t<T>(a) & std::underlying_type_t<T>(b));
+template<typename T>
+constexpr auto operator&(T a, T b) -> detail::enable_if_enum_t<T, T> {
+	return static_cast<T>(enumval(a) & enumval(b));
 }
 
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T operator^(T a, T b) {
-	return T(std::underlying_type_t<T>(a) ^ std::underlying_type_t<T>(b));
-}
-
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T& operator|=(T& a, T b) {
-	return (T&)((std::underlying_type_t<T>&)a |= std::underlying_type_t<T>(b));
-}
-
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T& operator&=(T& a, T b) {
-	return (T&)((std::underlying_type_t<T>&)a &= std::underlying_type_t<T>(b));
-}
-
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T& operator^=(T& a, T b) {
-	return (T&)((std::underlying_type_t<T>&)a ^= std::underlying_type_t<T>(b));
+template<typename T>
+constexpr auto operator^(T a, T b) -> detail::enable_if_enum_t<T, T> {
+	return static_cast<T>(enumval(a) ^ enumval(b));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  binary enum - underlying type ops
 //
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T operator|(T a, std::underlying_type_t<T> b) {
-	return T(std::underlying_type_t<T>(a) | b);
+template<typename T>
+constexpr auto operator|(T a, std::underlying_type_t<T> b) -> detail::enable_if_enum_t<T, T> {
+	return static_cast<T>(enumval(a) | b);
 }
 
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T operator&(T a, std::underlying_type_t<T> b) {
-	return T(std::underlying_type_t<T>(a) & b);
+template<typename T>
+constexpr auto operator&(T a, std::underlying_type_t<T> b) -> detail::enable_if_enum_t<T, T> {
+	return static_cast<T>(enumval(a) & b);
 }
 
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T operator^(T a, std::underlying_type_t<T> b) {
-	return T(std::underlying_type_t<T>(a) ^ b);
-}
-
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T& operator|=(T& a, std::underlying_type_t<T> b) {
-	return (T&)((std::underlying_type_t<T>&)a |= b);
-}
-
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T& operator&=(T& a, std::underlying_type_t<T> b) {
-	return (T&)((std::underlying_type_t<T>&)a &= b);
-}
-
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value && allow_enumops<T>::value>>
-constexpr T& operator^=(T& a, std::underlying_type_t<T> b) {
-	return (T&)((std::underlying_type_t<T>&)a ^= b);
+template<typename T>
+constexpr auto operator^(T a, std::underlying_type_t<T> b) -> detail::enable_if_enum_t<T, T> {
+	return static_cast<T>(enumval(a) ^ b);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  extract enum underlying type value
+//  in-place lhs modification
 //
-template<class T, typename = std::enable_if_t<std::is_enum<T>::value>>
-constexpr auto enumval(T a) {
-	return static_cast<std::underlying_type_t<T>>(a);
+template<typename T, typename U>
+constexpr auto operator|=(T& a, U b) -> detail::enable_if_enum_t<T, T&> {
+	return a = a | b;
 }
 
-} /* namespace blue_sky */
+template<typename T, typename U>
+constexpr auto operator&=(T& a, U b) -> detail::enable_if_enum_t<T, T&> {
+	return a = a & b;
+}
+
+template<typename T, typename U>
+constexpr auto operator^=(T& a, U b) -> detail::enable_if_enum_t<T, T&> {
+	return a = a ^ b;
+}
+
+}} /* namespace blue_sky */
 

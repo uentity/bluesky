@@ -27,6 +27,7 @@
 #include "actor_debug.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using namespace allow_enumops;
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 

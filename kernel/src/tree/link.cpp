@@ -359,6 +359,7 @@ auto link::data_node(process_data_cb f, bool high_priority) const -> void {
  *  subscribers management
  *-----------------------------------------------------------------------------*/
 auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t {
+	using namespace allow_enumops;
 	using baby_t = ev_listener_actor<link>;
 
 	// produce event bhavior that calls passed callback with proper params

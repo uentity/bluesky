@@ -226,5 +226,3 @@ auto to_string(Req) -> const char*;
 auto to_string(ReqStatus) -> const char*;
 
 NAMESPACE_END(blue_sky::tree)
-
-BS_ALLOW_ENUMOPS(blue_sky::tree::ReqReset)

@@ -13,6 +13,7 @@ OMIT_OBJ_SERIALIZATION
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
+using namespace allow_enumops;
 
 NAMESPACE_BEGIN()
 

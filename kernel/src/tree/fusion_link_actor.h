@@ -17,9 +17,11 @@ OMIT_OBJ_SERIALIZATION
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::sp_fusion)
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using namespace allow_enumops;
+using bs_detail::shared;
+
 // forward declare actor
 struct fusion_link_actor;
-using bs_detail::shared;
 
 /*-----------------------------------------------------------------------------
  *  fusion_link_impl

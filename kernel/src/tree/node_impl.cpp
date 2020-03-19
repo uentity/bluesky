@@ -154,6 +154,8 @@ inline constexpr auto rename_trials = 10000;
 auto node_impl::insert(
 	link L, const InsertPolicy pol, leaf_postproc_fn ppf
 ) -> insert_status<Key::ID> {
+	using namespace allow_enumops;
+
 	// can't move persistent node from it's owner
 	const auto Lflags = L.flags();
 	if(!L || (Lflags & Flags::Persistent && L.owner()))

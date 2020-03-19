@@ -122,5 +122,3 @@ inline auto spawn_lactor(std::shared_ptr<link_impl> limpl, Ts&&... args) {
 }
 
 NAMESPACE_END(blue_sky::tree)
-
-BS_ALLOW_ENUMOPS(blue_sky::tree::ReqOpts)
