@@ -110,12 +110,7 @@ public:
 	// if key already exists in propdict - replace value, if not -- insert new element
 	template<typename Map>
 	auto merge_props(Map&& rhs) -> propdict& {
-		using PureMap = std::remove_reference_t<Map>;
-		static_assert(meta::is_map_v<PureMap>, "Passed container is not map-like");
-		static_assert(
-			std::is_convertible_v<typename PureMap::key_type, key_type>,
-			"Source map should have string keys"
-		);
+		assert_wrong_map<Map>();
 
 		std::for_each(std::begin(rhs), std::end(rhs),[this, hint = std::begin(*this)](auto& src_val) mutable {
 			if constexpr(std::is_lvalue_reference_v<Map>)
@@ -126,10 +121,42 @@ public:
 		return *this;
 	}
 
+	// merge data from any map-like container
+	// keeps existing values and replace only 'none'
+	template<typename Map>
+	auto weak_merge_props(Map&& rhs, bool replace_none = true) -> propdict& {
+		assert_wrong_map<Map>();
+
+		const auto take_value = [](auto&& kv_pair) -> decltype(auto) {
+			if constexpr(std::is_lvalue_reference_v<Map>)
+				return kv_pair.second;
+			else
+				return std::move(kv_pair.second);
+		};
+
+		std::for_each(std::begin(rhs), std::end(rhs),[&](auto& src_val) mutable {
+			auto [it, is_inserted] = try_emplace(src_val.first, take_value(src_val));
+			if(!is_inserted && replace_none && it->second == none())
+				it->second = take_value(src_val);
+		});
+		return *this;
+	}
+
 	// assign via merge from map-like container, but not from propdict
 	template<typename Map>
 	auto operator =(Map&& rhs) -> std::enable_if_t<!std::is_same_v<std::decay_t<Map>, propdict>, propdict&> {
 		return merge_props(std::forward<Map>(rhs));
+	}
+
+private:
+	template<typename Map>
+	constexpr auto assert_wrong_map() {
+		using PureMap = std::remove_const_t<std::remove_reference_t<Map>>;
+		static_assert(meta::is_map_v<PureMap>, "Passed container is not map-like");
+		static_assert(
+			std::is_convertible_v<typename PureMap::key_type, key_type>,
+			"Source map should have string keys"
+		);
 	}
 };
 
