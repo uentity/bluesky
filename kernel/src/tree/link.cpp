@@ -302,8 +302,7 @@ auto link::data_node(unsafe_t) const -> sp_node {
 }
 
 auto link::data_apply(data_modificator_f m, bool silent) const -> error {
-	auto res = pimpl_->actorf<error::box>(*this, a_apply(), std::move(m), silent);
-	return res ? error::unpack(res.value()) : res.error();
+	return pimpl_->actorf<error>(*this, a_apply(), std::move(m), silent);
 }
 auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -> void {
 	caf::anon_send(actor(*this), a_apply(), std::move(m), silent);

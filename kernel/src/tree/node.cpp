@@ -263,17 +263,15 @@ auto node::rename(std::string old_name, std::string new_name) -> std::size_t {
 //  rearrrange
 //
 auto node::rearrange(lids_v new_order) -> error {
-	auto res = pimpl_->actorf<error::box>(
+	return pimpl_->actorf<error>(
 		*this, a_node_rearrange(), std::move(new_order)
 	);
-	return res ? error{*res} : res.error();
 }
 
 auto node::rearrange(std::vector<std::size_t> new_order) -> error {
-	auto res = pimpl_->actorf<error::box>(
+	return pimpl_->actorf<error>(
 		*this, a_node_rearrange(), std::move(new_order)
 	);
-	return res ? error{*res} : res.error();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

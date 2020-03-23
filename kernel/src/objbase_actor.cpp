@@ -65,10 +65,9 @@ auto objbase::start_engine() -> bool {
 }
 
 auto objbase::apply(modificator_f m) -> error {
-	auto res = actorf<error::box>(
+	return actorf<error>(
 		actor(), def_timeout(true), a_apply(), make_closed_modificator(std::move(m))
 	);
-	return res ? error::unpack(res.value()) : res.error();
 }
 
 auto objbase::apply(launch_async_t, modificator_f m) -> void {

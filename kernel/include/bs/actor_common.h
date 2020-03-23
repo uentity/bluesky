@@ -46,60 +46,70 @@ BS_API auto def_timeout(bool for_long_task = false) -> caf::duration;
 /// @return always return `result_or_errbox<R>`
 template<typename R, typename Actor, typename... Args>
 auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
-	auto x = factor(std::forward<Args>(args)...);
+	// error is always transferred inside a box
+	using R_ = std::conditional_t<std::is_same_v<R, error>, error::box, R>;
+	// prepare result placeholder
+	auto res = [] {
+		if constexpr(tl::detail::is_expected<R_>::value)
+			return std::optional<R_>{};
+		else
+			return std::optional<result_or_err<R_>>{};
+	}();
 
-	using T = typename decltype(x)::value_type;
-	const auto extract_value = [&](auto& res) {
-		// caf err passtrough
-		if(!x) {
-			res.emplace(tl::make_unexpected( forward_caf_error(x.error()) ));
-			return;
-		}
-
+	// make request & extract response
+	if(auto x = factor(std::forward<Args>(args)...)) {
+		using T = typename decltype(x)::value_type;
 		if constexpr(std::is_same_v<T, caf::message>)
-			x->extract({ [&](R& value) {
+			x->extract({ [&](R_& value) {
 				res.emplace(std::move(value));
 			} });
 		else
 			res.emplace(std::move(*x));
 		if(!res) res.emplace( tl::make_unexpected(error{ "actorf: wrong result type R specified" }) );
-	};
-
-	if constexpr(tl::detail::is_expected<R>::value) {
-		std::optional<R> res;
-		extract_value(res);
-		return std::move(*res);
 	}
-	else {
-		std::optional<result_or_err<R>> res;
-		extract_value(res);
-		return std::move(*res);
-	}
-}
+	else // caf err passtrough
+		res.emplace(tl::make_unexpected( forward_caf_error(x.error()) ));
 
-/// constructs function_view inside from passed handle & timeout
-template<typename R, typename Actor, typename T, typename... Args>
-auto actorf(const Actor& tgt, T timeout, Args&&... args) {
-	auto inplace_fv = caf::make_function_view(tgt, detail::cast_timeout(timeout));
-	return actorf<R>(inplace_fv, std::forward<Args>(args)...);
+	// if R is an error, then simply return `error` instead of `result_or_err<error>`
+	if constexpr(std::is_same_v<R_, error::box>)
+		return *res ? error{std::move(**res)} : std::move(*res).error();
+	else
+		return std::move(*res);
 }
 
 /// operates on passed `scoped_actor` instead of function view
 template<typename R, typename Actor, typename T, typename... Args>
 auto actorf(const caf::scoped_actor& caller, const Actor& tgt, T timeout, Args&&... args) {
+	// error is always transferred inside a box
+	using R_ = std::conditional_t<std::is_same_v<R, error>, error::box, R>;
+	// prepare result placeholder
 	auto res = [] {
-		if constexpr(tl::detail::is_expected<R>::value)
-			return std::optional<R>{};
+		if constexpr(tl::detail::is_expected<R_>::value)
+			return std::optional<R_>{};
 		else
-			return std::optional<result_or_err<R>>{};
+			return std::optional<result_or_err<R_>>{};
 	}();
 
+	// make request & extract response
 	caller->request(tgt, detail::cast_timeout(timeout), std::forward<Args>(args)...)
 	.receive(
-		[&](R& value) { res.emplace(std::move(value)); },
+		[&](R_& value) { res.emplace(std::move(value)); },
 		[&](const caf::error& er) { res.emplace(tl::make_unexpected(forward_caf_error(er))); }
 	);
-	return std::move(*res);
+
+	// if R is an error, then simply return `error` instead of `result_or_err<error>`
+	if constexpr(std::is_same_v<R_, error::box>)
+		return *res ? error{std::move(**res)} : std::move(*res).error();
+	else
+		return std::move(*res);
+}
+
+/// constructs scoped actor inside from passed handle & timeout
+template<typename R, typename Actor, typename T, typename... Args>
+auto actorf(const Actor& tgt, T timeout, Args&&... args) {
+	return actorf<R>(
+		caf::scoped_actor{kernel::radio::system()}, tgt, timeout, std::forward<Args>(args)...
+	);
 }
 
 /// @brief spawn temp actor that makes specified request to `A` and pass result to callback `f`

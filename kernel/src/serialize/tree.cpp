@@ -157,10 +157,7 @@ auto save_tree(link root, std::string filename, TreeArchive ar, timespan wait_fo
 	);
 
 	// wait for result
-	if(auto res = actorf<error::box>(Af, a_apply()); res)
-		return error::unpack(res.value());
-	else
-		return std::move(res.error());
+	return actorf<error>(Af, a_apply());
 }
 
 BS_API auto save_tree(
