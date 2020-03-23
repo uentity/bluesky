@@ -256,7 +256,9 @@ void py_bind_node(py::module& m) {
 		.def_property_readonly("size", &node::size, nogil)
 		.def_property_readonly("empty", &node::empty, nogil)
 		.def("clear", &node::clear, "Clears all node contents", nogil)
+
 		.def("keys", &node::skeys, "key_type"_a = Key::ID, "ordering"_a = Key::AnyOrder, nogil)
+		.def("ikeys", &node::ikeys, "ordering"_a = Key::AnyOrder, nogil)
 
 		// link rename
 		.def("rename", py::overload_cast<std::string, std::string>(&node::rename),

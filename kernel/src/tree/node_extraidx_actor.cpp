@@ -62,7 +62,6 @@ auto equal_to(const Key_type<K>& rhs) {
 
 auto sort(Key order, links_v& leafs) -> void {
 	switch(order) {
-	default:
 	case Key::OID:
 		std::sort(leafs.begin(), leafs.end(), memo_less<Key::OID>());
 		break;
@@ -75,19 +74,22 @@ auto sort(Key order, links_v& leafs) -> void {
 	case Key::ID:
 		std::sort(leafs.begin(), leafs.end(), memo_less<Key::ID>());
 		break;
+	default:
+		break;
 	}
 }
 
 // find among leafs
 auto find(const std::string& key, Key meaning, const links_v& leafs) {
 	switch(meaning) {
-	default:
 	case Key::OID:
 		return std::find_if(leafs.begin(), leafs.end(), equal_to<Key::OID>(key));
 	case Key::Type:
 		return std::find_if(leafs.begin(), leafs.end(), equal_to<Key::Type>(key));
 	case Key::Name:
 		return std::find_if(leafs.begin(), leafs.end(), equal_to<Key::Name>(key));
+	default:
+		return leafs.end();
 	}
 }
 
@@ -105,13 +107,14 @@ auto equal_range(const Key_type<K>& key, const links_v& leafs) {
 
 auto equal_range(const std::string& key, Key meaning, const links_v& leafs) {
 	switch(meaning) {
-	default:
 	case Key::Name:
 		return equal_range<Key::Name>(key, leafs);
 	case Key::OID:
 		return equal_range<Key::OID>(key, leafs);
 	case Key::Type:
 		return equal_range<Key::Type>(key, leafs);
+	default:
+		return links_v{};
 	}
 }
 
@@ -179,6 +182,31 @@ return {
 	[](a_node_leafs, Key order, links_v leafs) -> links_v {
 		sort(order, leafs);
 		return leafs;
+	},
+
+	// extract keys
+	[](a_node_keys, Key order, links_v leafs) -> lids_v {
+		sort(order, leafs);
+		return node_impl::keys<Key::ID>(leafs);
+	},
+
+	[](a_node_keys, Key meaning, Key order, links_v leafs) -> std::vector<std::string> {
+		sort(order, leafs);
+
+		switch(meaning) {
+		case Key::ID :
+			return range_t{leafs.begin(), leafs.end()}.extract<std::string>(
+				[](const auto& L) { return to_string(L.id()); }
+			);
+		case Key::Name:
+			return node_impl::keys<Key::Name>(leafs);
+		case Key::OID:
+			return node_impl::keys<Key::OID>(leafs);
+		case Key::Type:
+			return node_impl::keys<Key::Type>(leafs);
+		default:
+			return {};
+		}
 	},
 
 	// find link with given key (link ID index isn't supported)

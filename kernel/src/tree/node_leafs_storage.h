@@ -17,6 +17,9 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 
+#include <algorithm>
+#include <numeric>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 // global alias to shorten typing
 namespace mi = boost::multi_index;
@@ -46,28 +49,28 @@ using type_key = mi::const_mem_fun<
 struct any_order {};
 
 // convert from key alias -> key type
-template<Key K, class _ = void>
+template<Key K>
 struct Key_dispatch {
 	using tag = id_key;
 	using type = lid_type;
 };
-template<class _>
-struct Key_dispatch<Key::Name, _> {
+template<>
+struct Key_dispatch<Key::Name> {
 	using tag = name_key;
 	using type = std::string;
 };
-template<class _>
-struct Key_dispatch<Key::OID, _> {
+template<>
+struct Key_dispatch<Key::OID> {
 	using tag = oid_key;
 	using type = std::string;
 };
-template<class _>
-struct Key_dispatch<Key::Type, _> {
+template<>
+struct Key_dispatch<Key::Type> {
 	using tag = type_key;
 	using type = std::string;
 };
-template<class _>
-struct Key_dispatch<Key::AnyOrder, _> {
+template<>
+struct Key_dispatch<Key::AnyOrder> {
 	using tag = any_order;
 	using type = std::size_t;
 };
@@ -91,6 +94,9 @@ template<Key K = Key::AnyOrder> using Index = typename links_container::index<Ke
 template<Key K = Key::AnyOrder> using iterator = typename Index<K>::iterator;
 template<Key K = Key::AnyOrder> using const_iterator = typename Index<K>::const_iterator;
 template<Key K = Key::ID> using insert_status = std::pair<iterator<K>, bool>;
+
+template<Key K>
+inline constexpr auto has_builtin_index_v = K != Key::OID && K != Key::Type;
 
 constexpr auto has_builtin_index(Key K) { return K != Key::OID && K != Key::Type; }
 
@@ -117,16 +123,32 @@ struct range_t : public std::pair<Iterator, Iterator> {
 
 	auto begin() const noexcept { return this->first; }
 	auto end() const noexcept { return this->second; }
+	auto size() const noexcept {
+		return static_cast<std::size_t>(
+			std::max<typename Iterator::difference_type>( 0, std::distance(begin(), end()) )
+		);
+	}
 
-	// convert range to vector of `R` by applying `exporter` to each element
+	// convert range to vector of `R` by applying `extracter` to each element
 	template<typename R, typename F>
 	auto extract(F&& extracter) const -> std::vector<R> {
-		auto sz = std::distance(begin(), end());
-		if(sz <= 0) return {};
-		auto res = std::vector<R>((size_t)sz);
-		std::transform(
-			begin(), end(), res.begin(), std::forward<F>(extracter)
-		);
+		auto res = std::vector<R>(size());
+		if(!res.empty())
+			std::transform(
+				begin(), end(), res.begin(), std::forward<F>(extracter)
+			);
+		return res;
+	}
+
+	// convert range to vector of `R` by applying `extracter` to each iterator
+	template<typename R, typename F>
+	auto extract_it(F&& extracter) const -> std::vector<R> {
+		auto res = std::vector<R>(size());
+		if(!res.empty()) {
+			std::size_t i = 0;
+			for(auto it = begin(); it != end(); ++it)
+				res[i++] = extracter(it);
+		}
 		return res;
 	}
 

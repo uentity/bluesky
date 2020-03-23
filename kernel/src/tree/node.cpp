@@ -108,30 +108,23 @@ auto node::leafs(Key order) const -> links_v {
 //  keys
 //
 auto node::keys(Key ordering) const -> lids_v {
-	return node_impl::keys<Key::ID>(leafs(ordering));
+	return pimpl_->actorf<lids_v>(
+		*this, a_node_keys(), ordering
+	).value_or(lids_v{});
+}
+
+auto node::ikeys(Key ordering) const -> std::vector<std::size_t> {
+	using R = std::vector<std::size_t>;
+	return pimpl_->actorf<std::vector<std::size_t>>(
+		*this, a_node_ikeys(), ordering
+	).value_or(R{});
 }
 
 auto node::skeys(Key key_meaning, Key ordering) const -> std::vector<std::string> {
-	static const auto slids = [](const links_v& Ls) {
-		return range_t{ Ls.begin(), Ls.end() }.extract<std::string>(
-			[](const auto& L) { return to_string(L.id()); }
-		);
-	};
-
-	auto Ls = leafs(ordering);
-	switch(key_meaning) {
-	default:
-	case Key::ID:
-		return slids(Ls);
-	case Key::Name:
-		return node_impl::keys<Key::Name>(Ls);
-	case Key::OID:
-		return node_impl::keys<Key::OID>(Ls);
-	case Key::Type:
-		return node_impl::keys<Key::Type>(Ls);
-	case Key::AnyOrder:
-		return {};
-	}
+	using R = std::vector<std::string>;
+	return pimpl_->actorf<R>(
+		*this, a_node_keys(), key_meaning, ordering
+	).value_or(R{});
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -269,12 +262,18 @@ auto node::rename(std::string old_name, std::string new_name) -> std::size_t {
 ///////////////////////////////////////////////////////////////////////////////
 //  rearrrange
 //
-auto node::rearrange(lids_v new_order) -> void {
-	caf::anon_send(actor(), a_node_rearrange(), std::move(new_order));
+auto node::rearrange(lids_v new_order) -> error {
+	auto res = pimpl_->actorf<error::box>(
+		*this, a_node_rearrange(), std::move(new_order)
+	);
+	return res ? error{*res} : res.error();
 }
 
-auto node::rearrange(std::vector<std::size_t> new_order) -> void {
-	caf::anon_send(actor(), a_node_rearrange(), std::move(new_order));
+auto node::rearrange(std::vector<std::size_t> new_order) -> error {
+	auto res = pimpl_->actorf<error::box>(
+		*this, a_node_rearrange(), std::move(new_order)
+	);
+	return res ? error{*res} : res.error();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

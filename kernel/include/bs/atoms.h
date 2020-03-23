@@ -60,6 +60,7 @@ using a_lnk_flags = caf::atom_constant<caf::atom("tl flags")>;
 using a_node_size = caf::atom_constant<caf::atom("tn size")>;
 using a_node_leafs = caf::atom_constant<caf::atom("tn leafs")>;
 using a_node_keys = caf::atom_constant<caf::atom("tn keys")>;
+using a_node_ikeys = caf::atom_constant<caf::atom("tn ikeys")>;
 using a_node_find = caf::atom_constant<caf::atom("tn find")>;
 using a_node_index = caf::atom_constant<caf::atom("tn index")>;
 using a_node_deep_search = caf::atom_constant<caf::atom("tn deeps")>;

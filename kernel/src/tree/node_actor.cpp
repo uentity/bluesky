@@ -11,6 +11,7 @@
 #include "node_extraidx_actor.h"
 #include "node_retranslators.h"
 #include "link_impl.h"
+
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/serialize/cafbind.h>
@@ -178,7 +179,7 @@ auto node_actor::insert(
 		// send message that link inserted (with position)
 		if(!silent) send<high_prio>(
 			home(unsafe), a_ack(), a_node_insert(),
-			child_L.id(), impl.to_index(impl.find<Key::ID>(child_L.id())), pol
+			child_L.id(), impl.index(impl.find<Key::ID>(child_L.id())), pol
 		);
 	});
 }
@@ -189,7 +190,7 @@ auto node_actor::insert(
 	// 1. insert an element using ID index
 	// [NOTE] silent insert - send ack message later
 	auto res = insert(std::move(L), pol, true);
-	auto res_idx = impl.to_index<Key::ID>(res.first);
+	auto res_idx = impl.index<Key::ID>(res.first);
 	if(!res_idx) return { res_idx, res.second };
 
 	// 2. reposition an element in AnyOrder index
@@ -267,13 +268,13 @@ auto node_actor::make_behavior() -> behavior_type {
 
 		[=](a_node_disconnect) { disconnect(); },
 
-		// 2. propagate owner
+		// propagate owner
 		//[=](a_node_propagate_owner, bool deep) { impl.propagate_owner(deep); },
 
-		// 3. get handle
+		// get handle
 		[=](a_node_handle) { return link{ impl.handle() }; },
 
-		// 4. get size
+		// get size
 		[=](a_node_size) { return impl.size(); },
 
 		[=](a_node_leafs, Key order) -> caf::result<links_v> {
@@ -287,7 +288,51 @@ auto node_actor::make_behavior() -> behavior_type {
 				);
 		},
 
-		// 5.
+		[=](a_node_keys, Key order) -> caf::result<lids_v> {
+			// builtin indexes can be processed directly
+			switch(order) {
+			case Key::ID : return impl.keys<Key::ID>();
+			case Key::AnyOrder : return impl.keys<Key::ID, Key::AnyOrder>();
+			case Key::Name : return impl.keys<Key::ID, Key::Name>();
+			default: break;
+			}
+			// others via extra index actor
+			return delegate(
+				system().spawn(extraidx_search_actor),
+				a_node_keys(), order, impl.leafs(Key::AnyOrder)
+			);
+		},
+
+		[=](a_node_ikeys, Key order) -> caf::result<std::vector<std::size_t>> {
+			// builtin indexes can be processed directly
+			switch(order) {
+			case Key::ID : return impl.keys<Key::AnyOrder, Key::ID>();
+			case Key::AnyOrder : return impl.keys<Key::AnyOrder>();
+			case Key::Name : return impl.keys<Key::AnyOrder, Key::Name>();
+			default: break;
+			}
+
+			// others via extra sorted leafs
+			auto rp = make_response_promise();
+			request(
+				system().spawn(extraidx_search_actor), def_timeout(true),
+				a_node_leafs(), order, impl.leafs(Key::AnyOrder)
+			).then(
+				[=](const links_v& leafs) mutable {
+					rp.deliver( impl.ikeys(leafs.begin(), leafs.end()) );
+				}
+			);
+			return rp;
+		},
+
+		[=](a_node_keys, Key meaning, Key order) -> caf::result<std::vector<std::string>> {
+			return delegate(
+				system().spawn(extraidx_search_actor),
+				a_node_keys(), meaning, order, impl.leafs(Key::AnyOrder)
+			);
+		},
+
+		// find
 		[=](a_node_find, const lid_type& lid) -> link {
 			adbg(this) << "{a_node_find LID} " << to_string(lid) << std::endl;
 			auto res = impl.search<Key::ID>(lid);
@@ -363,20 +408,20 @@ auto node_actor::make_behavior() -> behavior_type {
 				);
 		},
 
-		// 8. insert new link
+		// insert new link
 		[=](a_node_insert, link L, InsertPolicy pol) -> node::insert_status {
 			adbg(this) << "{a_node_insert}" << std::endl;
 			auto res = insert(std::move(L), pol);
-			return { impl.to_index<Key::ID>(std::move(res.first)), res.second };
+			return { impl.index<Key::ID>(std::move(res.first)), res.second };
 		},
 
-		// 9. insert into specified position
+		// insert into specified position
 		[=](a_node_insert, link L, std::size_t idx, InsertPolicy pol) -> node::insert_status {
 			adbg(this) << "{a_node_insert}" << std::endl;
 			return insert(std::move(L), idx, pol);
 		},
 
-		// 10. insert bunch of links
+		// insert bunch of links
 		[=](a_node_insert, links_v Ls, InsertPolicy pol) {
 			size_t cnt = 0;
 			for(auto& L : Ls) {
@@ -385,19 +430,18 @@ auto node_actor::make_behavior() -> behavior_type {
 			return cnt;
 		},
 
-		// 13. normal link erase
+		// normal link erase
 		[=](a_node_erase, const lid_type& lid) -> std::size_t {
 			return erase(lid);
 		},
 
-		// 14. all other erase overloads do normal erase
+		// all other erase overloads do normal erase
 		[=](a_node_erase, std::size_t idx) {
 			return impl.erase<Key::AnyOrder>(
 				idx, [=](const link& L) { on_erase(L, *this); }
 			);
 		},
 
-		// 15.
 		[=](a_node_erase, std::string key, Key key_meaning) -> caf::result<std::size_t>{
 			if(has_builtin_index(key_meaning)) {
 				auto res = std::size_t{};
@@ -415,7 +459,7 @@ auto node_actor::make_behavior() -> behavior_type {
 				);
 		},
 
-		// 16. erase bunch of links
+		// erase bunch of links
 		[=](a_node_erase, const lids_v& lids) {
 			return impl.erase(
 				lids, [=](const link& L) { on_erase(L, *this); }
@@ -439,13 +483,13 @@ auto node_actor::make_behavior() -> behavior_type {
 			return impl.rename<Key::Name>(old_name, new_name);
 		},
 
-		// 18. apply custom order
-		[=](a_node_rearrange, const std::vector<std::size_t>& new_order) {
-			impl.rearrange<Key::AnyOrder>(new_order);
+		// apply custom order
+		[=](a_node_rearrange, const std::vector<std::size_t>& new_order) -> error::box {
+			return impl.rearrange<Key::AnyOrder>(new_order);
 		},
 
-		[=](a_node_rearrange, const lids_v& new_order) {
-			impl.rearrange<Key::ID>(new_order);
+		[=](a_node_rearrange, const lids_v& new_order) -> error::box {
+			return impl.rearrange<Key::ID>(new_order);
 		},
 
 		/// Non-public extensions
@@ -454,7 +498,7 @@ auto node_actor::make_behavior() -> behavior_type {
 			return erase(lid, opts);
 		},
 
-		// 11. ack on insert - reflect insert from sibling node actor
+		// ack on insert - reflect insert from sibling node actor
 		[=](a_ack, a_node_insert, lid_type lid, size_t pos, InsertPolicy pol) {
 			adbg(this) << "{a_node_insert ack}" << std::endl;
 			if(auto S = current_sender(); S != this) {
@@ -465,7 +509,7 @@ auto node_actor::make_behavior() -> behavior_type {
 				});
 			}
 		},
-		// 12. ack on move
+		// ack on move
 		[=](a_ack, a_node_insert, lid_type lid, size_t to, size_t from) {
 			if(auto S = current_sender(); S != this) {
 				if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>()) {
@@ -474,20 +518,20 @@ auto node_actor::make_behavior() -> behavior_type {
 			}
 		},
 
-		// 17. ack on erase - reflect erase from sibling node actor
+		// ack on erase - reflect erase from sibling node actor
 		[=](a_ack, a_node_erase, const lids_v& lids, const std::vector<std::string>&) {
 			if(auto S = current_sender(); S != this && !lids.empty()) {
 				erase(lids.front(), EraseOpts::Silent);
 			}
 		},
 
-		// 6. handle link rename
+		// handle link rename
 		[=](a_ack, a_lnk_rename, lid_type lid, const std::string&, const std::string&) {
 			adbg(this) << "{a_lnk_rename}" << std::endl;
 			impl.refresh(lid);
 		},
 
-		// 7. track link status
+		// track link status
 		[=](a_ack, a_lnk_status, const lid_type& lid, Req req, ReqStatus new_s, ReqStatus) {
 			// refresh link if new data arrived
 			if(new_s == ReqStatus::OK) {

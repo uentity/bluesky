@@ -33,8 +33,15 @@ public:
 		// get number of leafs
 		caf::replies_to<a_node_size>::with<std::size_t>,
 
-		// obtain node's content
-		caf::replies_to<a_node_leafs, Key>::with<links_v>,
+		// obtain node's content sorted by given order
+		caf::replies_to<a_node_leafs, Key /* order */>::with<links_v>,
+
+		// obtain leafs keys sorted by given index
+		caf::replies_to<a_node_keys, Key /* order */>::with<lids_v>,
+		// sorted string keys
+		caf::replies_to<a_node_keys, Key /* meaning */, Key /* order */>::with<std::vector<std::string>>,
+		// sorted indexes (offsets)
+		caf::replies_to<a_node_ikeys, Key /* order */>::with<std::vector<std::size_t>>,
 
 		// find link by ID
 		caf::replies_to<a_node_find, lid_type>::with<link>,
@@ -82,8 +89,8 @@ public:
 		caf::replies_to<a_lnk_rename, std::string, std::string>::with<std::size_t>,
 
 		// apply custom order
-		caf::reacts_to<a_node_rearrange, std::vector<std::size_t>>,
-		caf::reacts_to<a_node_rearrange, lids_v>
+		caf::replies_to<a_node_rearrange, std::vector<std::size_t>>::with<error::box>,
+		caf::replies_to<a_node_rearrange, lids_v>::with<error::box>
 	>;
 
 public:
@@ -111,6 +118,7 @@ public:
 
 	/// obtain vector of link ID keys
 	auto keys(Key ordering = Key::AnyOrder) const -> lids_v;
+	auto ikeys(Key ordering = Key::AnyOrder) const -> std::vector<std::size_t>;
 	/// obtain vector of string keys for given index type
 	auto skeys(Key key_meaning, Key ordering = Key::AnyOrder) const -> std::vector<std::string>;
 
@@ -173,8 +181,8 @@ public:
 	auto rename(std::string old_name, std::string new_name) -> std::size_t;
 
 	/// apply custom order
-	auto rearrange(std::vector<lid_type> new_order) -> void;
-	auto rearrange(std::vector<std::size_t> new_order) -> void;
+	auto rearrange(std::vector<lid_type> new_order) -> error;
+	auto rearrange(std::vector<std::size_t> new_order) -> error;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  track node events

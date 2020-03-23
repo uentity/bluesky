@@ -17,6 +17,9 @@ NAMESPACE_BEGIN(blue_sky::tree)
 using extraidx_search_api = caf::typed_actor<
 	// sort content according to given index
 	caf::replies_to<a_node_leafs, Key, links_v>::with<links_v>,
+	// extract keys
+	caf::replies_to<a_node_keys, Key, links_v>::with<lids_v>,
+	caf::replies_to<a_node_keys, Key, Key, links_v>::with<std::vector<std::string>>,
 	// find link by string key & meaning
 	caf::replies_to<a_node_find, std::string, Key, links_v>::with<link>,
 	// return index of link with string key & meaning

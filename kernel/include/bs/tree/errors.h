@@ -19,6 +19,7 @@ enum class Error {
 	// in single call to `populate()` or `pull_data()`
 	OKOK,
 
+	// link errors
 	EmptyData,
 	EmptyInode,
 	NotANode,
@@ -26,9 +27,12 @@ enum class Error {
 	UnboundSymLink,
 	LinkBusy,
 	NoFusionBridge,
-	KeyMismatch,
 
-	// Tree FS related errors
+	// node errors
+	KeyMismatch,
+	WrongOrderSize,
+
+	// Tree FS errors
 	EmptyPath,
 	PathNotExists,
 	PathNotDirectory,

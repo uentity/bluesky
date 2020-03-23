@@ -259,7 +259,7 @@ auto node_impl::erase_impl(
 
 	// erase
 	if(!dont_reset_owner) L.reset_owner(nullptr);
-	auto res = to_index<Key::ID>(victim);
+	auto res = index<Key::ID>(victim);
 	links_.get<Key_tag<Key::ID>>().erase(victim);
 	return res.value_or(links_.size());
 }

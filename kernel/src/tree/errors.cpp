@@ -44,6 +44,9 @@ BS_API std::error_code make_error_code(Error e) {
 			case Error::KeyMismatch :
 				return "Given key is not found";
 
+			case Error::WrongOrderSize :
+				return "Size of given keys set don't match size of node";
+
 			case Error::EmptyPath :
 				return "Path is empty";
 

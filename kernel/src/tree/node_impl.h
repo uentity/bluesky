@@ -129,15 +129,6 @@ public:
 			return links_.project<Key_tag<R>>(std::move(pos));
 	}
 
-	// convert iterator to offset from beginning of AnyOrder index
-	template<Key K = Key::AnyOrder>
-	auto to_index(iterator<K> pos) const -> existing_index {
-		auto& I = links_.get<Key_tag<Key::AnyOrder>>();
-		if(auto ipos = project<K>(std::move(pos)); ipos != I.end())
-			return static_cast<std::size_t>(std::distance(I.begin(), ipos));
-		return {};
-	}
-
 	///////////////////////////////////////////////////////////////////////////////
 	//  search
 	//
@@ -160,14 +151,6 @@ public:
 
 	auto search(const std::string& key, Key key_meaning) const -> link;
 
-	// index of link with given key in AnyOrder index
-	template<Key K>
-	auto index(const Key_type<K>& key) const -> existing_index {
-		return to_index(find<K>(key));
-	}
-
-	auto index(const std::string& key, Key key_meaning) const -> existing_index;
-
 	// equal key
 	template<Key K = Key::ID>
 	auto equal_range(const Key_type<K>& key) const -> range<K> {
@@ -183,6 +166,26 @@ public:
 	auto equal_range(const std::string& key, Key key_meaning) const -> links_v;
 
 	///////////////////////////////////////////////////////////////////////////////
+	//  index of element in AnyOrder
+	//
+	// convert iterator to offset from beginning of AnyOrder index
+	template<Key K = Key::AnyOrder>
+	auto index(iterator<K> pos) const -> existing_index {
+		auto& I = links_.get<Key_tag<Key::AnyOrder>>();
+		if(auto ipos = project<K>(std::move(pos)); ipos != I.end())
+			return static_cast<std::size_t>(std::distance(I.begin(), ipos));
+		return {};
+	}
+
+	// index of link with given key in AnyOrder index
+	template<Key K>
+	auto index(const Key_type<K>& key) const -> existing_index {
+		return index(find<K>(key));
+	}
+
+	auto index(const std::string& key, Key key_meaning) const -> existing_index;
+
+	///////////////////////////////////////////////////////////////////////////////
 	//  keys & values
 	//
 	template<Key K, typename Iterator>
@@ -191,14 +194,39 @@ public:
 		.template extract_keys<K>();
 	}
 
+	// AnyOrder keys are special
+	template<typename Iterator>
+	auto ikeys(Iterator start, Iterator finish) const {
+		return range_t<Iterator>{ std::move(start), std::move(finish) }
+		.template extract_it<std::size_t>([&](auto it) {
+			// builtin iterators are always projected to valid index
+			if constexpr(std::is_same_v<Iterator, iterator<Key::ID>>)
+				return *index<Key::ID>(std::move(it));
+			else if constexpr(std::is_same_v<Iterator, iterator<Key::Name>>)
+				return *index<Key::Name>(std::move(it));
+			else if constexpr(std::is_same_v<Iterator, iterator<Key::AnyOrder>>)
+				return *index<Key::AnyOrder>(std::move(it));
+			else {
+				// non-builtin iterator must point to link, find index via link's ID
+				// not found elems will have index > number of links (-1)
+				auto idx = index<Key::ID>(it->id());
+				return idx ? *idx : static_cast<std::size_t>(-1);
+			}
+		});
+	}
+
 	template<Key K, typename Container>
 	static auto keys(const Container& links) {
 		return keys<K>(links.begin(), links.end());
 	}
 
-	template<Key K>
+	template<Key K, Key Order = K>
 	auto keys() const {
-		return keys<K>(links_);
+		static_assert(has_builtin_index_v<Order>);
+		if constexpr(K == Key::AnyOrder)
+			return ikeys(begin<Order>(), end<Order>());
+		else
+			return keys<K>(begin<Order>(), end<Order>());
 	}
 
 	template<Key K>
@@ -274,14 +302,21 @@ public:
 	//  rearrange
 	//
 	template<Key K>
-	auto rearrange(const std::vector<Key_type<K>>& new_order) {
+	auto rearrange(const std::vector<Key_type<K>>& new_order) -> error {
+		if(new_order.size() != size()) return Error::WrongOrderSize;
 		// convert vector of keys into vector of iterators
 		std::vector<std::reference_wrapper<const link>> i_order;
-		i_order.reserve(new_order.size());
-		for(const auto& k : new_order)
-			i_order.push_back(std::ref(*find<K>(k)));
+		i_order.reserve(size());
+		const auto p_end = end<Key::AnyOrder>();
+		for(const auto& k : new_order) {
+			if(auto p_elem = find<K>(k); p_elem != p_end)
+				i_order.push_back(std::ref(*p_elem));
+			else
+				return Error::KeyMismatch;
+		}
 		// apply order
 		links_.get<Key_tag<Key::AnyOrder>>().rearrange(i_order.begin());
+		return perfect;
 	}
 
 	///////////////////////////////////////////////////////////////////////////////
