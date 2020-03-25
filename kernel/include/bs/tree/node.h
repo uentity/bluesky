@@ -23,6 +23,8 @@ public:
 	// some useful type aliases
 	using existing_index = std::optional<std::size_t>;
 	using insert_status = std::pair<existing_index, bool>;
+	using sp_node = std::shared_ptr<node>;
+	using sp_cnode = std::shared_ptr<const node>;
 
 	/// Interface of node actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
@@ -111,7 +113,7 @@ public:
 	auto empty() const -> bool;
 
 	/// clears node
-	auto clear() -> void;
+	auto clear() const -> void;
 
 	/// get snapshot of node's content
 	auto leafs(Key order = Key::AnyOrder) const -> links_v;
@@ -143,18 +145,20 @@ public:
 	auto equal_range(std::string key, Key key_meaning) const -> links_v;
 
 	/// leafs insertion
-	auto insert(link l, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
+	auto insert(link l, InsertPolicy pol = InsertPolicy::AllowDupNames) const -> insert_status;
 	/// insert link at given index
-	auto insert(link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
+	auto insert(link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames) const
+	-> insert_status;
 	/// auto-create and insert hard link that points to object
-	auto insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
+	auto insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) const
+	-> insert_status;
 	/// insert bunch of links
-	auto insert(links_v ls, InsertPolicy pol = InsertPolicy::AllowDupNames) -> std::size_t;
+	auto insert(links_v ls, InsertPolicy pol = InsertPolicy::AllowDupNames) const -> std::size_t;
 
 	/// insert links from given container
 	/// [NOTE] container elements will be moved from passed container!
 	template<typename C, typename = std::enable_if_t<meta::is_container_v<C>>>
-	auto insert(C&& links, InsertPolicy pol = InsertPolicy::AllowDupNames) -> void {
+	auto insert(C&& links, InsertPolicy pol = InsertPolicy::AllowDupNames) const -> void {
 		for(auto& L : links) {
 			static_assert(
 				std::is_base_of<link, std::decay_t<decltype(L)>>::value,
@@ -166,31 +170,31 @@ public:
 
 	/// leafs removal
 	/// return removed elemsnt count
-	auto erase(std::size_t idx) -> std::size_t;
-	auto erase(lid_type link_id) -> std::size_t;
+	auto erase(std::size_t idx) const -> std::size_t;
+	auto erase(lid_type link_id) const -> std::size_t;
 	/// erase leaf adressed by string key with specified treatment
-	auto erase(std::string key, Key key_meaning) -> std::size_t;
+	auto erase(std::string key, Key key_meaning) const -> std::size_t;
 	/// erase bunch of leafs with given IDs
-	auto erase(lids_v r) -> std::size_t;
+	auto erase(lids_v r) const -> std::size_t;
 
 	/// rename link at given position
-	auto rename(std::size_t idx, std::string new_name) -> bool;
+	auto rename(std::size_t idx, std::string new_name) const -> bool;
 	/// rename link with given ID
-	auto rename(lid_type lid, std::string new_name) -> bool;
+	auto rename(lid_type lid, std::string new_name) const -> bool;
 	/// rename link(s) with specified name
-	auto rename(std::string old_name, std::string new_name) -> std::size_t;
+	auto rename(std::string old_name, std::string new_name) const -> std::size_t;
 
 	/// apply custom order
-	auto rearrange(std::vector<lid_type> new_order) -> error;
-	auto rearrange(std::vector<std::size_t> new_order) -> error;
+	auto rearrange(std::vector<lid_type> new_order) const -> error;
+	auto rearrange(std::vector<std::size_t> new_order) const -> error;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  track node events
 	//
-	using handle_event_cb = std::function< void(sp_node, Event, prop::propdict) >;
+	using handle_event_cb = std::function< void(sp_cnode, Event, prop::propdict) >;
 
 	/// returns ID of suscriber that is required for unsubscribe
-	auto subscribe(handle_event_cb f, Event listen_to = Event::All) -> std::uint64_t;
+	auto subscribe(handle_event_cb f, Event listen_to = Event::All) const -> std::uint64_t;
 	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
 	// stops retranslating messages to this node
@@ -240,8 +244,8 @@ private:
 	BS_TYPE_DECL
 };
 // handy aliases
-using sp_node = std::shared_ptr<node>;
-using sp_cnode = std::shared_ptr<const node>;
+using sp_node = node::sp_node;
+using sp_cnode = node::sp_cnode;
 using node_ptr = object_ptr<node>;
 using cnode_ptr = object_ptr<const node>;
 

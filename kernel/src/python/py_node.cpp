@@ -236,7 +236,7 @@ void py_bind_node(py::module& m) {
 		.def("__delitem__", &erase_obj, "obj"_a, nogil)
 		.def("erase",       &erase_obj, "obj"_a, "Erase links to given object", nogil)
 		// generic erase by key & meaning
-		.def("erase", py::overload_cast<std::string, Key>(&node::erase),
+		.def("erase", py::overload_cast<std::string, Key>(&node::erase, py::const_),
 			"key"_a, "key_meaning"_a = Key::Name, "Erase all leafs with given key", nogil)
 
 		// misc container-related functions
@@ -248,19 +248,19 @@ void py_bind_node(py::module& m) {
 		.def("ikeys", &node::ikeys, "ordering"_a = Key::AnyOrder, nogil)
 
 		// link rename
-		.def("rename", py::overload_cast<std::string, std::string>(&node::rename),
+		.def("rename", py::overload_cast<std::string, std::string>(&node::rename, py::const_),
 			"old_name"_a, "new_name"_a, "Rename all links with given old_name", nogil)
 		// by index offset
-		.def("rename", py::overload_cast<std::size_t, std::string>(&node::rename),
+		.def("rename", py::overload_cast<std::size_t, std::string>(&node::rename, py::const_),
 			"idx"_a, "new_name"_a, "Rename link with given index", nogil)
 		// by ID
-		.def("rename", py::overload_cast<lid_type, std::string>(&node::rename),
+		.def("rename", py::overload_cast<lid_type, std::string>(&node::rename, py::const_),
 			"lid"_a, "new_name"_a, "Rename link with given ID", nogil)
 
-		.def("rearrange", py::overload_cast<lids_v>(&node::rearrange), "new_order"_a,
-			"Apply custom order to node")
-		.def("rearrange", py::overload_cast<std::vector<std::size_t>>(&node::rearrange), "new_order"_a,
-			"Apply custom order to node")
+		.def("rearrange", py::overload_cast<lids_v>(&node::rearrange, py::const_),
+			"new_order"_a, "Apply custom order to node")
+		.def("rearrange", py::overload_cast<std::vector<std::size_t>>(&node::rearrange, py::const_),
+			"new_order"_a, "Apply custom order to node")
 
 		// misc API
 		.def_property_readonly("handle", &node::handle,

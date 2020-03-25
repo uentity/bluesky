@@ -191,69 +191,69 @@ auto node::equal_range(std::string key, Key key_meaning) const -> links_v {
 ///////////////////////////////////////////////////////////////////////////////
 //  insert
 //
-auto node::insert(link l, InsertPolicy pol) -> insert_status {
+auto node::insert(link l, InsertPolicy pol) const -> insert_status {
 	return pimpl_->actorf<insert_status>(
 		*this, a_node_insert(), std::move(l), pol
 	).value_or(insert_status{ {}, false });
 }
 
-auto node::insert(link l, std::size_t idx, InsertPolicy pol) -> insert_status {
+auto node::insert(link l, std::size_t idx, InsertPolicy pol) const -> insert_status {
 	return pimpl_->actorf<insert_status>(
 		*this, a_node_insert(), std::move(l), idx, pol
 	).value_or(insert_status{ {}, false });
 }
 
-auto node::insert(links_v ls, InsertPolicy pol) -> std::size_t {
+auto node::insert(links_v ls, InsertPolicy pol) const -> std::size_t {
 	return pimpl_->actorf<std::size_t>(
 		*this, a_node_insert(), std::move(ls), pol
 	).value_or(0);
 }
 
-auto node::insert(std::string name, sp_obj obj, InsertPolicy pol) -> insert_status {
+auto node::insert(std::string name, sp_obj obj, InsertPolicy pol) const -> insert_status {
 	return insert( hard_link(std::move(name), std::move(obj)), pol );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  erase
 //
-auto node::erase(std::size_t idx) -> size_t {
+auto node::erase(std::size_t idx) const -> size_t {
 	return pimpl_->actorf<size_t>(
 		*this, a_node_erase(), idx
 	).value_or(0);
 }
 
-auto node::erase(lid_type lid) -> size_t {
+auto node::erase(lid_type lid) const -> size_t {
 	return pimpl_->actorf<size_t>(
 		*this, a_node_erase(), std::move(lid), EraseOpts::Normal
 	).value_or(0);
 }
 
-auto node::erase(std::string key, Key key_meaning) -> size_t {
+auto node::erase(std::string key, Key key_meaning) const -> size_t {
 	return pimpl_->actorf<size_t>(
 		*this, a_node_erase(), std::move(key), key_meaning
 	).value_or(0);
 }
 
-auto node::clear() -> void {
+auto node::clear() const -> void {
 	caf::anon_send(actor(), a_node_clear());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  rename
 //
-auto node::rename(std::size_t idx, std::string new_name) -> bool {
+auto node::rename(std::size_t idx, std::string new_name) const -> bool {
 	return pimpl_->actorf<std::size_t>(
 		*this, a_lnk_rename(), idx, std::move(new_name)
 	).value_or(false);
 }
 
-auto node::rename(lid_type lid, std::string new_name) -> bool {
+auto node::rename(lid_type lid, std::string new_name) const -> bool {
 	return pimpl_->actorf<std::size_t>(
 		*this, a_lnk_rename(), std::move(lid), std::move(new_name)
 	).value_or(false);
 }
 
-auto node::rename(std::string old_name, std::string new_name) -> std::size_t {
+auto node::rename(std::string old_name, std::string new_name) const -> std::size_t {
 	return pimpl_->actorf<std::size_t>(
 		*this, a_lnk_rename(), std::move(old_name), std::move(new_name)
 	).value_or(false);
@@ -262,13 +262,13 @@ auto node::rename(std::string old_name, std::string new_name) -> std::size_t {
 ///////////////////////////////////////////////////////////////////////////////
 //  rearrrange
 //
-auto node::rearrange(lids_v new_order) -> error {
+auto node::rearrange(lids_v new_order) const -> error {
 	return pimpl_->actorf<error>(
 		*this, a_node_rearrange(), std::move(new_order)
 	);
 }
 
-auto node::rearrange(std::vector<std::size_t> new_order) -> error {
+auto node::rearrange(std::vector<std::size_t> new_order) const -> error {
 	return pimpl_->actorf<error>(
 		*this, a_node_rearrange(), std::move(new_order)
 	);
@@ -277,9 +277,9 @@ auto node::rearrange(std::vector<std::size_t> new_order) -> error {
 ///////////////////////////////////////////////////////////////////////////////
 //  events handling
 //
-auto node::subscribe(handle_event_cb f, Event listen_to) -> std::uint64_t {
+auto node::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t {
 	using namespace allow_enumops;
-	using baby_t = ev_listener_actor<sp_node>;
+	using baby_t = ev_listener_actor<sp_cnode>;
 
 	auto make_ev_character = [N = bs_shared_this<node>(), listen_to](baby_t* self) {
 		auto res = caf::message_handler{};
