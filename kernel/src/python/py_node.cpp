@@ -37,16 +37,16 @@ bool contains_obj(const node& N, const sp_obj& obj) {
 }
 
 // ------- find
-template<Key K, bool Throw = true>
-auto find(const node& N, std::string key) -> link {
-	if(auto r = N.find(std::move(key), K))
+template<bool Throw = true>
+auto find(const node& N, std::string key, Key meaning) -> link {
+	if(auto r = N.find(std::move(key), meaning))
 		return r;
 
 	if constexpr(Throw) {
 		py::gil_scoped_acquire();
 
 		std::string msg = "Node doesn't contain link ";
-		switch(K) {
+		switch(meaning) {
 		default:
 		case Key::ID:
 			msg += "with ID = "; break;
@@ -62,9 +62,14 @@ auto find(const node& N, std::string key) -> link {
 	return {};
 }
 
+template<Key K, bool Throw = true>
+auto find(const node& N, std::string key) -> link {
+	return find<Throw>(N, std::move(key), K);
+}
+
 template<bool Throw = true>
 link find_obj(const node& N, const sp_obj& obj) {
-	return find<Key::OID, Throw>(N, obj->id());
+	return find<Throw>(N, obj->id(), Key::OID);
 }
 
 auto find_by_idx(const node& N, long idx) {
@@ -77,21 +82,24 @@ auto find_by_idx(const node& N, long idx) {
 }
 
 // ------- index
-template<Key K>
-auto index(const node& N, std::string key) -> std::size_t {
-	if(auto i = N.index(std::move(key), K)) return *i;
-	py::gil_scoped_acquire();
-	throw py::index_error();
+// [NOTE] don't throw by default
+template<Key K, bool Throw = false>
+auto index(const node& N, std::string key) -> py::int_ {
+	if(auto i = N.index(std::move(key), K))
+		return *i;
+	if constexpr(Throw) {
+		py::gil_scoped_acquire();
+		throw py::index_error();
+	}
+	else return py::none();
 }
-auto index_link(const node& N, const link& l) {
-	if(auto i = N.index(l.id())) return *i;
-	py::gil_scoped_acquire();
-	throw py::index_error();
-}
+
 auto index_obj(const node& N, const sp_obj& obj) {
-	if(auto i = N.index(obj->id(), Key::OID)) return *i;
-	py::gil_scoped_acquire();
-	throw py::index_error();
+	return index<Key::OID, false>(N, obj->id());
+}
+
+auto index_link(const node& N, const link& l) {
+	return N.index(l.id());
 }
 
 // ------- deep search
@@ -102,14 +110,6 @@ auto deep_search(const node& N, std::string key) -> link {
 
 auto deep_search_obj(const node& N, const sp_obj& obj) {
 	return N.deep_search(obj->id(), Key::OID);
-}
-
-// ------- equal_range
-template<Key K>
-auto equal_range(const node& N, std::string key) -> links_v {
-	return N.equal_range(std::move(key), K);
-	//py::gil_scoped_acquire();
-	//return make_container_iterator(std::move(res));
 }
 
 // ------- erase
@@ -170,19 +170,16 @@ void py_bind_node(py::module& m) {
 			"obj_type_id"_a, "Check if node contain links to objects of given type")
 
 		// get item by int index
-		.def("__getitem__", [](const node& N, const long idx) {
-			return find_by_idx(N, idx);
-		}, "link_idx"_a, nogil)
+		.def("__getitem__", &find_by_idx, "link_idx"_a, nogil)
 		// search by link ID
 		.def("__getitem__", &find<Key::ID>, "lid"_a, nogil)
 		.def("find",        &find<Key::ID, false>, "lid"_a, "Find link with given ID", nogil)
 		// search by object instance
-		.def("__getitem__", &find_obj<>, "obj"_a, nogil)
+		.def("__getitem__", &find_obj, "obj"_a, nogil)
 		.def("find",        &find_obj<false>, "obj"_a, "Find link to given object", nogil)
-		// search by object ID
-		.def("find_oid",    &find<Key::OID, false>, "oid"_a, "Find link to object with given ID", nogil)
-		// search by link name
-		.def("find_name",   &find<Key::Name, false>, "link_name"_a, "Find link with given name", nogil)
+		// search by string key & key treatment
+		.def("find", py::overload_cast<std::string, Key>(&node::find, py::const_),
+			"key"_a, "key_meaning"_a, "Find link by key with specified treatment", nogil)
 
 		// obtain index in custom order from link ID
 		.def("index", &index<Key::ID>, "lid"_a, "Find index of link with given ID", nogil)
@@ -190,31 +187,24 @@ void py_bind_node(py::module& m) {
 		.def("index", &index_link, "link"_a, "Find index of given link", nogil)
 		// ... from object
 		.def("index", &index_obj, "obj"_a, "Find index of link to given object", nogil)
-		// ... from OID
-		.def("index_oid",  &index<Key::OID>, "oid"_a, "Find index of link to object with given ID", nogil)
-		// ... from link name
-		.def("index_name", &index<Key::Name>, "name"_a, "Find index of link with given name", nogil)
+		// ... from string key with specified treatment
+		.def("index", py::overload_cast<std::string, Key>(&node::index, py::const_),
+			"key"_a, "key_meaning"_a, "Find index of link with specified key and treatment", nogil)
 
 		// deep search by object
 		.def("deep_search", &deep_search_obj, "obj"_a, "Deep search for link to given object", nogil)
 		// deep search by link ID
 		.def("deep_search", &deep_search<Key::ID>, "lid"_a, "Deep search for link with given ID", nogil)
-		// deep search by link name
-		.def("deep_search_name", &deep_search<Key::Name>, "link_name"_a,
-			"Deep search for link with given name", nogil)
-		// deep search by object ID
-		.def("deep_search_oid", &deep_search<Key::OID>, "oid"_a,
-			"Deep search for link to object with given ID", nogil)
 		// deep serach by specified key type
 		.def("deep_search", py::overload_cast<std::string, Key>(&node::deep_search, py::const_),
 			"key"_a, "key_meaning"_a, "Deep search by key with specified treatment", nogil)
-		// deep equal range
+
+		// equal range
+		.def("equal_range", &node::equal_range,
+			"key"_a, "key_meaning"_a = Key::Name, "Find all leafs with given key", nogil)
+
 		.def("deep_equal_range", &node::deep_equal_range,
 			"key"_a, "key_meaning"_a, "Deep search all links with given key & treatment", nogil)
-
-		.def("equal_range", &equal_range<Key::Name>, "link_name"_a, nogil)
-		.def("equal_range_oid", &equal_range<Key::OID>, "OID"_a, nogil)
-		.def("equal_type", &equal_range<Key::Type>, "obj_type_id"_a, nogil)
 
 		// insert given link
 		.def("insert", [](node& N, link l, InsertPolicy pol = InsertPolicy::AllowDupNames) {
@@ -245,12 +235,9 @@ void py_bind_node(py::module& m) {
 		// erase by object instance
 		.def("__delitem__", &erase_obj, "obj"_a, nogil)
 		.def("erase",       &erase_obj, "obj"_a, "Erase links to given object", nogil)
-		// erase by link name
-		.def("erase_name", &erase<Key::Name>, "link_name"_a, "Erase links with given name", nogil)
-		// erase by OID
-		.def("erase_oid",  &erase<Key::OID>, "oid"_a, "Erase links to object with given ID", nogil)
-		// erase by obj type
-		.def("erase_type", &erase<Key::Type>, "obj_type_id"_a, "Erase all links pointing to objects of given type", nogil)
+		// generic erase by key & meaning
+		.def("erase", py::overload_cast<std::string, Key>(&node::erase),
+			"key"_a, "key_meaning"_a = Key::Name, "Erase all leafs with given key", nogil)
 
 		// misc container-related functions
 		.def_property_readonly("size", &node::size, nogil)
