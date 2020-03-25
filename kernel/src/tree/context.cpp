@@ -344,10 +344,11 @@ struct BS_HIDDEN_API context::impl {
 
 			// leaf checker
 			const auto check_link = [&, Lid = L.id()](auto& item) {
+				auto ltag = push(R_path, Lid, item);
 				if(item.id() == Lid) {
 					if(auto Rnode = data_node(R)) {
 						if(auto row = Rnode->index(Lid))
-							res = { push(R_path, std::move(Lid), item), *row };
+							res = { std::move(ltag), *row };
 					}
 				}
 				return is_valid(res);
