@@ -20,6 +20,11 @@
 #include <caf/typed_actor.hpp>
 #include <caf/scoped_actor.hpp>
 
+#define STD_HASH_BS_LINK(link_class)                                                     \
+namespace std { template<> struct hash<::blue_sky::tree::link_class> {                   \
+	auto operator()(const ::blue_sky::tree::link& L) const noexcept { return L.hash(); } \
+}; }
+
 NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  base class of all links
@@ -55,7 +60,7 @@ public:
 		auto operator!=(const weak_ptr& rhs) const -> bool;
 		auto operator==(const link& rhs) const -> bool;
 		auto operator!=(const link& rhs) const -> bool;
-		// sorting
+		/// ordering
 		auto operator<(const weak_ptr& rhs) const -> bool;
 
 		/// obtain 'normal' link
@@ -180,6 +185,8 @@ public:
 
 	/// access link's unique ID
 	auto id() const -> lid_type;
+	/// hash for appropriate containers
+	auto hash() const -> std::size_t;
 
 	/// obtain link's symbolic name
 	auto name() const -> std::string;
@@ -411,3 +418,9 @@ private:
 };
 
 NAMESPACE_END(blue_sky::tree)
+
+// support for hashed container of links
+STD_HASH_BS_LINK(link)
+STD_HASH_BS_LINK(hard_link)
+STD_HASH_BS_LINK(weak_link)
+STD_HASH_BS_LINK(sym_link)

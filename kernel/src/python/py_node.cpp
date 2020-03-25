@@ -175,7 +175,7 @@ void py_bind_node(py::module& m) {
 		.def("__getitem__", &find<Key::ID>, "lid"_a, nogil)
 		.def("find",        &find<Key::ID, false>, "lid"_a, "Find link with given ID", nogil)
 		// search by object instance
-		.def("__getitem__", &find_obj, "obj"_a, nogil)
+		.def("__getitem__", &find_obj<>, "obj"_a, nogil)
 		.def("find",        &find_obj<false>, "obj"_a, "Find link to given object", nogil)
 		// search by string key & key treatment
 		.def("find", py::overload_cast<std::string, Key>(&node::find, py::const_),

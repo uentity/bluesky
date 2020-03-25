@@ -78,3 +78,6 @@ private:
 };
 
 NAMESPACE_END(blue_sky::tree)
+
+// support for hashed container of links
+STD_HASH_BS_LINK(fusion_link)

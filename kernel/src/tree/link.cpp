@@ -83,7 +83,7 @@ auto link::weak_ptr::operator!=(const link& rhs) const -> bool {
 }
 
 auto link::weak_ptr::operator<(const weak_ptr& rhs) const -> bool {
-	return pimpl_.lock() < rhs.pimpl_.lock();
+	return pimpl_.owner_before(rhs.pimpl_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -175,6 +175,10 @@ auto link::type_id() const -> std::string_view {
 auto link::id() const -> lid_type {
 	// ID cannot change
 	return pimpl_->id_;
+}
+
+auto link::hash() const -> std::size_t {
+	return std::hash<std::shared_ptr<link_impl>>{}(pimpl_);
 }
 
 auto link::rename(std::string new_name) const -> void {

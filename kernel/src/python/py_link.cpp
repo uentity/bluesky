@@ -82,11 +82,12 @@ void py_bind_link(py::module& m) {
 	// link base class
 	link_pyface
 		.def(py::init())
+
 		.def(py::self == py::self)
 		.def(py::self != py::self)
 		.def(py::self < py::self)
+		.def(hash(py::self))
 		.def("__bool__", [](const link& self) { return (bool)self; }, py::is_operator())
-		.def_property_readonly("is_nil", [](const link& self) { return self.is_nil(); })
 
 		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link", nogil)
 
@@ -142,6 +143,7 @@ void py_bind_link(py::module& m) {
 			"Set status of given request if it is NOT equal to given value, returns prev status", nogil
 		)
 
+		.def_property_readonly("is_nil", [](const link& self) { return self.is_nil(); })
 		.def_property_readonly("type_id", &link::type_id)
 		.def_property_readonly("id", [](const link& L) { return to_string(L.id()); })
 		.def_property_readonly("owner", &link::owner)
@@ -176,8 +178,13 @@ void py_bind_link(py::module& m) {
 		.def(py::self == py::self)
 		.def(py::self != py::self)
 		.def(py::self < py::self)
-		.def("__eq__", [](const link::weak_ptr& self, const link& other){ return self == other; })
-		.def("__neq__", [](const link::weak_ptr& self, const link& other){ return self != other; })
+		.def("__eq__",
+			[](const link::weak_ptr& self, const link& other){ return self == other; },
+			py::is_operator())
+		.def("__neq__",
+			[](const link::weak_ptr& self, const link& other){ return self != other; },
+			py::is_operator()
+		)
 
 		.def("lock", &link::weak_ptr::lock, "Obtain strong link reference")
 		.def("expired", &link::weak_ptr::expired, "Check if this ptr is expired")
