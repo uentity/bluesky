@@ -33,7 +33,7 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	// contained object
 	sp_node data_;
 
-	using actor_type = fusion_link::actor_type;
+	using actor_type = impl_actor_type<fusion_link::actor_type>;
 
 	using super = ilink_impl;
 	using super::owner_;
@@ -127,9 +127,7 @@ struct BS_HIDDEN_API fusion_link_actor : public cached_link_actor {
 		// get pointee type ID
 		caf::replies_to<a_lnk_otid>::with<std::string>,
 		// get pointee node group ID
-		caf::replies_to<a_node_gid>::with<result_or_errbox<std::string>>,
-		// get data cache
-		caf::replies_to<a_lnk_dcache>::with<sp_obj>
+		caf::replies_to<a_node_gid>::with<result_or_errbox<std::string>>
 	>;
 
 	auto fimpl() -> fusion_link_impl& { return static_cast<fusion_link_impl&>(impl); }
@@ -153,7 +151,7 @@ struct BS_HIDDEN_API fusion_link_actor : public cached_link_actor {
 	}
 
 	auto make_typed_behavior() -> typed_behavior {
-		return first_then_second( typed_behavior_overload{
+		return first_then_second(typed_behavior_overload{
 			// add handler to invoke populate with specified child type
 			[=](a_flnk_populate, std::string child_type_id, bool wait_if_busy)
 			-> caf::result< result_or_errbox<sp_node> > {
@@ -182,9 +180,6 @@ struct BS_HIDDEN_API fusion_link_actor : public cached_link_actor {
 			},
 
 			[=](a_flnk_bridge, sp_fusion new_bridge) { fimpl().reset_bridge(std::move(new_bridge)); },
-
-			// direct return cached data
-			[=](a_lnk_dcache) -> sp_obj { return fimpl().data_; },
 
 			// easier obj ID & object type id retrival
 			[&I = fimpl()](a_lnk_otid) {

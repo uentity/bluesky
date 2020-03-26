@@ -340,10 +340,6 @@ auto fast_link_actor::make_typed_behavior() -> typed_behavior {
 			//);
 			//return res;
 		},
-
-		[=](a_lnk_dcache) -> sp_obj {
-			return impl.data().value_or(nullptr);
-		}
 	}, super::make_typed_behavior() );
 }
 

@@ -36,7 +36,7 @@ class BS_API fusion_link : public link {
 public:
 	using super = link;
 
-	using actor_type = cached_link_actor_type::extend<
+	using actor_type = link::actor_type::extend<
 		// populate pointee with given children types
 		caf::replies_to<a_flnk_populate, std::string, bool>::with<result_or_errbox<sp_node>>,
 		// get link's bridge

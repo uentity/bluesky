@@ -64,7 +64,17 @@ class BS_HIDDEN_API link_impl :
 public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 	using sp_limpl = std::shared_ptr<link_impl>;
-	using actor_type = link::actor_type;
+
+	// extend given actor type with additional private interface
+	template<typename ActorType>
+	using impl_actor_type = typename ActorType::template extend<
+		// ack rename
+		caf::reacts_to<a_ack, a_lnk_rename, std::string, std::string>,
+		// request status change ack
+		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>
+	>;
+
+	using actor_type = impl_actor_type<link::actor_type>;
 
 	lid_type id_;
 	std::string name_;

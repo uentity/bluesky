@@ -95,15 +95,11 @@ public:
 		caf::replies_to<a_lnk_name>::with<std::string>,
 		// rename link
 		caf::reacts_to<a_lnk_rename, std::string, bool>,
-		// ack rename
-		caf::reacts_to<a_ack, a_lnk_rename, std::string, std::string>,
 
 		// get request status
 		caf::replies_to<a_lnk_status, Req>::with<ReqStatus>,
 		// reset request status
 		caf::replies_to<a_lnk_status, Req, ReqReset, ReqStatus, ReqStatus>::with<ReqStatus>,
-		// request status change ack
-		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>,
 
 		// get link flags
 		caf::replies_to<a_lnk_flags>::with<Flags>,
@@ -324,11 +320,6 @@ private:
 using links_v = std::vector<link>;
 using lids_v = std::vector<lid_type>;
 
-using cached_link_actor_type = link::actor_type::extend<
-	// get data cache
-	caf::replies_to<a_lnk_dcache>::with<sp_obj>
->;
-
 /*-----------------------------------------------------------------------------
  *  hard link stores direct pointer to object
  *  multiple hard links can point to the same object
@@ -339,7 +330,6 @@ class BS_API hard_link : public link {
 
 public:
 	using super = link;
-	using actor_type = cached_link_actor_type;
 
 	/// ctor -- additionaly accepts a pointer to object
 	hard_link(std::string name, sp_obj data, Flags f = Plain);
@@ -363,7 +353,6 @@ class BS_API weak_link : public link {
 
 public:
 	using super = link;
-	using actor_type = cached_link_actor_type;
 
 	/// ctor -- additionaly accepts a pointer to object
 	weak_link(std::string name, const sp_obj& data, Flags f = Plain);
