@@ -14,8 +14,7 @@
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/serialize/cafbind.h>
-
-OMIT_OBJ_SERIALIZATION
+#include <bs/serialize/tree.h>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(tree)

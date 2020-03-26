@@ -8,10 +8,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include <bs/atoms.h>
+#include <bs/actor_common.h>
 #include <bs/tree/node.h>
 #include <bs/kernel/radio.h>
 
-#include "actor_common.h"
 #include "link_impl.h"
 
 #include <boost/uuid/uuid_io.hpp>

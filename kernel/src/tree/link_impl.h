@@ -215,7 +215,7 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 
 	auto data() -> result_or_err<sp_obj> override;
 
-	auto pointee() const -> result_or_err<link>;
+	auto target() const -> result_or_err<link>;
 
 	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
 

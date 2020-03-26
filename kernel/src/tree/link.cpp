@@ -17,7 +17,6 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
-OMIT_OBJ_SERIALIZATION
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::data_modificator_f)
 
 NAMESPACE_BEGIN(blue_sky::tree)

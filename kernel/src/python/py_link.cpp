@@ -199,9 +199,6 @@ void py_bind_link(py::module& m) {
 			"name"_a, "data"_a, "flags"_a = Flags::Plain)
 		.def(py::init<const link&>())
 		.def_property_readonly_static("type_id_", [](const py::object&) { return hard_link::type_id_(); })
-
-		.def("cache", py::overload_cast<unsafe_t>(&hard_link::cache, py::const_),
-			"Unsafe direct access to link's data cache")
 	;
 
 	py::class_<weak_link, link>(m, "weak_link")
@@ -209,9 +206,6 @@ void py_bind_link(py::module& m) {
 			"name"_a, "data"_a, "flags"_a = Flags::Plain)
 		.def(py::init<const link&>())
 		.def_property_readonly_static("type_id_", [](const py::object&) { return weak_link::type_id_(); })
-
-		.def("cache", py::overload_cast<unsafe_t>(&weak_link::cache, py::const_),
-			"Unsafe direct access to link's data cache")
 	;
 
 	py::class_<sym_link, link>(m, "sym_link")
@@ -223,7 +217,8 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly_static("type_id_", [](const py::object&) { return sym_link::type_id_(); })
 
 		.def_property_readonly("check_alive", &sym_link::check_alive, nogil)
-		.def("src_path", &sym_link::src_path, "human_readable"_a = false, nogil)
+		.def("target", &sym_link::target, "Get target that sym link points to", nogil)
+		.def("target_path", &sym_link::target_path, "human_readable"_a = false, nogil)
 	;
 
 	///////////////////////////////////////////////////////////////////////////////

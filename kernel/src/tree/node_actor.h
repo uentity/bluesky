@@ -8,17 +8,18 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include <bs/atoms.h>
+#include <bs/actor_common.h>
 #include <bs/tree/node.h>
 #include <bs/kernel/radio.h>
 
-#include "actor_common.h"
 #include "node_impl.h"
+
+#include <boost/uuid/uuid_hash.hpp>
 
 #include <caf/actor_cast.hpp>
 
 #include <unordered_map>
-
-#include <boost/uuid/uuid_hash.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;

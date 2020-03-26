@@ -18,8 +18,6 @@
 
 #include "link_actor.h"
 
-OMIT_OBJ_SERIALIZATION
-
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
 //  actor + impl
@@ -31,23 +29,23 @@ struct sym_link_actor : public link_actor {
 
 	using super::super;
 
-	auto pointee() const -> result_or_err<link> {
-		return static_cast<sym_link_impl&>(impl).pointee();
+	auto target() const -> result_or_err<link> {
+		return static_cast<sym_link_impl&>(impl).target();
 	}
 
 	template<typename R, typename... Args>
-	auto delegate_source(Args&&... args)
+	auto delegate_target(Args&&... args)
 	-> std::enable_if_t<tl::detail::is_expected<R>::value, caf::result<R>> {
-		if(auto p = pointee())
+		if(auto p = target())
 			return delegate(link::actor(p.value()), std::forward<Args>(args)...);
 		else
 			return R{ tl::unexpect, p.error() };
 	}
 
 	template<typename R, typename... Args>
-	auto delegate_source(R errval, Args&&... args)
+	auto delegate_target(R errval, Args&&... args)
 	-> std::enable_if_t<!tl::detail::is_expected<R>::value, caf::result<R>> {
-		if(auto p = pointee())
+		if(auto p = target())
 			return delegate(link::actor(p.value()), std::forward<Args>(args)...);
 		else
 			return errval;
@@ -58,19 +56,19 @@ struct sym_link_actor : public link_actor {
 		return caf::message_handler({
 
 			[this](a_lnk_oid) -> caf::result<std::string> {
-				return delegate_source<std::string>(nil_otid, a_lnk_oid());
+				return delegate_target<std::string>(nil_otid, a_lnk_oid());
 			},
 
 			[this](a_lnk_otid) -> caf::result<std::string> {
-				return delegate_source<std::string>(nil_otid, a_lnk_otid());
+				return delegate_target<std::string>(nil_otid, a_lnk_otid());
 			},
 
 			[this](a_node_gid) -> caf::result< result_or_errbox<std::string> > {
-				return delegate_source< result_or_errbox<std::string> >(a_node_gid());
+				return delegate_target< result_or_errbox<std::string> >(a_node_gid());
 			},
 
 			[this](a_lnk_inode) -> caf::result< result_or_errbox<inodeptr> > {
-				return delegate_source< result_or_errbox<inodeptr> >(a_lnk_inode());
+				return delegate_target< result_or_errbox<inodeptr> >(a_lnk_inode());
 			},
 
 		}).or_else(super::make_behavior());
@@ -86,7 +84,7 @@ sym_link_impl::sym_link_impl()
 	: super()
 {}
 
-auto sym_link_impl::pointee() const -> result_or_err<link> {
+auto sym_link_impl::target() const -> result_or_err<link> {
 	const auto parent = owner_.lock();
 	if(!parent) return tl::make_unexpected( error::quiet(Error::UnboundSymLink) );
 
@@ -99,7 +97,7 @@ auto sym_link_impl::pointee() const -> result_or_err<link> {
 }
 
 auto sym_link_impl::data() -> result_or_err<sp_obj> {
-	auto res = pointee().and_then([](const link& src_link) {
+	auto res = target().and_then([](const link& src_link) {
 		return src_link.data_ex();
 	});
 #if defined(_DEBUG)
@@ -152,12 +150,18 @@ bool sym_link::check_alive() {
 	return res;
 }
 
+auto sym_link::target() const -> result_or_err<link> {
+	return SIMPL.target();
+}
+
 /// return stored pointee path
-std::string sym_link::src_path(bool human_readable) const {
-	if(!human_readable) return SIMPL.path_;
-	else if(const auto parent = owner())
-		return convert_path(SIMPL.path_, parent->handle());
-	return {};
+std::string sym_link::target_path(bool human_readable) const {
+	auto res = std::string(SIMPL.path_);
+	if(human_readable) {
+		if(const auto parent = owner())
+			res = convert_path(res, parent->handle());
+	}
+	return res;
 }
 
 LINK_CONVERT_TO(sym_link)

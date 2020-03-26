@@ -8,10 +8,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "node_actor.h"
+#include <bs/defaults.h>
 #include <bs/tree/common.h>
 #include <bs/tree/link.h>
 #include <bs/log.h>
+#include "node_actor.h"
 
 #include <caf/group.hpp>
 #include <caf/stateful_actor.hpp>
@@ -24,11 +25,11 @@ struct rsl_state {
 	caf::group src_grp;
 	caf::group tgt_grp;
 
-	auto src_grp_id() const -> const std::string& {
-		return src_grp ? src_grp.get()->identifier() : nil_grp_id;
+	auto src_grp_id() const -> std::string_view {
+		return src_grp ? src_grp.get()->identifier() : defaults::tree::nil_grp_id;
 	}
-	auto tgt_grp_id() const -> const std::string& {
-		return tgt_grp ? tgt_grp.get()->identifier() : nil_grp_id;
+	auto tgt_grp_id() const -> std::string_view {
+		return tgt_grp ? tgt_grp.get()->identifier() : defaults::tree::nil_grp_id;
 	}
 };
 

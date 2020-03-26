@@ -8,7 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "actor_common.h"
+#include <bs/atoms.h>
+#include <bs/actor_common.h>
 #include "node_impl.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)

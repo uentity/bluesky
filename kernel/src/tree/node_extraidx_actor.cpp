@@ -24,8 +24,6 @@
 #include <iterator>
 #include <unordered_map>
 
-OMIT_OBJ_SERIALIZATION
-
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 

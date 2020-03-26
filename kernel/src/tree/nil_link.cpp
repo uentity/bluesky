@@ -18,8 +18,6 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-OMIT_OBJ_SERIALIZATION
-
 NAMESPACE_BEGIN(blue_sky::tree)
 NAMESPACE_BEGIN()
 ///////////////////////////////////////////////////////////////////////////////

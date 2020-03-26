@@ -13,7 +13,6 @@
 #include <bs/tree/errors.h>
 #include "request_impl.h"
 
-OMIT_OBJ_SERIALIZATION
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::sp_fusion)
 
 NAMESPACE_BEGIN(blue_sky::tree)

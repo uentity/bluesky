@@ -7,11 +7,12 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/atoms.h>
+#include <bs/actor_common.h>
+#include <bs/log.h>
+#include <bs/kernel/tools.h>
 #include "link_impl.h"
 #include "link_actor.h"
-#include "actor_common.h"
-#include <bs/atoms.h>
-#include <bs/log.h>
 
 #include <boost/uuid/random_generator.hpp>
 
