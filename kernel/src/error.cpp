@@ -82,6 +82,8 @@ struct cat_registry {
 	}
 };
 
+const auto ok_err_code = make_error_code(Error::OK);
+
 #define ECR cat_registry::self()
 
 NAMESPACE_END()
@@ -140,7 +142,8 @@ error::error(IsQuiet quiet, box b) noexcept
 	: error(IsQuiet::Yes, b.message, ECR.make_error_code(b.ec, b.domain))
 {}
 
-error::error(success_tag) noexcept : error(IsQuiet::Yes, Error::OK) {}
+error::error(success_tag) noexcept : code(ok_err_code)
+{}
 
 // put passed error_category into registry
 auto error::register_category(std::error_category const* cat) -> void {
