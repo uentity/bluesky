@@ -166,6 +166,10 @@ auto link::raw_actor() const -> const caf::actor& {
 	return actor_->actor_;
 }
 
+auto link::home() const -> const caf::group& {
+	return pimpl_->home;
+}
+
 auto link::type_id() const -> std::string_view {
 	return pimpl_->type_id();
 }

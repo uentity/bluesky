@@ -19,6 +19,7 @@
 #include <caf/actor.hpp>
 #include <caf/typed_actor.hpp>
 #include <caf/scoped_actor.hpp>
+#include <caf/group.hpp>
 
 #define STD_HASH_BS_LINK(link_class)                                                     \
 namespace std { template<> struct hash<::blue_sky::tree::link_class> {                   \
@@ -154,6 +155,9 @@ public:
 	/// get link's scoped actor that can be used to make direct requests to internal actor
 	auto factor() const -> const caf::scoped_actor&;
 
+	/// get link's home group
+	auto home() const -> const caf::group&;
+
 	/// because we cannot make explicit copies of link
 	/// we need a dedicated function to make links clones
 	/// if `deep` flag is set, then clone pointed object as well
@@ -173,6 +177,9 @@ public:
 	auto is_nil() const -> bool;
 	operator bool() const { return !is_nil(); }
 
+	/// hash for appropriate containers
+	auto hash() const -> std::size_t;
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  Fast API
 	//
@@ -181,8 +188,6 @@ public:
 
 	/// access link's unique ID
 	auto id() const -> lid_type;
-	/// hash for appropriate containers
-	auto hash() const -> std::size_t;
 
 	/// obtain link's symbolic name
 	auto name() const -> std::string;
