@@ -99,7 +99,7 @@ auto link_actor::rename(std::string new_name, bool silent) -> void {
 	impl.name_ = std::move(new_name);
 	// send rename ack message
 	if(!silent)
-		send<high_prio>(impl.home, a_ack(), a_lnk_rename(), impl.name_, std::move(old_name));
+		send<high_prio>(impl.home, a_ack(), a_lnk_rename(), impl.id_, impl.name_, std::move(old_name));
 }
 
 
@@ -174,7 +174,7 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			rename(std::move(new_name), silent);
 		},
 		// 7. rename ack
-		[=](a_ack, a_lnk_rename, std::string new_name, const std::string& old_name) -> void {
+		[=](a_ack, a_lnk_rename, const lid_type&, std::string new_name, const std::string& old_name) -> void {
 			adbg(this) << "<- a_lnk_rename ack: " << old_name << "->" << new_name << std::endl;
 			if(current_sender() != this)
 				rename(std::move(new_name), true);
@@ -190,13 +190,13 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			return impl.rs_reset(
 				req, cond, new_rs, prev_rs,
 				[=](Req req, ReqStatus new_s, ReqStatus old_s) {
-					send<high_prio>(impl.home, a_ack(), a_lnk_status(), req, new_s, old_s);
+					send<high_prio>(impl.home, a_ack(), a_lnk_status(), impl.id_, req, new_s, old_s);
 				}
 			);
 		},
 
 		// 10. reset status ack
-		[=](a_ack, a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s) {
+		[=](a_ack, a_lnk_status, const lid_type&, Req req, ReqStatus new_s, ReqStatus prev_s) {
 			adbg(this) << "<- a_lnk_status ack: " << to_string(req) << " " <<
 				to_string(prev_s) << "->" << to_string(new_s) << std::endl;
 		},
@@ -251,11 +251,12 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 					pimpl_->rs_reset(
 						Req::Data, ReqReset::Always,
 						er.ok() ? ReqStatus::OK : ReqStatus::Error, ReqStatus::Void,
-						silent ?
-							function_view{ link_impl::on_rs_changed_noop } :
-							[=](Req req, ReqStatus new_s, ReqStatus old_s) {
-								send<high_prio>(impl.home, a_ack(), a_lnk_status(), req, new_s, old_s);
-							}
+						silent ? noop :
+							function_view{[=](Req req, ReqStatus new_s, ReqStatus old_s) {
+								send<high_prio>(
+									impl.home, a_ack(), a_lnk_status(), impl.id_, req, new_s, old_s
+								);
+							}}
 					);
 					// deliver error to callee
 					res.deliver(er.pack());

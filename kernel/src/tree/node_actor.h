@@ -84,12 +84,10 @@ public:
 
 // helper for correct spawn of node actor
 template<typename Actor = node_actor, caf::spawn_options Os = caf::no_spawn_options, class... Ts>
-inline auto spawn_nactor(std::shared_ptr<node_impl> nimpl, const std::string& gid, Ts&&... args) {
+inline auto spawn_nactor(std::shared_ptr<node_impl> nimpl, caf::group nhome, Ts&&... args) {
 	auto& AS = kernel::radio::system();
-	if(!gid.empty())
-		return AS.spawn_in_group<Actor, Os>(
-			AS.groups().get_local(gid), std::move(nimpl), std::forward<Ts>(args)...
-		);
+	if(nhome)
+		return AS.spawn_in_group<Actor, Os>(nhome, std::move(nimpl), std::forward<Ts>(args)...);
 	else // delayed self group creation
 		return AS.spawn<Actor, Os>(std::move(nimpl), std::forward<Ts>(args)...);
 }

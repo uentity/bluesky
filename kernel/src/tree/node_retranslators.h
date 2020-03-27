@@ -37,10 +37,6 @@ struct node_rsl_state : rsl_state {
 	link::actor_type src_actor;
 };
 
-// Link <-> Node retranslator
-auto link_retranslator(caf::stateful_actor<rsl_state>* self, caf::group node_grp, lid_type lid)
--> caf::behavior;
-
 // Node <-> Node retranslator
 auto node_retranslator(
 	caf::stateful_actor<node_rsl_state>* self, caf::group node_grp, lid_type lid, link::actor_type Lactor

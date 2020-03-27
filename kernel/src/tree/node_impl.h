@@ -29,8 +29,6 @@ enum class EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
 using bs_detail::shared;
 using node_impl_mutex = std::shared_mutex;
 
-static constexpr auto noop_postproc_f = [](const auto&) {};
-
 /*-----------------------------------------------------------------------------
  *  node_impl
  *-----------------------------------------------------------------------------*/
@@ -65,16 +63,18 @@ public:
 		caf::reacts_to<a_node_disconnect>,
 		// erase link by ID with specified options
 		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>,
-		// track link rename
-		caf::reacts_to<a_ack, a_lnk_rename, lid_type, std::string, std::string>,
-		// track link status
-		caf::reacts_to<a_ack, a_lnk_status, lid_type, Req, ReqStatus, ReqStatus>,
+
 		// ack on insert - reflect insert from sibling node actor
 		caf::reacts_to<a_ack, a_node_insert, lid_type, size_t, InsertPolicy>,
 		// ack on link move
 		caf::reacts_to<a_ack, a_node_insert, lid_type, size_t, size_t>,
 		// ack on link erase from sibling node
-		caf::reacts_to<a_ack, a_node_erase, lids_v, std::vector<std::string>>
+		caf::reacts_to<a_ack, a_node_erase, lids_v, std::vector<std::string>>,
+
+		// track link rename
+		caf::reacts_to<a_ack, a_lnk_rename, lid_type, std::string, std::string>,
+		// track link status
+		caf::reacts_to<a_ack, a_lnk_status, lid_type, Req, ReqStatus, ReqStatus>
 	>;
 
 	auto actor() const {
@@ -99,8 +99,6 @@ public:
 			N.factor_, actor(N), timeout, std::forward<Args>(args)...
 		);
 	}
-
-	auto spawn_actor(std::shared_ptr<node_impl> nimpl, const std::string& gid) const -> caf::actor;
 
 	auto start_engine(std::shared_ptr<node_impl> nimpl, std::string gid = "") -> void;
 
@@ -247,7 +245,7 @@ public:
 
 	auto insert(
 		link L, const InsertPolicy pol = InsertPolicy::AllowDupNames,
-		leaf_postproc_fn ppf = noop_postproc_f
+		leaf_postproc_fn ppf = noop
 	) -> insert_status<Key::ID>;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -255,7 +253,7 @@ public:
 	//
 	template<Key K = Key::ID>
 	auto erase(
-		const Key_type<K>& key, leaf_postproc_fn ppf = noop_postproc_f,
+		const Key_type<K>& key, leaf_postproc_fn ppf = noop,
 		bool dont_reset_owner = false
 	) -> size_t {
 		if constexpr(K == Key::ID || K == Key::AnyOrder) {
@@ -267,9 +265,9 @@ public:
 			return erase<K>(equal_range<K>(key), std::move(ppf), dont_reset_owner);
 	}
 
-	auto erase(const std::string& key, Key key_meaning, leaf_postproc_fn ppf = noop_postproc_f) -> size_t;
+	auto erase(const std::string& key, Key key_meaning, leaf_postproc_fn ppf = noop) -> size_t;
 
-	auto erase(const lids_v& r, leaf_postproc_fn ppf = noop_postproc_f) -> std::size_t;
+	auto erase(const lids_v& r, leaf_postproc_fn ppf = noop) -> std::size_t;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  rename
@@ -341,14 +339,14 @@ private:
 	// returns index of removed element
 	// [NOTE] don't do range checking
 	auto erase_impl(
-		iterator<Key::ID> key, leaf_postproc_fn ppf = noop_postproc_f,
+		iterator<Key::ID> key, leaf_postproc_fn ppf = noop,
 		bool dont_reset_owner = false
 	) -> std::size_t;
 
 	// erase multiple elements given in valid (!) range
 	template<Key K = Key::ID>
 	auto erase(
-		const range<K>& r, leaf_postproc_fn ppf = noop_postproc_f,
+		const range<K>& r, leaf_postproc_fn ppf = noop,
 		bool dont_reset_owner = false
 	) -> size_t {
 		size_t res = 0;

@@ -45,51 +45,6 @@ static auto adbg(caf::stateful_actor<State>* A, const std::string& msg_name = {}
 #endif
 
 // actor that retranslate some of link's messages attaching a link's ID to them
-auto link_retranslator(caf::stateful_actor<rsl_state>* self, caf::group node_grp, lid_type lid)
--> caf::behavior {
-	// remember target node group
-	self->state.tgt_grp = std::move(node_grp);
-	// connect source
-	self->state.src_lid = std::move(lid);
-	self->state.src_grp = system().groups().get_local(to_string(lid));
-	self->join(self->state.src_grp);
-
-	// register self
-	const auto sid = self->id();
-	system().registry().put(sid, self);
-
-	// silently drop all other messages not in my character
-	self->set_default_handler(caf::drop);
-
-	adbg(self) << "retranslator started" << std::endl;
-	return {
-		// quit after source
-		[=](a_bye) {
-			self->leave(self->state.src_grp);
-			system().registry().erase(sid);
-			adbg(self) << "retranslator quit" << std::endl;
-		},
-
-		// retranslate events
-		[=](a_ack, a_lnk_rename, std::string new_name, std::string old_name) {
-			adbg(self, "rename") << old_name << " -> " << new_name << std::endl;
-			self->send<high_prio>(
-				self->state.tgt_grp, a_ack(), a_lnk_rename(), self->state.src_lid,
-				std::move(new_name), std::move(old_name)
-			);
-		},
-
-		[=](a_ack, a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			adbg(self, "status") <<
-				to_string(req) << ": " << to_string(prev_s) << " -> " << to_string(new_s) << std::endl;
-			self->send<high_prio>(
-				self->state.tgt_grp, a_ack(), a_lnk_status(), self->state.src_lid, req, new_s, prev_s
-			);
-		}
-	};
-}
-
-// actor that retranslate some of link's messages attaching a link's ID to them
 auto node_retranslator(
 	caf::stateful_actor<node_rsl_state>* self, caf::group node_grp, lid_type lid, link::actor_type Lactor
 ) -> caf::behavior {

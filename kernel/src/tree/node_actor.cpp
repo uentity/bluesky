@@ -118,28 +118,19 @@ auto node_actor::gid(unsafe_t) const -> std::string {
 }
 
 auto node_actor::disconnect() -> void {
-	//for(const auto& L : links_)
-	//	stop_retranslate_from(L);
-
-	auto& Reg = system().registry();
-	for(auto& [lid, rs] : axons_) {
-		// stop link retranslator
-		send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(rs.first)), a_bye());
-		// and subnode
-		if(rs.second)
-			send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(*rs.second)), a_bye());
-	}
-	axons_.clear();
+	for(const auto& L : impl.links_)
+		stop_retranslate_from(L);
 }
 
 auto node_actor::retranslate_from(const link& L) -> void {
 	const auto lid = L.id();
 	auto& AS = system();
 
+	// add self to link's group and listen for events
+	join(L.home());
+
 	// spawn link retranslator first
-	auto axon = axon_t{
-		AS.spawn(link_retranslator, home(), lid).id(), {}
-	};
+	auto axon = axon_t{};
 	// for hard links also listen to subtree
 	// [TODO] move this part to `link::propagate_handle()`
 	if(L.type_id() == hard_link::type_id_())
@@ -150,13 +141,14 @@ auto node_actor::retranslate_from(const link& L) -> void {
 }
 
 auto node_actor::stop_retranslate_from(const link& L) -> void {
+	// stop listening to link's events
+	leave(L.home());
+
 	auto prs = axons_.find(L.id());
 	if(prs == axons_.end()) return;
 	auto& rs = prs->second;
 	auto& Reg = system().registry();
 
-	// stop link retranslator
-	send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(rs.first)), a_bye());
 	// .. and for subnode
 	if(rs.second)
 		send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(*rs.second)), a_bye());
@@ -178,8 +170,8 @@ auto node_actor::insert(
 		retranslate_from(child_L);
 		// send message that link inserted (with position)
 		if(!silent) send<high_prio>(
-			home(unsafe), a_ack(), a_node_insert(),
-			child_L.id(), impl.index(impl.find<Key::ID>(child_L.id())), pol
+			home(unsafe), a_ack(), a_node_insert(), child_L.id(),
+			impl.index(impl.find<Key::ID>(child_L.id())), pol
 		);
 	});
 }
@@ -244,11 +236,13 @@ NAMESPACE_END()
 
 auto node_actor::erase(const lid_type& victim, EraseOpts opts) -> size_t {
 	const auto ppf = [=](const link& L) { on_erase(L, *this); };
-	return impl.erase<Key::ID>(
+	std::size_t res = 0;
+	error::eval_safe([&] { res = impl.erase<Key::ID>(
 		victim,
-		enumval(opts & EraseOpts::Silent) ? noop_postproc_f : function_view{ ppf },
-		bool(enumval(opts & EraseOpts::DontResetOwner))
-	);
+		enumval(opts & EraseOpts::Silent) ? noop: function_view{ ppf },
+		enumval(opts & EraseOpts::DontResetOwner)
+	); });
+	return res;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -499,10 +493,10 @@ auto node_actor::make_behavior() -> behavior_type {
 		},
 
 		// ack on insert - reflect insert from sibling node actor
-		[=](a_ack, a_node_insert, lid_type lid, size_t pos, InsertPolicy pol) {
+		[=](a_ack, a_node_insert, const lid_type& lid, size_t pos, InsertPolicy pol) {
 			adbg(this) << "{a_node_insert ack}" << std::endl;
 			if(auto S = current_sender(); S != this) {
-				request(caf::actor_cast<caf::actor>(S), impl.timeout, a_node_find(), std::move(lid))
+				request(caf::actor_cast<caf::actor>(S), impl.timeout, a_node_find(), lid)
 				.then([=](link L) {
 					// [NOTE] silent insert
 					insert(std::move(L), pos, pol, true);
@@ -510,7 +504,7 @@ auto node_actor::make_behavior() -> behavior_type {
 			}
 		},
 		// ack on move
-		[=](a_ack, a_node_insert, lid_type lid, size_t to, size_t from) {
+		[=](a_ack, a_node_insert, const lid_type& lid, size_t to, size_t from) {
 			if(auto S = current_sender(); S != this) {
 				if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>()) {
 					insert(*p, to, InsertPolicy::AllowDupNames, true);
@@ -526,17 +520,20 @@ auto node_actor::make_behavior() -> behavior_type {
 		},
 
 		// handle link rename
-		[=](a_ack, a_lnk_rename, lid_type lid, const std::string&, const std::string&) {
-			adbg(this) << "{a_lnk_rename}" << std::endl;
-			impl.refresh(lid);
+		[=](a_ack, a_lnk_rename, const lid_type& lid, const std::string& new_, const std::string& old_) {
+			if(current_sender() != this) {
+				adbg(this) << "{a_lnk_rename}" << std::endl;
+				impl.refresh(lid);
+				// retranslate message to home
+				send(impl.home_, a_ack(), a_lnk_rename(), lid, new_, old_);
+			}
 		},
 
 		// track link status
-		[=](a_ack, a_lnk_status, const lid_type& lid, Req req, ReqStatus new_s, ReqStatus) {
-			// refresh link if new data arrived
-			if(new_s == ReqStatus::OK) {
-				impl.refresh(lid);
-			}
+		[=](a_ack, a_lnk_status, const lid_type& lid, Req req, ReqStatus new_, ReqStatus old_) {
+			// retranslate -> home
+			if(current_sender() != this)
+				send(impl.home_, a_ack(), a_lnk_status(), lid, req, new_, old_);
 		},
 
 	}.unbox();

@@ -21,15 +21,21 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-const auto uuid_from_str = boost::uuids::string_generator{};
+auto to_uuid(std::string_view s) noexcept -> std::optional<lid_type> {
+	static const auto gen = boost::uuids::string_generator{};
 
-node_impl::node_impl(node* super)
-	: timeout(def_timeout(true)), super_(super)
+	auto res = std::optional<lid_type>{};
+	error::eval_safe([&] { res = gen(s.begin(), s.end()); });
+	return res;
+}
+
+node_impl::node_impl(node* super) :
+	timeout(def_timeout(true)), super_(super)
 {}
 
 // implement shallow links copy ctor
-node_impl::node_impl(const node_impl& rhs, node* super)
-	: timeout(rhs.timeout), super_(super)
+node_impl::node_impl(const node_impl& rhs, node* super) :
+	timeout(rhs.timeout), super_(super)
 {
 	// [TODO] fix this in safer way after node is refactored
 	auto& tgt = links_.get<Key_tag<Key::AnyOrder>>();
@@ -40,21 +46,15 @@ node_impl::node_impl(const node_impl& rhs, node* super)
 	// correct this by manually calling `node::propagate_owner()` after copy is constructed
 }
 
-node_impl::node_impl(node_impl&& rhs, node* super)
-	: links_(std::move(rhs.links_)), handle_(std::move(rhs.handle_)),
+node_impl::node_impl(node_impl&& rhs, node* super) :
+	links_(std::move(rhs.links_)), handle_(std::move(rhs.handle_)),
 	timeout(std::move(rhs.timeout)), actor_(std::move(rhs.actor_)), home_(std::move(rhs.home_)),
 	super_(super)
 {}
 
-auto node_impl::spawn_actor(sp_nimpl nimpl, const std::string& gid) const -> caf::actor {
-	// [NOTE] don't make shared_ptr here, because this can be called from node's ctor
-	if(!super_) throw error{ "Can't spawn actor for null node" };
-	return spawn_nactor(std::move(nimpl), gid);
-}
-
 auto node_impl::start_engine(sp_nimpl nimpl, std::string gid) -> void {
 	if(!actor_)
-		actor_ = spawn_actor(std::move(nimpl), std::move(gid));
+		actor_ = spawn_nactor(std::move(nimpl), home(std::move(gid), true));
 	else // just enter group
 		home(std::move(gid));
 }
@@ -113,7 +113,7 @@ auto node_impl::leafs(Key order) const -> links_v {
 auto node_impl::search(const std::string& key, Key key_meaning) const -> link {
 	switch(key_meaning) {
 	case Key::ID:
-		return search<Key::ID>(uuid_from_str(key));
+		return if_uuid(key, [&](lid_type lid) { return search<Key::ID>(lid); }, {});
 	case Key::Name:
 		return search<Key::Name>(key);
 	default:
@@ -124,7 +124,7 @@ auto node_impl::search(const std::string& key, Key key_meaning) const -> link {
 auto node_impl::index(const std::string& key, Key key_meaning) const -> existing_index {
 	switch(key_meaning) {
 	case Key::ID:
-		return index<Key::ID>(uuid_from_str(key));
+		return if_uuid(key, [&](lid_type lid) { return index<Key::ID>(lid); }, {});
 	case Key::Name:
 		return index<Key::Name>(key);
 	default:
@@ -135,7 +135,7 @@ auto node_impl::index(const std::string& key, Key key_meaning) const -> existing
 auto node_impl::equal_range(const std::string& key, Key key_meaning) const -> links_v {
 	switch(key_meaning) {
 	case Key::ID:
-		return equal_range<Key::ID>(uuid_from_str(key)).extract_values();
+		return if_uuid(key, [&](lid_type lid) { return equal_range<Key::ID>(lid).extract_values(); }, {});
 	case Key::Name:
 		return equal_range<Key::Name>(key).extract_values();
 	default:
@@ -265,7 +265,7 @@ auto node_impl::erase_impl(
 auto node_impl::erase(const std::string& key, Key key_meaning, leaf_postproc_fn ppf) -> size_t {
 	switch(key_meaning) {
 	case Key::ID:
-		return erase<Key::ID>(uuid_from_str(key), ppf);
+		return if_uuid(key, [&](lid_type lid) { return erase<Key::ID>(lid, ppf); }, 0);
 	case Key::Name:
 		return erase<Key::Name>(key, ppf);
 	default:
@@ -286,14 +286,10 @@ auto node_impl::erase(const lids_v& r, leaf_postproc_fn ppf) -> std::size_t {
 //  misc
 //
 auto node_impl::refresh(const lid_type& lid) -> void {
-	constexpr auto touch = [](auto&&) {};
-
 	// find target link by it's ID
 	auto& I = links_.get<Key_tag<Key::ID>>();
-	if(auto pos = I.find(lid); pos != I.end()) {
-		// refresh each index in cycle
-		links_.get<Key_tag<Key::Name>>().modify_key( project<Key::ID, Key::Name>(pos), touch );
-	}
+	if(auto pos = I.find(lid); pos != I.end())
+		links_.get<Key_tag<Key::Name>>().modify_key( project<Key::ID, Key::Name>(pos), noop );
 }
 
 NAMESPACE_END(blue_sky::tree)

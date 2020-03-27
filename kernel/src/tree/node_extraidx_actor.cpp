@@ -29,8 +29,6 @@ using namespace kernel::radio;
 
 NAMESPACE_BEGIN()
 
-const auto uuid_from_str = boost::uuids::string_generator{};
-
 // returns memoized key extractor
 template<Key K>
 auto memo_kex() {
@@ -237,23 +235,19 @@ auto extraidx_deep_search_actor(extraidx_deep_search_api::pointer self, node_imp
 
 	[=](a_node_deep_search, const std::string& key, Key meaning, bool search_all) -> links_v {
 		auto f = caf::scoped_actor{system()};
-		if(meaning == Key::ID) {
-			lid_type needle;
-			if(error::eval_safe([&]{ needle = uuid_from_str(key); }).ok())
-				return deep_search<Key::ID>(f, Nactor, needle, !search_all);
+		switch(meaning) {
+		case Key::ID:
+			return if_uuid(key, [&](lid_type lid) {
+				return deep_search<Key::ID>(f, Nactor, lid, !search_all);
+			}, {});
+		case Key::Name:
+			return deep_search<Key::Name>(f, Nactor, key, !search_all);
+		case Key::OID:
+			return deep_search<Key::OID>(f, Nactor, key, !search_all);
+		case Key::Type:
+			return deep_search<Key::Type>(f, Nactor, key, !search_all);
+		default: return {};
 		}
-		else {
-			switch(meaning) {
-			case Key::Name:
-				return deep_search<Key::Name>(f, Nactor, key, !search_all);
-			case Key::OID:
-				return deep_search<Key::OID>(f, Nactor, key, !search_all);
-			case Key::Type:
-				return deep_search<Key::Type>(f, Nactor, key, !search_all);
-			default: break;
-			}
-		}
-		return {};
 	}
 }; }
 

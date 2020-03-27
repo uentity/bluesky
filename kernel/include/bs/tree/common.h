@@ -10,6 +10,7 @@
 
 #include "../common.h"
 #include "../detail/enumops.h"
+#include "../detail/function_view.h"
 #include "inode.h"
 
 #include <boost/uuid/uuid.hpp>
@@ -58,6 +59,26 @@ enum class InsertPolicy {
 using lid_type = boost::uuids::uuid;
 /// function that modifies link's pointee
 using data_modificator_f = objbase::modificator_f;
+
+/// convert string to lid_type eating exceptions
+/// decode error will be logged
+BS_API auto to_uuid(std::string_view s) noexcept -> std::optional<lid_type>;
+
+/// apply given function to successfully decoded input, return `defval` as fallback value
+template<typename F>
+auto if_uuid(std::string_view s, F&& f, std::invoke_result_t<F, lid_type> defval)
+noexcept(noexcept( f(std::declval<lid_type>()) )) {
+	if(auto u = to_uuid(s)) return f(*u);
+	return defval;
+}
+/// overload for void
+inline auto if_uuid(std::string_view s, function_view< void (lid_type) > f)
+noexcept(noexcept( f(std::declval<lid_type>()) )) -> void {
+	if(auto u = to_uuid(s)) f(*u);
+}
+
+/// can be passed as callback that does nothing
+inline constexpr auto noop = [](auto&&...) {};
 
 /// forward declare major types
 class link;

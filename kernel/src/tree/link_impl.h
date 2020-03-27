@@ -69,9 +69,9 @@ public:
 	template<typename ActorType>
 	using impl_actor_type = typename ActorType::template extend<
 		// ack rename
-		caf::reacts_to<a_ack, a_lnk_rename, std::string, std::string>,
+		caf::reacts_to<a_ack, a_lnk_rename, lid_type, std::string, std::string>,
 		// request status change ack
-		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>
+		caf::reacts_to<a_ack, a_lnk_status, lid_type, Req, ReqStatus, ReqStatus>
 	>;
 
 	using actor_type = impl_actor_type<link::actor_type>;
@@ -144,11 +144,10 @@ public:
 	auto req_status(Req request) const -> ReqStatus;
 
 	using on_rs_changed_fn = function_view< void(Req, ReqStatus /*new*/, ReqStatus /*old*/) >;
-	static constexpr auto on_rs_changed_noop = [](Req, ReqStatus, ReqStatus) {};
 
 	auto rs_reset(
 		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void,
-		on_rs_changed_fn on_rs_changed = on_rs_changed_noop
+		on_rs_changed_fn on_rs_changed = noop
 	) -> ReqStatus;
 
 	/// create or set or create inode for given target object
