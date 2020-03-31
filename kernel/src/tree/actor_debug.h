@@ -9,13 +9,12 @@
 #pragma once
 
 #include <bs/log.h>
+#include <bs/tree/common.h>
+
+#include <caf/actor_ostream.hpp>
 
 #ifndef DEBUG_ACTOR
 	#define DEBUG_ACTOR 0
-#endif
-
-#if DEBUG_ACTOR == 1
-#include <caf/actor_ostream.hpp>
 #endif
 
 NAMESPACE_BEGIN(blue_sky::tree)
@@ -26,6 +25,14 @@ template<typename Actor, typename... Ts>
 static constexpr auto adbg(Actor*, Ts&&...) {
 	return blue_sky::log::D();
 }
+
+#else
+
+static auto adbg_impl(link_actor*) -> caf::actor_ostream;
+static auto adbg_impl(node_actor*) -> caf::actor_ostream;
+
+template<typename Actor>
+static auto adbg(Actor* A) { return adbg_impl(A); }
 
 #endif
 

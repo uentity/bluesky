@@ -28,6 +28,9 @@ using namespace kernel::radio;
 class BS_HIDDEN_API node_actor : public caf::event_based_actor {
 public:
 	using super = caf::event_based_actor;
+	using actor_type = node_impl::actor_type;
+	using primary_actor_type = node_impl::primary_actor_type;
+	using ack_actor_type = node_impl::ack_actor_type;
 
 	// holds reference to node impl
 	sp_nimpl pimpl_;
@@ -37,8 +40,8 @@ public:
 	~node_actor();
 
 	// return typed actor handle to this
-	node_impl::actor_type handle() const {
-		return caf::actor_cast<node_impl::actor_type>(address());
+	auto handle() const -> actor_type {
+		return caf::actor_cast<actor_type>(address());
 	}
 
 	// pass message to upper (owner) level of tree structure
@@ -55,14 +58,18 @@ public:
 		forward_up(a_ack(), this, std::forward<Args>(args)...);
 	}
 
-	auto make_behavior() -> behavior_type override;
-
 	auto on_exit() -> void override;
 
 	auto name() const -> const char* override;
 
 	// say goodbye to others & leave home
 	auto goodbye() -> void;
+
+	// parts of behavior
+	auto make_primary_behavior() -> primary_actor_type::behavior_type;
+	auto make_ack_behavior() -> ack_actor_type::behavior_type;
+	// combines primary + ack
+	auto make_behavior() -> behavior_type override;
 
 	// get/set home group ID + optionally invite actor
 	auto home() -> caf::group&;

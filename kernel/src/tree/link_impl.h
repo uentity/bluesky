@@ -65,13 +65,18 @@ public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 	using sp_limpl = std::shared_ptr<link_impl>;
 
+	using primary_actor_type = link::actor_type;
+
 	// ack signals that this link send to home group
-	using ack_actor_type = caf::typed_actor<
+	using self_ack_actor_type = caf::typed_actor<
 		// ack rename
 		caf::reacts_to<a_ack, a_lnk_rename, std::string, std::string>,
 		// request status change ack
 		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>
 	>;
+
+	// home group receives only myself acks
+	using home_actor_type = self_ack_actor_type;
 
 	// foreign acks coming to link's home group from deeper levels
 	using subtree_ack_actor_type = caf::typed_actor<
@@ -85,13 +90,15 @@ public:
 		caf::reacts_to<a_ack, caf::actor, a_node_erase, lids_v>
 	>;
 
+	// all acks processed by link
+	using ack_actor_type = self_ack_actor_type::extend_with<subtree_ack_actor_type>;
+
 	// extend given actor type with additional private interface
 	template<typename ActorType>
-	using impl_actor_type = typename ActorType
-		::template extend_with< ack_actor_type >
-		::template extend_with< subtree_ack_actor_type >;
+	using make_actor_type = typename ActorType::template extend_with< ack_actor_type >;
 
-	using actor_type = impl_actor_type<link::actor_type>;
+	// complete private actor type
+	using actor_type = make_actor_type<primary_actor_type>;
 
 	lid_type id_;
 	std::string name_;

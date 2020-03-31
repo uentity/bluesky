@@ -46,8 +46,20 @@ public:
 	// local node group
 	caf::group home_;
 
+	// public node iface extended with some private messages
+	using primary_actor_type = node::actor_type::extend<
+		// join self group
+		caf::reacts_to<a_hi>,
+		// noop - sent by self to terminate siblings in group
+		caf::reacts_to<a_bye>,
+		// rebind node to new handle
+		caf::reacts_to<a_node_handle, link>,
+		// erase link by ID with specified options
+		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>
+	>;
+
 	// ack signals that this node send to home group
-	using ack_actor_type = caf::typed_actor<
+	using self_ack_actor_type = caf::typed_actor<
 		// ack on insert - reflect insert from sibling node actor
 		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, InsertPolicy>,
 		// ack on link move
@@ -56,24 +68,20 @@ public:
 		caf::reacts_to<a_ack, caf::actor, a_node_erase, lids_v>
 	>;
 
-	// append private behavior to public iface
-	using actor_type = node::actor_type::extend<
-		// join self group
-		caf::reacts_to<a_hi>,
-		// noop - sent by self to terminate siblings in group
-		caf::reacts_to<a_bye>,
-		// rebind node to new handle
-		caf::reacts_to<a_node_handle, link>,
-		// erase link by ID with specified options
-		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>,
-
+	// all acks processed by node: self acks + self leafs acks + subtree acks
+	// [NOTE] `subtree_ack_actor_type` includes self `ack_actor_type`
+	using ack_actor_type = link_impl::subtree_ack_actor_type::extend<
 		// track leaf rename
 		caf::reacts_to<a_ack, lid_type, a_lnk_rename, std::string, std::string>,
 		// track leaf status
 		caf::reacts_to<a_ack, lid_type, a_lnk_status, Req, ReqStatus, ReqStatus>
-	>
-	// `subtree_ack_actor_type` includes `ack_actor_type`
-	::extend_with< link_impl::subtree_ack_actor_type >;
+	>;
+
+	// all acks are pumped via node's home group
+	using home_actor_type = ack_actor_type;
+
+	// append private behavior to public iface
+	using actor_type = primary_actor_type::extend_with< ack_actor_type >;
 
 	auto actor() const {
 		return caf::actor_cast<actor_type>(actor_);

@@ -33,7 +33,7 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	// contained object
 	sp_node data_;
 
-	using actor_type = impl_actor_type<fusion_link::actor_type>;
+	using actor_type = make_actor_type<fusion_link::actor_type>;
 
 	using super = ilink_impl;
 	using super::owner_;

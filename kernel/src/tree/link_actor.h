@@ -32,9 +32,11 @@ enum class ReqOpts {
 class BS_HIDDEN_API link_actor : public caf::event_based_actor {
 public:
 	using super = caf::event_based_actor;
+	using primary_actor_type = link_impl::primary_actor_type;
+	using ack_actor_type = link_impl::ack_actor_type;
 	using actor_type = link_impl::actor_type;
-	using behavior_type = super::behavior_type;
 	using typed_behavior = actor_type::behavior_type;
+	using behavior_type = super::behavior_type;
 
 	link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl);
 	// virtual dtor
@@ -42,6 +44,10 @@ public:
 
 	// cleanup code executes leaving from local group & must be called from outside
 	auto goodbye() -> void;
+
+	auto on_exit() -> void override;
+
+	auto name() const -> const char* override;
 
 	// get handle of this actor
 	inline auto handle() -> caf::actor {
@@ -76,13 +82,12 @@ public:
 	using node_processor_f = std::function< void(result_or_errbox<sp_node>) >;
 	virtual auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void;
 
-	// returns generic link behavior
+	// parts of behavior
+	auto make_primary_behavior() -> primary_actor_type::behavior_type;
+	auto make_ack_behavior() -> ack_actor_type::behavior_type;
+	// combined link behavior: primary + ack
 	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;
-
-	auto on_exit() -> void override;
-
-	auto name() const -> const char* override;
 
 	// holds reference to link impl
 	sp_limpl pimpl_;

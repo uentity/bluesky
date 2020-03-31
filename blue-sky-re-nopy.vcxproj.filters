@@ -566,7 +566,13 @@
     <ClCompile Include="kernel\src\tree\link_actor.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
+    <ClCompile Include="kernel\src\tree\link_ack_behavior.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
     <ClCompile Include="kernel\src\tree\node_actor.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\node_ack_behavior.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\kernel\radio.cpp">

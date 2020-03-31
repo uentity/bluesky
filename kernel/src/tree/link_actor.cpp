@@ -27,16 +27,11 @@ NAMESPACE_BEGIN(blue_sky::tree)
 using namespace allow_enumops;
 using namespace kernel::radio;
 using namespace std::chrono_literals;
-using bs_detail::shared;
 
-#if DEBUG_ACTOR == 1
-
-static auto adbg(link_actor* A) -> caf::actor_ostream {
+[[maybe_unused]] static auto adbg_impl(link_actor* A) -> caf::actor_ostream {
 	return caf::aout(A) << "[L] [" << to_string(A->impl.id_) <<
 		"] [" << A->impl.name_ << "]: ";
 }
-
-#endif
 
 /*-----------------------------------------------------------------------------
  *  link
@@ -118,8 +113,8 @@ auto link_actor::rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus pr
 ///////////////////////////////////////////////////////////////////////////////
 //  behavior
 //
-auto link_actor::make_typed_behavior() -> typed_behavior {
-	return typed_behavior{
+auto link_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
+return {
 		// skip `bye` message (should always come from myself)
 		[=](a_bye) -> void {
 			adbg(this) << "<- a_lnk_bye " << std::endl;
@@ -185,12 +180,6 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 		[=](a_lnk_rename, std::string new_name, bool silent) -> void {
 			rename(std::move(new_name), silent);
 		},
-		// rename ack
-		[=](a_ack, a_lnk_rename, std::string new_name, std::string old_name) -> void {
-			adbg(this) << "<- a_lnk_rename ack: " << old_name << " -> " << new_name << std::endl;
-			// retranslate ack to upper level
-			ack_up(a_lnk_rename(), std::move(new_name), std::move(old_name));
-		},
 
 		// get status
 		[=](a_lnk_status, Req req) -> ReqStatus { return pimpl_->req_status(req); },
@@ -200,14 +189,6 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			adbg(this) << "<- a_lnk_status: " << to_string(req) << " " <<
 				to_string(prev_rs) << "->" << to_string(new_rs) << std::endl;
 			return rs_reset(req, cond, new_rs, prev_rs);
-		},
-
-		// reset status ack
-		[=](a_ack, a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s) {
-			adbg(this) << "<- a_lnk_status ack: " << to_string(req) << " " <<
-				to_string(prev_s) << "->" << to_string(new_s) << std::endl;
-			// retranslate ack to upper level
-			ack_up(a_lnk_status(), req, new_s, prev_s);
 		},
 
 		// get/set flags
@@ -287,38 +268,10 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			return const_cast<const caf::response_promise&>(res);
 		},
 
-		// retranslate pointee node acks to owner's home group
-		[=](
-			a_ack, caf::actor N, const lid_type& lid,
-			a_lnk_rename, std::string new_name, std::string old_name
-		) {
-			adbg(this) << "<- [ack] [deep] a_lnk_rename" << std::endl;
-			forward_up(a_ack(), std::move(N), lid, a_lnk_rename(), std::move(new_name), std::move(old_name));
-		},
+}; }
 
-		[=](
-			a_ack, caf::actor N, const lid_type& lid,
-			a_lnk_status, Req req, ReqStatus new_rs, ReqStatus old_rs
-		) {
-			adbg(this) << "<- [ack] [deep] a_lnk_status" << std::endl;
-			forward_up(a_ack(), std::move(N), lid, a_lnk_status(), req, new_rs, old_rs);
-		},
-
-		[=](a_ack, caf::actor N, a_node_insert, const lid_type& lid, size_t pos, InsertPolicy pol) {
-			adbg(this) << "<- [ack] [deep] a_node_insert" << std::endl;
-			forward_up(a_ack(), std::move(N), a_node_insert(), lid, pos, pol);
-		},
-
-		[=](a_ack, caf::actor N, a_node_insert, const lid_type& lid, size_t pos1, size_t pos2) {
-			adbg(this) << "<- [ack] [deep] a_node_insert [move]" << std::endl;
-			forward_up(a_ack(), std::move(N), a_node_insert(), lid, pos1, pos2);
-		},
-
-		[=](a_ack, caf::actor N, a_node_erase, lids_v erased_leafs) {
-			adbg(this) << "<- [ack] [deep] a_node_erase" << std::endl;
-			forward_up(a_ack(), std::move(N), a_node_erase(), std::move(erased_leafs));
-		}
-	};
+auto link_actor::make_typed_behavior() -> typed_behavior {
+	return first_then_second(make_ack_behavior(), make_primary_behavior());
 }
 
 auto link_actor::make_behavior() -> behavior_type {

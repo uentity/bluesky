@@ -32,9 +32,7 @@ using namespace allow_enumops;
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 
-#if DEBUG_ACTOR == 1
-
-static auto adbg(node_actor* A) -> caf::actor_ostream {
+[[maybe_unused]] static auto adbg_impl(node_actor* A) -> caf::actor_ostream {
 	auto res = caf::aout(A);
 	res << "[N] ";
 	if(auto pgrp = A->home(unsafe).get())
@@ -43,8 +41,6 @@ static auto adbg(node_actor* A) -> caf::actor_ostream {
 		res << "[homeless]";
 	return res <<  ": ";
 }
-
-#endif
 
 /*-----------------------------------------------------------------------------
  *  node_actor
@@ -199,339 +195,265 @@ auto node_actor::erase(const lid_type& victim, EraseOpts opts) -> size_t {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  behavior
+//  primary behavior
 //
-auto node_actor::make_behavior() -> behavior_type {
-	using typed_behavior = typename node_impl::actor_type::behavior_type;
+auto node_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
+return {
+	// unconditionally join home group - used after deserialization
+	[=](a_hi) { join(home()); },
 
-	return typed_behavior{
-		// unconditionally join home group - used after deserialization
-		[=](a_hi) { join(home()); },
+	// skip `bye` (should always come from myself)
+	[=](a_bye) {},
 
-		// skip `bye` (should always come from myself)
-		[=](a_bye) {},
+	[=](a_node_gid) -> std::string { return gid(); },
 
-		[=](a_node_gid) -> std::string { return gid(); },
+	// get handle
+	[=](a_node_handle) { return link{ impl.handle() }; },
 
-		// propagate owner
-		//[=](a_node_propagate_owner, bool deep) { impl.propagate_owner(deep); },
+	// set handle
+	[=](a_node_handle, link new_handle) {
+		// remove node from existing owner if it differs from owner of new handle
+		if(const auto old_handle = impl.handle()) {
+			const auto owner = old_handle.owner();
+			if(owner && (!new_handle || owner != new_handle.owner()))
+				owner->erase(old_handle.id());
+		}
 
-		// get handle
-		[=](a_node_handle) { return link{ impl.handle() }; },
+		if(new_handle)
+			impl.handle_ = new_handle;
+		else
+			impl.handle_.reset();
+	},
 
-		// set handle
-		[=](a_node_handle, link new_handle) {
-			// remove node from existing owner if it differs from owner of new handle
-			if(const auto old_handle = impl.handle()) {
-				const auto owner = old_handle.owner();
-				if(owner && (!new_handle || owner != new_handle.owner()))
-					owner->erase(old_handle.id());
-			}
+	// get size
+	[=](a_node_size) { return impl.size(); },
 
-			if(new_handle)
-				impl.handle_ = new_handle;
-			else
-				impl.handle_.reset();
-		},
-
-		// get size
-		[=](a_node_size) { return impl.size(); },
-
-		[=](a_node_leafs, Key order) -> caf::result<links_v> {
-			adbg(this) << "{a_node_leafs} " << static_cast<int>(order) << std::endl;
-			if(has_builtin_index(order))
-				return impl.leafs(order);
-			else
-				return delegate(
-					system().spawn(extraidx_search_actor),
-					a_node_leafs(), order, impl.leafs(Key::AnyOrder)
-				);
-		},
-
-		[=](a_node_keys, Key order) -> caf::result<lids_v> {
-			// builtin indexes can be processed directly
-			switch(order) {
-			case Key::ID : return impl.keys<Key::ID>();
-			case Key::AnyOrder : return impl.keys<Key::ID, Key::AnyOrder>();
-			case Key::Name : return impl.keys<Key::ID, Key::Name>();
-			default: break;
-			}
-			// others via extra index actor
+	[=](a_node_leafs, Key order) -> caf::result<links_v> {
+		adbg(this) << "{a_node_leafs} " << static_cast<int>(order) << std::endl;
+		if(has_builtin_index(order))
+			return impl.leafs(order);
+		else
 			return delegate(
 				system().spawn(extraidx_search_actor),
-				a_node_keys(), order, impl.leafs(Key::AnyOrder)
-			);
-		},
-
-		[=](a_node_ikeys, Key order) -> caf::result<std::vector<std::size_t>> {
-			// builtin indexes can be processed directly
-			switch(order) {
-			case Key::ID : return impl.keys<Key::AnyOrder, Key::ID>();
-			case Key::AnyOrder : return impl.keys<Key::AnyOrder>();
-			case Key::Name : return impl.keys<Key::AnyOrder, Key::Name>();
-			default: break;
-			}
-
-			// others via extra sorted leafs
-			auto rp = make_response_promise();
-			request(
-				system().spawn(extraidx_search_actor), def_timeout(true),
 				a_node_leafs(), order, impl.leafs(Key::AnyOrder)
-			).then(
-				[=](const links_v& leafs) mutable {
-					rp.deliver( impl.ikeys(leafs.begin(), leafs.end()) );
-				}
 			);
-			return rp;
-		},
+	},
 
-		[=](a_node_keys, Key meaning, Key order) -> caf::result<std::vector<std::string>> {
+	[=](a_node_keys, Key order) -> caf::result<lids_v> {
+		// builtin indexes can be processed directly
+		switch(order) {
+		case Key::ID : return impl.keys<Key::ID>();
+		case Key::AnyOrder : return impl.keys<Key::ID, Key::AnyOrder>();
+		case Key::Name : return impl.keys<Key::ID, Key::Name>();
+		default: break;
+		}
+		// others via extra index actor
+		return delegate(
+			system().spawn(extraidx_search_actor),
+			a_node_keys(), order, impl.leafs(Key::AnyOrder)
+		);
+	},
+
+	[=](a_node_ikeys, Key order) -> caf::result<std::vector<std::size_t>> {
+		// builtin indexes can be processed directly
+		switch(order) {
+		case Key::ID : return impl.keys<Key::AnyOrder, Key::ID>();
+		case Key::AnyOrder : return impl.keys<Key::AnyOrder>();
+		case Key::Name : return impl.keys<Key::AnyOrder, Key::Name>();
+		default: break;
+		}
+
+		// others via extra sorted leafs
+		auto rp = make_response_promise();
+		request(
+			system().spawn(extraidx_search_actor), def_timeout(true),
+			a_node_leafs(), order, impl.leafs(Key::AnyOrder)
+		).then(
+			[=](const links_v& leafs) mutable {
+				rp.deliver( impl.ikeys(leafs.begin(), leafs.end()) );
+			}
+		);
+		return rp;
+	},
+
+	[=](a_node_keys, Key meaning, Key order) -> caf::result<std::vector<std::string>> {
+		return delegate(
+			system().spawn(extraidx_search_actor),
+			a_node_keys(), meaning, order, impl.leafs(Key::AnyOrder)
+		);
+	},
+
+	// find
+	[=](a_node_find, const lid_type& lid) -> link {
+		adbg(this) << "{a_node_find LID} " << to_string(lid) << std::endl;
+		auto res = impl.search<Key::ID>(lid);
+		return res;
+	},
+
+	[=](a_node_find, std::size_t idx) -> link {
+		adbg(this) << "{a_node_find idx} " << idx << std::endl;
+		return impl.search<Key::AnyOrder>(idx);
+	},
+
+	[=](a_node_find, std::string key, Key key_meaning) -> caf::result<link> {
+		adbg(this) << "{a_node_find key} " << key << std::endl;
+		if(has_builtin_index(key_meaning)) {
+			auto res = link{};
+			error::eval_safe([&]{ res = impl.search(key, key_meaning); });
+			return res;
+		}
+		else
 			return delegate(
 				system().spawn(extraidx_search_actor),
-				a_node_keys(), meaning, order, impl.leafs(Key::AnyOrder)
+				a_node_find(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
 			);
-		},
+	},
 
-		// find
-		[=](a_node_find, const lid_type& lid) -> link {
-			adbg(this) << "{a_node_find LID} " << to_string(lid) << std::endl;
-			auto res = impl.search<Key::ID>(lid);
+	// deep search
+	[=](a_node_deep_search, lid_type lid) -> caf::result<link> {
+		adbg(this) << "{a_node_deep_search}" << std::endl;
+		return delegate(
+			system().spawn(extraidx_deep_search_actor, handle()),
+			a_node_deep_search(), std::move(lid)
+		);
+	},
+
+	[=](a_node_deep_search, std::string key, Key key_meaning, bool search_all)
+	-> caf::result<links_v> {
+		adbg(this) << "{a_node_deep_search}" << std::endl;
+		return delegate(
+			system().spawn(extraidx_deep_search_actor, handle()),
+			a_node_deep_search(), std::move(key), key_meaning, search_all
+		);
+	},
+
+	// index
+	[=](a_node_index, const lid_type& lid) -> existing_index {
+		return impl.index<Key::ID>(lid);
+	},
+
+	[=](a_node_index, std::string key, Key key_meaning) -> caf::result<existing_index> {
+		if(has_builtin_index(key_meaning)) {
+			auto res = existing_index{};
+			error::eval_safe([&] { res = impl.index(key, key_meaning); });
 			return res;
-		},
-
-		[=](a_node_find, std::size_t idx) -> link {
-			adbg(this) << "{a_node_find idx} " << idx << std::endl;
-			return impl.search<Key::AnyOrder>(idx);
-		},
-
-		[=](a_node_find, std::string key, Key key_meaning) -> caf::result<link> {
-			adbg(this) << "{a_node_find key} " << key << std::endl;
-			if(has_builtin_index(key_meaning)) {
-				auto res = link{};
-				error::eval_safe([&]{ res = impl.search(key, key_meaning); });
-				return res;
-			}
-			else
-				return delegate(
-					system().spawn(extraidx_search_actor),
-					a_node_find(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
-				);
-		},
-
-		// deep search
-		[=](a_node_deep_search, lid_type lid) -> caf::result<link> {
-			adbg(this) << "{a_node_deep_search}" << std::endl;
+		}
+		else
 			return delegate(
-				system().spawn(extraidx_deep_search_actor, handle()),
-				a_node_deep_search(), std::move(lid)
+				system().spawn(extraidx_search_actor),
+				a_node_index(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
 			);
-		},
+	},
 
-		[=](a_node_deep_search, std::string key, Key key_meaning, bool search_all)
-		-> caf::result<links_v> {
-			adbg(this) << "{a_node_deep_search}" << std::endl;
+	// equal_range
+	[=](a_node_equal_range, std::string key, Key key_meaning) -> caf::result<links_v> {
+		if(has_builtin_index(key_meaning)) {
+			auto res = links_v{};
+			error::eval_safe([&] { res = impl.equal_range(key, key_meaning); });
+			return res;
+		}
+		else
 			return delegate(
-				system().spawn(extraidx_deep_search_actor, handle()),
-				a_node_deep_search(), std::move(key), key_meaning, search_all
+				system().spawn(extraidx_search_actor),
+				a_node_equal_range(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
 			);
-		},
+	},
 
-		// index
-		[=](a_node_index, const lid_type& lid) -> existing_index {
-			return impl.index<Key::ID>(lid);
-		},
+	// insert new link
+	[=](a_node_insert, link L, InsertPolicy pol) -> node::insert_status {
+		adbg(this) << "{a_node_insert}" << std::endl;
+		auto res = insert(std::move(L), pol);
+		return { impl.index<Key::ID>(std::move(res.first)), res.second };
+	},
 
-		[=](a_node_index, std::string key, Key key_meaning) -> caf::result<existing_index> {
-			if(has_builtin_index(key_meaning)) {
-				auto res = existing_index{};
-				error::eval_safe([&] { res = impl.index(key, key_meaning); });
-				return res;
-			}
-			else
-				return delegate(
-					system().spawn(extraidx_search_actor),
-					a_node_index(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
+	// insert into specified position
+	[=](a_node_insert, link L, std::size_t idx, InsertPolicy pol) -> node::insert_status {
+		adbg(this) << "{a_node_insert}" << std::endl;
+		return insert(std::move(L), idx, pol);
+	},
+
+	// insert bunch of links
+	[=](a_node_insert, links_v Ls, InsertPolicy pol) {
+		size_t cnt = 0;
+		for(auto& L : Ls) {
+			if(insert(std::move(L), pol).second) ++cnt;
+		}
+		return cnt;
+	},
+
+	// normal link erase
+	[=](a_node_erase, const lid_type& lid) -> std::size_t {
+		return erase(lid);
+	},
+
+	// all other erase overloads do normal erase
+	[=](a_node_erase, std::size_t idx) {
+		return impl.erase<Key::AnyOrder>(
+			idx, [=](const link& L) { on_erase(L, *this); }
+		);
+	},
+
+	[=](a_node_erase, std::string key, Key key_meaning) -> caf::result<std::size_t>{
+		if(has_builtin_index(key_meaning)) {
+			auto res = std::size_t{};
+			error::eval_safe([&] {
+				res = impl.erase(
+					key, key_meaning, [=](const link& L) { on_erase(L, *this); }
 				);
-		},
-
-		// equal_range
-		[=](a_node_equal_range, std::string key, Key key_meaning) -> caf::result<links_v> {
-			if(has_builtin_index(key_meaning)) {
-				auto res = links_v{};
-				error::eval_safe([&] { res = impl.equal_range(key, key_meaning); });
-				return res;
-			}
-			else
-				return delegate(
-					system().spawn(extraidx_search_actor),
-					a_node_equal_range(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
-				);
-		},
-
-		// insert new link
-		[=](a_node_insert, link L, InsertPolicy pol) -> node::insert_status {
-			adbg(this) << "{a_node_insert}" << std::endl;
-			auto res = insert(std::move(L), pol);
-			return { impl.index<Key::ID>(std::move(res.first)), res.second };
-		},
-
-		// insert into specified position
-		[=](a_node_insert, link L, std::size_t idx, InsertPolicy pol) -> node::insert_status {
-			adbg(this) << "{a_node_insert}" << std::endl;
-			return insert(std::move(L), idx, pol);
-		},
-
-		// insert bunch of links
-		[=](a_node_insert, links_v Ls, InsertPolicy pol) {
-			size_t cnt = 0;
-			for(auto& L : Ls) {
-				if(insert(std::move(L), pol).second) ++cnt;
-			}
-			return cnt;
-		},
-
-		// normal link erase
-		[=](a_node_erase, const lid_type& lid) -> std::size_t {
-			return erase(lid);
-		},
-
-		// all other erase overloads do normal erase
-		[=](a_node_erase, std::size_t idx) {
-			return impl.erase<Key::AnyOrder>(
-				idx, [=](const link& L) { on_erase(L, *this); }
+			});
+			return res;
+		}
+		else
+			return delegate(
+				system().spawn(extraidx_erase_actor, handle()),
+				a_node_erase(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
 			);
-		},
+	},
 
-		[=](a_node_erase, std::string key, Key key_meaning) -> caf::result<std::size_t>{
-			if(has_builtin_index(key_meaning)) {
-				auto res = std::size_t{};
-				error::eval_safe([&] {
-					res = impl.erase(
-						key, key_meaning, [=](const link& L) { on_erase(L, *this); }
-					);
-				});
-				return res;
-			}
-			else
-				return delegate(
-					system().spawn(extraidx_erase_actor, handle()),
-					a_node_erase(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
-				);
-		},
+	// erase bunch of links
+	[=](a_node_erase, const lids_v& lids) {
+		return impl.erase(
+			lids, [=](const link& L) { on_erase(L, *this); }
+		);
+	},
 
-		// erase bunch of links
-		[=](a_node_erase, const lids_v& lids) {
-			return impl.erase(
-				lids, [=](const link& L) { on_erase(L, *this); }
-			);
-		},
+	[=](a_node_clear) {
+		impl.links_.clear();
+	},
 
-		[=](a_node_clear) {
-			impl.links_.clear();
-		},
+	// rename
+	[=](a_lnk_rename, const lid_type& lid, const std::string& new_name) -> std::size_t {
+		return impl.rename<Key::ID>(lid, new_name);
+	},
 
-		// rename
-		[=](a_lnk_rename, const lid_type& lid, const std::string& new_name) -> std::size_t {
-			return impl.rename<Key::ID>(lid, new_name);
-		},
+	[=](a_lnk_rename, std::size_t idx, const std::string& new_name) -> std::size_t {
+		return impl.rename<Key::AnyOrder>(idx, new_name);
+	},
 
-		[=](a_lnk_rename, std::size_t idx, const std::string& new_name) -> std::size_t {
-			return impl.rename<Key::AnyOrder>(idx, new_name);
-		},
+	[=](a_lnk_rename, const std::string& old_name, const std::string& new_name) -> std::size_t {
+		return impl.rename<Key::Name>(old_name, new_name);
+	},
 
-		[=](a_lnk_rename, const std::string& old_name, const std::string& new_name) -> std::size_t {
-			return impl.rename<Key::Name>(old_name, new_name);
-		},
+	// apply custom order
+	[=](a_node_rearrange, const std::vector<std::size_t>& new_order) -> error::box {
+		return impl.rearrange<Key::AnyOrder>(new_order);
+	},
 
-		// apply custom order
-		[=](a_node_rearrange, const std::vector<std::size_t>& new_order) -> error::box {
-			return impl.rearrange<Key::AnyOrder>(new_order);
-		},
+	[=](a_node_rearrange, const lids_v& new_order) -> error::box {
+		return impl.rearrange<Key::ID>(new_order);
+	},
 
-		[=](a_node_rearrange, const lids_v& new_order) -> error::box {
-			return impl.rearrange<Key::ID>(new_order);
-		},
+	/// Non-public extensions
+	// erase link by ID with specified options
+	[=](a_node_erase, const lid_type& lid, EraseOpts opts) -> std::size_t {
+		return erase(lid, opts);
+	},
+}; }
 
-		/// Non-public extensions
-		// erase link by ID with specified options
-		[=](a_node_erase, const lid_type& lid, EraseOpts opts) -> std::size_t {
-			return erase(lid, opts);
-		},
-
-		// ack on insert - reflect insert from sibling node actor
-		[=](a_ack, caf::actor origin, a_node_insert, const lid_type& lid, size_t pos, InsertPolicy pol) {
-			adbg(this) << "{a_node_insert ack}: " << pos << std::endl;
-			// notify handle about data change
-			if(origin == this)
-				forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
-			forward_up(a_ack(), std::move(origin), a_node_insert(), lid, pos, pol);
-
-			//if(origin != this) {
-			//	request(origin, impl.timeout, a_node_find(), lid)
-			//	.then([=](link L) {
-			//		// [NOTE] silent insert
-			//		insert(std::move(L), pos, pol, true);
-			//	});
-			//}
-		},
-		// ack on move
-		[=](a_ack, caf::actor origin, a_node_insert, const lid_type& lid, size_t to, size_t from) {
-			adbg(this) << "{a_node_insert ack} [move]: " << from << " -> " << to << std::endl;
-			// notify handle about data change
-			if(origin == this)
-				forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
-			forward_up(a_ack(), std::move(origin), a_node_insert(), lid, to, from);
-
-			//if(origin != this) {
-			//	if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>()) {
-			//		insert(*p, to, InsertPolicy::AllowDupNames, true);
-			//	}
-			//}
-		},
-
-		// ack on erase - reflect erase from sibling node actor
-		[=](a_ack, caf::actor origin, a_node_erase, lids_v lids) {
-			adbg(this) << "{a_node_erase ack}" << std::endl;
-			// notify handle about data change
-			if(origin == this)
-				forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
-			forward_up(a_ack(), std::move(origin), a_node_erase(), std::move(lids));
-
-			//if(auto S = current_sender(); S != this && !lids.empty()) {
-			//	erase(lids.front(), EraseOpts::Silent);
-			//}
-		},
-
-		// handle my leaf rename
-		[=](a_ack, const lid_type& lid, a_lnk_rename, std::string new_, std::string old_) {
-			adbg(this) << "{a_lnk_rename ack}" << std::endl;
-			impl.refresh(lid);
-			ack_up(lid, a_lnk_rename(), std::move(new_), std::move(old_));
-			// notify handle about data change
-			forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
-		},
-
-		// track my leaf status
-		[=](a_ack, const lid_type& lid, a_lnk_status, Req req, ReqStatus new_, ReqStatus old_) {
-			ack_up(lid, a_lnk_status(), req, new_, old_);
-		},
-
-		// retranslate deep links rename & status
-		[=](
-			a_ack, caf::actor N, const lid_type& lid,
-			a_lnk_rename, std::string new_name, std::string old_name
-		) {
-			forward_up(a_ack(), std::move(N), lid, a_lnk_rename(), std::move(new_name), std::move(old_name));
-		},
-
-		[=](
-			a_ack, caf::actor N, const lid_type& lid,
-			a_lnk_status, Req req, ReqStatus new_rs, ReqStatus old_rs
-		) {
-			forward_up(a_ack(), std::move(N), lid, a_lnk_status(), req, new_rs, old_rs);
-		},
-
-	}.unbox();
+auto node_actor::make_behavior() -> behavior_type {
+	return actor_type::behavior_type{first_then_second(
+		make_ack_behavior(), make_primary_behavior()
+	)}.unbox();
 }
 
 NAMESPACE_END(blue_sky::tree)
