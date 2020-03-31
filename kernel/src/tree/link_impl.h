@@ -8,13 +8,13 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <bs/tree/node.h>
 #include <bs/actor_common.h>
 #include <bs/defaults.h>
 #include <bs/kernel/radio.h>
 #include <bs/detail/enumops.h>
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
+#include <bs/tree/node.h>
 #if defined(_MSC_VER)
 #include <bs/detail/spinlock.h>
 #endif
@@ -65,14 +65,31 @@ public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 	using sp_limpl = std::shared_ptr<link_impl>;
 
+	// ack signals that this link send to home group
+	using ack_actor_type = caf::typed_actor<
+		// ack rename
+		caf::reacts_to<a_ack, a_lnk_rename, std::string, std::string>,
+		// request status change ack
+		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>
+	>;
+
+	// foreign acks coming to link's home group from deeper levels
+	using subtree_ack_actor_type = caf::typed_actor<
+		// leafs changes on deeper levels
+		caf::reacts_to<a_ack, caf::actor, lid_type, a_lnk_rename, std::string, std::string>,
+		caf::reacts_to<a_ack, caf::actor, lid_type, a_lnk_status, Req, ReqStatus, ReqStatus>,
+
+		// node acks from deeper levels
+		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, InsertPolicy>,
+		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, size_t>,
+		caf::reacts_to<a_ack, caf::actor, a_node_erase, lids_v>
+	>;
+
 	// extend given actor type with additional private interface
 	template<typename ActorType>
-	using impl_actor_type = typename ActorType::template extend<
-		// ack rename
-		caf::reacts_to<a_ack, a_lnk_rename, lid_type, std::string, std::string>,
-		// request status change ack
-		caf::reacts_to<a_ack, a_lnk_status, lid_type, Req, ReqStatus, ReqStatus>
-	>;
+	using impl_actor_type = typename ActorType
+		::template extend_with< ack_actor_type >
+		::template extend_with< subtree_ack_actor_type >;
 
 	using actor_type = impl_actor_type<link::actor_type>;
 
@@ -105,8 +122,9 @@ public:
 	link_impl(std::string name, Flags f);
 	virtual ~link_impl();
 
-	// raw spawn actor corresponding to this impl type
-	virtual auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor;
+	static auto actor(const link& L) {
+		return caf::actor_cast<actor_type>(L.raw_actor());
+	}
 
 	// make request to given link L
 	template<typename R, typename Link, typename... Args>
@@ -118,6 +136,9 @@ public:
 	auto actorf(const Link& L, timespan timeout, Args&&... args) {
 		return blue_sky::actorf<R>( L.factor(), Link::actor(L), timeout, std::forward<Args>(args)... );
 	}
+
+	// raw spawn actor corresponding to this impl type
+	virtual auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor;
 
 	/// return type ID of link
 	virtual auto type_id() const -> std::string_view = 0;

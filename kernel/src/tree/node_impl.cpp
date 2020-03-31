@@ -14,6 +14,7 @@
 #include <bs/tree/tree.h>
 #include <bs/detail/tuple_utils.h>
 #include <bs/serialize/cafbind.h>
+#include <bs/serialize/tree.h>
 
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/random_generator.hpp>
@@ -77,16 +78,7 @@ auto node_impl::super() const -> sp_node {
 }
 
 auto node_impl::set_handle(const link& new_handle) -> void {
-	auto guard = lock<Metadata>();
-	// remove node from existing owner if it differs from owner of new handle
-	if(const auto old_handle = handle()) {
-		const auto owner = old_handle.owner();
-		if(owner && (!new_handle || owner != new_handle.owner()))
-			owner->erase(old_handle.id());
-	}
-
-	// set new handle link
-	handle_ = new_handle;
+	caf::anon_send<high_prio>(actor(), a_node_handle(), new_handle);
 }
 
 auto node_impl::handle() const -> link {

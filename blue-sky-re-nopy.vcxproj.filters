@@ -476,7 +476,13 @@
     <ClCompile Include="kernel\src\tree\link.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
+    <ClCompile Include="kernel\src\tree\link_events.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
     <ClCompile Include="kernel\src\tree\node.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\node_events.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\sym_link.cpp">

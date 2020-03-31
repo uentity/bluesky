@@ -120,8 +120,9 @@ public:
 
 	/// obtain vector of link ID keys
 	auto keys(Key ordering = Key::AnyOrder) const -> lids_v;
+	/// obtain vector of link indexes (offsets from beginning)
 	auto ikeys(Key ordering = Key::AnyOrder) const -> std::vector<std::size_t>;
-	/// obtain vector of string keys for given index type
+	/// obtain vector of leafs keys of `key_meaning` index type sorted by `ordering` key
 	auto skeys(Key key_meaning, Key ordering = Key::AnyOrder) const -> std::vector<std::string>;
 
 	// search link by given key
@@ -197,10 +198,6 @@ public:
 	auto subscribe(handle_event_cb f, Event listen_to = Event::All) const -> std::uint64_t;
 	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
-	// stops retranslating messages to this node
-	// if `deep` is true, then also disconnect each subtree node
-	auto disconnect(bool deep = true) -> void;
-
 	/// obtain link to this node conained in owner (parent) node
 	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)
 	auto handle() const -> link;
@@ -211,6 +208,8 @@ public:
 
 	/// obtain node's group ID
 	auto gid() const -> std::string;
+	/// get node's home group
+	auto home() const -> const caf::group&;
 
 	/// ctor - creates hard self link with given name
 	node(std::string custom_id = "");

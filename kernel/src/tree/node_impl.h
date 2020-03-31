@@ -12,7 +12,6 @@
 #include <bs/log.h>
 #include <bs/tree/node.h>
 #include <bs/detail/function_view.h>
-#include <bs/detail/sharded_mutex.h>
 #include "node_leafs_storage.h"
 #include "link_impl.h"
 
@@ -26,18 +25,12 @@ using existing_index = typename node::existing_index;
 /// link erase options
 enum class EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
 
-using bs_detail::shared;
-using node_impl_mutex = std::shared_mutex;
-
 /*-----------------------------------------------------------------------------
  *  node_impl
  *-----------------------------------------------------------------------------*/
-class BS_HIDDEN_API node_impl : public bs_detail::sharded_same_mutex<node_impl_mutex, 2> {
+class BS_HIDDEN_API node_impl {
 public:
 	friend class node;
-
-	// lock granularity
-	enum { Metadata, Links };
 
 	// leafs
 	links_container links_;
@@ -53,29 +46,34 @@ public:
 	// local node group
 	caf::group home_;
 
+	// ack signals that this node send to home group
+	using ack_actor_type = caf::typed_actor<
+		// ack on insert - reflect insert from sibling node actor
+		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, InsertPolicy>,
+		// ack on link move
+		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, size_t>,
+		// ack on link erase from sibling node
+		caf::reacts_to<a_ack, caf::actor, a_node_erase, lids_v>
+	>;
+
 	// append private behavior to public iface
 	using actor_type = node::actor_type::extend<
 		// join self group
 		caf::reacts_to<a_hi>,
 		// noop - sent by self to terminate siblings in group
 		caf::reacts_to<a_bye>,
-		// stop all retranslators
-		caf::reacts_to<a_node_disconnect>,
+		// rebind node to new handle
+		caf::reacts_to<a_node_handle, link>,
 		// erase link by ID with specified options
 		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>,
 
-		// ack on insert - reflect insert from sibling node actor
-		caf::reacts_to<a_ack, a_node_insert, lid_type, size_t, InsertPolicy>,
-		// ack on link move
-		caf::reacts_to<a_ack, a_node_insert, lid_type, size_t, size_t>,
-		// ack on link erase from sibling node
-		caf::reacts_to<a_ack, a_node_erase, lids_v, std::vector<std::string>>,
-
-		// track link rename
-		caf::reacts_to<a_ack, a_lnk_rename, lid_type, std::string, std::string>,
-		// track link status
-		caf::reacts_to<a_ack, a_lnk_status, lid_type, Req, ReqStatus, ReqStatus>
-	>;
+		// track leaf rename
+		caf::reacts_to<a_ack, lid_type, a_lnk_rename, std::string, std::string>,
+		// track leaf status
+		caf::reacts_to<a_ack, lid_type, a_lnk_status, Req, ReqStatus, ReqStatus>
+	>
+	// `subtree_ack_actor_type` includes `ack_actor_type`
+	::extend_with< link_impl::subtree_ack_actor_type >;
 
 	auto actor() const {
 		return caf::actor_cast<actor_type>(actor_);

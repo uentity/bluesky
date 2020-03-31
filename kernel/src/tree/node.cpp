@@ -8,7 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "node_actor.h"
-#include "ev_listener_actor.h"
 #include <bs/kernel/types_factory.h>
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
@@ -49,23 +48,12 @@ auto node::start_engine(std::string gid) -> void {
 
 auto node::raw_actor() const -> const caf::actor& { return pimpl_->actor_; }
 
+auto node::home() const -> const caf::group& { return pimpl_->home_; }
+
 auto node::gid() const -> std::string {
 	return pimpl_->actorf<std::string>(
 		*this, a_node_gid()
 	).value_or("");
-}
-
-auto node::disconnect(bool deep) -> void {
-	// disconnect self
-	caf::anon_send(pimpl_->actor(), a_node_disconnect());
-
-	if(deep) {
-		// don't follow symlinks & lazy links
-		walk(bs_shared_this<node>(), [](const sp_node&, std::list<sp_node>& subnodes, std::vector<link>&) {
-			for(const auto& N : subnodes)
-				N->disconnect(false);
-		}, true, false, false);
-	}
 }
 
 auto node::propagate_owner(bool deep) -> void {
@@ -271,117 +259,6 @@ auto node::rearrange(std::vector<std::size_t> new_order) const -> error {
 	return pimpl_->actorf<error>(
 		*this, a_node_rearrange(), std::move(new_order)
 	);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//  events handling
-//
-auto node::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t {
-	using namespace allow_enumops;
-	using baby_t = ev_listener_actor<sp_cnode>;
-
-	auto make_ev_character = [N = bs_shared_this<node>(), listen_to](baby_t* self) {
-		auto res = caf::message_handler{};
-		if(enumval(listen_to & Event::LinkRenamed)) {
-			res = res.or_else(
-				[self, wN = std::weak_ptr{N}] (
-					a_ack, a_lnk_rename, const lid_type& lid, std::string new_name, std::string old_name
-				) {
-					bsout() << "*-* node: fired LinkRenamed event" << bs_end;
-					if(auto N = wN.lock())
-						self->f(std::move(N), Event::LinkRenamed, {
-							{"link_id", to_string(lid)},
-							{"new_name", std::move(new_name)},
-							{"prev_name", std::move(old_name)}
-						});
-				}
-			);
-			bsout() << "*-* node: subscribed to LinkRenamed event" << bs_end;
-		}
-
-		if(enumval(listen_to & Event::LinkStatusChanged)) {
-			res = res.or_else(
-				[self, wN = std::weak_ptr{N}](
-					a_ack, a_lnk_status, const lid_type& lid, Req req, ReqStatus new_s, ReqStatus prev_s
-				) {
-					bsout() << "*-* node: fired LinkStatusChanged event" << bs_end;
-					if(auto N = wN.lock())
-						self->f(std::move(N), Event::LinkStatusChanged, {
-							{"link_id", to_string(lid)},
-							{"request", prop::integer(req)},
-							{"new_status", prop::integer(new_s)},
-							{"prev_status", prop::integer(prev_s)}
-						});
-				}
-			);
-			bsout() << "*-* node: subscribed to LinkStatusChanged event" << bs_end;
-		}
-
-		if(enumval(listen_to & Event::LinkInserted)) {
-			res = res.or_else(
-				[self, wN = std::weak_ptr{N}](
-					a_ack, a_node_insert, const lid_type& lid, std::size_t pos, InsertPolicy pol
-				) {
-					bsout() << "*-* node: fired LinkInserted event" << bs_end;
-					if(auto N = wN.lock())
-						self->f(std::move(N), Event::LinkInserted, {
-							{"link_id", to_string(lid)},
-							{"pos", (prop::integer)pos}
-						});
-				},
-
-				[self, wN = std::weak_ptr{N}](
-					a_ack, a_node_insert, const lid_type& lid, std::size_t to_idx, std::size_t from_idx
-				) {
-					bsout() << "*-* node: fired LinkInserted event" << bs_end;
-					if(auto N = wN.lock())
-						self->f(std::move(N), Event::LinkInserted, {
-							{"link_id", to_string(lid)},
-							{"to_idx", (prop::integer)to_idx},
-							{"from_idx", (prop::integer)from_idx}
-						});
-				}
-			);
-			bsout() << "*-* node: subscribed to LinkInserted event" << bs_end;
-		}
-
-		if(enumval(listen_to & Event::LinkErased)) {
-			res = res.or_else(
-				[self, wN = std::weak_ptr{N}](
-					a_ack, a_node_erase, const lids_v& lids, std::vector<std::string>& oids
-				) {
-					bsout() << "*-* node: fired LinkErased event" << bs_end;
-					auto N = wN.lock();
-					if(!N) return;
-
-					auto killed = prop::propdict{};
-					killed["oids"] = std::move(oids);
-					// convert link IDs to strings
-					std::vector<std::string> slids(lids.size());
-					std::transform(
-						lids.begin(), lids.end(), slids.begin(),
-						[](const lid_type& lid) { return to_string(lid); }
-					);
-
-					self->f(std::move(N), Event::LinkErased, killed);
-				}
-			);
-			bsout() << "*-* node: subscribed to LinkErased event" << bs_end;
-		}
-
-		return res;
-	};
-
-	// make shiny new subscriber actor and place into parent's room
-	auto baby = kernel::radio::system().spawn_in_group<baby_t>(
-		pimpl_->home_, pimpl_->home_, std::move(f), std::move(make_ev_character)
-	);
-	// and return ID
-	return baby.id();
-}
-
-auto node::unsubscribe(std::uint64_t event_cb_id) -> void {
-	kernel::radio::bye_actor(event_cb_id);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

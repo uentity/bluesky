@@ -19,8 +19,6 @@
 
 #include <caf/actor_cast.hpp>
 
-#include <unordered_map>
-
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 
@@ -35,16 +33,26 @@ public:
 	sp_nimpl pimpl_;
 	node_impl& impl;
 
-	// map links to retranslator actors
-	using axon_t = std::pair<std::uint64_t, std::optional<std::uint64_t>>;
-	std::unordered_map<lid_type, axon_t> axons_;
-
 	node_actor(caf::actor_config& cfg, sp_nimpl Nimpl);
 	~node_actor();
 
 	// return typed actor handle to this
 	node_impl::actor_type handle() const {
 		return caf::actor_cast<node_impl::actor_type>(address());
+	}
+
+	// pass message to upper (owner) level of tree structure
+	template<typename... Args>
+	auto forward_up(Args&&... args) -> void {
+		// node forward messages to handle's actor
+		if(auto h = impl.handle())
+			send(link_impl::actor(h), std::forward<Args>(args)...);
+	}
+
+	// forward 'ack' message to upper level, auto prepend it with this link ID info
+	template<typename... Args>
+	auto ack_up(Args&&... args) -> void {
+		forward_up(a_ack(), this, std::forward<Args>(args)...);
 	}
 
 	auto make_behavior() -> behavior_type override;
@@ -75,11 +83,6 @@ public:
 	) -> node::insert_status;
 
 	auto erase(const lid_type& key, EraseOpts opts = EraseOpts::Normal) -> size_t;
-
-	auto retranslate_from(const link& L) -> void;
-	auto stop_retranslate_from(const link& L) -> void;
-	// stops retranslating from all leafs
-	auto disconnect() -> void;
 };
 
 // helper for correct spawn of node actor

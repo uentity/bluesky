@@ -80,6 +80,11 @@ noexcept(noexcept( f(std::declval<lid_type>()) )) -> void {
 /// can be passed as callback that does nothing
 inline constexpr auto noop = [](auto&&...) {};
 
+template<typename R>
+constexpr auto noop_r(R res = {}) {
+	return [res = std::move(res)](auto&&...) mutable -> R { return res; };
+}
+
 /// forward declare major types
 class link;
 class link_impl;

@@ -138,7 +138,6 @@
     <ClInclude Include="kernel\src\tree\node_extraidx_actor.h" />
     <ClInclude Include="kernel\src\tree\node_impl.h" />
     <ClInclude Include="kernel\src\tree\node_leafs_storage.h" />
-    <ClInclude Include="kernel\src\tree\node_retranslators.h" />
     <ClInclude Include="kernel\src\tree\request_impl.h" />
     <ClInclude Include="kernel\src\tree\tree_impl.h" />
   </ItemGroup>
@@ -193,13 +192,14 @@
     <ClCompile Include="kernel\src\tree\link.cpp" />
     <ClCompile Include="kernel\src\tree\link_actor.cpp" />
     <ClCompile Include="kernel\src\tree\link_actor_data.cpp" />
+    <ClCompile Include="kernel\src\tree\link_events.cpp" />
     <ClCompile Include="kernel\src\tree\link_impl.cpp" />
     <ClCompile Include="kernel\src\tree\nil_link.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
     <ClCompile Include="kernel\src\tree\node_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\node_events.cpp" />
     <ClCompile Include="kernel\src\tree\node_extraidx_actor.cpp" />
     <ClCompile Include="kernel\src\tree\node_impl.cpp" />
-    <ClCompile Include="kernel\src\tree\node_retranslators.cpp" />
     <ClCompile Include="kernel\src\tree\sym_link.cpp" />
     <ClCompile Include="kernel\src\tree\tree.cpp" />
     <ClCompile Include="kernel\src\tree\tree_async.cpp" />

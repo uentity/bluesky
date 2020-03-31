@@ -56,13 +56,6 @@ struct leafs_view {
 } // eof hidden namespace
 
 BSS_FCN_INL_BEGIN(serialize, node_impl)
-	[[maybe_unused]] auto guard = [&] {
-		if constexpr(Archive::is_saving::value)
-			return t.lock(shared);
-		else // don't lock when loading - object is not yet 'usable' and fully constructed
-			return 0;
-	}();
-
 	ar(make_nvp("leafs", leafs_view(t)));
 BSS_FCN_INL_END(save, node_impl)
 

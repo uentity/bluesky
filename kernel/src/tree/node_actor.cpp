@@ -9,7 +9,6 @@
 
 #include "node_actor.h"
 #include "node_extraidx_actor.h"
-#include "node_retranslators.h"
 #include "link_impl.h"
 
 #include <bs/log.h>
@@ -23,6 +22,7 @@
 #include <caf/typed_event_based_actor.hpp>
 
 #include <cereal/types/optional.hpp>
+#include <cereal/types/vector.hpp>
 
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
@@ -40,7 +40,7 @@ static auto adbg(node_actor* A) -> caf::actor_ostream {
 	if(auto pgrp = A->home(unsafe).get())
 		res << "[" << pgrp->identifier() << "]";
 	else
-		res << "[null grp]";
+		res << "[homeless]";
 	return res <<  ": ";
 }
 
@@ -66,7 +66,9 @@ node_actor::node_actor(caf::actor_config& cfg, sp_nimpl Nimpl)
 		}
 	});
 
-	set_default_handler(caf::drop);
+	set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
+		return caf::none;
+	});
 }
 
 node_actor::~node_actor() = default;
@@ -88,9 +90,6 @@ auto node_actor::goodbye() -> void {
 		send(H, a_bye());
 		leave(H);
 	}
-
-	// unload retranslators from leafs
-	disconnect();
 }
 
 auto node_actor::name() const -> const char* {
@@ -117,45 +116,6 @@ auto node_actor::gid(unsafe_t) const -> std::string {
 	return impl.home_ ? impl.home_.get()->identifier() : "";
 }
 
-auto node_actor::disconnect() -> void {
-	for(const auto& L : impl.links_)
-		stop_retranslate_from(L);
-}
-
-auto node_actor::retranslate_from(const link& L) -> void {
-	const auto lid = L.id();
-	auto& AS = system();
-
-	// add self to link's group and listen for events
-	join(L.home());
-
-	// spawn link retranslator first
-	auto axon = axon_t{};
-	// for hard links also listen to subtree
-	// [TODO] move this part to `link::propagate_handle()`
-	if(L.type_id() == hard_link::type_id_())
-		axon.second = AS.spawn(node_retranslator, home(), lid, link::actor(L)).id();
-
-	axons_[lid] = std::move(axon);
-	//adbg(this) << "*-* node: retranslating events from link " << L->name() << std::endl;
-}
-
-auto node_actor::stop_retranslate_from(const link& L) -> void {
-	// stop listening to link's events
-	leave(L.home());
-
-	auto prs = axons_.find(L.id());
-	if(prs == axons_.end()) return;
-	auto& rs = prs->second;
-	auto& Reg = system().registry();
-
-	// .. and for subnode
-	if(rs.second)
-		send<high_prio>(caf::actor_cast<caf::actor>(Reg.get(*rs.second)), a_bye());
-	axons_.erase(prs);
-	//adbg(this) << "*-* node: stopped retranslating events from link " << L->name() << std::endl;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 //  leafs insert & erase
 //
@@ -166,12 +126,10 @@ auto node_actor::insert(
 		to_string(L.id()) << std::endl;
 
 	return impl.insert(std::move(L), pol, [=](const link& child_L) {
-		// create link events retranlator
-		retranslate_from(child_L);
 		// send message that link inserted (with position)
 		if(!silent) send<high_prio>(
-			home(unsafe), a_ack(), a_node_insert(), child_L.id(),
-			impl.index(impl.find<Key::ID>(child_L.id())), pol
+			home(unsafe), a_ack(), this, a_node_insert(),
+			child_L.id(), impl.index(impl.find<Key::ID>(child_L.id())), pol
 		);
 	});
 }
@@ -197,11 +155,11 @@ auto node_actor::insert(
 	if(!silent) {
 		if(res.second) // normal insert
 			send<high_prio>(
-				home(unsafe), a_ack(), a_node_insert(), std::move(lid), to_idx, pol
+				home(unsafe), a_ack(), this, a_node_insert(), std::move(lid), to_idx, pol
 			);
 		else if(to != from) // move
 			send<high_prio>(
-				home(unsafe), a_ack(), a_node_insert(), std::move(lid), to_idx, *res_idx
+				home(unsafe), a_ack(), this, a_node_insert(), std::move(lid), to_idx, *res_idx
 			);
 	}
 	return { to_idx, res.second };
@@ -211,24 +169,19 @@ auto node_actor::insert(
 NAMESPACE_BEGIN()
 
 auto on_erase(const link& L, node_actor& self) {
-	self.stop_retranslate_from(L);
-
 	// collect link IDs of all deleted subtree elements
 	// first elem is erased link itself
 	lids_v lids{ L.id() };
-	std::vector<std::string> oids{ L.oid() };
-	walk(L, [&lids, &oids](const link&, std::list<link> Ns, std::vector<link> Os) {
+	walk(L, [&lids](const link&, std::list<link> Ns, std::vector<link> Os) {
 		const auto dump_erased = [&](const link& erl) {
 			lids.push_back(erl.id());
-			oids.push_back(erl.oid());
 		};
 		std::for_each(Ns.cbegin(), Ns.cend(), dump_erased);
-		std::for_each(Os.cbegin(), Os.cend(), dump_erased);
 	});
 
 	// send message that link erased
 	self.send<high_prio>(
-		self.home(unsafe), a_ack(), a_node_erase(), std::move(lids), std::move(oids)
+		self.home(unsafe), a_ack(), &self, a_node_erase(), std::move(lids)
 	);
 }
 
@@ -239,7 +192,7 @@ auto node_actor::erase(const lid_type& victim, EraseOpts opts) -> size_t {
 	std::size_t res = 0;
 	error::eval_safe([&] { res = impl.erase<Key::ID>(
 		victim,
-		enumval(opts & EraseOpts::Silent) ? noop: function_view{ ppf },
+		enumval(opts & EraseOpts::Silent) ? noop : function_view{ ppf },
 		enumval(opts & EraseOpts::DontResetOwner)
 	); });
 	return res;
@@ -260,13 +213,26 @@ auto node_actor::make_behavior() -> behavior_type {
 
 		[=](a_node_gid) -> std::string { return gid(); },
 
-		[=](a_node_disconnect) { disconnect(); },
-
 		// propagate owner
 		//[=](a_node_propagate_owner, bool deep) { impl.propagate_owner(deep); },
 
 		// get handle
 		[=](a_node_handle) { return link{ impl.handle() }; },
+
+		// set handle
+		[=](a_node_handle, link new_handle) {
+			// remove node from existing owner if it differs from owner of new handle
+			if(const auto old_handle = impl.handle()) {
+				const auto owner = old_handle.owner();
+				if(owner && (!new_handle || owner != new_handle.owner()))
+					owner->erase(old_handle.id());
+			}
+
+			if(new_handle)
+				impl.handle_ = new_handle;
+			else
+				impl.handle_.reset();
+		},
 
 		// get size
 		[=](a_node_size) { return impl.size(); },
@@ -487,53 +453,82 @@ auto node_actor::make_behavior() -> behavior_type {
 		},
 
 		/// Non-public extensions
-		// 13. erase link by ID with specified options
+		// erase link by ID with specified options
 		[=](a_node_erase, const lid_type& lid, EraseOpts opts) -> std::size_t {
 			return erase(lid, opts);
 		},
 
 		// ack on insert - reflect insert from sibling node actor
-		[=](a_ack, a_node_insert, const lid_type& lid, size_t pos, InsertPolicy pol) {
-			adbg(this) << "{a_node_insert ack}" << std::endl;
-			if(auto S = current_sender(); S != this) {
-				request(caf::actor_cast<caf::actor>(S), impl.timeout, a_node_find(), lid)
-				.then([=](link L) {
-					// [NOTE] silent insert
-					insert(std::move(L), pos, pol, true);
-				});
-			}
+		[=](a_ack, caf::actor origin, a_node_insert, const lid_type& lid, size_t pos, InsertPolicy pol) {
+			adbg(this) << "{a_node_insert ack}: " << pos << std::endl;
+			// notify handle about data change
+			if(origin == this)
+				forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
+			forward_up(a_ack(), std::move(origin), a_node_insert(), lid, pos, pol);
+
+			//if(origin != this) {
+			//	request(origin, impl.timeout, a_node_find(), lid)
+			//	.then([=](link L) {
+			//		// [NOTE] silent insert
+			//		insert(std::move(L), pos, pol, true);
+			//	});
+			//}
 		},
 		// ack on move
-		[=](a_ack, a_node_insert, const lid_type& lid, size_t to, size_t from) {
-			if(auto S = current_sender(); S != this) {
-				if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>()) {
-					insert(*p, to, InsertPolicy::AllowDupNames, true);
-				}
-			}
+		[=](a_ack, caf::actor origin, a_node_insert, const lid_type& lid, size_t to, size_t from) {
+			adbg(this) << "{a_node_insert ack} [move]: " << from << " -> " << to << std::endl;
+			// notify handle about data change
+			if(origin == this)
+				forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
+			forward_up(a_ack(), std::move(origin), a_node_insert(), lid, to, from);
+
+			//if(origin != this) {
+			//	if(auto p = impl.find<Key::ID, Key::ID>(lid); p != impl.end<Key::ID>()) {
+			//		insert(*p, to, InsertPolicy::AllowDupNames, true);
+			//	}
+			//}
 		},
 
 		// ack on erase - reflect erase from sibling node actor
-		[=](a_ack, a_node_erase, const lids_v& lids, const std::vector<std::string>&) {
-			if(auto S = current_sender(); S != this && !lids.empty()) {
-				erase(lids.front(), EraseOpts::Silent);
-			}
+		[=](a_ack, caf::actor origin, a_node_erase, lids_v lids) {
+			adbg(this) << "{a_node_erase ack}" << std::endl;
+			// notify handle about data change
+			if(origin == this)
+				forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
+			forward_up(a_ack(), std::move(origin), a_node_erase(), std::move(lids));
+
+			//if(auto S = current_sender(); S != this && !lids.empty()) {
+			//	erase(lids.front(), EraseOpts::Silent);
+			//}
 		},
 
-		// handle link rename
-		[=](a_ack, a_lnk_rename, const lid_type& lid, const std::string& new_, const std::string& old_) {
-			if(current_sender() != this) {
-				adbg(this) << "{a_lnk_rename}" << std::endl;
-				impl.refresh(lid);
-				// retranslate message to home
-				send(impl.home_, a_ack(), a_lnk_rename(), lid, new_, old_);
-			}
+		// handle my leaf rename
+		[=](a_ack, const lid_type& lid, a_lnk_rename, std::string new_, std::string old_) {
+			adbg(this) << "{a_lnk_rename ack}" << std::endl;
+			impl.refresh(lid);
+			ack_up(lid, a_lnk_rename(), std::move(new_), std::move(old_));
+			// notify handle about data change
+			forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
 		},
 
-		// track link status
-		[=](a_ack, a_lnk_status, const lid_type& lid, Req req, ReqStatus new_, ReqStatus old_) {
-			// retranslate -> home
-			if(current_sender() != this)
-				send(impl.home_, a_ack(), a_lnk_status(), lid, req, new_, old_);
+		// track my leaf status
+		[=](a_ack, const lid_type& lid, a_lnk_status, Req req, ReqStatus new_, ReqStatus old_) {
+			ack_up(lid, a_lnk_status(), req, new_, old_);
+		},
+
+		// retranslate deep links rename & status
+		[=](
+			a_ack, caf::actor N, const lid_type& lid,
+			a_lnk_rename, std::string new_name, std::string old_name
+		) {
+			forward_up(a_ack(), std::move(N), lid, a_lnk_rename(), std::move(new_name), std::move(old_name));
+		},
+
+		[=](
+			a_ack, caf::actor N, const lid_type& lid,
+			a_lnk_status, Req req, ReqStatus new_rs, ReqStatus old_rs
+		) {
+			forward_up(a_ack(), std::move(N), lid, a_lnk_status(), req, new_rs, old_rs);
 		},
 
 	}.unbox();

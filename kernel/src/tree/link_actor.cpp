@@ -62,7 +62,9 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
 		}
 	});
 
-	set_default_handler(caf::drop);
+	set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
+		return caf::none;
+	});
 }
 
 link_actor::~link_actor() = default;
@@ -92,16 +94,26 @@ auto link_actor::name() const -> const char* {
 }
 
 auto link_actor::rename(std::string new_name, bool silent) -> void {
-	adbg(this) << "<- a_lnk_rename " << (silent ? "silent: " : "loud: ") << impl.name_ <<
+	adbg(this) << "<- a_lnk_rename " << (silent ? "[silent]: " : ": ") << impl.name_ <<
 		" -> " << new_name << std::endl;
 
 	auto old_name = impl.name_;
 	impl.name_ = std::move(new_name);
 	// send rename ack message
 	if(!silent)
-		send<high_prio>(impl.home, a_ack(), a_lnk_rename(), impl.id_, impl.name_, std::move(old_name));
+		send<high_prio>(impl.home, a_ack(), a_lnk_rename(), impl.name_, std::move(old_name));
 }
 
+auto link_actor::rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs, bool silent)
+-> ReqStatus {
+	return impl.rs_reset(
+		req, cond, new_rs, prev_rs,
+		silent ? noop :
+			function_view{[=](Req req, ReqStatus new_s, ReqStatus old_s) {
+				send<high_prio>(impl.home, a_ack(), a_lnk_status(), req, new_s, old_s);
+			}}
+	);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //  behavior
@@ -113,13 +125,13 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			adbg(this) << "<- a_lnk_bye " << std::endl;
 		},
 
-		/// 1. get id
+		// get id
 		[=](a_lnk_id) -> lid_type {
 			adbg(this) << "<- a_lnk_id: " << to_string(impl.id_) << std::endl;
 			return impl.id_;
 		},
 
-		// 2. get oid
+		// get oid
 		[=](a_lnk_oid) -> std::string {
 			// [NOTE] assume that if status is OK then getting data is fast (data is cached)
 			auto res = std::string{};
@@ -133,7 +145,7 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			return res;
 		},
 
-		// 3. get object type_id
+		// get object type_id
 		[=](a_lnk_otid) -> std::string {
 			// [NOTE] assume that if status is OK then getting data is fast (data is cached)
 			auto res = std::string{};
@@ -148,7 +160,7 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			return res;
 		},
 
-		// 4. get node's group ID
+		// get node's group ID
 		[=](a_node_gid) -> result_or_errbox<std::string> {
 			adbg(this) << "<- a_node_gid" << std::endl;
 			auto res = result_or_err<std::string>{};
@@ -163,56 +175,53 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			return res;
 		},
 
-		/// 5. get name
+		// get name
 		[=](a_lnk_name) -> std::string {
 			adbg(this) << "<- a_lnk_name: " << impl.name_ << std::endl;
 			return impl.name_;
 		},
 
-		/// 6. rename
+		// rename
 		[=](a_lnk_rename, std::string new_name, bool silent) -> void {
 			rename(std::move(new_name), silent);
 		},
-		// 7. rename ack
-		[=](a_ack, a_lnk_rename, const lid_type&, std::string new_name, const std::string& old_name) -> void {
-			adbg(this) << "<- a_lnk_rename ack: " << old_name << "->" << new_name << std::endl;
-			if(current_sender() != this)
-				rename(std::move(new_name), true);
+		// rename ack
+		[=](a_ack, a_lnk_rename, std::string new_name, std::string old_name) -> void {
+			adbg(this) << "<- a_lnk_rename ack: " << old_name << " -> " << new_name << std::endl;
+			// retranslate ack to upper level
+			ack_up(a_lnk_rename(), std::move(new_name), std::move(old_name));
 		},
 
-		// 8. get status
+		// get status
 		[=](a_lnk_status, Req req) -> ReqStatus { return pimpl_->req_status(req); },
 
-		// 9. change status
+		// change status
 		[=](a_lnk_status, Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs) -> ReqStatus {
 			adbg(this) << "<- a_lnk_status: " << to_string(req) << " " <<
 				to_string(prev_rs) << "->" << to_string(new_rs) << std::endl;
-			return impl.rs_reset(
-				req, cond, new_rs, prev_rs,
-				[=](Req req, ReqStatus new_s, ReqStatus old_s) {
-					send<high_prio>(impl.home, a_ack(), a_lnk_status(), impl.id_, req, new_s, old_s);
-				}
-			);
+			return rs_reset(req, cond, new_rs, prev_rs);
 		},
 
-		// 10. reset status ack
-		[=](a_ack, a_lnk_status, const lid_type&, Req req, ReqStatus new_s, ReqStatus prev_s) {
+		// reset status ack
+		[=](a_ack, a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s) {
 			adbg(this) << "<- a_lnk_status ack: " << to_string(req) << " " <<
 				to_string(prev_s) << "->" << to_string(new_s) << std::endl;
+			// retranslate ack to upper level
+			ack_up(a_lnk_status(), req, new_s, prev_s);
 		},
 
-		// 11, 12. get/set flags
+		// get/set flags
 		[=](a_lnk_flags) { return pimpl_->flags_; },
 		[=](a_lnk_flags, Flags f) { pimpl_->flags_ = f; },
 
-		// 13. obtain inode
+		// obtain inode
 		// [NOTE] assume it's a fast call, override behaviour where needed (sym_link for ex)
 		[=](a_lnk_inode) -> result_or_errbox<inodeptr> {
 			adbg(this) << "<- a_lnk_inode" << std::endl;
 			return impl.get_inode();
 		},
 
-		// 14. get data
+		// get data
 		[=](a_lnk_data, bool wait_if_busy) -> caf::result< result_or_errbox<sp_obj> > {
 			adbg(this) << "<- a_lnk_data, status = " <<
 				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
@@ -225,7 +234,7 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			return res;
 		},
 
-		// 15. get data node
+		// get data node
 		[=](a_lnk_dnode, bool wait_if_busy) -> caf::result< result_or_errbox<sp_node> > {
 			adbg(this) << "<- a_lnk_dnode, status = " <<
 				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
@@ -238,9 +247,10 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 			return res;
 		},
 
-		// 16. apply modifier function on pointee
+		// apply modifier function on pointee
 		// set `Data` status depending on error returned from modifier
 		[=](a_apply, data_modificator_f m, bool silent) mutable -> caf::result<error::box> {
+			adbg(this) << "<- a_apply" << std::endl;
 			auto res = make_response_promise();
 
 			request(caf::actor{this}, caf::duration{def_timeout(true)}, a_lnk_data(), true)
@@ -248,15 +258,9 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 
 				auto finally = [=](auto&& er) mutable {
 					// set status after modificator ivoked
-					pimpl_->rs_reset(
+					rs_reset(
 						Req::Data, ReqReset::Always,
-						er.ok() ? ReqStatus::OK : ReqStatus::Error, ReqStatus::Void,
-						silent ? noop :
-							function_view{[=](Req req, ReqStatus new_s, ReqStatus old_s) {
-								send<high_prio>(
-									impl.home, a_ack(), a_lnk_status(), impl.id_, req, new_s, old_s
-								);
-							}}
+						er.ok() ? ReqStatus::OK : ReqStatus::Error, ReqStatus::Void, silent
 					);
 					// deliver error to callee
 					res.deliver(er.pack());
@@ -268,7 +272,7 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 					return;
 				}
 
-				// invoke modificator
+				// put modificator into object's queue
 				(*obj)->apply(
 					launch_async,
 					[m = std::move(m), finally = std::move(finally)](sp_obj obj) mutable -> error {
@@ -281,6 +285,38 @@ auto link_actor::make_typed_behavior() -> typed_behavior {
 
 			});
 			return const_cast<const caf::response_promise&>(res);
+		},
+
+		// retranslate pointee node acks to owner's home group
+		[=](
+			a_ack, caf::actor N, const lid_type& lid,
+			a_lnk_rename, std::string new_name, std::string old_name
+		) {
+			adbg(this) << "<- [ack] [deep] a_lnk_rename" << std::endl;
+			forward_up(a_ack(), std::move(N), lid, a_lnk_rename(), std::move(new_name), std::move(old_name));
+		},
+
+		[=](
+			a_ack, caf::actor N, const lid_type& lid,
+			a_lnk_status, Req req, ReqStatus new_rs, ReqStatus old_rs
+		) {
+			adbg(this) << "<- [ack] [deep] a_lnk_status" << std::endl;
+			forward_up(a_ack(), std::move(N), lid, a_lnk_status(), req, new_rs, old_rs);
+		},
+
+		[=](a_ack, caf::actor N, a_node_insert, const lid_type& lid, size_t pos, InsertPolicy pol) {
+			adbg(this) << "<- [ack] [deep] a_node_insert" << std::endl;
+			forward_up(a_ack(), std::move(N), a_node_insert(), lid, pos, pol);
+		},
+
+		[=](a_ack, caf::actor N, a_node_insert, const lid_type& lid, size_t pos1, size_t pos2) {
+			adbg(this) << "<- [ack] [deep] a_node_insert [move]" << std::endl;
+			forward_up(a_ack(), std::move(N), a_node_insert(), lid, pos1, pos2);
+		},
+
+		[=](a_ack, caf::actor N, a_node_erase, lids_v erased_leafs) {
+			adbg(this) << "<- [ack] [deep] a_node_erase" << std::endl;
+			forward_up(a_ack(), std::move(N), a_node_erase(), std::move(erased_leafs));
 		}
 	};
 }

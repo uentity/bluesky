@@ -38,28 +38,29 @@ struct ev_listener_actor : caf::event_based_actor {
 	safe_callback_t f;
 
 	// listen to messages from this group
-	caf::group grp;
+	caf::group home;
 
 	ev_listener_actor(
 		caf::actor_config& cfg, caf::group tgt_grp, callback_t cb,
 		std::function< caf::message_handler(ev_listener_actor*) > make_event_behavior
 	)
-		: super(cfg), f(make_safe_callback(std::move(cb))), grp(std::move(tgt_grp))
+		: super(cfg), f(make_safe_callback(std::move(cb))), home(std::move(tgt_grp))
 	{
 		// silently drop all other messages not in my character
-		set_default_handler(caf::drop);
+		set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
+			return caf::none;
+		});
 		// self-register
 		kernel::radio::system().registry().put(id(), this);
 
 		// generate & remember self behavior
 		character = make_event_behavior(this).or_else(caf::message_handler{
-			[=](a_bye) { disconnect(); }
+			[=](a_bye) { quit(); }
 		});
 	}
 
-	auto disconnect() -> void {
-		kernel::radio::system().registry().erase(id());
-		leave(grp);
+	auto on_exit() -> void override {
+		leave(home);
 	}
 
 	auto make_behavior() -> behavior_type override {

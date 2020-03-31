@@ -273,7 +273,6 @@ void py_bind_node(py::module& m) {
 		// events subscrition
 		.def("subscribe", &node::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
 		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
-		.def("disconnect", &node::disconnect, "deep"_a = true, "Stop receiving messages from tree", nogil)
 	;
 
 	// [TODO] remove it later (added for compatibility)

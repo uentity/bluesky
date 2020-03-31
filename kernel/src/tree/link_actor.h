@@ -48,15 +48,33 @@ public:
 		return caf::actor_cast<caf::actor>(address());
 	}
 
-	/// get pointer to object link is pointing to, never returns invalid (NULL) sp_obj
+	// forward call to impl + send notification to self group
+	auto rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs, bool silent = false)
+	-> ReqStatus;
+
+	auto rename(std::string new_name, bool silent = false) -> void;
+
+	// pass message to upper (owner) level of tree structure
+	template<typename... Args>
+	auto forward_up(Args&&... args) -> void {
+		// link forward messages directly to owner's home group
+		if(auto master = impl.owner_.lock())
+			send(master->home(), std::forward<Args>(args)...);
+	}
+
+	// forward 'ack' message to upper level, auto prepend it with this link ID info
+	template<typename... Args>
+	auto ack_up(Args&&... args) -> void {
+		forward_up(a_ack(), impl.id_, std::forward<Args>(args)...);
+	}
+
+	// get pointer to object link is pointing to, never returns invalid (NULL) sp_obj
 	using obj_processor_f = std::function<  void(result_or_errbox<sp_obj>) >;
 	virtual auto data_ex(obj_processor_f cb, ReqOpts opts) -> void;
 
-	/// return tree::node if contained object is a node, never returns invalid (NULL) sp_obj
+	// return tree::node if contained object is a node, never returns invalid (NULL) sp_obj
 	using node_processor_f = std::function< void(result_or_errbox<sp_node>) >;
 	virtual auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void;
-
-	auto rename(std::string new_name, bool silent = false) -> void;
 
 	// returns generic link behavior
 	auto make_typed_behavior() -> typed_behavior;
