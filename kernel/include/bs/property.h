@@ -108,14 +108,14 @@ constexpr decltype(auto) get(U&& p) {
 }
 
 template<typename T, typename U>
-constexpr auto get_if(U* p) {
+constexpr auto get_if(U* p) noexcept {
 	if constexpr(detail::is_prop_v<U> && detail::can_carry_type_v<T>)
 		return std::get_if<T>(p);
 }
 
 /// Intended to appear on right side, that's why const refs
 template<typename T>
-constexpr auto get_or(const property* p, const T& def_value) -> const T& {
+constexpr auto get_or(const property* p, const T& def_value) noexcept -> const T& {
 	if constexpr(detail::can_carry_type_v<T>) {
 		auto pv = std::get_if<T>(p);
 		return pv ? *pv : def_value;
@@ -128,7 +128,7 @@ constexpr auto get_or(const property* p, const T& def_value) -> const T& {
 /// If property doesn't hold such alternative,
 /// return if value was found and updated
 template<typename From = void, typename To = void>
-constexpr bool extract(const property& source, To& target) {
+constexpr bool extract(const property& source, To& target) noexcept {
 	using carryT = std::conditional_t< std::is_same_v<From, void>, To, From >;
 	if constexpr(detail::can_carry_type_v<carryT>) {
 		if(std::holds_alternative<carryT>(source)) {
@@ -140,11 +140,11 @@ constexpr bool extract(const property& source, To& target) {
 }
 
 /// check if property holds 'None' value (null `sp_obj`)
-constexpr bool is_none(const property& P) {
+constexpr bool is_none(const property& P) noexcept {
 	return std::holds_alternative<object>(P) && get<object>(P) == nullptr;
 }
 
-inline auto none() { return property{ sp_obj() }; }
+inline auto none() noexcept { return property{ sp_obj() }; }
 
 /// custom analog of `std::visit` to fix compile issues with VS
 template<

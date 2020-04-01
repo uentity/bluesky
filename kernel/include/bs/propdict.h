@@ -174,14 +174,14 @@ constexpr decltype(auto) get(U&& pdict, std::string_view key) {
 }
 
 template<typename T, typename U>
-constexpr decltype(auto) get_if(U* pdict, std::string_view key) {
+constexpr decltype(auto) get_if(U* pdict, std::string_view key) noexcept {
 	auto pval = pdict->find(key);
 	return get_if<T>(pval != pdict->end() ? &pval->second : nullptr);
 }
 
 /// Intended to appear on right side, that's why const refs
 template<typename T, typename U>
-constexpr auto get_or(U* pdict, std::string_view key, const T& def_value) -> const T& {
+constexpr auto get_or(U* pdict, std::string_view key, const T& def_value) noexcept -> const T& {
 	auto pval = pdict->find(key);
 	if(pval != pdict->end())
 		return get_or<T>(&pval->second, def_value);
@@ -192,7 +192,7 @@ constexpr auto get_or(U* pdict, std::string_view key, const T& def_value) -> con
 /// if value isn't found, target value is not modified
 /// return if value was found and updated
 template<typename From = void, typename To = void>
-auto extract(const propdict& pdict, std::string_view key, To& target) {
+auto extract(const propdict& pdict, std::string_view key, To& target) noexcept {
 	auto pval = pdict.find(key);
 	if(pval != pdict.end())
 		return extract<From>(pval->second, target);
