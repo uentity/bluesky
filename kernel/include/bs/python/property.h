@@ -16,7 +16,8 @@
 #include "../property.h"
 #include "../propdict.h"
 
-// propbooks are opaque
+// propdict & propbooks are opaque
+PYBIND11_MAKE_OPAQUE(blue_sky::prop::propdict);
 PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_s);
 PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_i);
 
