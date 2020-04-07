@@ -112,9 +112,7 @@ public:
 		// get data
 		caf::replies_to<a_lnk_data, bool>::with<result_or_errbox<sp_obj>>,
 		// get data node
-		caf::replies_to<a_lnk_dnode, bool>::with<result_or_errbox<sp_node>>,
-		// modify data
-		caf::replies_to<a_apply, data_modificator_f, bool>::with<error::box>
+		caf::replies_to<a_lnk_dnode, bool>::with<result_or_errbox<sp_node>>
 	>;
 
 	/// empty ctor will construct nil link

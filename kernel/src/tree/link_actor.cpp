@@ -21,8 +21,6 @@
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::data_modificator_f)
-
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace allow_enumops;
 using namespace kernel::radio;
@@ -227,47 +225,6 @@ return {
 			);
 			return res;
 		},
-
-		// apply modifier function on pointee
-		// set `Data` status depending on error returned from modifier
-		[=](a_apply, data_modificator_f m, bool silent) mutable -> caf::result<error::box> {
-			adbg(this) << "<- a_apply" << std::endl;
-			auto res = make_response_promise();
-
-			request(caf::actor{this}, caf::duration{def_timeout(true)}, a_lnk_data(), true)
-			.then([=, m = std::move(m)](result_or_errbox<sp_obj> obj) mutable {
-
-				auto finally = [=](auto&& er) mutable {
-					// set status after modificator ivoked
-					rs_reset(
-						Req::Data, ReqReset::Always,
-						er.ok() ? ReqStatus::OK : ReqStatus::Error, ReqStatus::Void, silent
-					);
-					// deliver error to callee
-					res.deliver(er.pack());
-				};
-
-				// deliver error if couldn't obtain link's data
-				if(!obj) {
-					finally(error::unpack(obj.error()));
-					return;
-				}
-
-				// put modificator into object's queue
-				(*obj)->apply(
-					launch_async,
-					[m = std::move(m), finally = std::move(finally)](sp_obj obj) mutable -> error {
-						finally(error::eval_safe(
-							[&]{ return m(std::move(obj)); }
-						));
-						return perfect;
-					}
-				);
-
-			});
-			return const_cast<const caf::response_promise&>(res);
-		},
-
 }; }
 
 auto link_actor::make_typed_behavior() -> typed_behavior {

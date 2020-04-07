@@ -16,8 +16,6 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::data_modificator_f)
-
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 using bs_detail::shared;
@@ -307,13 +305,6 @@ auto link::data_node(unsafe_t) const -> sp_node {
 	return nullptr;
 }
 
-auto link::data_apply(data_modificator_f m, bool silent) const -> error {
-	return pimpl_->actorf<error>(*this, a_apply(), std::move(m), silent);
-}
-auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -> void {
-	caf::anon_send(actor(*this), a_apply(), std::move(m), silent);
-}
-
 auto link::data_node_gid() const -> result_or_err<std::string> {
 	return pimpl_->actorf<result_or_errbox<std::string>>(*this, a_node_gid());
 }
@@ -336,14 +327,55 @@ auto link::propagate_handle() const -> result_or_err<sp_node> {
 	return pimpl_->propagate_handle(*this);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//  apply impl
+//
+template<bool AsyncApply = false>
+static auto make_apply_impl(const link& L, data_modificator_f m, bool silent) {
+return [=, wL = link::weak_ptr(L), m = std::move(m)](result_or_errbox<sp_obj> obj) mutable {
+		auto finally = [=](error&& er) {
+			// set status after modificator invoked
+			if(!silent)
+				L.rs_reset(Req::Data, er.ok() ? ReqStatus::OK : ReqStatus::Error);
+			return std::move(er);
+		};
+
+		// deliver error if couldn't obtain link's data
+		if(!obj) {
+			auto er = finally( error::unpack(obj.error()) );
+			if constexpr(!AsyncApply) return er;
+		}
+
+		// put modificator into object's queue
+		if constexpr(AsyncApply) {
+			(*obj)->apply(
+				launch_async,
+				[m = std::move(m), finally = std::move(finally)](sp_obj obj) -> error {
+					finally(error::eval_safe(
+						[&]{ return m(std::move(obj)); }
+					));
+					return perfect;
+				}
+			);
+		}
+		else
+			return finally( (*obj)->apply(std::move(m)) );
+	};
+}
+
+auto link::data_apply(data_modificator_f m, bool silent) const -> error {
+	return make_apply_impl(*this, std::move(m), silent)( data_ex(true) );
+}
+
 /*-----------------------------------------------------------------------------
  *  async API
  *-----------------------------------------------------------------------------*/
 auto link::data(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
 		actor(*this), def_timeout(true), high_priority,
-		[f = std::move(f), self_impl = pimpl_](result_or_errbox<sp_obj> eobj) {
-			f(std::move(eobj), link(self_impl));
+		[f = std::move(f), wself = weak_ptr(*this)](result_or_errbox<sp_obj> eobj) {
+			if(auto self = wself.lock())
+				f(std::move(eobj), std::move(self));
 		},
 		a_lnk_data(), true
 	);
@@ -352,10 +384,19 @@ auto link::data(process_data_cb f, bool high_priority) const -> void {
 auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
 		actor(*this), def_timeout(true), high_priority,
-		[f = std::move(f), self_impl = pimpl_](result_or_errbox<sp_node> eobj) {
-			f(std::move(eobj), link(self_impl));
+		[f = std::move(f), wself = weak_ptr(*this)](result_or_errbox<sp_node> eobj) {
+			if(auto self = wself.lock())
+				f(std::move(eobj), std::move(self));
 		},
 		a_lnk_dnode(), true
+	);
+}
+
+auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -> void {
+	anon_request(
+		actor(*this), def_timeout(true), false,
+		make_apply_impl<true>(*this, std::move(m), silent),
+		a_lnk_data(), true
 	);
 }
 
