@@ -650,6 +650,9 @@
     <ClCompile Include="kernel\src\serialize\object_formatter.cpp">
       <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
+    <ClCompile Include="kernel\src\serialize\objfrm_manager.cpp">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
     <ClCompile Include="kernel\src\serialize\tree_fs_input.cpp">
       <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>

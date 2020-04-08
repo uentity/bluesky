@@ -7,10 +7,15 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/atoms.h>
+#include <bs/timetypes.h>
 #include <bs/tree/errors.h>
 #include <bs/serialize/serialize_decl.h>
 
 #include <cereal/archives/json.hpp>
+
+#include <caf/typed_actor.hpp>
+#include <caf/typed_event_based_actor.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -19,6 +24,9 @@
 NAMESPACE_BEGIN(blue_sky::detail)
 namespace fs = std::filesystem;
 
+/*-----------------------------------------------------------------------------
+ *  Manage link file streams and dirs during tree save/load
+ *-----------------------------------------------------------------------------*/
 template<bool Saving>
 struct file_heads_manager {
 	using Error = tree::Error;
@@ -44,7 +52,6 @@ struct file_heads_manager {
 	using neck_t = typename trait_t::neck_t;
 	using head_t = typename trait_t::head_t;
 	static constexpr auto neck_mode = trait_t::neck_mode;
-
 
 	// ctor
 	file_heads_manager(std::string root_fname, std::string objects_dirname = {})
@@ -162,6 +169,41 @@ struct file_heads_manager {
 
 	std::list<neck_t> necks_;
 	std::list<head_t> heads_;
+};
+
+/*-----------------------------------------------------------------------------
+ *  handle objects save/load jobs
+ *-----------------------------------------------------------------------------*/
+using objfrm_manager_t = caf::typed_actor<
+	// launch object formatting job
+	caf::reacts_to<
+		caf::actor /*self*/, sp_cobj /*what*/, std::string /*formatter name*/, std::string /*filename*/
+	>,
+	// accept result of finished job
+	caf::reacts_to< error::box >,
+	// return collected job errors
+	caf::replies_to< a_ack >::with< std::vector<error::box> >
+>;
+
+struct BS_HIDDEN_API objfrm_manager : objfrm_manager_t::base {
+	using actor_type = objfrm_manager_t;
+
+	objfrm_manager(caf::actor_config& cfg, bool is_saving);
+
+	auto make_behavior() -> behavior_type override;
+
+	static auto wait_jobs_done(objfrm_manager_t self, timespan how_long) -> std::vector<error>;
+
+private:
+	auto cut_save_errors();
+
+	const bool is_saving_;
+
+	// errors collection
+	std::vector<error::box> er_stack_;
+	caf::response_promise boxed_errs_;
+	// track running savers
+	size_t nstarted_ = 0, nfinished_ = 0;
 };
 
 NAMESPACE_END(blue_sky::detail)

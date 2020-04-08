@@ -37,11 +37,12 @@ namespace fs = std::filesystem;
 //
 struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	using heads_mgr_t = detail::file_heads_manager<true>;
+	using fmanager_t = detail::objfrm_manager;
 	using Error = tree::Error;
 
 	impl(std::string root_fname, std::string objects_dirname) :
 		heads_mgr_t{ std::move(root_fname), std::move(objects_dirname) },
-		manager_(kernel::radio::system().spawn<savers_manager>())
+		manager_(kernel::radio::system().spawn<fmanager_t>(true))
 	{}
 
 	auto begin_link(const tree::link& L) -> error {
@@ -159,7 +160,10 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			(**cur_head)(cereal::make_nvp( "object", obj ));
 
 		// 4. and actually save object data to file
-		caf::anon_send(manager_, obj.shared_from_this(), obj_fmt, fs::absolute(*obj_path).u8string());
+		caf::anon_send(
+			manager_, caf::actor_cast<caf::actor>(manager_),
+			obj.shared_from_this(), obj_fmt, fs::absolute(*obj_path).u8string()
+		);
 		// defer wait until save completes
 		if(!has_wait_deferred_) {
 			ar(cereal::defer(cereal::Functor{ [](auto& ar){ ar.wait_objects_saved(); } }));
@@ -193,93 +197,8 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		return false;
 	}
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  objects save manager
-	//
-	using errb_vector = std::vector<error::box>;
-	using savers_manager_t = caf::typed_actor<
-		caf::reacts_to< sp_cobj, std::string, std::string >,
-		caf::reacts_to< error::box >,
-		caf::replies_to< a_ack >::with< std::vector<error::box> >
-	>;
-
-	// savers manager
-	struct manager_state {
-		// errors collection
-		errb_vector er_stack_;
-		caf::response_promise boxed_errs;
-		// track running savers
-		size_t nstarted_ = 0, nfinished_ = 0;
-	};
-
-	struct savers_manager : savers_manager_t::stateful_base<manager_state> {
-
-		savers_manager(caf::actor_config& cfg) : savers_manager_t::stateful_base<manager_state>(cfg) {}
-
-		auto cut_save_errors() {
-			auto finally = scope_guard{[=]{ state.er_stack_.clear(); }};
-			return std::move(state.er_stack_);
-		}
-
-		auto make_behavior() -> behavior_type override {
-			return {
-				// save given object
-				[=](const sp_cobj& obj, const std::string& fmt_name, std::string fname) {
-					auto res = error::box{};
-					if(auto F = get_formatter(obj->type_id(), fmt_name)) {
-						// run save in object's queue
-						obj->apply(
-							launch_async,
-							[=, fname = std::move(fname), master = caf::actor_cast<savers_manager_t>(this)]
-							(const sp_obj& obj) {
-								auto er = F->save(*obj, std::move(fname));
-								// inform manager about save result
-								caf::anon_send(master, er.pack());
-								return er;
-							}
-						);
-						// inc counter of started save jobs
-						++state.nstarted_;
-					}
-					else
-						state.er_stack_.emplace_back(error{obj->type_id(), Error::MissingFormatter});
-				},
-
-				// store error from finished saver, deliver errors stack when save is done
-				[=](error::box er) {
-					if(er.ec) state.er_stack_.push_back(std::move(er));
-					if(++state.nfinished_ == state.nstarted_)
-						state.boxed_errs.deliver(cut_save_errors());
-				},
-
-				[=](a_ack) -> caf::result<errb_vector> {
-					if(state.nfinished_ == state.nstarted_)
-						return cut_save_errors();
-					else {
-						state.boxed_errs = make_response_promise<errb_vector>();
-						return state.boxed_errs;
-					}
-				}
-			};
-		}
-	};
-
 	auto wait_objects_saved(timespan how_long) -> std::vector<error> {
-		auto fmanager = caf::make_function_view(
-			manager_, how_long == infinite ? caf::infinite : caf::duration{how_long}
-		);
-
-		auto res = std::vector<error>{};
-		auto boxed_res = actorf<std::vector<error::box>>(fmanager, a_ack());
-		if(boxed_res) {
-			auto& boxed_errs = *boxed_res;
-			res.reserve(boxed_errs.size());
-			for(auto& er_box : boxed_errs)
-				res.push_back( error::unpack(std::move(er_box)) );
-		}
-		else
-			res.push_back(std::move(boxed_res.error()));
-		return res;
+		return fmanager_t::wait_jobs_done(manager_, how_long);
 	}
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -290,7 +209,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	active_fmt_t active_fmt_;
 
 	// async savers manager
-	savers_manager_t manager_;
+	fmanager_t::actor_type manager_;
 	bool has_wait_deferred_ = false;
 };
 

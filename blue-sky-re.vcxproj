@@ -208,6 +208,7 @@
     <ClCompile Include="kernel\src\serialize\link.cpp" />
     <ClCompile Include="kernel\src\serialize\node.cpp" />
     <ClCompile Include="kernel\src\serialize\object_formatter.cpp" />
+    <ClCompile Include="kernel\src\serialize\objfrm_manager.cpp" />
     <ClCompile Include="kernel\src\serialize\python.cpp" />
     <ClCompile Include="kernel\src\serialize\tree.cpp" />
     <ClCompile Include="kernel\src\serialize\tree_fs_input.cpp" />

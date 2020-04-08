@@ -68,6 +68,7 @@ kernel_cpp_list = [
 	"src/serialize/tree_fs_output.cpp",
 	"src/serialize/tree_fs_input.cpp",
 	"src/serialize/object_formatter.cpp",
+	"src/serialize/objfrm_manager.cpp",
 
 	"src/tree/inode.cpp",
 	"src/tree/link.cpp",
