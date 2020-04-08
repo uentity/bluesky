@@ -14,9 +14,6 @@
 #include <bs/kernel/radio.h>
 #include <bs/serialize/cafbind.h>
 
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::objbase::modificator_f)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::objbase::closed_modificator_f)
-
 NAMESPACE_BEGIN(blue_sky)
 using namespace kernel::radio;
 using namespace std::chrono_literals;
@@ -64,13 +61,13 @@ auto objbase::start_engine() -> bool {
 	return false;
 }
 
-auto objbase::apply(modificator_f m) -> error {
+auto objbase::apply(modificator_f m) const -> error {
 	return actorf<error>(
 		actor(), def_timeout(true), a_apply(), make_closed_modificator(std::move(m))
 	);
 }
 
-auto objbase::apply(launch_async_t, modificator_f m) -> void {
+auto objbase::apply(launch_async_t, modificator_f m) const -> void {
 	caf::anon_send(actor(), a_apply(), make_closed_modificator(std::move(m)));
 }
 

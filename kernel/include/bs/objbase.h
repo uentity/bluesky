@@ -105,12 +105,13 @@ public:
 	virtual auto bs_resolve_type() const -> const type_descriptor&;
 
 	/// runs modificator in message queue of this object
-	auto apply(modificator_f m) -> error;
-	auto apply(launch_async_t, modificator_f m) -> void;
+	auto apply(modificator_f m) const -> error;
+	auto apply(launch_async_t, modificator_f m) const -> void;
 
 	template<typename F>
-	auto make_closed_modificator(F&& f) -> closed_modificator_f {
-		return [f = std::forward<F>(f), self = shared_from_this()]() mutable -> error {
+	auto make_closed_modificator(F&& f) const -> closed_modificator_f {
+		return [f = std::forward<F>(f), self = const_cast<objbase*>(this)->shared_from_this()]() mutable
+		-> error {
 			return f(std::move(self));
 		};
 	}
@@ -145,3 +146,7 @@ using obj_ptr  = object_ptr<objbase>;
 using cobj_ptr = object_ptr<const objbase>;
 
 NAMESPACE_END(blue_sky)
+
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::objbase::modificator_f)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::objbase::closed_modificator_f)
+
