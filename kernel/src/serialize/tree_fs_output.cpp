@@ -27,11 +27,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include <caf/all.hpp>
-
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::sp_cobj)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::error::box)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(std::vector<blue_sky::error::box>)
+#include <caf/typed_event_based_actor.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
@@ -163,19 +159,12 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			(**cur_head)(cereal::make_nvp( "object", obj ));
 
 		// 4. and actually save object data to file
-		// spawn object save actor
-		auto A = kernel::radio::system().spawn(async_saver, F, manager_);
-		auto pm = caf::actor_cast<savers_manager_ptr>(manager_);
+		caf::anon_send(manager_, obj.shared_from_this(), obj_fmt, fs::absolute(*obj_path).u8string());
 		// defer wait until save completes
 		if(!has_wait_deferred_) {
 			ar(cereal::defer(cereal::Functor{ [](auto& ar){ ar.wait_objects_saved(); } }));
 			has_wait_deferred_ = true;
 		}
-		// inc started counter
-		++pm->state.nstarted_;
-		// post invoke save mesage
-		auto abs_obj_path = fs::absolute(*obj_path);
-		pm->send(A, obj.shared_from_this(), abs_obj_path.u8string());
 		return perfect;
 	}); }
 
@@ -205,28 +194,14 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	}
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  async saver API
+	//  objects save manager
 	//
-	using saver_actor_t = caf::typed_actor<
-		caf::reacts_to< sp_cobj, std::string > // invoke save
-	>;
-
 	using errb_vector = std::vector<error::box>;
 	using savers_manager_t = caf::typed_actor<
+		caf::reacts_to< sp_cobj, std::string, std::string >,
 		caf::reacts_to< error::box >,
-		caf::replies_to< int >::with< std::vector<error::box> >
+		caf::replies_to< a_ack >::with< std::vector<error::box> >
 	>;
-
-	// saver
-	static auto async_saver(
-		saver_actor_t::pointer self, object_formatter* F, savers_manager_t manager
-	) -> saver_actor_t::behavior_type {
-		return {
-			[=](const sp_cobj& obj, const std::string& fname) {
-				self->send( manager, F->save(*obj, fname, F->name).pack() );
-			}
-		};
-	}
 
 	// savers manager
 	struct manager_state {
@@ -236,8 +211,6 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		// track running savers
 		size_t nstarted_ = 0, nfinished_ = 0;
 	};
-
-	using savers_manager_ptr = typename savers_manager_t::stateful_pointer<manager_state>;
 
 	struct savers_manager : savers_manager_t::stateful_base<manager_state> {
 
@@ -250,14 +223,36 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 
 		auto make_behavior() -> behavior_type override {
 			return {
+				// save given object
+				[=](const sp_cobj& obj, const std::string& fmt_name, std::string fname) {
+					auto res = error::box{};
+					if(auto F = get_formatter(obj->type_id(), fmt_name)) {
+						// run save in object's queue
+						obj->apply(
+							launch_async,
+							[=, fname = std::move(fname), master = caf::actor_cast<savers_manager_t>(this)]
+							(const sp_obj& obj) {
+								auto er = F->save(*obj, std::move(fname), F->name);
+								// inform manager about save result
+								caf::anon_send(master, er.pack());
+								return er;
+							}
+						);
+						// inc counter of started save jobs
+						++state.nstarted_;
+					}
+					else
+						state.er_stack_.emplace_back(error{obj->type_id(), Error::MissingFormatter});
+				},
+
 				// store error from finished saver, deliver errors stack when save is done
-				[this](error::box er) {
+				[=](error::box er) {
 					if(er.ec) state.er_stack_.push_back(std::move(er));
 					if(++state.nfinished_ == state.nstarted_)
 						state.boxed_errs.deliver(cut_save_errors());
 				},
 
-				[this](int) -> caf::result<errb_vector> {
+				[=](a_ack) -> caf::result<errb_vector> {
 					if(state.nfinished_ == state.nstarted_)
 						return cut_save_errors();
 					else {
@@ -273,9 +268,9 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		auto fmanager = caf::make_function_view(
 			manager_, how_long == infinite ? caf::infinite : caf::duration{how_long}
 		);
-		auto res = std::vector<error>{};
 
-		auto boxed_res = actorf<std::vector<error::box>>(fmanager, 0);
+		auto res = std::vector<error>{};
+		auto boxed_res = actorf<std::vector<error::box>>(fmanager, a_ack());
 		if(boxed_res) {
 			auto& boxed_errs = *boxed_res;
 			res.reserve(boxed_errs.size());
