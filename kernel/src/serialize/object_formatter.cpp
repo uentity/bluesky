@@ -174,20 +174,16 @@ auto operator<(std::string_view lhs, const object_formatter& rhs) {
 	return lhs < rhs.name;
 }
 
-auto object_formatter::save(
-	const objbase& obj, std::string obj_fname, std::string_view fmt_name
-) const -> error {
+auto object_formatter::save(const objbase& obj, std::string obj_fname) const -> error {
 	FM.register_formatter(obj, name);
-	auto res = error::eval_safe([&]{ first(obj, std::move(obj_fname), fmt_name); });
+	auto res = error::eval_safe([&]{ first(obj, std::move(obj_fname), name); });
 	FM.deregister_formatter(obj);
 	return res;
 }
 
-auto object_formatter::load(
-	objbase& obj, std::string obj_fname, std::string_view fmt_name
-) const -> error {
+auto object_formatter::load(objbase& obj, std::string obj_fname) const -> error {
 	FM.register_formatter(obj, name);
-	auto res = error::eval_safe([&]{ second(obj, std::move(obj_fname), fmt_name); });
+	auto res = error::eval_safe([&]{ second(obj, std::move(obj_fname), name); });
 	FM.deregister_formatter(obj);
 	return res;
 }

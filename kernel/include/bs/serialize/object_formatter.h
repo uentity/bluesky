@@ -33,8 +33,8 @@ struct BS_API object_formatter : private std::pair<object_saver_fn, object_loade
 		std::string fmt_name, object_saver_fn saver, object_loader_fn loader, bool stores_node = false
 	);
 
-	auto save(const objbase& obj, std::string obj_fname, std::string_view fmt_name) const -> error;
-	auto load(objbase& obj, std::string obj_fname, std::string_view fmt_name) const -> error;
+	auto save(const objbase& obj, std::string obj_fname) const -> error;
+	auto load(objbase& obj, std::string obj_fname) const -> error;
 };
 
 BS_API auto install_formatter(const type_descriptor& obj_type, object_formatter of) -> bool;

@@ -232,7 +232,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 							launch_async,
 							[=, fname = std::move(fname), master = caf::actor_cast<savers_manager_t>(this)]
 							(const sp_obj& obj) {
-								auto er = F->save(*obj, std::move(fname), F->name);
+								auto er = F->save(*obj, std::move(fname));
 								// inform manager about save result
 								caf::anon_send(master, er.pack());
 								return er;

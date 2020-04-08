@@ -55,8 +55,8 @@ void py_bind_objbase(py::module& m) {
 			"Formatter name treated by default as file extension")
 		.def_readonly("stores_node", &object_formatter::stores_node,
 			"For node-derived objects: false (default) if object file doesn't include leafs, true if include")
-		.def("save", &object_formatter::save, "obj"_a, "obj_fname"_a, "fmt_name"_a)
-		.def("load", &object_formatter::load, "obj"_a, "obj_fname"_a, "fmt_name"_a)
+		.def("save", &object_formatter::save, "obj"_a, "obj_fname"_a)
+		.def("load", &object_formatter::load, "obj"_a, "obj_fname"_a)
 	;
 
 	m.def("install_formatter", &install_formatter, "obj_type"_a, "obj_formatter"_a);

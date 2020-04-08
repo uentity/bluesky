@@ -226,7 +226,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		SCOPE_EVAL_SAFE
 			abs_obj_path = fs::absolute(obj_path);
 		RETURN_SCOPE_ERR
-		return F->load(obj, abs_obj_path.string(), obj_frm);
+		return F->load(obj, abs_obj_path.string());
 	}); }
 
 	NodeLoad mode_;
