@@ -11,11 +11,13 @@
 
 #include <bs/tree/errors.h>
 #include <bs/tree/node.h>
+#include <bs/kernel/radio.h>
 
 #include <bs/serialize/tree_fs_input.h>
+#include <bs/serialize/object_formatter.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
-#include <bs/serialize/object_formatter.h>
+#include <bs/serialize/cafbind.h>
 
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/string_generator.hpp>
@@ -37,10 +39,12 @@ const auto uuid_from_str = boost::uuids::string_generator{};
 //
 struct tree_fs_input::impl : detail::file_heads_manager<false> {
 	using heads_mgr_t = detail::file_heads_manager<false>;
+	using fmanager_t = detail::objfrm_manager;
 	using Error = tree::Error;
 
 	impl(std::string root_fname, NodeLoad mode) :
-		heads_mgr_t{std::move(root_fname)}, mode_(mode)
+		heads_mgr_t{std::move(root_fname)}, mode_(mode),
+		manager_(kernel::radio::system().spawn<fmanager_t>(false))
 	{}
 
 	auto begin_node(tree_fs_input& ar) -> error {
@@ -226,10 +230,29 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		SCOPE_EVAL_SAFE
 			abs_obj_path = fs::absolute(obj_path);
 		RETURN_SCOPE_ERR
-		return F->load(obj, abs_obj_path.string());
+
+		caf::anon_send(
+			manager_, caf::actor_cast<caf::actor>(manager_),
+			const_cast<const objbase&>(obj).shared_from_this(), obj_frm, fs::absolute(obj_path).u8string()
+		);
+		// defer wait until save completes
+		if(!has_wait_deferred_) {
+			ar(cereal::defer(cereal::Functor{ [](auto& ar){ ar.wait_objects_loaded(); } }));
+			has_wait_deferred_ = true;
+		}
+		return perfect;
 	}); }
 
+	auto wait_objects_loaded(timespan how_long) -> std::vector<error> {
+		auto res = fmanager_t::wait_jobs_done(manager_, how_long);
+		has_wait_deferred_ = false;
+		return res;
+	}
+
 	NodeLoad mode_;
+	// async loaders manager
+	fmanager_t::actor_type manager_;
+	bool has_wait_deferred_ = false;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -255,6 +278,10 @@ auto tree_fs_input::end_node(const tree::node& N) -> error {
 
 auto tree_fs_input::load_object(objbase& obj) -> error {
 	return pimpl_->load_object(*this, obj);
+}
+
+auto tree_fs_input::wait_objects_loaded(timespan how_long) const -> std::vector<error> {
+	return pimpl_->wait_objects_loaded(how_long);
 }
 
 auto tree_fs_input::loadBinaryValue(void* data, size_t size, const char* name) -> void {

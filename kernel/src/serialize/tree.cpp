@@ -28,16 +28,7 @@ NAMESPACE_BEGIN()
 ///////////////////////////////////////////////////////////////////////////////
 //  Tree FS archive
 //
-auto save_fs(const link& root, const std::string& filename) -> error {
-	// collect all errors happened
-	auto errs = std::vector<error>{};
-	if(auto er = error::eval_safe([&] {
-		auto ar = tree_fs_output(filename);
-		ar(root);
-		errs = ar.wait_objects_saved(infinite);
-	}))
-		errs.push_back(er);
-
+auto unite_errors(const std::vector<error>& errs) -> error {
 	std::string reduced_er;
 	for(const auto& er : errs) {
 		if(er) {
@@ -48,12 +39,32 @@ auto save_fs(const link& root, const std::string& filename) -> error {
 	return reduced_er.empty() ? success() : error::quiet(reduced_er);
 }
 
+auto save_fs(const link& root, const std::string& filename) -> error {
+	// collect all errors happened
+	auto errs = std::vector<error>{};
+	if(auto er = error::eval_safe([&] {
+		auto ar = tree_fs_output(filename);
+		ar(root);
+		//ar.serializeDeferments();
+		errs = ar.wait_objects_saved(infinite);
+	}))
+		errs.push_back(er);
+
+	return unite_errors(errs);
+}
+
 auto load_fs(link& root, const std::string& filename) -> error {
-	return error::eval_safe([&] {
+	// collect all errors happened
+	auto errs = std::vector<error>{};
+	if(auto er = error::eval_safe([&] {
 		auto ar = tree_fs_input(filename, tree_fs_input::NodeLoad::Normal);
 		ar(root);
-		ar.serializeDeferments();
-	});
+		//ar.serializeDeferments();
+		errs = ar.wait_objects_loaded(infinite);
+	}))
+		errs.push_back(er);
+
+	return unite_errors(errs);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

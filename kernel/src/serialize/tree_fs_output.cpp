@@ -198,7 +198,9 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	}
 
 	auto wait_objects_saved(timespan how_long) -> std::vector<error> {
-		return fmanager_t::wait_jobs_done(manager_, how_long);
+		auto res = fmanager_t::wait_jobs_done(manager_, how_long);
+		has_wait_deferred_ = false;
+		return res;
 	}
 
 	///////////////////////////////////////////////////////////////////////////////
