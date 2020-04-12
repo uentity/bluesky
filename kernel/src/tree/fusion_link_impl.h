@@ -80,7 +80,9 @@ struct BS_HIDDEN_API fusion_link::impl : public blue_sky::detail::anon_async_api
 			[](
 				flnk_populate_atom, const sp_clink& lnk, const process_data_cb& f, const std::string& obj_type_id
 			) {
-				f(std::static_pointer_cast<const fusion_link>(lnk)->populate(obj_type_id), lnk);
+				error::eval_safe([&] { f(
+					std::static_pointer_cast<const fusion_link>(lnk)->populate(obj_type_id), lnk
+				); });
 			}
 		};
 	}
