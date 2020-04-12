@@ -108,6 +108,9 @@ void py_bind_error(py::module& m) {
 		.def_property_readonly("message", &error::message, "Get custom part of message passed to constructor")
 	;
 	py::implicitly_convertible<Error, error>();
+
+	// translate error -> BSError Python exception
+	py::register_exception<error>(m, "BSError");
 }
 
 NAMESPACE_END(blue_sky::python)
