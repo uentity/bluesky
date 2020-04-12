@@ -123,10 +123,10 @@ struct BS_HIDDEN_API link::impl : public blue_sky::detail::anon_async_api_mixin<
 	static auto async_behavior(link_actor_t::pointer self) -> link_actor_t::behavior_type {
 		return {
 			[](lnk_data_atom, const sp_clink& lnk, const process_data_cb& f) {
-				f(lnk->data_ex(true), lnk);
+				error::eval_safe([&] { f(lnk->data_ex(true), lnk); });
 			},
 			[](lnk_dnode_atom, const sp_clink& lnk, const process_data_cb& f) {
-				f(lnk->data_node_ex(true), lnk);
+				error::eval_safe([&] { f(lnk->data_node_ex(true), lnk); });
 			}
 		};
 	}
