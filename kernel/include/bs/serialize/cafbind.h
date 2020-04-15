@@ -31,14 +31,15 @@ namespace caf {
  *-----------------------------------------------------------------------------*/
 // serialize
 template<typename Inspector, typename T>
-std::enable_if_t<
+auto inspect(Inspector& f, T& x)
+-> std::enable_if_t<
 	Inspector::reads_state &&
-		!std::is_same_v<Inspector, caf::detail::stringification_inspector> &&
 		!std::is_scalar_v<std::decay_t<T>> &&
+		!std::is_same_v<Inspector, caf::detail::stringification_inspector> &&
+		!blue_sky::is_archive_inspector_v<Inspector> &&
 		cereal::traits::is_output_serializable<T, cereal::PortableBinaryOutputArchive>::value,
 	typename Inspector::result_type
->
-inspect(Inspector& f, T& x) {
+> {
 	using vostream = boost::interprocess::basic_ovectorstream< std::vector<char> >;
 	vostream ss;
 	try {
@@ -53,14 +54,15 @@ inspect(Inspector& f, T& x) {
 
 // deserialize
 template<typename Inspector, typename T>
-std::enable_if_t<
+auto inspect(Inspector& f, T& x)
+-> std::enable_if_t<
 	Inspector::writes_state &&
 		!std::is_scalar_v<std::decay_t<T>> &&
 		!std::is_same_v<Inspector, caf::detail::stringification_inspector> &&
+		!blue_sky::is_archive_inspector_v<Inspector> &&
 		cereal::traits::is_input_serializable<T, cereal::PortableBinaryInputArchive>::value,
 	typename Inspector::result_type
->
-inspect(Inspector& f, T& x) {
+> {
 	using vistream = boost::interprocess::basic_ivectorstream< std::vector<char> >;
 	std::vector<char> x_data;
 	auto g = caf::detail::make_scope_guard([&]() -> error {
