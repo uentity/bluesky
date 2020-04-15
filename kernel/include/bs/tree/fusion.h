@@ -36,7 +36,7 @@ class BS_API fusion_link : public link {
 public:
 	using super = link;
 
-	using actor_type = link::actor_type::extend<
+	using fusion_actor_type = caf::typed_actor<
 		// populate pointee with given children types
 		caf::replies_to<a_flnk_populate, std::string, bool>::with<result_or_errbox<sp_node>>,
 		// get link's bridge
@@ -44,6 +44,8 @@ public:
 		// set link's bridge
 		caf::reacts_to<a_flnk_bridge, sp_fusion>
 	>;
+
+	using actor_type = link::actor_type::extend_with<fusion_actor_type>;
 
 	// ctors
 	fusion_link(

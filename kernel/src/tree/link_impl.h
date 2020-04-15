@@ -65,7 +65,10 @@ public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 	using sp_limpl = std::shared_ptr<link_impl>;
 
-	using primary_actor_type = link::actor_type;
+	using primary_actor_type = link::actor_type::extend<
+		// obtain link impl
+		caf::replies_to<a_impl>::with<sp_limpl>
+	>;
 
 	// ack signals that this link send to home group
 	using self_ack_actor_type = caf::typed_actor<
@@ -93,12 +96,8 @@ public:
 	// all acks processed by link
 	using ack_actor_type = self_ack_actor_type::extend_with<subtree_ack_actor_type>;
 
-	// extend given actor type with additional private interface
-	template<typename ActorType>
-	using make_actor_type = typename ActorType::template extend_with< ack_actor_type >;
-
 	// complete private actor type
-	using actor_type = make_actor_type<primary_actor_type>;
+	using actor_type = primary_actor_type::extend_with<ack_actor_type>;
 
 	lid_type id_;
 	std::string name_;

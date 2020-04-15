@@ -11,7 +11,9 @@
 #include <caf/atom.hpp>
 
 namespace blue_sky {
-
+///////////////////////////////////////////////////////////////////////////////
+//  common
+//
 /// denote that we don't want to wait until invoke result is available
 using launch_async_t = caf::atom_constant<caf::atom("bs lasync")>;
 inline constexpr auto launch_async = launch_async_t{};
@@ -20,9 +22,6 @@ inline constexpr auto launch_async = launch_async_t{};
 using unsafe_t = caf::atom_constant<caf::atom("bs unsafe")>;
 inline constexpr auto unsafe = unsafe_t{};
 
-///////////////////////////////////////////////////////////////////////////////
-//  common
-//
 // discover neighbourhood
 using a_hi = caf::atom_constant<caf::atom("bs hi")>;
 // used to inform others that I'm quit
@@ -31,6 +30,8 @@ using a_bye = caf::atom_constant<caf::atom("bs bye")>;
 using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 // used to invoke some processing over an object/actor
 using a_apply = caf::atom_constant<caf::atom("bs apply")>;
+// get implementation part of link/node/etc...
+using a_impl = caf::atom_constant<caf::atom("bs impl")>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  link API

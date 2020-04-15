@@ -118,6 +118,10 @@ return {
 			adbg(this) << "<- a_lnk_bye " << std::endl;
 		},
 
+		[=](a_impl) -> sp_limpl {
+			return pimpl_;
+		},
+
 		// get id
 		[=](a_lnk_id) -> lid_type {
 			adbg(this) << "<- a_lnk_id: " << to_string(impl.id_) << std::endl;
