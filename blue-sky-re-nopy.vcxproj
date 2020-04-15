@@ -89,6 +89,7 @@
     <ClInclude Include="kernel\include\bs\serialize\carray.h" />
     <ClInclude Include="kernel\include\bs\serialize\eigen.h" />
     <ClInclude Include="kernel\include\bs\serialize\formatter_tools.h" />
+    <ClInclude Include="kernel\include\bs\serialize\inspectable.h" />
     <ClInclude Include="kernel\include\bs\serialize\macro.h" />
     <ClInclude Include="kernel\include\bs\serialize\make_base_class.h" />
     <ClInclude Include="kernel\include\bs\serialize\object_formatter.h" />
@@ -188,6 +189,7 @@
     <ClCompile Include="kernel\src\tree\context.cpp" />
     <ClCompile Include="kernel\src\tree\errors.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
+    <ClCompile Include="kernel\src\tree\fusion_link_actor.cpp" />
     <ClCompile Include="kernel\src\tree\hard_link.cpp" />
     <ClCompile Include="kernel\src\tree\inode.cpp" />
     <ClCompile Include="kernel\src\tree\link.cpp" />

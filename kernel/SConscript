@@ -80,6 +80,8 @@ kernel_cpp_list = [
 	"src/tree/nil_link.cpp",
 	"src/tree/hard_link.cpp",
 	"src/tree/sym_link.cpp",
+	"src/tree/fusion_link.cpp",
+	"src/tree/fusion_link_actor.cpp",
 	"src/tree/node.cpp",
 	"src/tree/node_actor.cpp",
 	"src/tree/node_ack_behavior.cpp",
@@ -88,7 +90,6 @@ kernel_cpp_list = [
 	"src/tree/node_impl.cpp",
 	"src/tree/tree.cpp",
 	"src/tree/tree_async.cpp",
-	"src/tree/fusion_link.cpp",
 	"src/tree/errors.cpp",
 	"src/tree/context.cpp"
 ];

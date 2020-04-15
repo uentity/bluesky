@@ -261,6 +261,9 @@
     <ClInclude Include="kernel\include\bs\serialize\cafbind.h">
       <Filter>Заголовочные файлы\bs\serialize</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\serialize\inspectable.h">
+      <Filter>Заголовочные файлы\bs\serialize</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\include\bs\serialize\python.h">
       <Filter>Заголовочные файлы\bs\serialize</Filter>
     </ClInclude>
@@ -576,6 +579,9 @@
       <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\fusion_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\fusion_link_actor.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\errors.cpp">
