@@ -32,7 +32,7 @@ using namespace allow_enumops;
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 
-[[maybe_unused]] static auto adbg_impl(node_actor* A) -> caf::actor_ostream {
+[[maybe_unused]] auto adbg_impl(node_actor* A) -> caf::actor_ostream {
 	auto res = caf::aout(A);
 	res << "[N] ";
 	if(auto pgrp = A->home(unsafe).get())

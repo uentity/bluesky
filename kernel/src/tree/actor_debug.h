@@ -28,8 +28,8 @@ static constexpr auto adbg(Actor*, Ts&&...) {
 
 #else
 
-static auto adbg_impl(link_actor*) -> caf::actor_ostream;
-static auto adbg_impl(node_actor*) -> caf::actor_ostream;
+auto adbg_impl(link_actor*) -> caf::actor_ostream;
+auto adbg_impl(node_actor*) -> caf::actor_ostream;
 
 template<typename Actor>
 static auto adbg(Actor* A) { return adbg_impl(A); }

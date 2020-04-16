@@ -26,7 +26,7 @@ using namespace allow_enumops;
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 
-[[maybe_unused]] static auto adbg_impl(link_actor* A) -> caf::actor_ostream {
+[[maybe_unused]] auto adbg_impl(link_actor* A) -> caf::actor_ostream {
 	return caf::aout(A) << "[L] [" << to_string(A->impl.id_) <<
 		"] [" << A->impl.name_ << "]: ";
 }
