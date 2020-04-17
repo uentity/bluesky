@@ -28,7 +28,7 @@ BS_REGISTER_TYPE("kernel", blue_sky::bs_signal)
 BS_REGISTER_TYPE("kernel", blue_sky::bs_messaging)
 
 // slot virtual dtor
-bs_slot::~bs_slot() {}
+bs_slot::~bs_slot() = default;
 
 /*-----------------------------------------------------------------
  * sync slot invoke layer
@@ -90,7 +90,7 @@ class bs_signal::signal_impl
 public:
 	//send signal command
 	typedef boost::signals2::signal<
-		void (const std::any& sender, int signal_code, const std::any& param)
+		void (std::any sender, int signal_code, std::any param)
 	> signal_engine;
 
 	//default ctor

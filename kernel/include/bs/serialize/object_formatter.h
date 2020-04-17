@@ -35,6 +35,8 @@ struct BS_API object_formatter : private std::pair<object_saver_fn, object_loade
 
 	auto save(const objbase& obj, std::string obj_fname) const -> error;
 	auto load(objbase& obj, std::string obj_fname) const -> error;
+
+	template<typename, typename> friend struct formatter_tools;
 };
 
 BS_API auto install_formatter(const type_descriptor& obj_type, object_formatter of) -> bool;

@@ -33,8 +33,8 @@ if build_kind == "init" :
 		custom_env.AppendUnique(CCFLAGS = ['-fvisibility=hidden']);
 		if cpl == 'g++' :
 			custom_env.AppendUnique(CCFLAGS = ['-Wno-pragmas', '-Wno-unused-local-typedefs']);
-		elif cpl == "clang" :
-			custom_env.AppendUnique(CCFLAGS = ['-Wno-unused-local-typedefs']);
+		elif cpl.startswith("clang") :
+			custom_env.AppendUnique(CCFLAGS = ['-Wno-unused-local-typedefs', '-Wno-unused-lambda-capture']);
 		else :
 			custom_env.AppendUnique(CCFLAGS = ['-Wno-unused-function']);
 	else :
@@ -47,7 +47,7 @@ if build_kind == "init" :
 # release/debug base flags
 elif build_kind == 'debug' :
 	custom_env.AppendUnique(CCFLAGS = ['-O0']);
-elif build_kind == 'release-debug' and custom_env['compiler'] == "g++" :
+elif build_kind == 'release-debug' :
 	custom_env.AppendUnique(CCFLAGS = ['-Og']);
 elif build_kind.startswith('release') :
 	custom_env.AppendUnique(
