@@ -15,6 +15,8 @@
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
 struct python_subsyst {
+	virtual ~python_subsyst() = default;
+
 	virtual auto py_init_plugin(
 		const blue_sky::detail::lib_descriptor& lib, plugin_descriptor& p_descr
 	) -> result_or_err<std::string> = 0;

@@ -80,11 +80,11 @@ public:
 
 	typedef std::pair< int, int > sig_range_t;
 
-	bool subscribe(int signal_code, sp_slot slot) const;
-	bool unsubscribe(int signal_code, sp_slot slot) const;
-	ulong num_slots(int signal_code) const;
-	bool fire_signal(int signal_code, std::any param = {}, std::any sender = nullptr) const;
-	std::vector< int > get_signal_list() const;
+	bool subscribe(int signal_code, sp_slot slot) const override;
+	bool unsubscribe(int signal_code, sp_slot slot) const override;
+	ulong num_slots(int signal_code) const override;
+	bool fire_signal(int signal_code, std::any param = {}, std::any sender = nullptr) const override;
+	std::vector< int > get_signal_list() const override;
 
 	// default ctor - doesn't add any signals
 	bs_messaging();
