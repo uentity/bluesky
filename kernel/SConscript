@@ -11,7 +11,7 @@ kboost_libs = ['regex', 'thread', 'serialization', 'locale'];
 
 # init stage
 if build_kind == "init" :
-	if ("unmanaged" not in custom_vars.keys ()) :
+	if ("unmanaged" not in list(custom_vars.keys ())) :
 		custom_vars.Add ("unmanaged", "Set to 1 to force kernel skip tracking of created objects", "1")
 		custom_vars.Update (custom_env)
 	# query for reuired boost libs
