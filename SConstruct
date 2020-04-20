@@ -25,17 +25,17 @@ def ss_search(root_dir, ss_prefix, ss_list) :
 
 # debug
 def compare_env(env1, env2) :
-	print 'env1: ', env1;
-	print 'env2: ', env2;
+	print('env1: ', env1);
+	print('env2: ', env2);
 	d1 = env1.Dictionary(); d2 = env2.Dictionary();
 	i = 0;
-	for k in d1.keys() :
+	for k in list(d1.keys()) :
 		if d1[k] != d2[k] :
-			print 'env1[', k, '] = ', d1[k];
-			print 'env2[', k, '] = ', d2[k];
+			print('env1[', k, '] = ', d1[k]);
+			print('env2[', k, '] = ', d2[k]);
 			++i;
-	if i == 0 : print 'Dictionary match!';
-	print '';
+	if i == 0 : print('Dictionary match!');
+	print('');
 
 # 1. Build minimal list of sconscript files to be processed
 # ORDER-SENSITIVE!
@@ -183,11 +183,11 @@ process_sconscripts(custom_env, "init");
 Import('*');
 
 # dump ss_tree
-print 'Processing build scripts:';
-print '[';
+print('Processing build scripts:');
+print('[');
 for x in ss_tree :
-	print x;
-print']';
+	print(x);
+print(']');
 
 # 7. Configure
 if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :
@@ -200,7 +200,6 @@ if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :
 	if not conf.CheckCXX() :
 		print('!! Your compiler and/or environment is not correctly configured.');
 		Exit(1);
-	CheckLoki(conf);
 	CheckBoost(conf);
 	# restore user-defined compiler
 	custom_env.Replace(CXX = cxx_save);
