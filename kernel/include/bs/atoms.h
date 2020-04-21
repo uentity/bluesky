@@ -32,6 +32,8 @@ using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 using a_apply = caf::atom_constant<caf::atom("bs apply")>;
 // get implementation part of link/node/etc...
 using a_impl = caf::atom_constant<caf::atom("bs impl")>;
+// get home group of entity
+using a_home = caf::atom_constant<caf::atom("bs home")>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  link API

@@ -15,6 +15,7 @@
 
 #include <caf/actor.hpp>
 #include <caf/typed_actor.hpp>
+#include <caf/group.hpp>
 
 // shortcut for quick declaration of shared ptr to BS object
 #define BS_SP(T) std::shared_ptr<T>
@@ -35,11 +36,13 @@ public:
 
 	/// Interface of object actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
+		// get home group
+		caf::replies_to<a_home>::with<caf::group>,
 		// runs modificator in message queue of this object
 		caf::replies_to<a_apply, closed_modificator_f>::with<error::box>
 	>;
 
-	// return objects's typed actor handle
+	/// return objects's typed actor handle
 	auto actor() const {
 		return caf::actor_cast<actor_type>(raw_actor());
 	}
@@ -48,6 +51,9 @@ public:
 	static auto actor(const T& obj) {
 		return caf::actor_cast<typename T::actor_type>(obj.raw_actor());
 	}
+
+	/// get object's home group
+	auto home() const -> const caf::group&;
 
 	/// default ctor that accepts custom ID string
 	/// if ID is empty it will be auto-generated
@@ -133,6 +139,8 @@ private:
 	std::weak_ptr<tree::inode> inode_;
 	/// object's internal actor
 	caf::actor actor_;
+	/// internal home group
+	caf::group home_;
 
 	/// dedicated ctor that sets `is_node` flag
 	objbase(bool is_node, std::string custom_oid = "");

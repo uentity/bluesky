@@ -54,8 +54,6 @@ void objbase::swap(objbase& rhs) {
 	std::swap(actor_, rhs.actor_);
 }
 
-objbase::~objbase() = default;
-
 objbase& objbase::operator=(const objbase& rhs) {
 	objbase(rhs).swap(*this);
 	return *this;
