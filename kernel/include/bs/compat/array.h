@@ -65,10 +65,10 @@ public:
 
 	bs_array() = default;
 	bs_array(const bs_array&) = default;
-	//bs_array(bs_array&&) = default;
+	bs_array(bs_array&&) = default;
 
 	// perfect forwarding ctor
-	template < typename... Args >
+	template < typename... Args, typename = meta::enable_pf_ctor_to<bs_array, base_t, Args...> >
 	bs_array(Args&&... args)
 		: base_t(std::forward< Args >(args)...), objbase()
 	{}
