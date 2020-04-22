@@ -31,16 +31,12 @@ struct mfn2bsctor<R (C::*)(A...)> { typedef bs_type_ctor_result type(A...); };
 template <typename C, typename R, typename... A>
 struct mfn2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...); };
 template<typename... T> using mfn2bsctor_t = typename mfn2bsctor<T...>::type;
-/// correct leafs owner in cloned node object
-BS_API void adjust_cloned_node(const sp_obj&);
 
 NAMESPACE_END(detail)
 
-/*!
-\struct type_descriptor
-\ingroup blue_sky
-\brief BlueSky type descriptor
-*/
+/*-----------------------------------------------------------------------------
+ *  describes BS type and provides create/copy/assign facilities
+ *-----------------------------------------------------------------------------*/
 class BS_API type_descriptor {
 private:
 	const BS_GET_TD_FUN parent_td_fun_;
@@ -82,47 +78,6 @@ private:
 	template< typename... Args >
 	using creator_callback = bs_type_ctor_result (*)(void*, pass_arg<Args>...);
 
-	template< class T, class unused = void >
-	struct extract_tdfun {
-		static BS_GET_TD_FUN go() {
-			return T::bs_type;
-		}
-	};
-	template < class unused >
-	struct extract_tdfun< nil, unused > {
-		static BS_GET_TD_FUN go() {
-			return nullptr;
-		}
-	};
-
-	template< class T>
-	struct extract_typename {
-		template< class str_type >
-		static std::string go(str_type val) {
-			return val;
-		}
-
-		static std::string go(std::nullptr_t) {
-			return bs_type_name< T >();
-		}
-	};
-
-	// should we add default ctor?
-	template< typename T, bool Enable >
-	void add_def_constructor(std::enable_if_t< !Enable >* = nullptr) {}
-	template< typename T, bool Enable >
-	void add_def_constructor(std::enable_if_t< Enable >* = nullptr) {
-		add_constructor< T >();
-	}
-
-	// should we add default copy?
-	template< typename T, bool Enable >
-	void add_def_copy_constructor(std::enable_if_t< !Enable >* = nullptr) {}
-	template< typename T, bool Enable >
-	void add_def_copy_constructor(std::enable_if_t< Enable >* = nullptr) {
-		add_copy_constructor< T >();
-	}
-
 public:
 	const std::string name; //!< string type name
 	const std::string description; //!< arbitrary type description
@@ -161,20 +116,33 @@ public:
 	// if add_def_construct is set -- add default (empty) type's constructor
 	// if add_def_copy is set -- add copy constructor
 	template<
-		class T, class base = nil, class typename_t = std::nullptr_t,
+		class T, class base = void, class typename_t = std::nullptr_t,
 		bool add_def_ctor = false, bool add_def_copy = false
 	>
 	type_descriptor(
 		identity< T >, identity< base >,
-		typename_t type_name = nullptr, const char* description = nullptr,
-		std::integral_constant< bool, add_def_ctor > = std::false_type(),
-		std::integral_constant< bool, add_def_copy > = std::false_type()
+		typename_t type_name = nullptr, std::string description = {}
 	) :
-		parent_td_fun_(extract_tdfun< base >::go()), copy_fun_(nullptr),
-		name(extract_typename< T >::go(type_name)), description(description)
+		parent_td_fun_([&] {
+			if constexpr(std::is_same_v<base, void>)
+				return &nil;
+			else
+				return &base::bs_type;
+		}()),
+		copy_fun_(nullptr),
+		name([&] {
+			if constexpr(std::is_same_v<typename_t, std::nullptr_t>)
+				return bs_type_name<T>();
+			else
+				return std::move(type_name);
+		}()),
+		description(std::move(description))
 	{
-		add_def_constructor< T, add_def_ctor >();
-		add_def_copy_constructor< T, add_def_copy >();
+		// auto-add default ctor, from single string arg (typically ID), and copy ctor
+		if constexpr(std::is_default_constructible_v<T>)
+			add_constructor<T>();
+		if constexpr(std::is_copy_constructible_v<T>)
+			add_copy_constructor<T>();
 	}
 
 	// obtain Nil type_descriptor
@@ -206,7 +174,7 @@ public:
 		add_constructor((func_t*)f);
 	}
 
-	// std type construction
+	// add type default constructor
 	// explicit constructor arguments types
 	template< typename T, typename... Args >
 	void add_constructor() const {
@@ -245,9 +213,9 @@ public:
 	template< typename T >
 	void add_copy_constructor() const {
 		copy_fun_ = [](bs_type_copy_param src) {
-			return std::static_pointer_cast< objbase, T >(
+			return src ? std::static_pointer_cast< objbase, T >(
 				std::make_shared< T >(static_cast< const T& >(*src))
-			);
+			) : nullptr;
 		};
 	}
 
@@ -257,15 +225,7 @@ public:
 	}
 
 	// make a copy of object instance
-	shared_ptr_cast clone(bs_type_copy_param src) const {
-		if(copy_fun_) {
-			auto res = (*copy_fun_)(src);
-			// nodes need special adjustment
-			detail::adjust_cloned_node(res);
-			return res;
-		}
-		return {};
-	}
+	shared_ptr_cast clone(bs_type_copy_param src) const;
 
 	/// tests
 	bool is_copyable() const {
@@ -280,33 +240,31 @@ public:
 		return name.c_str();
 	}
 
+	/// retrieve type_descriptor of parent class
+	const type_descriptor& parent_td() const;
+
 	/// type_descriptors are comparable by string type name
 	bool operator <(const type_descriptor& td) const;
 
-	/// retrieve type_descriptor of parent class
-	const type_descriptor& parent_td() const {
-		return parent_td_fun_ ? (*parent_td_fun_)() : nil();
+	/// comparison with string type ID
+	friend bool operator ==(const type_descriptor& td, std::string_view type_id) {
+		return (td.name == type_id);
+	}
+	friend bool operator ==(std::string_view type_id, const type_descriptor& td) {
+		return (td.name == type_id);
+	}
+
+	friend bool operator !=(const type_descriptor& td, std::string_view type_id) {
+		return td.name != type_id;
+	}
+	friend bool operator !=(std::string_view type_id, const type_descriptor& td) {
+		return td.name != type_id;
+	}
+
+	friend bool operator <(const type_descriptor& td, std::string_view type_id) {
+		return td.name < type_id;
 	}
 };
-
-/// comparison with string type ID
-inline bool operator ==(const type_descriptor& td, std::string_view type_id) {
-	return (td.name == type_id);
-}
-inline bool operator ==(std::string_view type_id, const type_descriptor& td) {
-	return (td.name == type_id);
-}
-
-inline bool operator !=(const type_descriptor& td, std::string_view type_id) {
-	return td.name != type_id;
-}
-inline bool operator !=(std::string_view type_id, const type_descriptor& td) {
-	return td.name != type_id;
-}
-
-inline bool operator <(const type_descriptor& td, std::string_view type_id) {
-	return td.name < type_id;
-}
 
 // upcastable_eq(td1, td2) will return true if td1 == td2
 // or td1 can be casted up to td2 (i.e. td2 is inherited from td1)

@@ -62,8 +62,8 @@ objbase& objbase::operator=(const objbase& rhs) {
 const type_descriptor& objbase::bs_type() {
 	static auto td = [] {
 		auto td = type_descriptor(
-			identity< objbase >(), identity< nil >(),
-			"objbase", "Base class of all BlueSky types", std::true_type(), std::true_type()
+			identity< objbase >(), identity< void >(),
+			"objbase", "Base class of all BlueSky types"
 		);
 		// add constructor from custom OID
 		td.add_constructor([](const std::string& custom_oid) -> sp_obj {

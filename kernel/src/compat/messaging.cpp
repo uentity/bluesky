@@ -18,10 +18,10 @@ using namespace blue_sky;
 
 NAMESPACE_BEGIN(blue_sky)
 
-BS_TYPE_IMPL(bs_signal, objbase, "bs_signal", "Compat BS signal", false, false)
+BS_TYPE_IMPL(bs_signal, objbase, "bs_signal", "Compat BS signal")
 BS_TYPE_ADD_CONSTRUCTOR(bs_signal, (int))
 
-BS_TYPE_IMPL(bs_messaging, objbase, "bs_messaging", "Compat BS signals hub", true, true)
+BS_TYPE_IMPL(bs_messaging, objbase, "bs_messaging", "Compat BS signals hub")
 BS_TYPE_ADD_CONSTRUCTOR(bs_messaging, (const bs_messaging::sig_range_t&))
 
 BS_REGISTER_TYPE("kernel", blue_sky::bs_signal)

@@ -12,6 +12,12 @@
 #include <bs/defaults.h>
 
 namespace blue_sky {
+NAMESPACE_BEGIN(detail)
+
+/// correct leafs owner in cloned node object
+BS_API void adjust_cloned_node(const sp_obj&);
+
+NAMESPACE_END(detail)
 /*-----------------------------------------------------------------------------
  *  Nil type tag
  *-----------------------------------------------------------------------------*/
@@ -53,6 +59,20 @@ const type_descriptor& type_descriptor::nil() {
 
 bool type_descriptor::is_nil() const {
 	return parent_td_fun_ == &nil;
+}
+
+auto type_descriptor::clone(bs_type_copy_param src) const -> shared_ptr_cast {
+	if(copy_fun_) {
+		auto res = (*copy_fun_)(src);
+		// nodes need special adjustment
+		detail::adjust_cloned_node(res);
+		return res;
+	}
+	return {};
+}
+
+auto type_descriptor::parent_td() const -> const type_descriptor& {
+	return parent_td_fun_();
 }
 
 bool type_descriptor::operator <(const type_descriptor& td) const {

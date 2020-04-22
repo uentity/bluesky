@@ -142,7 +142,7 @@ protected:
 	}
 
 	BS_TYPE_DECL_INL_BEGIN(bs_array, objbase, "", \
-			"Array of values of the same type indexed by integral type", true, true)
+			"Array of values of the same type indexed by integral type")
 		td.add_constructor< bs_array, size_type >();
 		td.add_constructor< bs_array, size_type, const value_type& >();
 		// add the same ctors but with size specified as `int`

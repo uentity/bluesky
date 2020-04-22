@@ -68,7 +68,7 @@ struct my_strategy : public objbase {
 	}
 
 	// expect that only one strategy can exist
-	BS_TYPE_DECL_INL(my_strategy, objbase, "", "Strategy", true, true)
+	BS_TYPE_DECL_INL(my_strategy, objbase, "", "Strategy")
 };
 template< class T >
 using sp_strat = std::shared_ptr< my_strategy< T > >;
@@ -106,7 +106,7 @@ public:
 	cont_T storage_;
 	std::string name_;
 
-	BS_TYPE_DECL_INL_BEGIN(uber_type, objbase, "", "Uber complex type", true, false)
+	BS_TYPE_DECL_INL_BEGIN(uber_type, objbase, "", "Uber complex type")
 		td.add_constructor< uber_type, const char* >();
 		td.add_copy_constructor< uber_type >();
 	BS_TYPE_DECL_INL_END

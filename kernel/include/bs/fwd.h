@@ -17,7 +17,6 @@ namespace blue_sky {
 template< class > class singleton;
 
 // type_info && type_descriptor
-class nil;
 class type_descriptor;
 struct plugin_descriptor;
 

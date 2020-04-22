@@ -264,7 +264,7 @@ auto node::rearrange(std::vector<std::size_t> new_order) const -> error {
 ///////////////////////////////////////////////////////////////////////////////
 //  misc
 //
-BS_TYPE_IMPL(node, objbase, "node", "BS tree node", true, true);
+BS_TYPE_IMPL(node, objbase, "node", "BS tree node");
 BS_TYPE_ADD_CONSTRUCTOR(node, (std::string))
 BS_REGISTER_TYPE("kernel", node)
 
