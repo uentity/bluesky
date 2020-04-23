@@ -6,11 +6,11 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include "common.h"
 #include "type_macro.h"
+#include "detail/function_view.h"
 
 #include <unordered_map>
 
@@ -22,18 +22,6 @@ using bs_type_copy_param = const std::shared_ptr<const objbase>&;
 using BS_TYPE_COPY_FUN = bs_type_ctor_result (*)(bs_type_copy_param);
 using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
 
-NAMESPACE_BEGIN(detail)
-
-/// Convert lambda::operator() to bs type construct function pointer
-template <typename L> struct mfn2bsctor {};
-template <typename C, typename R, typename... A>
-struct mfn2bsctor<R (C::*)(A...)> { typedef bs_type_ctor_result type(A...); };
-template <typename C, typename R, typename... A>
-struct mfn2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...); };
-template<typename... T> using mfn2bsctor_t = typename mfn2bsctor<T...>::type;
-
-NAMESPACE_END(detail)
-
 /*-----------------------------------------------------------------------------
  *  describes BS type and provides create/copy/assign facilities
  *-----------------------------------------------------------------------------*/
@@ -43,8 +31,8 @@ private:
 	mutable BS_TYPE_COPY_FUN copy_fun_;
 
 	// map type of params tuple -> typeless creation function
-	using ctor_handle = std::pair< void(*)(), void*>;
-	mutable std::unordered_map< std::type_index, ctor_handle > creators_;
+	using erased_ctor = function_view<void()>;
+	mutable std::unordered_map< std::type_index, erased_ctor > creators_;
 
 	// `decay_helper` extends `std::decay` such that pointed type (for pointers) is also decayed
 	template<typename T, typename = void>
@@ -52,14 +40,12 @@ private:
 		using type = std::decay_t<T>; //-> can give a pointer, that's why 2nd pass is needed
 	};
 	template<typename T>
-	struct decay_helper<T, std::enable_if_t<std::is_pointer<T>::value>> {
+	struct decay_helper<T, std::enable_if_t<std::is_pointer_v<T>>> {
 		using type = std::decay_t<decltype(*std::declval<T>())>*;
 	};
 	// need to double-pass through `decay_helper` to strip `const` from inline strings
 	// and other const arrays
 	template<typename T> using decay_arg = typename decay_helper< typename decay_helper<T>::type >::type;
-	// decayed ctor parameters tuple is the key to find corresponding creator function
-	template< typename... Args > using args_pack = std::tuple<decay_arg<Args>...>;
 
 	// generate BS type creator signature with consistent results
 	// if param is pointer (const or not) to type `T` -> result is `const T*`
@@ -69,18 +55,30 @@ private:
 		using type = std::add_lvalue_reference_t< std::add_const_t<decay_arg<T>> >;
 	};
 	template<typename T>
-	struct pass_helper<T, std::enable_if_t<std::is_pointer<decay_arg<T>>::value>> {
+	struct pass_helper<T, std::enable_if_t<std::is_pointer_v<decay_arg<T>>>> {
 		using dT = std::remove_reference_t<decltype(*std::declval<decay_arg<T>>())>;
 		using type = std::add_const_t<dT>*;
 	};
 	template<typename T> using pass_arg = typename pass_helper<T>::type;
-	// final signature of object creator function callback
-	template< typename... Args >
-	using creator_callback = bs_type_ctor_result (*)(void*, pass_arg<Args>...);
+
+	// normalized signature of object constructor
+	template<typename... Args>
+	struct normalized_ctor {
+		using type = function_view< bs_type_ctor_result (pass_arg<Args>...) >;
+	};
+
+	template<typename R, typename... Args>
+	struct normalized_ctor<R (Args...)> {
+		using type = typename normalized_ctor<Args...>::type;
+	};
+
+	template<typename... Args> using normalized_ctor_t = typename normalized_ctor<Args...>::type;
 
 public:
-	const std::string name; //!< string type name
-	const std::string description; //!< arbitrary type description
+	/// string type name
+	const std::string name;
+	/// arbitrary type description
+	const std::string description;
 
 	// std::shared_ptr support casting only using explicit call to std::static_pointer_cast
 	// this helper allows to avoid lengthy typing and auto-cast pointer from objbase
@@ -95,9 +93,9 @@ public:
 		shared_ptr_cast(std::shared_ptr< objbase>&& rhs) : ptr_(std::move(rhs)) {}
 
 		// only allow imlicit conversion of rvalue shared_ptr_cast (&&)
-		template< typename T >
-		operator std::shared_ptr< T >() const && {
-			return std::static_pointer_cast< T, objbase >(ptr_);
+		template<typename T>
+		operator std::shared_ptr<T>() const && {
+			return std::static_pointer_cast<T>(std::move(ptr_));
 		}
 
 		bs_type_ctor_result ptr_;
@@ -150,64 +148,45 @@ public:
 	bool is_nil() const;
 
 	/*-----------------------------------------------------------------
-	 * create new instance
+	 * register constructors & construct new instance from ctor agruments
 	 *----------------------------------------------------------------*/
-	// vanilla fucntion pointer as type constructor
-	// NOTE: if Args&& used as function params then args types auto-deduction fails
-	// for templated functions
-	template< typename... Args >
-	void add_constructor(bs_type_ctor_result (*f)(Args...)) const {
-		creators_[typeid(args_pack< Args... >)] = ctor_handle(
-			reinterpret_cast< void(*)() >((creator_callback< Args... >)
-				[](void* ff, pass_arg< Args >... args) {
-					return (*reinterpret_cast< decltype(f) >(ff))(args...);
-				}
-			),
-			reinterpret_cast< void* >(f)
+	template<typename F>
+	auto add_constructor(F&& f) const -> void {
+		using Finfo = detail::deduce_callable<std::remove_reference_t<F>>;
+		using Fsign = typename Finfo::type;
+		static_assert(
+			std::is_same_v<typename Finfo::result, bs_type_ctor_result>,
+			"Type constructor must return sp_obj"
 		);
+		static_assert(
+			std::is_convertible_v<F, std::add_pointer_t<Fsign>>,
+			"Only stateless functor that can be registered as constructor"
+		);
+		// store type-erased constructor
+		using Fnorm = normalized_ctor_t<Fsign>;
+		creators_.insert_or_assign( typeid(Fnorm), reinterpret_cast<erased_ctor&&>(Fnorm{f}) );
 	}
 
-	// add stateless lambda as type constructor
-	template< typename Lambda >
-	void add_constructor(Lambda&& f) const {
-		using func_t = detail::mfn2bsctor_t< decltype(&std::remove_reference_t<Lambda>::operator()) >;
-		add_constructor((func_t*)f);
-	}
-
-	// add type default constructor
-	// explicit constructor arguments types
-	template< typename T, typename... Args >
+	template<typename T, typename... Args>
 	void add_constructor() const {
-		creators_[typeid(args_pack< Args... >)] = ctor_handle(
-			reinterpret_cast< void(*)() >((creator_callback< Args... >)
-				[](void* ff, pass_arg< Args >... args) {
-					return std::static_pointer_cast<objbase, T>(std::make_shared<T>(args...));
-				}
-			),
-			nullptr
-		);
-	}
-
-	// std type's constructor
-	// deduce constructor arguments types from passed tuple
-	template< typename T, typename... Args >
-	void add_constructor(std::tuple< Args... >*) const {
-		add_constructor< T, Args... >();
+		add_constructor([](pass_arg<Args>... args) {
+			return std::static_pointer_cast<objbase>(std::make_shared<T>(args...));
+		});
 	}
 
 	// make new instance
-	template< typename... Args >
-	shared_ptr_cast construct(Args&&... args) const {
-		auto creator = creators_.find(typeid(args_pack< Args... >));
-		if(creator != creators_.end()) {
-			auto callback = reinterpret_cast< creator_callback<Args...> >(creator->second.first);
-			return callback(creator->second.second, std::forward<Args>(args)...);
+	template<typename... Args>
+	auto construct(Args&&... args) const -> shared_ptr_cast {
+		using Fnorm = normalized_ctor_t<Args...>;
+		if(auto creator = creators_.find(typeid(Fnorm)); creator != creators_.end()) {
+			auto& f = reinterpret_cast<Fnorm&>(creator->second);
+			return f(std::forward<Args>(args)...);
 		}
 		return {};
 	}
 
 	/*-----------------------------------------------------------------
-	 * create copy of instance
+	 * make copy of instance
 	 *----------------------------------------------------------------*/
 	// register type's copy constructor
 	template< typename T >
