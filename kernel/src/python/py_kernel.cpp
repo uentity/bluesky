@@ -82,9 +82,17 @@ auto bind_tfactory_api(py::module& m) -> void {
 		py::overload_cast<const type_descriptor&, const std::string&>(&kernel::tfactory::register_type),
 		"type_descriptor"_a, "plugin_name"_a);
 	m.def("find_type", &kernel::tfactory::find_type, "type_name"_a);
-	m.def("clone_object", [](bs_type_copy_param src) -> sp_obj {
-		return kernel::tfactory::clone_object(src);
+
+	m.def("create", [](std::string_view obj_type_id) -> sp_obj {
+		return kernel::tfactory::create(obj_type_id);
+	}, "obj_type_id"_a, "Default construct object of given type");
+
+	m.def("clone", [](bs_type_copy_param src) -> sp_obj {
+		return kernel::tfactory::clone(src);
 	}, "src"_a, "Make object copy");
+
+	m.def("assign", &kernel::tfactory::assign,
+		"target"_a, "source"_a, "params"_a = prop::propdict{}, "Assign content from source to target");
 }
 
 auto bind_config_api(py::module& m) -> void {

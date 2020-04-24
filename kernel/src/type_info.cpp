@@ -10,26 +10,40 @@
 #include <bs/type_info.h>
 #include <bs/type_descriptor.h>
 #include <bs/defaults.h>
+#include <bs/objbase.h>
 
-namespace blue_sky {
+NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(detail)
 
 /// correct leafs owner in cloned node object
 BS_API void adjust_cloned_node(const sp_obj&);
 
 NAMESPACE_END(detail)
+
+NAMESPACE_BEGIN()
 /*-----------------------------------------------------------------------------
  *  Nil type tag
  *-----------------------------------------------------------------------------*/
-class nil {};
+struct nil_ {
+	static constexpr auto bs_disable_assign = true;
+
+	static auto bs_type() -> const type_descriptor& {
+		static const auto nil_td = type_descriptor(
+			defaults::nil_type_name, nullptr, nullptr, nullptr, "Nil type"
+		);
+		return nil_td;
+	}
+};
+
+NAMESPACE_END()
 
 const std::type_index& nil_type_info() {
-	static const auto nil_ti = BS_GET_TI(nil);
+	static const auto nil_ti = BS_GET_TI(nil_);
 	return nil_ti;
 }
 
 bool is_nil(const std::type_index& t) {
-	return t == std::type_index(typeid(nil));
+	return t == std::type_index(typeid(nil_));
 }
 
 /*-----------------------------------------------------------------------------
@@ -37,28 +51,39 @@ bool is_nil(const std::type_index& t) {
  *-----------------------------------------------------------------------------*/
 // constructor from string type name for temporary tasks (searching etc)
 type_descriptor::type_descriptor(std::string_view type_name) :
-	parent_td_fun_(&nil), copy_fun_(nullptr), name(type_name)
+	parent_td_fun_(&nil), assign_fun_(make_assigner<nil_>()),
+	copy_fun_(nullptr), name(type_name)
 {}
 
 // standard constructor
 type_descriptor::type_descriptor(
-	std::string type_name, const BS_TYPE_COPY_FUN& cp_fn,
-	const BS_GET_TD_FUN& parent_td_fn, std::string description
+	std::string type_name, BS_GET_TD_FUN parent_td_fn, BS_TYPE_ASSIGN_FUN assign_fn,
+	BS_TYPE_COPY_FUN cp_fn, std::string description
 ) :
-	parent_td_fun_(parent_td_fn), copy_fun_(cp_fn),
+	parent_td_fun_(parent_td_fn ? parent_td_fn : &nil),
+	assign_fun_(assign_fn ? assign_fn : make_assigner<nil_>()), copy_fun_(cp_fn),
 	name(std::move(type_name)), description(std::move(description))
 {}
 
 // obtain Nil type_descriptor instance
-const type_descriptor& type_descriptor::nil() {
-	static const auto nil_td = type_descriptor(
-		defaults::nil_type_name, nullptr, &nil, "Nil type"
-	);
-	return nil_td;
+auto type_descriptor::nil() -> const type_descriptor& {
+	return nil_::bs_type();
 }
 
-bool type_descriptor::is_nil() const {
+auto type_descriptor::is_nil() const -> bool {
 	return parent_td_fun_ == &nil;
+}
+
+auto type_descriptor::is_copyable() const -> bool {
+	return (copy_fun_ != nullptr);
+}
+
+auto type_descriptor::parent_td() const -> const type_descriptor& {
+	return parent_td_fun_();
+}
+
+auto type_descriptor::operator <(const type_descriptor& td) const -> bool {
+	return name < td.name;
 }
 
 auto type_descriptor::clone(bs_type_copy_param src) const -> shared_ptr_cast {
@@ -71,15 +96,19 @@ auto type_descriptor::clone(bs_type_copy_param src) const -> shared_ptr_cast {
 	return {};
 }
 
-auto type_descriptor::parent_td() const -> const type_descriptor& {
-	return parent_td_fun_();
+auto type_descriptor::assign(sp_obj target, sp_cobj source, prop::propdict params) const -> error {
+	return assign_fun_(std::move(target), std::move(source), std::move(params));
 }
 
-bool type_descriptor::operator <(const type_descriptor& td) const {
-	return name < td.name;
+auto type_descriptor::isinstance(const sp_cobj& obj) const -> bool {
+	return obj->bs_resolve_type() == *this;
 }
 
-bool upcastable_eq::operator()(const type_descriptor& td1, const type_descriptor& td2) const {
+auto isinstance(const sp_cobj& obj, std::string_view obj_type_id) -> bool {
+	return obj->bs_resolve_type() == obj_type_id;
+}
+
+auto upcastable_eq::operator()(const type_descriptor& td1, const type_descriptor& td2) const -> bool {
 	if(td1 == td2) return true;
 
 	const type_descriptor* cur_td = &td2.parent_td();
@@ -91,5 +120,4 @@ bool upcastable_eq::operator()(const type_descriptor& td1, const type_descriptor
 	return false;
 }
 
-} // eof blue_sky namespace
-
+NAMESPACE_END(blue_sky)

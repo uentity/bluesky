@@ -8,7 +8,6 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "objbase.h"
 #include "timetypes.h"
 #include "meta.h"
 
@@ -141,7 +140,7 @@ constexpr bool extract(const property& source, To& target) noexcept {
 
 /// check if property holds 'None' value (null `sp_obj`)
 constexpr bool is_none(const property& P) noexcept {
-	return std::holds_alternative<object>(P) && get<object>(P) == nullptr;
+	return std::holds_alternative<object>(P) && !get<object>(P);
 }
 
 inline auto none() noexcept { return property{ sp_obj() }; }

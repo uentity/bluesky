@@ -15,6 +15,7 @@
 
 #include "../property.h"
 #include "../propdict.h"
+#include "../objbase.h"
 
 // propdict & propbooks are opaque
 PYBIND11_MAKE_OPAQUE(blue_sky::prop::propdict);

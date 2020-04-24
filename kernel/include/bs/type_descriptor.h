@@ -9,7 +9,9 @@
 #pragma once
 
 #include "common.h"
+#include "error.h"
 #include "type_macro.h"
+#include "propdict.h"
 #include "detail/function_view.h"
 
 #include <unordered_map>
@@ -21,6 +23,91 @@ using bs_type_copy_param = const std::shared_ptr<const objbase>&;
 
 using BS_TYPE_COPY_FUN = bs_type_ctor_result (*)(bs_type_copy_param);
 using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
+using BS_TYPE_ASSIGN_FUN = error (*)(sp_obj /*target*/, sp_cobj /*source*/, prop::propdict /*params*/);
+
+/*-----------------------------------------------------------------------------
+ *  every BS type must be assignable - provide assing(target, source) definition
+ *-----------------------------------------------------------------------------*/
+
+/// Povide explicit specialization of this struct to disable assign (enabled by default for all types)
+/// Also can be controlled by adding `T::bs_disable_assign` static bool constant
+template<typename T, typename sfinae = void> struct has_disabled_assign : std::false_type {};
+
+template<typename T> struct has_disabled_assign<T, std::void_t<decltype( T::bs_disable_assign )>> :
+	std::bool_constant<T::bs_disable_assign> {};
+
+NAMESPACE_BEGIN(detail)
+
+template<typename T, typename = void>
+struct assign_traits {
+	// detect if type provide T::bs_assign() member
+	template<typename U, typename = void> struct has_member_assign : std::false_type {};
+	template<typename U> struct has_member_assign<U, std::void_t<decltype(
+		std::declval<U&>().bs_assign(std::declval<const U&>(), std::declval<prop::propdict&>())
+	)>> : std::true_type {};
+
+	static constexpr auto member = has_member_assign<T>::value;
+	static constexpr auto noop = has_disabled_assign<T>::value && !member;
+	static constexpr auto generic = !(member || noop);
+};
+
+NAMESPACE_END(detail)
+
+/// Generic definition of assign() that works via operator=()
+template<typename T>
+auto assign(T& target, const T& source, prop::propdict)
+-> std::enable_if_t<detail::assign_traits<T>::generic, error> {
+	static_assert(
+		std::is_assignable_v<T, T>,
+		"Seems that type lacks default assignemnt operator. "
+		"Either define it or provide overload of assign(T&, const T&, prop::propdict) -> error"
+	);
+	if constexpr(std::is_assignable_v<T, T>)
+		target = source;
+	return perfect;
+}
+
+/// overload appears for types that have defined T::assign(const T&) method
+template<typename T>
+auto assign(T& target, const T& source, prop::propdict params)
+-> std::enable_if_t<detail::assign_traits<T>::member, error> {
+	using R = std::invoke_result_t<decltype(T::bs_assign), T&, const T&, prop::propdict>;
+	static_assert(
+		std::is_same_v<R, error> || std::is_same_v<R, void>,
+		"T::bs_assign() must return void or blue_sky::error"
+	);
+
+	if constexpr(std::is_same_v<R, void>) {
+		target.bs_assign(source, std::move(params));
+		return perfect;
+	}
+	else
+		return target.bs_assign(source, std::move(params));
+}
+
+/// noop for types defined corresponding constant
+template<typename T>
+auto assign(T& target, const T& source, prop::propdict)
+-> std::enable_if_t<detail::assign_traits<T>::noop, error> {
+	return perfect;
+}
+
+template<typename T>
+auto make_assigner() {
+	if constexpr(detail::assign_traits<T>::noop)
+		return [](sp_obj, sp_cobj, prop::propdict) -> error { return perfect; };
+	else
+		return [](sp_obj target, sp_cobj source, prop::propdict params) -> error {
+			// sanity
+			if(!target) return error{"Empty target"};
+			if(!source) return error{"Empty source"};
+			auto& td = T::bs_type();
+			if(!td.isinstance(target) || !td.isinstance(source))
+				return error{"Incompatible object passed as assign source or target"};
+			// invoke overload for type T
+			return assign(static_cast<T&>(*target), static_cast<const T&>(*source), std::move(params));
+		};
+}
 
 /*-----------------------------------------------------------------------------
  *  describes BS type and provides create/copy/assign facilities
@@ -28,6 +115,7 @@ using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
 class BS_API type_descriptor {
 private:
 	const BS_GET_TD_FUN parent_td_fun_;
+	const function_view<detail::deduce_callable_t<BS_TYPE_ASSIGN_FUN>> assign_fun_;
 	mutable BS_TYPE_COPY_FUN copy_fun_;
 
 	// map type of params tuple -> typeless creation function
@@ -106,17 +194,12 @@ public:
 
 	// standard constructor
 	type_descriptor(
-		std::string type_name, const BS_TYPE_COPY_FUN& cp_fn,
-		const BS_GET_TD_FUN& parent_td_fn, std::string description = ""
+		std::string type_name, BS_GET_TD_FUN parent_td_fn, BS_TYPE_ASSIGN_FUN assign_fn,
+		BS_TYPE_COPY_FUN cp_fn = nullptr, std::string description = ""
 	);
 
 	// templated ctor for BlueSky types
-	// if add_def_construct is set -- add default (empty) type's constructor
-	// if add_def_copy is set -- add copy constructor
-	template<
-		class T, class base = void, class typename_t = std::nullptr_t,
-		bool add_def_ctor = false, bool add_def_copy = false
-	>
+	template<class T, class base = void, class typename_t = std::nullptr_t>
 	type_descriptor(
 		identity< T >, identity< base >,
 		typename_t type_name = nullptr, std::string description = {}
@@ -127,6 +210,7 @@ public:
 			else
 				return &base::bs_type;
 		}()),
+		assign_fun_(make_assigner<T>()),
 		copy_fun_(nullptr),
 		name([&] {
 			if constexpr(std::is_same_v<typename_t, std::nullptr_t>)
@@ -134,6 +218,7 @@ public:
 			else
 				return std::move(type_name);
 		}()),
+
 		description(std::move(description))
 	{
 		// auto-add default ctor, from single string arg (typically ID), and copy ctor
@@ -143,13 +228,9 @@ public:
 			add_copy_constructor<T>();
 	}
 
-	// obtain Nil type_descriptor
-	static const type_descriptor& nil();
-	bool is_nil() const;
-
-	/*-----------------------------------------------------------------
-	 * register constructors & construct new instance from ctor agruments
-	 *----------------------------------------------------------------*/
+	///////////////////////////////////////////////////////////////////////////////
+	// register constructors & construct new instance from ctor agruments 
+	//
 	template<typename F>
 	auto add_constructor(F&& f) const -> void {
 		using Finfo = detail::deduce_callable<std::remove_reference_t<F>>;
@@ -168,7 +249,7 @@ public:
 	}
 
 	template<typename T, typename... Args>
-	void add_constructor() const {
+	auto add_constructor() const -> void {
 		add_constructor([](pass_arg<Args>... args) {
 			return std::static_pointer_cast<objbase>(std::make_shared<T>(args...));
 		});
@@ -185,12 +266,12 @@ public:
 		return {};
 	}
 
-	/*-----------------------------------------------------------------
-	 * make copy of instance
-	 *----------------------------------------------------------------*/
+	///////////////////////////////////////////////////////////////////////////////
+	// make copy of instance 
+	//
 	// register type's copy constructor
 	template< typename T >
-	void add_copy_constructor() const {
+	auto add_copy_constructor() const -> void {
 		copy_fun_ = [](bs_type_copy_param src) {
 			return src ? std::static_pointer_cast< objbase, T >(
 				std::make_shared< T >(static_cast< const T& >(*src))
@@ -199,19 +280,21 @@ public:
 	}
 
 	// construct copy using vanilla function
-	void add_copy_constructor(BS_TYPE_COPY_FUN f) const {
+	auto add_copy_constructor(BS_TYPE_COPY_FUN f) const -> void {
 		copy_fun_ = f;
 	}
 
 	// make a copy of object instance
-	shared_ptr_cast clone(bs_type_copy_param src) const;
+	auto clone(bs_type_copy_param src) const -> shared_ptr_cast;
 
-	/// tests
-	bool is_copyable() const {
-		return (copy_fun_ != nullptr);
-	}
+	// assign content from source -> target
+	auto assign(sp_obj target, sp_cobj source, prop::propdict params = {}) const -> error;
 
-	/// conversions
+	auto is_copyable() const -> bool;
+
+	static auto nil() -> const type_descriptor&;
+	auto is_nil() const -> bool;
+
 	operator std::string() const {
 		return name;
 	}
@@ -219,31 +302,37 @@ public:
 		return name.c_str();
 	}
 
+	/// check that object's type descriptor mathes self
+	auto isinstance(const sp_cobj& obj) const -> bool;
+	
 	/// retrieve type_descriptor of parent class
-	const type_descriptor& parent_td() const;
+	auto parent_td() const -> const type_descriptor&;
 
 	/// type_descriptors are comparable by string type name
-	bool operator <(const type_descriptor& td) const;
+	auto operator <(const type_descriptor& td) const -> bool;
 
 	/// comparison with string type ID
-	friend bool operator ==(const type_descriptor& td, std::string_view type_id) {
+	friend auto operator ==(const type_descriptor& td, std::string_view type_id) -> bool {
 		return (td.name == type_id);
 	}
-	friend bool operator ==(std::string_view type_id, const type_descriptor& td) {
+	friend auto operator ==(std::string_view type_id, const type_descriptor& td) -> bool {
 		return (td.name == type_id);
 	}
 
-	friend bool operator !=(const type_descriptor& td, std::string_view type_id) {
+	friend auto operator !=(const type_descriptor& td, std::string_view type_id) -> bool {
 		return td.name != type_id;
 	}
-	friend bool operator !=(std::string_view type_id, const type_descriptor& td) {
+	friend auto operator !=(std::string_view type_id, const type_descriptor& td) -> bool {
 		return td.name != type_id;
 	}
 
-	friend bool operator <(const type_descriptor& td, std::string_view type_id) {
+	friend auto operator <(const type_descriptor& td, std::string_view type_id) -> bool {
 		return td.name < type_id;
 	}
 };
+
+inline auto isinstance(const sp_cobj& obj, const type_descriptor& td) -> bool { return td.isinstance(obj); }
+BS_API auto isinstance(const sp_cobj& obj, std::string_view obj_type_id) -> bool;
 
 // upcastable_eq(td1, td2) will return true if td1 == td2
 // or td1 can be casted up to td2 (i.e. td2 is inherited from td1)

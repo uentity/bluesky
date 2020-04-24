@@ -37,8 +37,18 @@ auto create_object(Obj_type_spec&& obj_type, Args&&... ctor_args) {
 	auto& td = detail::demand_type(type_descriptor(std::forward< Obj_type_spec >(obj_type)));
 	return td.construct(std::forward< Args >(ctor_args)...);
 }
+// just shorter alias to create_object
+template< typename Obj_type, typename... Args >
+auto create(Obj_type&& obj_type, Args&&... ctor_args) {
+	return create_object(std::forward<Obj_type>(obj_type), std::forward< Args >(ctor_args)...);
+}
 
 // clone object
 BS_API auto clone_object(bs_type_copy_param source) -> type_descriptor::shared_ptr_cast;
+// shorter alias to clone_object()
+inline auto clone(bs_type_copy_param source) { return clone_object(std::move(source)); }
+
+// assign source contet to target
+BS_API auto assign(sp_obj target, sp_cobj source, prop::propdict params = {}) -> error;
 
 NAMESPACE_END(blue_sky::kernel::tfactory)

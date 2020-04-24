@@ -38,4 +38,9 @@ auto clone_object(bs_type_copy_param source) -> type_descriptor::shared_ptr_cast
 	return source->bs_resolve_type().clone(source);
 }
 
+auto assign(sp_obj target, sp_cobj source, prop::propdict params) -> error {
+	auto& tar_td = target->bs_resolve_type();
+	return tar_td.assign(std::move(target), std::move(source), std::move(params));
+}
+
 NAMESPACE_END(blue_sky::kernel::tfactory)
