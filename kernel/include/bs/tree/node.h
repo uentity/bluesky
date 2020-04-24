@@ -213,8 +213,10 @@ public:
 
 	/// ctor - creates hard self link with given name
 	node(std::string custom_id = "");
-	// copy ctor makes deep copy of contained links
+	/// copy ctor makes deep copy of contained links
 	node(const node& src);
+	/// assignemnt support
+	auto operator=(const node& rhs) -> node&;
 
 	virtual ~node();
 

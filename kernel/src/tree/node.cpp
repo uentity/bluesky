@@ -35,6 +35,12 @@ node::node(const node& src)
 	start_engine();
 }
 
+auto node::operator=(const node& rhs) -> node& {
+	*pimpl_ = *rhs.pimpl_;
+	propagate_owner();
+	return *this;
+}
+
 node::~node() {
 	// mark self as deleted for impl & actor
 	pimpl_->super_ = nullptr;

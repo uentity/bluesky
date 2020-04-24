@@ -38,13 +38,17 @@ node_impl::node_impl(node* super) :
 node_impl::node_impl(const node_impl& rhs, node* super) :
 	timeout(rhs.timeout), super_(super)
 {
+	*this = rhs;
+}
+
+auto node_impl::operator=(const node_impl& rhs) -> node_impl& {
 	// [TODO] fix this in safer way after node is refactored
-	auto& tgt = links_.get<Key_tag<Key::AnyOrder>>();
-	for(const auto& plink : rhs.links_.get<Key_tag<Key::AnyOrder>>()) {
-		tgt.insert(tgt.end(), plink.clone(true));
-	}
+	auto& raw_leafs = links_.get<Key_tag<Key::AnyOrder>>();
+	for(const auto& plink : rhs.links_.get<Key_tag<Key::AnyOrder>>())
+		raw_leafs.insert(raw_leafs.end(), plink.clone(true));
 	// [NOTE] links are in invalid state (no owner set) now
 	// correct this by manually calling `node::propagate_owner()` after copy is constructed
+	return *this;
 }
 
 node_impl::node_impl(node_impl&& rhs, node* super) :

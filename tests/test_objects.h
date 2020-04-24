@@ -60,6 +60,8 @@ struct my_strategy : public objbase {
 	my_strategy(my_strategy&&) = default;
 	my_strategy(const std::string& name) : name_(name) {}
 
+	auto operator=(const my_strategy&) -> my_strategy& = default;
+
 	std::string name_;
 
 	//template< class Ostream >

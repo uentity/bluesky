@@ -112,6 +112,8 @@ public:
 	node_impl(node* super);
 	node_impl(const node_impl&, node* super);
 	node_impl(node_impl&&, node* super);
+	// assignment
+	auto operator=(const node_impl&) -> node_impl&;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  iterate
