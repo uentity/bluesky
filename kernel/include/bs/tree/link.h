@@ -83,6 +83,8 @@ public:
 	using actor_type = caf::typed_actor<
 		// terminate actor
 		caf::reacts_to<a_bye>,
+		// get home group
+		caf::replies_to<a_home>::with<caf::group>,
 		// get link ID
 		caf::replies_to<a_lnk_id>::with<lid_type>,
 		// get pointee OID
@@ -176,7 +178,7 @@ public:
 	operator bool() const { return !is_nil(); }
 
 	/// hash for appropriate containers
-	auto hash() const -> std::size_t;
+	auto hash() const noexcept -> std::size_t;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Fast API

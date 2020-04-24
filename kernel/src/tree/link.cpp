@@ -177,7 +177,7 @@ auto link::id() const -> lid_type {
 	return pimpl_->id_;
 }
 
-auto link::hash() const -> std::size_t {
+auto link::hash() const noexcept -> std::size_t {
 	return std::hash<std::shared_ptr<link_impl>>{}(pimpl_);
 }
 

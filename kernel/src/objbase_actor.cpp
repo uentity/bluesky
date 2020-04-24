@@ -45,6 +45,8 @@ struct objbase_actor : public caf::event_based_actor {
 	auto make_typed_behavior() -> typed_behavior {
 	return typed_behavior {
 
+		[=](a_home) { return home_; },
+
 		// execute modificator
 		[=](a_apply, const closed_modificator_f& m) -> error::box {
 			// invoke modificator

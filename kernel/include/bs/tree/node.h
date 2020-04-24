@@ -28,6 +28,8 @@ public:
 
 	/// Interface of node actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
+		// get home group
+		caf::replies_to<a_home>::with<caf::group>,
 		// get node's group ID
 		caf::replies_to<a_node_gid>::with<std::string>,
 		// get node's handle

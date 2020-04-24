@@ -202,6 +202,8 @@ return {
 	// unconditionally join home group - used after deserialization
 	[=](a_hi) { join(home()); },
 
+	[=](a_home) { return impl.home_; },
+
 	// skip `bye` (should always come from myself)
 	[=](a_bye) {},
 
