@@ -23,7 +23,7 @@ using bs_type_copy_param = const std::shared_ptr<const objbase>&;
 
 using BS_TYPE_COPY_FUN = bs_type_ctor_result (*)(bs_type_copy_param);
 using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
-using BS_TYPE_ASSIGN_FUN = error (*)(sp_obj /*target*/, sp_cobj /*source*/, prop::propdict /*params*/);
+using BS_TYPE_ASSIGN_FUN = error (*)(sp_obj /*target*/, sp_obj /*source*/, prop::propdict /*params*/);
 
 /*-----------------------------------------------------------------------------
  *  every BS type must be assignable - provide assing(target, source) definition
@@ -43,7 +43,7 @@ struct assign_traits {
 	// detect if type provide T::bs_assign() member
 	template<typename U, typename = void> struct has_member_assign : std::false_type {};
 	template<typename U> struct has_member_assign<U, std::void_t<decltype(
-		std::declval<U&>().bs_assign(std::declval<const U&>(), std::declval<prop::propdict&>())
+		std::declval<U&>().bs_assign(std::declval<U&>(), std::declval<prop::propdict&>())
 	)>> : std::true_type {};
 
 	static constexpr auto member = has_member_assign<T>::value;
@@ -55,12 +55,12 @@ NAMESPACE_END(detail)
 
 /// Generic definition of assign() that works via operator=()
 template<typename T>
-auto assign(T& target, const T& source, prop::propdict)
+auto assign(T& target, T& source, prop::propdict)
 -> std::enable_if_t<detail::assign_traits<T>::generic, error> {
 	static_assert(
-		std::is_assignable_v<T, T>,
+		std::is_assignable_v<T&, T>,
 		"Seems that type lacks default assignemnt operator. "
-		"Either define it or provide overload of assign(T&, const T&, prop::propdict) -> error"
+		"Either define it or provide overload of assign(T&, T&, prop::propdict) -> error"
 	);
 	if constexpr(std::is_assignable_v<T, T>)
 		target = source;
@@ -69,12 +69,12 @@ auto assign(T& target, const T& source, prop::propdict)
 
 /// overload appears for types that have defined T::assign(const T&) method
 template<typename T>
-auto assign(T& target, const T& source, prop::propdict params)
+auto assign(T& target, T& source, prop::propdict params)
 -> std::enable_if_t<detail::assign_traits<T>::member, error> {
-	using R = std::invoke_result_t<decltype(T::bs_assign), T&, const T&, prop::propdict>;
+	using R = std::invoke_result_t<decltype(T::bs_assign), T&, T&, prop::propdict>;
 	static_assert(
 		std::is_same_v<R, error> || std::is_same_v<R, void>,
-		"T::bs_assign() must return void or blue_sky::error"
+		"T::bs_assign(T&, prop::propdict) must return void or blue_sky::error"
 	);
 
 	if constexpr(std::is_same_v<R, void>) {
@@ -87,7 +87,7 @@ auto assign(T& target, const T& source, prop::propdict params)
 
 /// noop for types defined corresponding constant
 template<typename T>
-auto assign(T& target, const T& source, prop::propdict)
+auto assign(T& target, T& source, prop::propdict)
 -> std::enable_if_t<detail::assign_traits<T>::noop, error> {
 	return perfect;
 }
@@ -95,17 +95,17 @@ auto assign(T& target, const T& source, prop::propdict)
 template<typename T>
 auto make_assigner() {
 	if constexpr(detail::assign_traits<T>::noop)
-		return [](sp_obj, sp_cobj, prop::propdict) -> error { return perfect; };
+		return [](sp_obj, sp_obj, prop::propdict) -> error { return perfect; };
 	else
-		return [](sp_obj target, sp_cobj source, prop::propdict params) -> error {
+		return [](sp_obj target, sp_obj source, prop::propdict params) -> error {
 			// sanity
 			if(!target) return error{"Empty target"};
 			if(!source) return error{"Empty source"};
 			auto& td = T::bs_type();
-			if(!td.isinstance(target) || !td.isinstance(source))
-				return error{"Incompatible object passed as assign source or target"};
+			if(!isinstance(target, td) || !isinstance(source, td))
+				return error{"Object of incompatible type passed as assign source or target"};
 			// invoke overload for type T
-			return assign(static_cast<T&>(*target), static_cast<const T&>(*source), std::move(params));
+			return assign(static_cast<T&>(*target), static_cast<T&>(*source), std::move(params));
 		};
 }
 
@@ -288,7 +288,7 @@ public:
 	auto clone(bs_type_copy_param src) const -> shared_ptr_cast;
 
 	// assign content from source -> target
-	auto assign(sp_obj target, sp_cobj source, prop::propdict params = {}) const -> error;
+	auto assign(sp_obj target, sp_obj source, prop::propdict params = {}) const -> error;
 
 	auto is_copyable() const -> bool;
 

@@ -96,7 +96,7 @@ auto type_descriptor::clone(bs_type_copy_param src) const -> shared_ptr_cast {
 	return {};
 }
 
-auto type_descriptor::assign(sp_obj target, sp_cobj source, prop::propdict params) const -> error {
+auto type_descriptor::assign(sp_obj target, sp_obj source, prop::propdict params) const -> error {
 	return assign_fun_(std::move(target), std::move(source), std::move(params));
 }
 

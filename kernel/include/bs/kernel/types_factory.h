@@ -49,6 +49,6 @@ BS_API auto clone_object(bs_type_copy_param source) -> type_descriptor::shared_p
 inline auto clone(bs_type_copy_param source) { return clone_object(std::move(source)); }
 
 // assign source contet to target
-BS_API auto assign(sp_obj target, sp_cobj source, prop::propdict params = {}) -> error;
+BS_API auto assign(sp_obj target, sp_obj source, prop::propdict params = {}) -> error;
 
 NAMESPACE_END(blue_sky::kernel::tfactory)
