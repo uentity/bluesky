@@ -61,7 +61,6 @@ inline constexpr auto enable_pf_ctor_to_v = enable_pf_ctor_v<T, Args...> &&
 	std::is_constructible_v<U, Args...>;
 
 template<typename T, typename U, typename... Args>
-using enable_pf_ctor_to = std::enable_if_t<enable_pf_ctor_v<T, U, Args...>>;
-
+using enable_pf_ctor_to = std::enable_if_t<enable_pf_ctor_to_v<T, U, Args...>>;
 
 } // eof blue_sky::meta
