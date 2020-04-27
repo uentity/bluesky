@@ -7,7 +7,6 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/type_info.h>
 #include <bs/type_descriptor.h>
 #include <bs/defaults.h>
 #include <bs/objbase.h>
@@ -51,7 +50,7 @@ bool is_nil(const std::type_index& t) {
  *-----------------------------------------------------------------------------*/
 // constructor from string type name for temporary tasks (searching etc)
 type_descriptor::type_descriptor(std::string_view type_name) :
-	parent_td_fun_(&nil), assign_fun_(make_assigner<nil_>()),
+	parent_td_fun_(&nil), assign_fun_(detail::noop_assigner),
 	copy_fun_(nullptr), name(type_name)
 {}
 
@@ -61,7 +60,7 @@ type_descriptor::type_descriptor(
 	BS_TYPE_COPY_FUN cp_fn, std::string description
 ) :
 	parent_td_fun_(parent_td_fn ? parent_td_fn : &nil),
-	assign_fun_(assign_fn ? assign_fn : make_assigner<nil_>()), copy_fun_(cp_fn),
+	assign_fun_(assign_fn ? assign_fn : detail::noop_assigner), copy_fun_(cp_fn),
 	name(std::move(type_name)), description(std::move(description))
 {}
 

@@ -62,13 +62,15 @@ objbase& objbase::operator=(const objbase& rhs) {
 const type_descriptor& objbase::bs_type() {
 	static auto td = [] {
 		auto td = type_descriptor(
-			identity< objbase >(), identity< void >(),
-			"objbase", "Base class of all BlueSky types"
+			"objbase", &type_descriptor::nil, detail::make_assigner<objbase>(), nullptr,
+			"Base class of all BlueSky types"
 		);
 		// add constructor from custom OID
 		td.add_constructor([](const std::string& custom_oid) -> sp_obj {
 			return std::make_shared<objbase>(custom_oid);
 		});
+		// add default copy ctor
+		td.add_copy_constructor<objbase>();
 		return td;
 	}();
 

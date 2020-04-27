@@ -14,6 +14,7 @@
 #include "propdict.h"
 #include "detail/function_view.h"
 
+#include <type_traits>
 #include <unordered_map>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -50,6 +51,28 @@ struct assign_traits {
 	static constexpr auto noop = has_disabled_assign<T>::value && !member;
 	static constexpr auto generic = !(member || noop);
 };
+
+inline auto noop_assigner(sp_obj, sp_obj, prop::propdict) -> error { return perfect; };
+
+template<typename T>
+auto make_assigner() {
+	// [NOTE] strange if clause with extra constexpr if just to compile under VS
+	if constexpr (assign_traits<T>::noop)
+		return noop_assigner;
+	else if constexpr(std::is_base_of_v<objbase, T>)
+		return [](sp_obj target, sp_obj source, prop::propdict params) -> error {
+			// sanity
+			if(!target) return error{"Empty target"};
+			if(!source) return error{"Empty source"};
+			auto& td = T::bs_type();
+			if(!isinstance(target, td) || !isinstance(source, td))
+				return error{"Object of incompatible type passed as assign source or target"};
+			// invoke overload for type T
+			return assign(static_cast<T&>(*target), static_cast<T&>(*source), std::move(params));
+		};
+	else
+		return noop_assigner;
+}
 
 NAMESPACE_END(detail)
 
@@ -90,23 +113,6 @@ template<typename T>
 auto assign(T& target, T& source, prop::propdict)
 -> std::enable_if_t<detail::assign_traits<T>::noop, error> {
 	return perfect;
-}
-
-template<typename T>
-auto make_assigner() {
-	if constexpr(detail::assign_traits<T>::noop)
-		return [](sp_obj, sp_obj, prop::propdict) -> error { return perfect; };
-	else
-		return [](sp_obj target, sp_obj source, prop::propdict params) -> error {
-			// sanity
-			if(!target) return error{"Empty target"};
-			if(!source) return error{"Empty source"};
-			auto& td = T::bs_type();
-			if(!isinstance(target, td) || !isinstance(source, td))
-				return error{"Object of incompatible type passed as assign source or target"};
-			// invoke overload for type T
-			return assign(static_cast<T&>(*target), static_cast<T&>(*source), std::move(params));
-		};
 }
 
 /*-----------------------------------------------------------------------------
@@ -199,18 +205,13 @@ public:
 	);
 
 	// templated ctor for BlueSky types
-	template<class T, class base = void, class typename_t = std::nullptr_t>
+	template<class T, class base, class typename_t = std::nullptr_t>
 	type_descriptor(
 		identity< T >, identity< base >,
 		typename_t type_name = nullptr, std::string description = {}
 	) :
-		parent_td_fun_([&] {
-			if constexpr(std::is_same_v<base, void>)
-				return &nil;
-			else
-				return &base::bs_type;
-		}()),
-		assign_fun_(make_assigner<T>()),
+		parent_td_fun_(&base::bs_type),
+		assign_fun_(detail::make_assigner<T>()),
 		copy_fun_(nullptr),
 		name([&] {
 			if constexpr(std::is_same_v<typename_t, std::nullptr_t>)
@@ -218,7 +219,6 @@ public:
 			else
 				return std::move(type_name);
 		}()),
-
 		description(std::move(description))
 	{
 		// auto-add default ctor, from single string arg (typically ID), and copy ctor
