@@ -60,7 +60,7 @@ public:
 
 	// perfect forwarding ctor forwards all args to container
 	// specifically treats first argument to allow vonstructors above
-	template<typename... Args, typename = meta::enable_pf_ctor_to<bs_arrbase_shared_impl, array_t>>
+	template<typename... Args, typename = meta::enable_pf_ctor_to<bs_arrbase_shared_impl, array_t, Args...>>
 	bs_arrbase_shared_impl(Args&&... args) :
 		shared_data_(std::make_shared< array_t >(std::forward< Args >(args)...))
 	{}
