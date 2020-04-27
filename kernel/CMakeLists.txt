@@ -20,6 +20,9 @@ target_compile_definitions(${T} PRIVATE -DBS_EXPORTING -DBS_EXPORTING_PLUGIN -DB
 if(PY EQUAL 1)
     target_compile_definitions(${T} PRIVATE -DBSPY_EXPORTING -DBSPY_EXPORTING_PLUGIN)
 endif()
+if(MSVC)
+	target_compile_definitions(${T} PUBLIC -DNOMINMAX)
+endif()
 # include dirs
 target_include_directories(${T} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # dependencies
@@ -34,6 +37,7 @@ if(UNIX)
     target_link_libraries(${T} PRIVATE stdc++fs)
 endif()
 use_boost(${T} regex thread serialization locale)
+use_fmt(${T})
 use_caf(${T})
 use_cereal(${T})
 use_eigen(${T})
