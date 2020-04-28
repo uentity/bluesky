@@ -13,6 +13,8 @@
 #include <bs/tree/common.h>
 #include <bs/kernel/radio.h>
 
+#include "../kernel/radio_subsyst.h"
+
 #include <caf/group.hpp>
 #include <caf/actor_config.hpp>
 #include <caf/event_based_actor.hpp>
@@ -50,8 +52,8 @@ struct ev_listener_actor : caf::event_based_actor {
 		set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
 			return caf::none;
 		});
-		// self-register
-		kernel::radio::system().registry().put(id(), this);
+		// register self in kernel's home group
+		join(KRADIO.khome());
 
 		// generate & remember self behavior
 		character = make_event_behavior(this).or_else(caf::message_handler{
