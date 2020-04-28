@@ -24,7 +24,6 @@
 #include <iostream>
 
 #define BSCONFIG ::blue_sky::kernel::config::config()
-#define KRADIO ::blue_sky::singleton<::blue_sky::kernel::detail::radio_subsyst>::Instance()
 
 inline constexpr std::uint16_t def_port = 9339;
 inline constexpr std::uint16_t def_groups_port = 9340;
@@ -85,22 +84,35 @@ auto radio_subsyst::init() -> error {
 		// start actor system
 		if(actor_sys_.emplace(actor_config()); !actor_sys_)
 			return error{ "Can't create CAF actor_system!" };
+		// init kernel group
+		khome_ = actor_sys_->groups().anonymous();
 	}
 	return perfect;
 }
 
 auto radio_subsyst::shutdown() -> void {
-	if(actor_sys_) actor_sys_.reset();
+	if(actor_sys_) {
+		// send `a_bye` message to all actors in kernel group
+		caf::anon_send(khome_, a_bye());
+		// terminate actor system
+		actor_sys_.reset();
+	}
 }
 
 auto radio_subsyst::system() -> caf::actor_system& {
 	// ensure actor system is initialized
-	static auto& actor_sys = [=]() -> caf::actor_system& {
+	static auto& actor_sys = [&]() -> caf::actor_system& {
 		if(auto er = init(); er)
 			throw er;
 		return *actor_sys_;
 	}();
 	return actor_sys;
+}
+
+auto radio_subsyst::khome() -> const caf::group& {
+	// ensure home group is initialized
+	[[maybe_unused]] static const auto& _ = system();
+	return khome_;
 }
 
 auto radio_subsyst::toggle(bool on) -> error {

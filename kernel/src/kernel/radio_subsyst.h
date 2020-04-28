@@ -12,13 +12,25 @@
 #include <bs/tree/link.h>
 
 #include <caf/actor.hpp>
+#include <caf/typed_actor.hpp>
 #include <caf/actor_system.hpp>
+#include <caf/group.hpp>
 
-#include <mutex>
+#include <optional>
+#include <set>
+
+#define KRADIO ::blue_sky::singleton<::blue_sky::kernel::detail::radio_subsyst>::Instance()
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
+// interface of kernel's home group
+using khome_actor_type = caf::typed_actor<
+	caf::reacts_to<a_bye>
+>;
 
 struct BS_HIDDEN_API radio_subsyst {
+	// get kernel's home group
+	auto khome() -> const caf::group&;
+
 	// store links that will be visible to the world
 	std::set< tree::link, std::less<> > publinks;
 
@@ -28,6 +40,7 @@ struct BS_HIDDEN_API radio_subsyst {
 	auto shutdown() -> void;
 
 	auto system() -> caf::actor_system&;
+
 
 	auto toggle(bool on) -> error;
 
@@ -42,6 +55,9 @@ private:
 	// kernel's actor system
 	// delayed actor system initialization
 	std::optional<caf::actor_system> actor_sys_;
+
+	// kernel's home group
+	caf::group khome_;
 
 	caf::actor radio_;
 };
