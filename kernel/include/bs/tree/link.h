@@ -81,8 +81,6 @@ public:
 
 	/// Interface of link actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
-		// terminate actor
-		caf::reacts_to<a_bye>,
 		// get home group
 		caf::replies_to<a_home>::with<caf::group>,
 		// get link ID

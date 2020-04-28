@@ -51,6 +51,9 @@ node_actor::node_actor(caf::actor_config& cfg, sp_nimpl Nimpl)
 		return *pimpl_;
 	}())
 {
+	// self-register in kernel's group
+	join(KRADIO.khome());
+
 	// prevent termination in case some errors happens in group members
 	// for ex. if they receive unexpected messages (translators normally do)
 	set_error_handler([this](caf::error er) {
@@ -202,10 +205,9 @@ return {
 	// unconditionally join home group - used after deserialization
 	[=](a_hi) { join(home()); },
 
-	[=](a_home) { return impl.home_; },
+	[=](a_bye) { if(current_sender() != this) quit(); },
 
-	// skip `bye` (should always come from myself)
-	[=](a_bye) {},
+	[=](a_home) { return impl.home_; },
 
 	[=](a_node_gid) -> std::string { return gid(); },
 

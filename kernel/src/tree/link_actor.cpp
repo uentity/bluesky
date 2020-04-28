@@ -44,6 +44,9 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
 	impl.home = std::move(lgrp);
 	adbg(this) << "joined self group " << impl.home.get()->identifier() << std::endl;
 
+	// self-register in kernel's group
+	join(KRADIO.khome());
+
 	// prevent termination in case some errors happens in group members
 	// for ex. if they receive unexpected messages (translators normally do)
 	set_error_handler([this](caf::error er) {
@@ -114,8 +117,9 @@ auto link_actor::rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus pr
 auto link_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
 	// skip `bye` message (should always come from myself)
-	[=](a_bye) -> void {
+	[=](a_bye) {
 		adbg(this) << "<- a_lnk_bye " << std::endl;
+		if(current_sender() != this) quit();
 	},
 
 	[=](a_home) { return impl.home; },

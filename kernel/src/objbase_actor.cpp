@@ -15,6 +15,8 @@
 #include <bs/kernel/radio.h>
 #include <bs/serialize/cafbind.h>
 
+#include "kernel/radio_subsyst.h"
+
 NAMESPACE_BEGIN(blue_sky)
 using namespace kernel::radio;
 using namespace std::chrono_literals;
@@ -31,7 +33,11 @@ struct objbase_actor : public caf::event_based_actor {
 	using home_actor_type = caf::typed_actor<
 		caf::reacts_to<a_ack, a_lnk_status, tree::ReqStatus>
 	>;
-	using actor_type = objbase::actor_type::extend_with<home_actor_type>;
+
+	using actor_type = objbase::actor_type
+		::extend_with<kernel::detail::khome_actor_type>
+		::extend_with<home_actor_type>
+	;
 	using typed_behavior = actor_type::behavior_type;
 
 	using modificator_f = objbase::modificator_f;
@@ -40,10 +46,14 @@ struct objbase_actor : public caf::event_based_actor {
 
 	objbase_actor(caf::actor_config& cfg, caf::group home) :
 		super(cfg), home_(std::move(home))
-	{}
+	{
+		// self-register in kernel's group
+		join(KRADIO.khome());
+	}
 
 	auto make_typed_behavior() -> typed_behavior {
 	return typed_behavior {
+		[=](a_bye) { if(current_sender() != this) quit(); },
 
 		[=](a_home) { return home_; },
 

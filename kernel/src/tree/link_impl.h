@@ -15,6 +15,9 @@
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
 #include <bs/tree/node.h>
+
+#include "../kernel/radio_subsyst.h"
+
 #if defined(_MSC_VER)
 #include <bs/detail/spinlock.h>
 #endif
@@ -68,7 +71,7 @@ public:
 	using primary_actor_type = link::actor_type::extend<
 		// obtain link impl
 		caf::replies_to<a_impl>::with<sp_limpl>
-	>;
+	>::extend_with<kernel::detail::khome_actor_type>;
 
 	// ack signals that this link send to home group
 	using self_ack_actor_type = caf::typed_actor<

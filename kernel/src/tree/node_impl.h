@@ -12,8 +12,10 @@
 #include <bs/log.h>
 #include <bs/tree/node.h>
 #include <bs/detail/function_view.h>
+
 #include "node_leafs_storage.h"
 #include "link_impl.h"
+#include "../kernel/radio_subsyst.h"
 
 #include <cereal/types/vector.hpp>
 
@@ -50,13 +52,11 @@ public:
 	using primary_actor_type = node::actor_type::extend<
 		// join self group
 		caf::reacts_to<a_hi>,
-		// noop - sent by self to terminate siblings in group
-		caf::reacts_to<a_bye>,
 		// rebind node to new handle
 		caf::reacts_to<a_node_handle, link>,
 		// erase link by ID with specified options
 		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>
-	>;
+	>::extend_with<kernel::detail::khome_actor_type>;
 
 	// ack signals that this node send to home group
 	using self_ack_actor_type = caf::typed_actor<
