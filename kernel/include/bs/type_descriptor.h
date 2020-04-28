@@ -41,15 +41,20 @@ NAMESPACE_BEGIN(detail)
 
 template<typename T, typename = void>
 struct assign_traits {
-	// detect if type provide T::bs_assign() member
+	// detect if type provide T::assign() member
 	template<typename U, typename = void> struct has_member_assign : std::false_type {};
+	template<typename U, typename = void> struct has_member_assign_wparams : std::false_type {};
 	template<typename U> struct has_member_assign<U, std::void_t<decltype(
-		std::declval<U&>().bs_assign(std::declval<U&>(), std::declval<prop::propdict&>())
+		std::declval<U&>().assign(std::declval<U&>())
+	)>> : std::true_type {};
+	template<typename U> struct has_member_assign_wparams<U, std::void_t<decltype(
+		std::declval<U&>().assign(std::declval<U&>(), std::declval<prop::propdict>())
 	)>> : std::true_type {};
 
-	static constexpr auto member = has_member_assign<T>::value;
-	static constexpr auto noop = has_disabled_assign<T>::value && !member;
-	static constexpr auto generic = !(member || noop);
+	// if > 1 use `assign(source, params)`, otherwise `assign(source)`
+	static constexpr char member = 2 * has_member_assign_wparams<T>::value + has_member_assign<T>::value;
+	static constexpr auto noop = has_disabled_assign<T>::value && member == 0;
+	static constexpr auto generic = !(member > 0 || noop);
 };
 
 inline auto noop_assigner(sp_obj, sp_obj, prop::propdict) -> error { return perfect; };
@@ -85,8 +90,10 @@ auto assign(T& target, T& source, prop::propdict)
 		"Seems that type lacks default assignemnt operator. "
 		"Either define it or provide overload of assign(T&, T&, prop::propdict) -> error"
 	);
-	if constexpr(std::is_assignable_v<T, T>)
+	if constexpr(std::is_nothrow_assignable_v<T, T>)
 		target = source;
+	else if constexpr(std::is_assignable_v<T, T>)
+		return error::eval_safe([&] { target = source; });
 	return perfect;
 }
 
@@ -94,18 +101,18 @@ auto assign(T& target, T& source, prop::propdict)
 template<typename T>
 auto assign(T& target, T& source, prop::propdict params)
 -> std::enable_if_t<detail::assign_traits<T>::member, error> {
-	using R = std::invoke_result_t<decltype(T::bs_assign), T&, T&, prop::propdict>;
-	static_assert(
-		std::is_same_v<R, error> || std::is_same_v<R, void>,
-		"T::bs_assign(T&, prop::propdict) must return void or blue_sky::error"
-	);
+	const auto invoke_assign = [&](auto&&... args) -> error {
+		using R = std::remove_reference_t<decltype( target.assign(std::forward<decltype(args)>(args)...) )>;
+		if constexpr(std::is_same_v<R, error>)
+			return target.assign(std::forward<decltype(args)>(args)...);
+		else
+			return error::eval_safe([&] { target.assign(std::forward<decltype(args)>(args)...); });
+	};
 
-	if constexpr(std::is_same_v<R, void>) {
-		target.bs_assign(source, std::move(params));
-		return perfect;
-	}
+	if constexpr(detail::assign_traits<T>::member > 1)
+		return invoke_assign(source, std::move(params));
 	else
-		return target.bs_assign(source, std::move(params));
+		return invoke_assign(source);
 }
 
 /// noop for types defined corresponding constant
