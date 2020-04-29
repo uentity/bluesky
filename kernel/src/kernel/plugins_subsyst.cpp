@@ -220,7 +220,7 @@ auto unify_serial_globals(
 ) {
 	// lambda helper to merge bindings from source to destination
 	auto merge_targets = [](const auto& src, auto& dest) {
-		auto merger = [](const auto& src, auto& dest, [[maybe_unused]] auto self) {
+		auto merger = [](const auto& src, auto& dest, auto self) {
 			// supports map, vector, list, etc
 			auto search = [](auto& where, auto& what) {
 				if constexpr(meta::is_map_v<decltype(where)>)

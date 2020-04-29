@@ -244,32 +244,33 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{D269D8FA-A040-4E02-BB3C-61F3B9B4C1A9}</ProjectGuid>
     <RootNamespace>blueskyre</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <UseNativeEnvironment>true</UseNativeEnvironment>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -341,7 +342,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)third_party\fmt\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\actor-framework\libcaf_io;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(ProjectDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(ProjectDir)kernel\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;NOMINMAX;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -384,7 +385,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)third_party\fmt\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\actor-framework\libcaf_io;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(ProjectDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(ProjectDir)kernel\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;NOMINMAX;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>

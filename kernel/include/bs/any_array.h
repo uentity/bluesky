@@ -12,6 +12,7 @@
 #include "common.h"
 #include <any>
 #include <map>
+#include <algorithm>
 
 NAMESPACE_BEGIN(blue_sky)
 

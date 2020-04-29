@@ -405,9 +405,6 @@
     <ClInclude Include="kernel\src\tree\node_leafs_storage.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\src\tree\node_retranslators.h">
-      <Filter>Файлы исходного кода\tree</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\src\tree\request_impl.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
@@ -609,9 +606,6 @@
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\node_impl.cpp">
-      <Filter>Файлы исходного кода\tree</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\tree\node_retranslators.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\defaults.cpp">

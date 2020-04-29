@@ -13,6 +13,7 @@
 
 #include <map>
 #include <iterator>
+#include <algorithm>
 
 NAMESPACE_BEGIN(blue_sky::prop)
 

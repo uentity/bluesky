@@ -104,7 +104,7 @@ auto data_node_request(link_actor& LA, ReqOpts opts, C&& res_processor) {
 			// directly invoke 'Data' request, store returned value in `res` and return it
 			auto res = result_or_errbox<sp_node>{};
 			request_impl<ManageStatus>(
-				LA, Req::Data, opts | ReqOpts::DirectInvoke,
+				LA, Req::Data, static_cast<ReqOpts>(enumval(opts) | enumval(ReqOpts::DirectInvoke)),
 				[&LA] {
 					return LA.pimpl_->data().and_then([](sp_obj&& obj) {
 						return obj && obj->is_node() ?
