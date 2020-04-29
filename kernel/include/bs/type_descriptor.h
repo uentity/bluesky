@@ -64,7 +64,7 @@ auto make_assigner() {
 	// [NOTE] strange if clause with extra constexpr if just to compile under VS
 	if constexpr (assign_traits<T>::noop)
 		return noop_assigner;
-	else if constexpr(std::is_base_of_v<objbase, T>)
+	else
 		return [](sp_obj target, sp_obj source, prop::propdict params) -> error {
 			// sanity
 			if(!target) return error{"Empty target"};
@@ -75,8 +75,6 @@ auto make_assigner() {
 			// invoke overload for type T
 			return assign(static_cast<T&>(*target), static_cast<T&>(*source), std::move(params));
 		};
-	else
-		return noop_assigner;
 }
 
 NAMESPACE_END(detail)
@@ -218,7 +216,7 @@ public:
 		typename_t type_name = nullptr, std::string description = {}
 	) :
 		parent_td_fun_(&base::bs_type),
-		assign_fun_(detail::make_assigner<T>()),
+		assign_fun_(blue_sky::detail::make_assigner<T>()),
 		copy_fun_(nullptr),
 		name([&] {
 			if constexpr(std::is_same_v<typename_t, std::nullptr_t>)
@@ -240,7 +238,7 @@ public:
 	//
 	template<typename F>
 	auto add_constructor(F&& f) const -> void {
-		using Finfo = detail::deduce_callable<std::remove_reference_t<F>>;
+		using Finfo = blue_sky::detail::deduce_callable<std::remove_reference_t<F>>;
 		using Fsign = typename Finfo::type;
 		static_assert(
 			std::is_same_v<typename Finfo::result, bs_type_ctor_result>,

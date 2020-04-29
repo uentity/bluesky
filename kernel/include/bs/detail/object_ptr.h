@@ -118,7 +118,7 @@ public:
 	template <
 		typename Ptr,
 		typename= std::enable_if_t<
-			detail::is_convertible_smart_pointer<Ptr, T>::value>>
+			blue_sky::detail::is_convertible_smart_pointer<Ptr, T>::value>>
 	constexpr object_ptr(Ptr const &other) noexcept : ptr(other.get()) {}
 
 	/// Get the raw pointer value

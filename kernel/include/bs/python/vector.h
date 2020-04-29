@@ -102,9 +102,7 @@ auto bind_rich_vector(py::handle scope, std::string const &name, Args&&... args)
 	Class_ cl(scope, name.c_str(), pybind11::module_local(local), std::forward<Args>(args)...);
 
 	// Declare the buffer interface if a buffer_protocol() is passed in
-	// [NOTE] spin into constexpr if to overcome VS compile issue
-	if constexpr(sizeof...(Args))
-		py::detail::vector_buffer<Vector, Class_, Args...>(cl);
+	py::detail::vector_buffer<Vector, Class_, Args...>(cl);
 
 	cl.def(py::init<>());
 
