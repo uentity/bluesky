@@ -52,6 +52,9 @@ struct ev_listener_actor : caf::event_based_actor {
 		set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
 			return caf::none;
 		});
+
+		// put self-into registry (to find later by ID)
+		KRADIO.system().registry().put(id(), this);
 		// register self in kernel's home group
 		join(KRADIO.khome());
 
@@ -63,6 +66,7 @@ struct ev_listener_actor : caf::event_based_actor {
 
 	auto on_exit() -> void override {
 		leave(home);
+		leave(KRADIO.khome());
 	}
 
 	auto make_behavior() -> behavior_type override {

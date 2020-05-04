@@ -28,7 +28,7 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 			res = res.or_else(
 				[=](a_ack, a_lnk_rename, std::string new_name, std::string old_name) {
 					if(auto src = weak_src.lock())
-						self->f(link{std::move(src)}, Event::LinkRenamed, {
+						self->f(std::move(src), Event::LinkRenamed, {
 							{"new_name", std::move(new_name)},
 							{"prev_name", std::move(old_name)}
 						});
@@ -39,7 +39,7 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 			res = res.or_else(
 				[=](a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v) {
 					if(auto src = weak_src.lock())
-						self->f(link{std::move(src)}, Event::LinkStatusChanged, {
+						self->f(std::move(src), Event::LinkStatusChanged, {
 							{"request", prop::integer(new_v)},
 							{"new_status", prop::integer(new_v)},
 							{"prev_status", prop::integer(prev_v)}
@@ -50,9 +50,12 @@ auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t 
 		if(enumval(listen_to & Event::LinkDeleted))
 			res = res.or_else(
 				[=](a_bye) {
-					self->f( weak_src.lock(), Event::LinkDeleted, {{ "lid", to_string(src_id) }} );
 					// when overriding `a_bye` we must quit explicitly
+					// [NOTE] terminate self behavior, but current handler will execute till end
 					self->quit();
+					// do callback job
+					if(auto src = weak_src.lock())
+						self->f( std::move(src), Event::LinkDeleted, {{ "lid", to_string(src_id) }} );
 				}
 			);
 
