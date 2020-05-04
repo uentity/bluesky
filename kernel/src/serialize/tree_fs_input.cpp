@@ -28,6 +28,8 @@
 
 #include <caf/all.hpp>
 
+#include <optional>
+
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
 using NodeLoad = tree_fs_input::NodeLoad;
@@ -48,9 +50,10 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 	{}
 
 	auto begin_node(tree_fs_input& ar) -> error {
+		static const auto sentinel = std::optional<tree::node>{};
 		return error::eval_safe(
-			// node reference (2nd arg) is ONLY used for template matching
-			[&]{ return head().map( [&](auto* ar) { prologue(*ar, *(tree::node*)nullptr); }); },
+			// sentinel is ONLY used for template matching
+			[&]{ return head().map( [&](auto* ar) { prologue(*ar, *sentinel); }); },
 			[&]{ return enter_root(); }
 		);
 	}
