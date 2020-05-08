@@ -15,6 +15,7 @@
 #include <caf/detail/ini_consumer.hpp>
 #include <caf/detail/parser/read_ini.hpp>
 #include <caf/detail/parser/read_string.hpp>
+#include <caf/io/middleman.hpp>
 #include <fmt/ostream.h>
 
 #include <sstream>
@@ -125,6 +126,8 @@ config_subsyst::config_subsyst() {
 		.add<std::uint16_t>("groups-port", "Port number for publishing actor groups")
 		.add<timespan>("timeout", "Generic default timeout for actor operations")
 		.add<timespan>("long-timeout", "Timeout for long resource-consuming tasks")
+		.add<bool>("await_actors_before_shutdown",
+			"Do we have to wait until all actors terminate on kernel shutdown?")
 	;
 
 	/*-----------------------------------------------------------------------------
@@ -225,6 +228,10 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 		bsout() << confdump.str() << log::end;
 		put(confdata_, "dump-config", false);
 	}
+
+	// [NOTE] load networking module after kernel & CAF are configured (do it only once!)
+	if(!kernel_configured)
+		actor_cfg_.load<caf::io::middleman>();
 
 	kernel_configured = true;
 }

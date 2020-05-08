@@ -48,16 +48,15 @@ public:
 	enum class InitState { NonInitialized, Initialized, Down };
 	std::atomic<InitState> init_state_;
 
-	// Python support depends on compile flags and can be 'dumb' or 'real'
-	std::unique_ptr<detail::python_subsyst> pysupport_;
-	// radio subsystem
-	std::unique_ptr<detail::radio_subsyst> radio_ss_;
-
 	kimpl();
 	~kimpl();
 
-	auto init_radio() -> error;
-	auto shutdown_radio() -> void;
+	// BS kernel init & shutdown impl
+	auto init() -> error;
+	auto shutdown() -> void;
+
+	auto get_radio() -> detail::radio_subsyst*;
+	auto pysupport() -> detail::python_subsyst*;
 
 	using type_tuple = tfactory::type_tuple;
 	auto find_type(const std::string& key) const -> type_tuple;
@@ -65,6 +64,16 @@ public:
 	auto str_key_storage(const std::string& key) -> str_any_array&;
 
 	auto idx_key_storage(const std::string& key) -> idx_any_array&;
+
+private:
+	// [NOTE] `actor_system` inside `radio_subsyst` starts worker and other service threads in constructor.
+	// BS kernel singleton is constructed during initialization of kernel shared library.
+	// And on Windows it is PROHIBITED to start threads in `DllMain()`, because that cause a deadlock.
+	// Solution: delay construction of actor_system until first usage, don't use CAf in kernel ctor.
+	std::unique_ptr<detail::radio_subsyst> radio_ss_;
+	// Python support depends on compile flags and can be 'dumb' or 'real'
+	std::unique_ptr<detail::python_subsyst> pysupport_;
+	std::once_flag radio_up_, py_up_;
 };
 
 /// Kernel internal singleton

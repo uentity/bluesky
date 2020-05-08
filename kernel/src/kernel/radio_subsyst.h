@@ -39,8 +39,9 @@ struct BS_HIDDEN_API radio_subsyst {
 	auto init() -> error;
 	auto shutdown() -> void;
 
-	auto system() -> caf::actor_system&;
-
+	inline auto system() -> caf::actor_system& {
+		return (this->*get_actor_sys_)();
+	}
 
 	auto toggle(bool on) -> error;
 
@@ -55,6 +56,12 @@ private:
 	// kernel's actor system
 	// delayed actor system initialization
 	std::optional<caf::actor_system> actor_sys_;
+
+	// actor_system getter switched at runtime on kernel init/shutdown
+	using as_getter_f = caf::actor_system& (radio_subsyst::*)();
+	as_getter_f get_actor_sys_;
+	auto normal_as_getter() -> caf::actor_system&;
+	auto always_throw_as_getter() -> caf::actor_system&;
 
 	// kernel's home group
 	caf::group khome_;

@@ -7,17 +7,16 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/atoms.h>
+#include "radio_subsyst.h"
+
+#include <bs/actor_common.h>
 #include <bs/log.h>
 #include <bs/kernel/config.h>
 #include <bs/kernel/misc.h>
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
-#include "radio_subsyst.h"
 
-#include <caf/function_view.hpp>
 #include <caf/actor_system_config.hpp>
-#include <caf/event_based_actor.hpp>
 #include <caf/typed_event_based_actor.hpp>
 #include <caf/io/middleman.hpp>
 
@@ -27,7 +26,6 @@
 
 inline constexpr std::uint16_t def_port = 9339;
 inline constexpr std::uint16_t def_groups_port = 9340;
-inline constexpr blue_sky::timespan def_timeout = std::chrono::seconds(30);
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 using namespace kernel::config;
@@ -60,30 +58,26 @@ NAMESPACE_END()
 /*-----------------------------------------------------------------------------
  *  radio subsystem impl
  *-----------------------------------------------------------------------------*/
-radio_subsyst::radio_subsyst() {
+radio_subsyst::radio_subsyst() : get_actor_sys_(&radio_subsyst::always_throw_as_getter)
+{
 	actor_config()
 		.add_actor_type("radio_station", radio_station)
 		.add_message_type<tree::lid_type>("link_id_type")
 	;
 
-	// [NOTE] `actor_system` starts worker and other service threads in constructor.
-	// BS kernel singleton is constructed during initialization of kernel shared library.
-	// And on Windows it is PROHIBITED to start threads in `DllMain()`, because that cause a deadlock.
-	// Solution: delay construction of actor_system until first usage, don't use CAf in kernel ctor.
-
-	// [NOTE] radio subsystem is explicitly created by `kernel::misc::init()`,
-	// so it's safe to init `actor_system` here
 	if(auto er = init(); er)
 		throw er;
 }
 
 auto radio_subsyst::init() -> error {
 	if(!actor_sys_) {
-		// load network module
-		actor_config().load<caf::io::middleman>();
+		// kernel must be configured (middleman module loaded)
+		if(!kernel::config::is_configured())
+			kernel::config::configure();
 		// start actor system
 		if(actor_sys_.emplace(actor_config()); !actor_sys_)
 			return error{ "Can't create CAF actor_system!" };
+		get_actor_sys_ = &radio_subsyst::normal_as_getter;
 		// init kernel group
 		khome_ = actor_sys_->groups().anonymous();
 	}
@@ -94,24 +88,24 @@ auto radio_subsyst::shutdown() -> void {
 	if(actor_sys_) {
 		// send `a_bye` message to all actors in kernel group
 		caf::anon_send(khome_, a_bye());
+		khome_ = nullptr;
 		// terminate actor system
+		system().await_actors_before_shutdown(
+			get_or(config::config(), "radio.await_actors_before_shutdown", true)
+		);
+		get_actor_sys_ = &radio_subsyst::always_throw_as_getter;
 		actor_sys_.reset();
 	}
 }
 
-auto radio_subsyst::system() -> caf::actor_system& {
-	// ensure actor system is initialized
-	static auto& actor_sys = [&]() -> caf::actor_system& {
-		if(auto er = init(); er)
-			throw er;
-		return *actor_sys_;
-	}();
-	return actor_sys;
+auto radio_subsyst::normal_as_getter() -> caf::actor_system& {
+	return *actor_sys_;
+}
+auto radio_subsyst::always_throw_as_getter() -> caf::actor_system& {
+	throw error{"Kernel's radio subsystem is down"};
 }
 
 auto radio_subsyst::khome() -> const caf::group& {
-	// ensure home group is initialized
-	[[maybe_unused]] static const auto& _ = system();
 	return khome_;
 }
 
@@ -163,7 +157,7 @@ auto radio_subsyst::start_client(const std::string& host) -> error {
 
 	actor_config().add_message_type<tree::link>("link");
 	auto station = actor_sys_->middleman().remote_spawn<radio_station_handle>(
-		*netnode, "radio_station", caf::make_message(), get_or(BSCONFIG, "timeout", def_timeout)
+		*netnode, "radio_station", caf::make_message(), def_timeout(true)
 	);
 	if(!station) return { actor_sys_->render(station.error()) };
 
