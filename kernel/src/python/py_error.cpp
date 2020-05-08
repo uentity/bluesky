@@ -12,6 +12,7 @@
 #include <bs/kernel/errors.h>
 #include <bs/tree/errors.h>
 #include <bs/log.h>
+
 #include <fmt/format.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
@@ -112,6 +113,13 @@ void py_bind_error(py::module& m) {
 
 	// add 'perfect' constant
 	m.attr("perfect") = error{ perfect };
+
+	// register exception translator for `error`
+	static py::exception<error> py_error(m, "BSError");
+	py::register_exception_translator([](std::exception_ptr ex) {
+		try { if(ex) std::rethrow_exception(ex); }
+		catch(const error& er) { py_error(er.what().c_str()); }
+	});
 }
 
 NAMESPACE_END(blue_sky::python)

@@ -32,9 +32,9 @@ BS_INIT_PY(bs) {
 	Py_AtExit([] { kernel::shutdown(); });
 
 	// invoke bindings
+	py_bind_error(m);
 	py_bind_common(m);
 	py_bind_log(m);
-	py_bind_error(m);
 	py_bind_objbase(m);
 	py_bind_messaging(m);
 	py_bind_misc(m);
