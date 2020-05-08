@@ -7,27 +7,31 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include "logging_subsyst.h"
+
 #include <bs/error.h>
 #include <bs/log.h>
 #include <bs/kernel/errors.h>
 #include <bs/kernel/config.h>
-#include "logging_subsyst.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/async.h>
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/pattern_formatter.h>
 
 #include <iostream>
 #include <filesystem>
 #include <unordered_map>
 #include <atomic>
+#include <mutex>
 
 #define BSCONFIG ::blue_sky::kernel::config::config()
-constexpr char FILE_LOG_PATTERN[] = "[%Y-%m-%d %T.%e] [%L] %v";
-constexpr char CONSOLE_LOG_PATTERN[] = "[%L] %v";
+constexpr char FILE_LOG_PATTERN[] = "[%Y-%m-%d %T.%e] [%L] [%*] %v";
+constexpr char CONSOLE_LOG_PATTERN[] = "[%L] [%*] %v";
 constexpr char LOG_FNAME_PREFIX[] = "bs_";
+constexpr auto CUSTOM_TAG_FIELD = std::string_view{ "[%*]" };
 constexpr auto ROTATING_FSIZE_DEFAULT = 1024*1024*5;
 constexpr auto DEF_FLUSH_INTERVAL = 5;
 constexpr auto DEF_FLUSH_LEVEL = spdlog::level::err;
@@ -50,6 +54,45 @@ const auto& null_sink() {
 auto& are_logs_mt() {
 	static std::atomic<bool> mt_state{false};
 	return mt_state;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  custom patter flag that adds predefined tag to every record
+//
+struct custom_tag_flag : public spdlog::custom_flag_formatter {
+	static auto update_tag(std::string t) {
+		// tag value storage
+		static auto tagv_ = std::string{};
+		static auto mut = std::mutex{};
+		std::lock_guard _{ mut };
+		tagv_ = std::move(t);
+		tag() = tagv_;
+	}
+
+	auto format(const spdlog::details::log_msg&, const std::tm&, spdlog::memory_buf_t& dest)
+	-> void override {
+		dest.append(tag().begin(), tag().end());
+	}
+
+	auto clone() const -> std::unique_ptr<custom_flag_formatter> override {
+		return std::make_unique<custom_tag_flag>();
+	}
+
+private:
+	inline static auto tag() -> std::string_view& {
+		static auto tag_ = std::string_view{};
+		return tag_;
+	}
+};
+
+auto make_formatter(std::string pat_format) {
+	// append custom tag field if it is missing
+	if(pat_format.find(CUSTOM_TAG_FIELD) == std::string::npos)
+		pat_format.insert(0, CUSTOM_TAG_FIELD);
+	// make formatter with custom flag
+	auto res = std::make_unique<spdlog::pattern_formatter>();
+	res->add_flag<custom_tag_flag>('*').set_pattern(std::move(pat_format));
+	return res;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -101,7 +144,7 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 					cur_logf.string(), fsize, 1
 				);
 				if(res) {
-					res->set_pattern(FILE_LOG_PATTERN);
+					res->set_formatter(make_formatter(FILE_LOG_PATTERN));
 					sinks_.insert( {desired_fname, res} );
 					std::cout << "[I] Using log file " << cur_logf.string() << std::endl;
 					break;
@@ -115,10 +158,10 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 
 	// configure sink
 	if(res && !logger_name.empty()) {
-		res->set_pattern(caf::get_or(
+		res->set_formatter(make_formatter(caf::get_or(
 			BSCONFIG, std::string("logger.") + logger_name + "-file-format",
 			FILE_LOG_PATTERN
-		));
+		)));
 	}
 
 	return res ? res : null_sink();
@@ -131,17 +174,17 @@ auto create_console_sink(const std::string& logger_name = "") -> spdlog::sink_pt
 		spdlog::sink_ptr S = null_sink();
 		try {
 			if((S = std::make_shared<Sink>()))
-				S->set_pattern(CONSOLE_LOG_PATTERN);
+				S->set_formatter(make_formatter(CONSOLE_LOG_PATTERN));
 		}
 		catch(...) {}
 		return S;
 	}();
 
 	if(!logger_name.empty()) {
-		sink_->set_pattern(caf::get_or(
+		sink_->set_formatter(make_formatter(caf::get_or(
 			BSCONFIG, std::string("logger.") + logger_name + "-console-format",
 			CONSOLE_LOG_PATTERN
-		));
+		)));
 	}
 
 	return sink_;
@@ -232,6 +275,10 @@ auto get_logger(const char* log_name) -> spdlog::logger& {
 			) :
 			null_sink()
 	);
+}
+
+auto set_custom_tag(std::string tag) -> void {
+	custom_tag_flag::update_tag(std::move(tag));
 }
 
 NAMESPACE_END(log)
