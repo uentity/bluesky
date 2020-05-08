@@ -53,6 +53,8 @@ auto bind_log_impl(py::module& m) -> void {
 
 	// access BS loggers
 	m.def("get_logger", &get_logger, py::return_value_policy::reference);
+
+	m.def("set_custom_tag", &set_custom_tag, "tag"_a);
 }
 
 } // eof hidden namespace

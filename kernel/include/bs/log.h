@@ -356,6 +356,9 @@ constexpr auto O(Args&&... args) {
 	return off(std::forward< Args >(args)...);
 }
 
+/// set custom tag that will appear inside every printed message to any log
+BS_API auto set_custom_tag(std::string tag) -> void;
+
 } // eof blue_sky::log namespace
 
 /*-----------------------------------------------------------------
