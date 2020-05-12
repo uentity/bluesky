@@ -9,10 +9,9 @@
 
 #include "logging_subsyst.h"
 
-#include <bs/error.h>
 #include <bs/log.h>
-#include <bs/kernel/errors.h>
 #include <bs/kernel/config.h>
+#include <bs/detail/sharded_mutex.h>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/async.h>
@@ -21,19 +20,21 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/pattern_formatter.h>
 
-#include <iostream>
-#include <filesystem>
-#include <unordered_map>
+#include <algorithm>
 #include <atomic>
-#include <mutex>
+#include <cctype>
+#include <filesystem>
+#include <iostream>
+#include <unordered_map>
 
-#define BSCONFIG ::blue_sky::kernel::config::config()
-constexpr char FILE_LOG_PATTERN[] = "[%Y-%m-%d %T.%e] [%L] [%*] %v";
-constexpr char CONSOLE_LOG_PATTERN[] = "[%L] [%*] %v";
-constexpr char LOG_FNAME_PREFIX[] = "bs_";
-constexpr auto CUSTOM_TAG_FIELD = std::string_view{ "[%*]" };
+constexpr auto FILE_LOG_PATTERN    = std::string_view{ "[%Y-%m-%d %T.%e] [%L] [%*] %v" };
+constexpr auto CONSOLE_LOG_PATTERN = std::string_view{ "[%L] [%*] %v" };
+constexpr auto CUSTOM_LOG_PATTERN  = std::string_view{ "[%L] [%*] %v" };
+constexpr auto LOG_FNAME_PREFIX    = std::string_view{ "bs_" };
+constexpr auto CUSTOM_TAG_FIELD    = std::string_view{ "[%*]" };
+
 constexpr auto ROTATING_FSIZE_DEFAULT = 1024*1024*5;
-constexpr auto DEF_FLUSH_INTERVAL = 5;
+constexpr auto DEF_FLUSH_INTERVAL = 1;
 constexpr auto DEF_FLUSH_LEVEL = spdlog::level::err;
 
 using namespace blue_sky::detail;
@@ -56,10 +57,24 @@ auto& are_logs_mt() {
 	return mt_state;
 }
 
+// read value from config or return default value if kernel isn't yet configured
+template<typename T>
+auto configured_value(std::string_view key, T def_value) {
+	return kernel::config::is_configured() ?
+		get_or(kernel::config::config(), key, std::move(def_value)) :
+		def_value;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-//  custom patter flag that adds predefined tag to every record
+//  custom pattern flag that adds predefined tag to every record
 //
 struct custom_tag_flag : public spdlog::custom_flag_formatter {
+	static auto tag() -> std::string_view& {
+		static auto tag_ = std::string_view{};
+		return tag_;
+	}
+
+	// [NOTE] lock is aquired only on tag update
 	static auto update_tag(std::string t) {
 		// tag value storage
 		static auto tagv_ = std::string{};
@@ -77,18 +92,22 @@ struct custom_tag_flag : public spdlog::custom_flag_formatter {
 	auto clone() const -> std::unique_ptr<custom_flag_formatter> override {
 		return std::make_unique<custom_tag_flag>();
 	}
-
-private:
-	inline static auto tag() -> std::string_view& {
-		static auto tag_ = std::string_view{};
-		return tag_;
-	}
 };
 
 auto make_formatter(std::string pat_format) {
-	// append custom tag field if it is missing
-	if(pat_format.find(CUSTOM_TAG_FIELD) == std::string::npos)
-		pat_format.insert(0, CUSTOM_TAG_FIELD);
+	const auto cur_tag = custom_tag_flag::tag();
+	auto pos = pat_format.find(CUSTOM_TAG_FIELD);
+
+	// remove custom tag field if tag is empty, add (if missing) if tag is non-empty
+	if(cur_tag.empty() && pos != std::string::npos) {
+		pat_format.erase(pos, CUSTOM_TAG_FIELD.size());
+		// try to remove additional space before/after removed tag
+		if(pos < pat_format.size() && std::isspace(pat_format[pos]))
+			pat_format.erase(pos, 1);
+	}
+	else if(!cur_tag.empty() && pos == std::string::npos)
+		pat_format.insert(0, std::string(CUSTOM_TAG_FIELD) + ' ');
+
 	// make formatter with custom flag
 	auto res = std::make_unique<spdlog::pattern_formatter>();
 	res->add_flag<custom_tag_flag>('*').set_pattern(std::move(pat_format));
@@ -96,43 +115,148 @@ auto make_formatter(std::string pat_format) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  sinks manager
+//
+struct sinks_manager : public detail::sharded_same_mutex<std::mutex, 3> {
+	using sink_ptr = spdlog::sink_ptr;
+	using sinks_storage_t = std::unordered_map<std::string, sink_ptr>;
+
+	// guards for different sinks groups
+	enum SinkGroup { File = 0, Console = 1, Custom = 2 };
+	using guard_t = detail::sharded_same_mutex<std::mutex, 3>;
+
+	static auto group_guard() -> guard_t& {
+		static auto guard_ = guard_t{};
+		return guard_;
+	}
+
+	// access different sinks storages
+	template<SinkGroup S>
+	static auto group() -> sinks_storage_t& {
+		if constexpr(S == File) {
+			static auto sinks_ = sinks_storage_t{};
+			return sinks_;
+		}
+		else if constexpr(S == Console) {
+			static auto sinks_ = sinks_storage_t{};
+			return sinks_;
+		}
+		else {
+			static auto sinks_ = sinks_storage_t{};
+			return sinks_;
+		}
+	}
+
+	template<SinkGroup S>
+	static constexpr auto group_name() -> const char* {
+		if constexpr(S == File) return "file";
+		else if constexpr(S == Console) return "console";
+		else return "custom";
+	}
+
+	template<SinkGroup S>
+	static constexpr auto def_format_pattern() -> std::string_view {
+		if constexpr(S == File)
+			return FILE_LOG_PATTERN;
+		else if constexpr(S == Console)
+			return CONSOLE_LOG_PATTERN;
+		else
+			return CUSTOM_LOG_PATTERN;
+	}
+
+	// manipulate with sinks
+	template<SinkGroup S, typename F>
+	static auto apply(F&& f) {
+		auto solo = group_guard().lock<S>();
+		auto& sinks = group<S>();
+		for_each(sinks.begin(), sinks.end(), std::forward<F>(f));
+	}
+
+	template<SinkGroup S, typename F>
+	static auto apply(F&& f, const std::string& name) {
+		auto solo = group_guard().lock<S>();
+		auto& sinks = group<S>();
+		if(auto s = sinks.find(name); s != sinks.end())
+			f(s->second);
+	}
+
+	template<SinkGroup S>
+	static auto add_sink(std::string name, sink_ptr sink) {
+		auto solo = group_guard().lock<S>();
+		auto& sinks = group<S>();
+		sinks[name] = std::move(sink);
+	}
+
+	template<SinkGroup S, typename F>
+	static auto get_or_make(const std::string& name, F&& sink_maker) -> sink_ptr {
+		auto solo = group_guard().lock<S>();
+		auto& sinks = group<S>();
+		if(auto s = sinks.find(name); s!= sinks.end())
+			return s->second;
+		else {
+			try {
+				if(auto new_sink = sink_maker()) {
+					refresh_format<S>(new_sink, name);
+					sinks[name] = new_sink;
+					return new_sink;
+				}
+			}
+			catch(...) {}
+		}
+		return nullptr;
+	}
+
+	template<SinkGroup S>
+	static auto refresh_format(const sink_ptr& sink, const std::string& name) {
+		sink->set_formatter(make_formatter(configured_value(
+			std::string("logger.") + name + "-" + group_name<S>() + "-format",
+			std::string{ def_format_pattern<S>() }
+		)));
+	}
+
+	template<SinkGroup S>
+	static auto refresh_format() {
+		static auto impl = [](auto& s) {
+			auto& [name, sink] = s;
+			refresh_format<S>(sink, name);
+		};
+
+		apply<S>(impl);
+	}
+};
+
+///////////////////////////////////////////////////////////////////////////////
 //  create sinks
 //
 // purpose of this function is to find log filename that is not locked by another process
 // if `logger_name` is set -- tune sink with configured values
-spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::string& logger_name = "") {
-	static std::unordered_map<std::string, spdlog::sink_ptr> sinks_;
-	static std::mutex solo_;
-
-	// protect sinks_ map from mt-access
-	std::lock_guard<std::mutex> play_solo(solo_);
-
-	spdlog::sink_ptr res;
-	// check if sink with desired fname is already created
-	auto S = sinks_.find(desired_fname);
-	if(S != sinks_.end()) {
-		res = S->second;
-	}
-	else {
-		// if not -- create it
+auto create_file_sink(const std::string& logger_name) -> spdlog::sink_ptr {
+	// extract desired log filename
+	const auto def_fname = std::string(LOG_FNAME_PREFIX) + logger_name + ".log";
+	const auto desired_fname = configured_value(
+		std::string("logger.") + logger_name + "-file-name", def_fname
+	);
+	// create sink
+	auto res = sinks_manager::get_or_make<sinks_manager::File>(logger_name, [&]() -> spdlog::sink_ptr {
+		// create intermediate dirs
 		const auto logf = fs::path(desired_fname);
 		const auto logf_ext = logf.extension();
 		const auto logf_parent = logf.parent_path();
 		const auto logf_body = logf_parent / logf.stem();
-		// create parent dir
 		if(!logf_parent.empty()) {
 			std::error_code er;
 			if(!fs::exists(logf_parent, er) && !er)
 				fs::create_directories(logf_parent, er);
 			if(er) {
-				std::cerr << "[E] Failed to create/access dirs for log file " << desired_fname
+				std::cerr << "[E] Failed to create/access path of log file " << desired_fname
 					<< ": " << er.message() << std::endl;
-				return null_sink();
+				return nullptr;
 			}
 		}
 
-		const auto fsize = logger_name.empty() ? ROTATING_FSIZE_DEFAULT :
-			caf::get_or(BSCONFIG, std::string("logger.") + logger_name + "-file-size", ROTATING_FSIZE_DEFAULT);
+		const auto fsize = configured_value(
+			std::string("logger.") + logger_name + "-file-size", ROTATING_FSIZE_DEFAULT
+		);
 		for(int i = 0; i < 100; i++) {
 			auto cur_logf = logf_body;
 			if(i)
@@ -140,54 +264,30 @@ spdlog::sink_ptr create_file_sink(const std::string& desired_fname, const std::s
 			cur_logf += logf_ext;
 
 			try {
-				res = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-					cur_logf.string(), fsize, 1
-				);
-				if(res) {
-					res->set_formatter(make_formatter(FILE_LOG_PATTERN));
-					sinks_.insert( {desired_fname, res} );
+				if(auto res = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(cur_logf.string(), fsize, 1)) {
 					std::cout << "[I] Using log file " << cur_logf.string() << std::endl;
-					break;
+					return res;
 				}
-			}
-			catch(...) {}
+			} catch(...) {}
 		}
-	}
+		return nullptr;
+	});
+
 	// print err if couldn't create log file
-	if(!res) std::cerr << "[E] Failed to create log file " << desired_fname << std::endl;
-
-	// configure sink
-	if(res && !logger_name.empty()) {
-		res->set_formatter(make_formatter(caf::get_or(
-			BSCONFIG, std::string("logger.") + logger_name + "-file-format",
-			FILE_LOG_PATTERN
-		)));
+	if(!res) {
+		std::cerr << "[E] Failed to create log file " << desired_fname << std::endl;
+		return null_sink();
 	}
-
-	return res ? res : null_sink();
+	return res;
 }
 
 // if `logger_name` is set -- tune sink with configured values
 template<typename Sink>
-auto create_console_sink(const std::string& logger_name = "") -> spdlog::sink_ptr {
-	static const auto sink_ = []() -> spdlog::sink_ptr {
-		spdlog::sink_ptr S = null_sink();
-		try {
-			if((S = std::make_shared<Sink>()))
-				S->set_formatter(make_formatter(CONSOLE_LOG_PATTERN));
-		}
-		catch(...) {}
-		return S;
-	}();
-
-	if(!logger_name.empty()) {
-		sink_->set_formatter(make_formatter(caf::get_or(
-			BSCONFIG, std::string("logger.") + logger_name + "-console-format",
-			CONSOLE_LOG_PATTERN
-		)));
-	}
-
-	return sink_;
+auto create_console_sink(const std::string& logger_name) -> spdlog::sink_ptr {
+	auto res = sinks_manager::get_or_make<sinks_manager::Console>(logger_name, [&]() -> spdlog::sink_ptr {
+		return std::make_shared<Sink>();
+	});
+	return res ? res : null_sink();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -203,7 +303,6 @@ auto create_logger(const char* log_name, Sinks... sinks) -> std::shared_ptr<spdl
 		spdlog::register_logger(L);
 		return L;
 	}
-	//catch(const spdlog::spdlog_ex&) {}
 	catch(...) {}
 	return null_st_logger;
 }
@@ -218,8 +317,8 @@ auto create_async_logger(const char* log_name, Sinks... sinks) -> std::shared_pt
 		auto L = std::make_shared<spdlog::async_logger>(
 			log_name, std::begin(S), std::end(S), spdlog::thread_pool()
 		);
-		L->flush_on(static_cast<spdlog::level::level_enum>(caf::get_or(
-			BSCONFIG, std::string("logger.") + log_name + "-flush-level",
+		L->flush_on(static_cast<spdlog::level::level_enum>(configured_value(
+			std::string("logger.") + log_name + "-flush-level",
 			std::uint8_t(DEF_FLUSH_LEVEL)
 		)));
 		spdlog::register_logger(L);
@@ -231,7 +330,7 @@ auto create_async_logger(const char* log_name, Sinks... sinks) -> std::shared_pt
 
 // global bs_log loggers for "out" and "err"
 auto& predefined_logs() {
-	static auto loggers = []{
+	static auto loggers = [] {
 		// do some default initialization
 		// set global minimum flush level
 		spdlog::flush_on(DEF_FLUSH_LEVEL);
@@ -246,11 +345,12 @@ auto& predefined_logs() {
 
 NAMESPACE_END() // hidden namespace
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(log)
 /*-----------------------------------------------------------------------------
  *  get/create spdlog::logger backend for bs_log
  *-----------------------------------------------------------------------------*/
+NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(log)
+
 auto get_logger(const char* log_name) -> spdlog::logger& {
 	// switch create on async/not async
 	auto create = [log_name](auto&&... sinks) {
@@ -266,19 +366,19 @@ auto get_logger(const char* log_name) -> spdlog::logger& {
 	const bool is_error = std::string_view(log_name) == "err";
 	return *create(
 		is_error ?
-			create_console_sink<spdlog::sinks::stderr_sink_mt>() :
-			create_console_sink<spdlog::sinks::stdout_sink_mt>(),
+			create_console_sink<spdlog::sinks::stderr_sink_mt>(log_name) :
+			create_console_sink<spdlog::sinks::stdout_sink_mt>(log_name),
 		kernel::config::is_configured() ?
-			create_file_sink(caf::get_or(BSCONFIG,
-				std::string("logger.") + log_name + "-file-name",
-				std::string(LOG_FNAME_PREFIX) + log_name + ".log"), log_name
-			) :
+			create_file_sink(log_name) :
 			null_sink()
 	);
 }
 
 auto set_custom_tag(std::string tag) -> void {
 	custom_tag_flag::update_tag(std::move(tag));
+	sinks_manager::refresh_format<sinks_manager::File>();
+	sinks_manager::refresh_format<sinks_manager::Console>();
+	sinks_manager::refresh_format<sinks_manager::Custom>();
 }
 
 NAMESPACE_END(log)
@@ -309,8 +409,8 @@ auto logging_subsyst::toggle_mt_logs(bool turn_on) -> void {
 		};
 		// setup periodic flush
 		if(turn_on)
-			spdlog::flush_every(std::chrono::seconds(caf::get_or(
-				BSCONFIG, "logger.flush-interval", DEF_FLUSH_INTERVAL
+			spdlog::flush_every(std::chrono::seconds(configured_value(
+				"logger.flush-interval", DEF_FLUSH_INTERVAL
 			)));
 		else
 			// disable periodic flush for non-mt loggers
@@ -332,4 +432,3 @@ log::bs_log& bserr() {
 }
 
 NAMESPACE_END(blue_sky)
-
