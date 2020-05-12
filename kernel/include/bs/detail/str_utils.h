@@ -6,52 +6,48 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include <bs/common.h>
-#include <string>
+
 #include <algorithm>
-#include <functional>
 #include <cctype>
 #include <locale>
 
-namespace blue_sky {
+NAMESPACE_BEGIN(blue_sky)
 
-//! this manipulator skips line
-template <class charT, class traits>
-inline
-std::basic_istream <charT, traits>&
-ignoreLine(std::basic_istream <charT, traits>& strm)
-{
+/// manipulator that skips line
+template<class charT, class traits>
+auto ignoreLine(std::basic_istream <charT, traits>& strm) -> std::basic_istream <charT, traits>& {
 	strm.ignore(0x7fff, strm.widen('\n'));
 	return strm;
 }
 
-// trim from start
-static inline std::string ltrim(const std::string& S) {
-	using isspace_t = int (*)(int);
-	std::string s = S;
+/// trim from start
+template<typename String>
+auto ltrim(String&& S) {
+	std::string s = std::forward<String>(S);
 	s.erase(
-		s.begin(), std::find_if( s.begin(), s.end(), std::not_fn(isspace_t(std::isspace)) )
+		s.begin(), std::find_if(s.begin(), s.end(), [](int ch) { return !std::isspace(ch); })
 	);
 	return s;
 }
 
-// trim from end
-static inline std::string rtrim(const std::string& S) {
-	using isspace_t = int (*)(int);
-	std::string s = S;
+/// trim from end
+template<typename String>
+auto rtrim(String&& S) {
+	std::string s = std::forward<String>(S);
 	s.erase(
-		std::find_if(s.rbegin(), s.rend(), std::not_fn(isspace_t(std::isspace))).base(),
+		std::find_if(s.rbegin(), s.rend(), [](int ch) { return !std::isspace(ch); }).base(),
 		s.end()
 	);
 	return s;
 }
 
-// trim from both ends
-static inline std::string trim(const std::string& s) {
-	return ltrim(rtrim(s));
+/// trim from both ends
+template<typename String>
+auto trim(String&& S) {
+	return ltrim(rtrim(std::forward<String>(S)));
 }
 
 // functions to convert string <-> wstring using given locale name in POSIX format
@@ -75,5 +71,4 @@ BS_API std::string str2str(
 // obtain std::locale for given locale string name
 BS_API std::locale get_locale(const std::string& loc_name = "");
 
-}	//end of blue_sky namespace
-
+NAMESPACE_END(blue_sky)
