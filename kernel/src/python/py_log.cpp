@@ -9,11 +9,43 @@
 
 #include <bs/python/common.h>
 #include <bs/log.h>
+#include "../kernel/logging_subsyst.h"
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(python)
-namespace {
+#include <pybind11/chrono.h>
+#include <pybind11/functional.h>
+
+#include <spdlog/sinks/base_sink.h>
+#include <spdlog/details/null_mutex.h>
+
+NAMESPACE_BEGIN(blue_sky::python)
+NAMESPACE_BEGIN()
+
 using namespace blue_sky::log;
 using logger = spdlog::logger;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Custom Python sink that can be binded to any (or all) BS loggers
+//
+using printer_f = std::function< void(std::string, level_enum, spdlog::log_clock::time_point) >;
+
+template<typename Mutex>
+struct py_sink : public spdlog::sinks::base_sink<Mutex> {
+	using base_t = spdlog::sinks::base_sink<Mutex>;
+
+	py_sink(printer_f printer) : printer_(std::move(printer)) {}
+
+protected:
+	auto sink_it_(const spdlog::details::log_msg& msg) -> void override {
+		spdlog::memory_buf_t formatted;
+		base_t::formatter_->format(msg, formatted);
+		printer_(fmt::to_string(formatted), msg.level, msg.time);
+	}
+
+	auto flush_() -> void override {}
+
+private:
+	printer_f printer_;
+};
 
 auto print_logger(logger& L, level_enum level, const py::args& args) -> void {
 	std::string stape;
@@ -54,10 +86,29 @@ auto bind_log_impl(py::module& m) -> void {
 	// access BS loggers
 	m.def("get_logger", &get_logger, py::return_value_policy::reference);
 
-	m.def("set_custom_tag", &set_custom_tag, "tag"_a);
+	m.def("set_custom_tag", &set_custom_tag, "tag"_a, "Include given tag to every BS log line");
+
+	// register Python callback as custom BS logger sink
+	m.def("register_sink", [](printer_f py_printer, const std::string& logger_name) {
+		using namespace kernel::detail;
+		// [NOTE] using null mutex, because locking is done via GIL
+		auto s = std::make_shared<py_sink<spdlog::details::null_mutex>>(std::move(py_printer));
+		logging_subsyst::add_custom_sink(s, logger_name);
+
+		auto at_pyexit = py::module::import("atexit");
+		at_pyexit.attr("register")(std::function< void() >{[ws = std::weak_ptr{s}] {
+			// ensure we're switched to ST logging mode (all pending messages flushed
+			{
+				auto _ = py::gil_scoped_release{};
+				logging_subsyst::toggle_mt_logs(false);
+			}
+			// remove added sink BEFORE interpreter is destructed
+			logging_subsyst::remove_custom_sink(ws.lock());
+		}});
+	}, "print_cb"_a, "logger_name"_a = "", "If `logger_name` is empty, attach sink to all existing loggers");
 }
 
-} // eof hidden namespace
+NAMESPACE_END()
 
 void py_bind_log(py::module& m) {
 	auto logm = m.def_submodule("log", "BS logging");
@@ -113,5 +164,4 @@ void py_bind_log(py::module& m) {
 	});
 }
 
-NAMESPACE_END(python) NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::python)
