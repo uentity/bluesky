@@ -46,8 +46,7 @@ auto shutdown() -> void {
 			KIMPL.actor_sys_.release();
 		}
 		// shutdown mt logs
-		KIMPL.toggle_mt_logs(false);
-		spdlog::shutdown();
+		detail::logging_subsyst::shutdown();
 	}
 }
 
