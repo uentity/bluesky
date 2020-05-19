@@ -350,7 +350,7 @@
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs;$(BLUE_SKY_WINDEPS)\caf\lib64\debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs;$(BLUE_SKY_WINDEPS)\caf\lib\debug</AdditionalLibraryDirectories>
       <AdditionalDependencies>Shlwapi.lib;Ws2_32.lib;Iphlpapi.lib;caf_core.lib;caf_io.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -394,7 +394,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs;$(BLUE_SKY_WINDEPS)\caf\lib64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs;$(BLUE_SKY_WINDEPS)\caf\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>Shlwapi.lib;Ws2_32.lib;Iphlpapi.lib;caf_core.lib;caf_io.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

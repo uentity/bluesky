@@ -50,11 +50,11 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 	{}
 
 	auto begin_node(tree_fs_input& ar) -> error {
-		static const auto sentinel = std::optional<tree::node>{};
+		const auto sentinel = std::optional<tree::node>{};
 		return error::eval_safe(
 			// sentinel is ONLY used for template matching
-			[&]{ return head().map( [&](auto* ar) { prologue(*ar, *sentinel); }); },
-			[&]{ return enter_root(); }
+			[&] { return head().map([&](auto* ar) { prologue(*ar, *sentinel); }); },
+			[&] { return enter_root(); }
 		);
 	}
 
