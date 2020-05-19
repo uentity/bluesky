@@ -16,7 +16,6 @@
 #include "config_subsyst.h"
 
 #include <fmt/format.h>
-#include <spdlog/spdlog.h>
 
 #ifdef BSPY_EXPORTING
 #include "python_subsyst_impl.h"
@@ -90,9 +89,8 @@ auto kimpl::shutdown() -> void {
 	if(init_state_.compare_exchange_strong(expected_state, InitState::Down)) {
 		// turn off radio subsystem
 		if(radio_ss_) radio_ss_->shutdown();
-		// shutdown mt logs
-		toggle_mt_logs(false);
-		spdlog::shutdown();
+		// shutdown logging subsyst
+		logging_subsyst::shutdown();
 	}
 }
 
