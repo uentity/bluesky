@@ -115,7 +115,7 @@ base_env = custom_env.Clone();
 base_env.AppendUnique(
 	CPPDEFINES = ['BS_EXPORTING'],
 	CPPPATH = ['#kernel/src'],
-	LIBS = ['loki', 'stdc++fs']
+	LIBS = ['stdc++fs']
 );
 if base_env['platform'].startswith('lin') :
 	base_env.Append(LIBS = ['dl']);
