@@ -162,8 +162,8 @@ def CheckBoostLibrary(context, library, header = '') :
 	#print(test_src)
 	ret = context.TryCompile(test_src, '.cpp')
 	#print(ret)
-	#if ret :
-	#ret = context.TryLink(test_src, '.cpp');
+	if ret :
+		ret = context.TryLink(test_src, '.cpp');
 	context.Result(ret)
 	return ret
 
@@ -276,32 +276,6 @@ def CheckBoost(conf) :
 		for L in boost_libalias :
 			boost_libnames_d[L] = conf.FindBoostLibrary(L, postfix = "-d");
 
-def CheckLoki(conf) :
-	if 'LOKI_PATH' in os.environ :
-		print("LOKI_PATH found!");
-		print("Assume Loki headers in $LOKI_PATH/include, libraries in $LOKI_PATH/lib");
-		loki_libpath = os.path.join(os.environ['LOKI_PATH'], 'lib');
-		conf.env.AppendUnique(
-			CPPPATH = [os.path.join(os.environ['LOKI_PATH'], 'include')]
-			, LIBPATH = [loki_libpath]
-			, RPATH = [loki_libpath]
-		);
-
-	# Check headers
-	#if not conf.CheckCXXHeader('loki/TypeManip.h') :
-	#	print "loki/TypeManip.h required to build BlueSky";
-	#	Exit(1);
-	if not conf.CheckCXXHeader('loki/Singleton.h') :
-		print("loki/Singleton.h required to build BlueSky");
-		Exit(1);
-	# CheckLib makes LIBS dirty, so save and restore it
-	orig_LIBS = conf.env.subst('$LIBS');
-	check_res = conf.CheckLib('loki', language='CXX');
-	conf.env.Replace(LIBS = orig_LIBS);
-	if not check_res :
-		print('Loki library link check failed!')
-		Exit(1);
-
 Export('boost_libalias');
 Export('boost_libnames');
 Export('boost_libnames_d');
@@ -313,5 +287,4 @@ Export('CheckBoostVersion')
 Export('CheckBoostLibrary')
 Export('FindBoostLibrary')
 Export("CheckBoost");
-Export("CheckLoki");
 

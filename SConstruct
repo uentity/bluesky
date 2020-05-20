@@ -191,19 +191,11 @@ print(']');
 
 # 7. Configure
 if not custom_env.GetOption('clean') and not custom_env.GetOption('help') :
-	# HACK: replace compiler with platform default
-	# becuase configure don't work with shell scripts specified as compiler
-	cxx_save = custom_env["CXX"];
-	custom_env.Replace(CXX = Environment()["CXX"]);
-
 	conf = Configure(custom_env);
 	if not conf.CheckCXX() :
 		print('!! Your compiler and/or environment is not correctly configured.');
 		Exit(1);
 	CheckBoost(conf);
-	# restore user-defined compiler
-	custom_env.Replace(CXX = cxx_save);
-	custom_env = conf.Finish();
 
 # add some global dependencies to build environment template
 custom_env.AppendUnique(
