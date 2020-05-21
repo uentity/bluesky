@@ -26,7 +26,7 @@ using logger = spdlog::logger;
 ///////////////////////////////////////////////////////////////////////////////
 //  Custom Python sink that can be binded to any (or all) BS loggers
 //
-using printer_f = std::function< void(std::string, level_enum, spdlog::log_clock::time_point) >;
+using printer_f = std::function< void (std::string, level_enum, spdlog::log_clock::time_point) >;
 
 template<typename Mutex>
 struct py_sink : public spdlog::sinks::base_sink<Mutex> {
@@ -47,14 +47,27 @@ private:
 	printer_f printer_;
 };
 
-auto print_logger(logger& L, level_enum level, const py::args& args) -> void {
+auto print_logger(logger& L, level_enum level, const py::args& args) -> std::string {
 	std::string stape;
 	for(const auto& arg : args) {
 		if(!stape.empty()) stape += ' ';
 		stape += py::str(arg);
 	}
 	L.log(level, "{}", stape);
+	return stape;
 }
+
+// log channels available in BS by default
+enum class Log { Out, Err };
+
+inline auto print_r(Log channel, level_enum level, const py::args& args) {
+	auto& bs_logger = channel == Log::Out ? bsout() : bserr();
+	return print_logger(bs_logger.logger(), level, args);
+};
+
+inline auto print(Log channel, level_enum level, const py::args& args) {
+	print_r(channel, level, args);
+};
 
 auto bind_log_impl(py::module& m) -> void {
 	// log levels enum
@@ -69,12 +82,12 @@ auto bind_log_impl(py::module& m) -> void {
 	;
 
 	// wrap spdlog::logger
-	py::class_<logger, std::shared_ptr<logger>>(m, "logger")
-		.def("should_log", &logger::should_log)
-		.def("set_level", &logger::set_level)
-		.def("set_pattern", [](logger& L, std::string pattern){ L.set_pattern(pattern); })
+	py::class_<logger>(m, "logger")
 		.def_property_readonly("level", &logger::level)
 		.def_property_readonly("name", &logger::name, py::return_value_policy::reference_internal)
+		.def("should_log", &logger::should_log)
+		.def("set_level", &logger::set_level)
+		.def("set_pattern", [](logger& L, std::string pattern){ L.set_pattern(std::move(pattern)); })
 		// main logging function
 		.def("log", print_logger)
 		// make overload with info default log level
@@ -117,38 +130,35 @@ void py_bind_log(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  `bs.print` family overloads
 	//
-	// log channels available in BS by default
-	enum class Log { Out, Err };
 	py::enum_<Log>(m, "Log")
 		.value("Out", Log::Out)
 		.value("Err", Log::Err)
 	;
 
-	static const auto print = [](Log channel, level_enum level, const py::args& args) {
-		// [TODO] fast, but non-extensible code
-		const auto name = channel == Log::Out ? "out" : "err";
-		print_logger(get_logger(name), level, args);
-	};
-
-	// 1. most generic - print given log channel name + [level] + data
+	// 1. most generic - print given log channel name + [level] + data -> return formatted string
+	m.def("print_log_r", [](const char* name, level_enum level, py::args args) {
+		return print_logger(get_logger(name), level, std::move(args));
+	}, "channel_name"_a, "level"_a);
+	// same as above, but formatted string isn't returned
 	m.def("print_log", [](const char* name, level_enum level, py::args args) {
 		print_logger(get_logger(name), level, std::move(args));
-	});
+	}, "channel_name"_a, "level"_a);
 	// if level is omitted -- print with info level
 	m.def("print_log", [](const char* name, py::args args) {
 		print_logger(get_logger(name), level_enum::info, std::move(args));
-	});
+	}, "channel_name"_a);
 
 	// 2. log channel is specified by enum
-	m.def("print", print);
+	m.def("print_r", &print_r, "channel"_a, "level"_a);
+	m.def("print", &print, "channel"_a, "level"_a);
 	// if level is omitted -- print info
 	m.def("print", [](Log channel, const py::args& args) {
 		print(channel, level_enum::info, args);
-	});
+	}, "channel"_a);
 	// if log channel is omitted -- print to bsout
 	m.def("print", [](level_enum level, const py::args& args) {
 		print(Log::Out, level, args);
-	});
+	}, "level"_a);
 	// if channel is omitted -- print to 'out'
 	m.def("print", [](const py::args& args) {
 		print(Log::Out, level_enum::info, args);
@@ -157,7 +167,7 @@ void py_bind_log(py::module& m) {
 	// 3. handy functions to print errors
 	m.def("print_err", [](level_enum level, const py::args& args) {
 		print(Log::Err, level, args);
-	});
+	}, "level"_a);
 	// if level is omitted -- print error to bserr channel
 	m.def("print_err", [](const py::args& args) {
 		print(Log::Err, level_enum::err, args);
