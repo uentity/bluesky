@@ -20,6 +20,7 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 NAMESPACE_BEGIN()
+
 ///////////////////////////////////////////////////////////////////////////////
 //  nil link actor
 //
@@ -60,6 +61,11 @@ struct BS_HIDDEN_API nil_link_actor : link_actor {
 		}
 
 	}.or_else(link_actor::make_behavior()); }
+
+	auto on_exit() -> void override {
+		link_actor::on_exit();
+		nil_link::stop();
+	}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -102,33 +108,31 @@ struct nil_link_impl : link_impl {
 	}
 };
 
+// return global instance of nil link inside optional to destroy at any moment
+inline auto nil_link_internals() -> std::pair<sp_limpl, sp_ahandle>& {
+	static auto self_ = [] {
+		sp_limpl nl_impl = std::make_shared<nil_link_impl>();
+		auto nl_actor = std::make_shared<link::actor_handle>(nl_impl->spawn_actor(nl_impl));
+		return std::make_pair(std::move(nl_impl), std::move(nl_actor));
+	}();
+	return self_;
+}
+
 NAMESPACE_END()
 
 ///////////////////////////////////////////////////////////////////////////////
 //  nil link
 //
-nil_link::nil_link(sp_limpl pimpl) :
-	pimpl_(pimpl),
-	// auto start nil link service
-	actor_( std::make_shared<link::actor_handle>(pimpl_->spawn_actor(pimpl_)) )
-{}
-
-auto nil_link::self() -> nil_link& {
-	static auto self_ = nil_link{ std::make_shared<nil_link_impl>() };
-	return self_;
-}
-
 auto nil_link::stop() -> void {
-	self().pimpl_.reset();
-	self().actor_.reset();
+	// explicitly reset signleton nil link acctor handle & internals
+	auto& [nl_impl, nl_actor] = nil_link_internals();
+	nl_actor->actor_ = nullptr;
+	nl_actor.reset();
+	nl_impl.reset();
 }
 
-nil_link::~nil_link() {
-	stop();
-}
+auto nil_link::pimpl() -> const sp_limpl& { return nil_link_internals().first; }
 
-auto nil_link::pimpl() -> const sp_limpl& { return self().pimpl_; }
-
-auto nil_link::actor() -> const sp_ahandle& { return self().actor_; }
+auto nil_link::actor() -> const sp_ahandle& { return nil_link_internals().second; }
 
 NAMESPACE_END(blue_sky::tree)

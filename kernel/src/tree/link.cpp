@@ -124,7 +124,7 @@ auto link::reset() -> void {
 }
 
 auto link::start_engine() -> bool {
-	if(actor_ == nil_link::self().actor()) {
+	if(actor_ == nil_link::actor()) {
 		actor_ = std::make_shared<actor_handle>(pimpl_->spawn_actor(pimpl_));
 		return true;
 	}
