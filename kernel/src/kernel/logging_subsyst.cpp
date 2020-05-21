@@ -413,8 +413,8 @@ auto get_logger(const char* logger_name) -> spdlog::logger& {
 
 	// ensure file & console sinks are pre-created
 	std::string_view(logger_name) == "err" ?
-		create_console_sink<spdlog::sinks::stderr_sink_mt>(logger_name) :
-		create_console_sink<spdlog::sinks::stdout_sink_mt>(logger_name);
+		create_console_sink<spdlog::sinks::ansicolor_stderr_sink_mt>(logger_name) :
+		create_console_sink<spdlog::sinks::ansicolor_stdout_sink_mt>(logger_name);
 	if(kernel::config::is_configured())
 		create_file_sink(logger_name);
 
