@@ -17,6 +17,7 @@
 #include <spdlog/async.h>
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/pattern_formatter.h>
 
@@ -408,8 +409,8 @@ auto get_logger(const char* logger_name) -> spdlog::logger& {
 
 	// ensure file & console sinks are pre-created
 	std::string_view(logger_name) == "err" ?
-		create_console_sink<spdlog::sinks::ansicolor_stderr_sink_mt>(logger_name) :
-		create_console_sink<spdlog::sinks::ansicolor_stdout_sink_mt>(logger_name);
+		create_console_sink<spdlog::sinks::stderr_color_sink_mt>(logger_name) :
+		create_console_sink<spdlog::sinks::stdout_color_sink_mt>(logger_name);
 	if(kernel::config::is_configured())
 		create_file_sink(logger_name);
 
