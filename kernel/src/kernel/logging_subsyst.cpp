@@ -27,9 +27,9 @@
 #include <iostream>
 #include <map>
 
-constexpr auto FILE_LOG_PATTERN    = std::string_view{ "[%Y-%m-%d %T.%e] [%L] [%*] %v" };
-constexpr auto CONSOLE_LOG_PATTERN = std::string_view{ "[%L] [%*] %v" };
-constexpr auto CUSTOM_LOG_PATTERN  = std::string_view{ "[%L] [%*] %v" };
+constexpr auto FILE_LOG_PATTERN    = std::string_view{ "[%Y-%m-%d %T.%e] [%P] [%L] [%*] %v" };
+constexpr auto CONSOLE_LOG_PATTERN = std::string_view{ "[%L] %v" };
+constexpr auto CUSTOM_LOG_PATTERN  = std::string_view{ "[%L] %v" };
 constexpr auto LOG_FNAME_PREFIX    = std::string_view{ "bs_" };
 constexpr auto CUSTOM_TAG_FIELD    = std::string_view{ "[%*]" };
 
@@ -96,19 +96,14 @@ struct custom_tag_flag : public spdlog::custom_flag_formatter {
 };
 
 auto make_formatter(std::string pat_format) {
-	const auto cur_tag = custom_tag_flag::tag();
-	auto pos = pat_format.find(CUSTOM_TAG_FIELD);
-
 	// remove custom tag field if tag is empty, add (if missing) if tag is non-empty
-	if(cur_tag.empty() && pos != std::string::npos) {
+	const auto pos = pat_format.find(CUSTOM_TAG_FIELD);
+	if(custom_tag_flag::tag().empty() && pos != std::string::npos) {
 		pat_format.erase(pos, CUSTOM_TAG_FIELD.size());
 		// try to remove additional space before/after removed tag
 		if(pos < pat_format.size() && std::isspace(pat_format[pos]))
 			pat_format.erase(pos, 1);
 	}
-	else if(!cur_tag.empty() && pos == std::string::npos)
-		pat_format.insert(0, std::string(CUSTOM_TAG_FIELD) + ' ');
-
 	// make formatter with custom flag
 	auto res = std::make_unique<spdlog::pattern_formatter>();
 	res->add_flag<custom_tag_flag>('*').set_pattern(std::move(pat_format));
@@ -123,7 +118,7 @@ struct sinks_manager : public detail::sharded_same_mutex<std::mutex, 3> {
 	using sinks_storage_t = std::multimap<std::string, sink_ptr, std::less<>>;
 
 	// guards for different sinks groups
-	enum SinkGroup { File = 0, Console = 1, Custom = 2 };
+	enum SinkGroup : std::uint8_t { File = 0, Console = 1, Custom = 2 };
 	using guard_t = detail::sharded_same_mutex<std::mutex, 3>;
 
 	static auto group_guard() -> guard_t& {
