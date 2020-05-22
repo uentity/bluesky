@@ -15,6 +15,7 @@
 #include "kimpl.h"
 #include "python_subsyst_impl.h"
 #include "plugins_subsyst.h"
+#include "radio_subsyst.h"
 
 #include <boost/uuid/uuid_io.hpp>
 
@@ -74,14 +75,26 @@ python_subsyst_impl::python_subsyst_impl(void* kmod_ptr)
 auto python_subsyst_impl::py_kmod() const -> void* { return kmod_; }
 
 auto python_subsyst_impl::setup_py_kmod(void* kmod_ptr) -> void {
-	if(kmod_ptr) {
-		kmod_ = kmod_ptr;
-		auto& kmod = *static_cast<pybind11::module*>(kmod_);
+	if(!kmod_ptr) return;
 
-		auto& kpd = plugins_subsyst::kernel_pd();
-		kmod.doc() = kpd.description;
-		kpd.py_namespace = PyModule_GetName(kmod.ptr());
-	}
+	kmod_ = kmod_ptr;
+	auto& kmod = *static_cast<pybind11::module*>(kmod_);
+
+	auto& kpd = plugins_subsyst::kernel_pd();
+	kmod.doc() = kpd.description;
+	kpd.py_namespace = PyModule_GetName(kmod.ptr());
+
+	// [IMPORTANT] we must clean up adapters & cache right BEFORE interpreter termination
+	auto at_pyexit = py::module::import("atexit");
+	at_pyexit.attr("register")(py::cpp_function{[this] {
+		drop_adapted_cache();
+		adapters_.clear();
+		def_adapter_ = nullptr;
+
+		// shut down radio (normally wait until all actor handles wired into Python are released)
+		auto _ = py::gil_scoped_release{};
+		KIMPL.get_radio()->shutdown();
+	}});
 }
 
 auto python_subsyst_impl::py_init_plugin(
