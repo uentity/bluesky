@@ -89,10 +89,12 @@ auto radio_subsyst::shutdown() -> void {
 		// send `a_bye` message to all actors in kernel group
 		caf::anon_send(khome_, a_bye());
 		khome_ = nullptr;
-		// terminate actor system
-		system().await_actors_before_shutdown(
-			get_or(config::config(), "radio.await_actors_before_shutdown", true)
-		);
+		// [NOTE] explicit wait until all actors done if asked for
+		// because during termination some actor may need to access live actor_system
+		if(get_or(config::config(), "radio.await_actors_before_shutdown", true))
+			actor_sys_->await_all_actors_done();
+		// destroy actor_system
+		actor_sys_->await_actors_before_shutdown(false);
 		get_actor_sys_ = &radio_subsyst::always_throw_as_getter;
 		actor_sys_.reset();
 	}
