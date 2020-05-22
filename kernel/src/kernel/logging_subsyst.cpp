@@ -87,7 +87,8 @@ struct custom_tag_flag : public spdlog::custom_flag_formatter {
 
 	auto format(const spdlog::details::log_msg&, const std::tm&, spdlog::memory_buf_t& dest)
 	-> void override {
-		dest.append(tag().begin(), tag().end());
+		auto& t = tag();
+		dest.append(t.data(), t.data() + t.size());
 	}
 
 	auto clone() const -> std::unique_ptr<custom_flag_formatter> override {
