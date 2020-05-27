@@ -27,6 +27,8 @@ using logger = spdlog::logger;
 //  Custom Python sink that can be binded to any (or all) BS loggers
 //
 using printer_f = std::function< void (std::string, level_enum, spdlog::log_clock::time_point) >;
+// log channels available in BS by default
+enum class Log { Out, Err };
 
 template<typename Mutex>
 struct py_sink : public spdlog::sinks::base_sink<Mutex> {
@@ -47,7 +49,7 @@ private:
 	printer_f printer_;
 };
 
-auto print_logger(logger& L, level_enum level, const py::args& args) -> std::string {
+inline auto print_logger(logger& L, level_enum level, const py::args& args) -> std::string {
 	std::string stape;
 	for(const auto& arg : args) {
 		if(!stape.empty()) stape += ' ';
@@ -56,9 +58,6 @@ auto print_logger(logger& L, level_enum level, const py::args& args) -> std::str
 	L.log(level, "{}", stape);
 	return stape;
 }
-
-// log channels available in BS by default
-enum class Log { Out, Err };
 
 inline auto print_r(Log channel, level_enum level, const py::args& args) {
 	auto& bs_logger = channel == Log::Out ? bsout() : bserr();
@@ -82,7 +81,7 @@ auto bind_log_impl(py::module& m) -> void {
 	;
 
 	// wrap spdlog::logger
-	py::class_<logger>(m, "logger")
+	py::class_<spdlog::logger, std::shared_ptr<spdlog::logger>>(m, "logger")
 		.def_property_readonly("level", &logger::level)
 		.def_property_readonly("name", &logger::name, py::return_value_policy::reference_internal)
 		.def("should_log", &logger::should_log)
@@ -97,7 +96,7 @@ auto bind_log_impl(py::module& m) -> void {
 	;
 
 	// access BS loggers
-	m.def("get_logger", &get_logger, py::return_value_policy::reference);
+	m.def("get_logger", &get_logger);
 
 	m.def("set_custom_tag", &set_custom_tag, "tag"_a, "Include given tag to every BS log line");
 
@@ -113,7 +112,7 @@ auto bind_log_impl(py::module& m) -> void {
 			// ensure we're switched to ST logging mode (all pending messages flushed
 			{
 				auto _ = py::gil_scoped_release{};
-				logging_subsyst::toggle_mt_logs(false);
+				logging_subsyst::toggle_async(false);
 			}
 			// remove added sink BEFORE interpreter is destructed
 			logging_subsyst::remove_custom_sink(ws.lock());
@@ -137,15 +136,15 @@ void py_bind_log(py::module& m) {
 
 	// 1. most generic - print given log channel name + [level] + data -> return formatted string
 	m.def("print_log_r", [](const char* name, level_enum level, py::args args) {
-		return print_logger(get_logger(name), level, std::move(args));
+		return print_logger(*get_logger(name), level, std::move(args));
 	}, "channel_name"_a, "level"_a);
 	// same as above, but formatted string isn't returned
 	m.def("print_log", [](const char* name, level_enum level, py::args args) {
-		print_logger(get_logger(name), level, std::move(args));
+		print_logger(*get_logger(name), level, std::move(args));
 	}, "channel_name"_a, "level"_a);
 	// if level is omitted -- print with info level
 	m.def("print_log", [](const char* name, py::args args) {
-		print_logger(get_logger(name), level_enum::info, std::move(args));
+		print_logger(*get_logger(name), level_enum::info, std::move(args));
 	}, "channel_name"_a);
 
 	// 2. log channel is specified by enum

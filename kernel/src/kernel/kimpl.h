@@ -24,10 +24,10 @@ NAMESPACE_BEGIN(blue_sky::kernel)
  *  kernel impl
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API kimpl :
+	public detail::logging_subsyst,
 	public detail::config_subsyst,
 	public detail::plugins_subsyst,
-	public detail::instance_subsyst,
-	public detail::logging_subsyst
+	public detail::instance_subsyst
 {
 public:
 	// kernel generic data storage

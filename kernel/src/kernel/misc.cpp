@@ -25,7 +25,7 @@ auto init() -> void {
 		// configure kernel
 		KIMPL.configure();
 		// switch to mt logs
-		KIMPL.toggle_mt_logs(true);
+		KIMPL.toggle_async(true);
 		// init actor system
 		auto& actor_sys = KIMPL.actor_sys_;
 		if(!actor_sys) {

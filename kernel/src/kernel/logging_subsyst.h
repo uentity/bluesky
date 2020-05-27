@@ -11,13 +11,16 @@
 #include <bs/common.h>
 
 #include <spdlog/common.h>
+#include <spdlog/logger.h>
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
 struct BS_HIDDEN_API logging_subsyst {
 	logging_subsyst();
 
-	static auto toggle_mt_logs(bool turn_on) -> void;
+	static auto null_logger() -> const std::shared_ptr<spdlog::logger>&;
+
+	static auto toggle_async(bool turn_on) -> void;
 
 	// if `logger_name` isn't specified, add to all existing logs
 	static auto add_custom_sink(spdlog::sink_ptr sink, const std::string& logger_name = {}) -> void;
