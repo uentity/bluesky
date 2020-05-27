@@ -6,17 +6,17 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include "common.h"
 #include "detail/tuple_utils.h"
+
 #include <spdlog/logger.h>
 
 namespace blue_sky { namespace log {
 
 /// Create spdlog::logger backend with given name
-BS_API auto get_logger(const char* name) -> spdlog::logger&;
+BS_API auto get_logger(const char* name) -> std::shared_ptr<spdlog::logger>;
 
 // import spdlog level_enum
 using level_enum = spdlog::level::level_enum;
@@ -218,6 +218,9 @@ public:
 	/// import detail::log_tape as tape
 	template<level_enum Level, typename... Args> using tape = detail::log_tape<Level, Args...>;
 
+	bs_log(std::shared_ptr<spdlog::logger> L);
+	bs_log(const char* name);
+
 	/// returns a log tape with reference to this as first element
 	template<
 		typename T,
@@ -234,24 +237,22 @@ public:
 		return (*op)(lhs);
 	}
 
-	bs_log(spdlog::logger& log) : log_(log) {}
-	bs_log(const char* name);
-
 	// access spdlog::logger backend
 	spdlog::logger& logger() {
-		return log_;
+		return *log_;
 	}
 	const spdlog::logger& loggger() const {
-		return log_;
+		return *log_;
 	}
 
 	// return log level
 	level_enum level() const {
-		return log_.level();
+		return log_->level();
 	}
 
 private:
-	spdlog::logger& log_;
+	// [NOTE] non-null invariant is enforced by constructors
+	std::shared_ptr<spdlog::logger> log_;
 };
 
 /*-----------------------------------------------------------------

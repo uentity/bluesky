@@ -27,10 +27,11 @@
 #include <filesystem>
 #include <iostream>
 #include <map>
+#include <optional>
 
 constexpr auto FILE_LOG_PATTERN    = std::string_view{ "[%Y-%m-%d %T.%e] [%P] [%L] [%*] %v" };
 constexpr auto CONSOLE_LOG_PATTERN = std::string_view{ "[%L] %v" };
-constexpr auto CUSTOM_LOG_PATTERN  = std::string_view{ "[%L] %v" };
+constexpr auto CUSTOM_LOG_PATTERN  = std::string_view{ "%v" };
 constexpr auto LOG_FNAME_PREFIX    = std::string_view{ "bs_" };
 constexpr auto CUSTOM_TAG_FIELD    = std::string_view{ "[%*]" };
 
@@ -52,8 +53,14 @@ const auto& null_sink() {
 	return nowhere;
 }
 
+const auto& null_logger() {
+	// unregistered standalone logger
+	static const auto nowhere = std::make_shared<spdlog::logger>("null", null_sink());
+	return nowhere;
+}
+
 // flag that indicates whether we have switched to mt logs
-auto& are_logs_mt() {
+auto& are_logs_async() {
 	static std::atomic<bool> mt_state{false};
 	return mt_state;
 }
@@ -114,7 +121,7 @@ auto make_formatter(std::string pat_format) {
 /*-----------------------------------------------------------------------------
  *  sinks manager
  *-----------------------------------------------------------------------------*/
-struct sinks_manager : public detail::sharded_same_mutex<std::mutex, 3> {
+struct sinks_registry : public detail::sharded_same_mutex<std::mutex, 3> {
 	using sink_ptr = spdlog::sink_ptr;
 	using sinks_storage_t = std::multimap<std::string, sink_ptr, std::less<>>;
 
@@ -276,7 +283,7 @@ auto create_file_sink(const std::string& logger_name) -> spdlog::sink_ptr {
 		std::string("logger.") + logger_name + "-file-name", def_fname
 	);
 	// create sink
-	auto res = sinks_manager::get_or_make<sinks_manager::File>(logger_name, [&]() -> spdlog::sink_ptr {
+	auto res = sinks_registry::get_or_make<sinks_registry::File>(logger_name, [&]() -> spdlog::sink_ptr {
 		// create intermediate dirs
 		const auto logf = fs::path(desired_fname);
 		const auto logf_ext = logf.extension();
@@ -323,7 +330,7 @@ auto create_file_sink(const std::string& logger_name) -> spdlog::sink_ptr {
 // if `logger_name` is set -- tune sink with configured values
 template<typename Sink>
 auto create_console_sink(const std::string& logger_name) -> spdlog::sink_ptr {
-	auto res = sinks_manager::get_or_make<sinks_manager::Console>(logger_name, [&]() -> spdlog::sink_ptr {
+	auto res = sinks_registry::get_or_make<sinks_registry::Console>(logger_name, [&]() -> spdlog::sink_ptr {
 		return std::make_shared<Sink>();
 	});
 	return res ? res : null_sink();
@@ -334,66 +341,80 @@ auto create_console_sink(const std::string& logger_name) -> spdlog::sink_ptr {
  *-----------------------------------------------------------------------------*/
 template< typename... Sinks >
 auto create_logger(const char* logger_name) -> std::shared_ptr<spdlog::logger> {
-	static const auto null_st_logger = [] {
-		// [NOTE] disable auto-registering to prevent auto-binding of sinks to 'null' logger
-		spdlog::set_automatic_registration(false);
-		return spdlog::create<spdlog::sinks::null_sink_mt>("null");
-	}();
-
-	auto S = sinks_manager::get(logger_name);
+	auto S = sinks_registry::get(logger_name);
 	try {
 		auto L = std::make_shared<spdlog::logger>( logger_name, std::begin(S), std::end(S) );
 		spdlog::register_logger(L);
 		return L;
 	}
 	catch(...) {}
-	return null_st_logger;
+	return null_logger();
 }
 
 template< typename... Sinks >
 auto create_async_logger(const char* logger_name) -> std::shared_ptr<spdlog::logger> {
-	static const auto null_mt_logger = [] {
-		// [NOTE] disable auto-registering to prevent auto-binding of sinks to 'null' logger
-		spdlog::set_automatic_registration(false);
-		// null logger created this way ensures thread pool is initialized
-		return spdlog::create_async_nb<spdlog::sinks::null_sink_mt>("null");
-	}();
-
-	auto S = sinks_manager::get(logger_name);
+	auto S = sinks_registry::get(logger_name);
 	try {
+		// create thread pool if not created yet
+		if(auto tp = spdlog::thread_pool(); !tp)
+			spdlog::init_thread_pool(spdlog::details::default_async_q_size, 1);
+		// create non-blocking logger
 		auto L = std::make_shared<spdlog::async_logger>(
-			logger_name, std::begin(S), std::end(S), spdlog::thread_pool()
+			logger_name, std::begin(S), std::end(S), spdlog::thread_pool(),
+			spdlog::async_overflow_policy::overrun_oldest
 		);
+		spdlog::register_logger(L);
+		// setup flushing policy
 		L->flush_on(static_cast<spdlog::level::level_enum>(configured_value(
 			std::string("logger.") + logger_name + "-flush-level",
 			std::uint8_t(DEF_FLUSH_LEVEL)
 		)));
-		spdlog::register_logger(L);
 		return L;
 	}
 	catch(...) {}
-	return null_mt_logger;
+	return null_logger();
 }
 
-// global bs_log loggers for "out" and "err"
-auto& predefined_loggers() {
-	static auto loggers = [] {
-		// do some default initialization
-		// set global minimum flush level
-		spdlog::flush_on(DEF_FLUSH_LEVEL);
-		// ... and create `bs_log` instances
-		return std::tuple{
-			std::make_unique<log::bs_log>("out"),
-			std::make_unique<log::bs_log>("err")
+///////////////////////////////////////////////////////////////////////////////
+//  builtin 'out' & 'err' loggers
+//
+struct builtin_loggers {
+	static auto& storage() {
+		static auto storage_ = std::array<std::optional<log::bs_log>, 2>{
+			std::make_optional<log::bs_log>("out"),
+			std::make_optional<log::bs_log>("err")
 		};
-	}();
-	return loggers;
-}
+		return storage_;
+	}
 
-auto clear_loggers() -> void {
-	predefined_loggers() = {};
-	spdlog::drop_all();
-}
+	static auto& guard() {
+		static auto guard_ = std::mutex{};
+		return guard_;
+	}
+
+	static auto reset() -> void {
+		auto solo = std::lock_guard{ guard() };
+		storage() = {
+			std::make_optional<log::bs_log>("out"),
+			std::make_optional<log::bs_log>("err")
+		};
+	}
+
+	static auto clear() -> void {
+		auto solo = std::lock_guard{ guard() };
+		auto& nowhere = null_logger();
+		storage() = {
+			std::make_optional<log::bs_log>(nowhere),
+			std::make_optional<log::bs_log>(nowhere)
+		};
+	}
+
+	template<int i>
+	static auto& get() {
+		auto solo = std::lock_guard{ guard() };
+		return *storage()[i];
+	}
+};
 
 NAMESPACE_END() // hidden namespace
 
@@ -403,10 +424,19 @@ NAMESPACE_END() // hidden namespace
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(log)
 
-auto get_logger(const char* logger_name) -> spdlog::logger& {
+auto get_logger(const char* logger_name) -> std::shared_ptr<spdlog::logger> {
+	// do spdlog initialization before first logger ever created
+	static std::once_flag init_flag_;
+	std::call_once(init_flag_, [] {
+		// [NOTE] disable auto-registering, beacuse we do it manually
+		spdlog::set_automatic_registration(false);
+		// set global minimum flush level
+		spdlog::flush_on(DEF_FLUSH_LEVEL);
+	});
+
 	// if log already registered -- return it
 	if(auto L = spdlog::get(logger_name))
-		return *L;
+		return L;
 
 	// ensure file & console sinks are pre-created
 	std::string_view(logger_name) == "err" ?
@@ -416,16 +446,16 @@ auto get_logger(const char* logger_name) -> spdlog::logger& {
 		create_file_sink(logger_name);
 
 	// create new logger
-	return are_logs_mt() ?
-		*create_async_logger(logger_name) :
-		*create_logger(logger_name);
+	return are_logs_async() ?
+		create_async_logger(logger_name) :
+		create_logger(logger_name);
 }
 
 auto set_custom_tag(std::string tag) -> void {
 	custom_tag_flag::update_tag(std::move(tag));
-	sinks_manager::refresh_format<sinks_manager::File>();
-	sinks_manager::refresh_format<sinks_manager::Console>();
-	sinks_manager::refresh_format<sinks_manager::Custom>();
+	sinks_registry::refresh_format<sinks_registry::File>();
+	sinks_registry::refresh_format<sinks_registry::Console>();
+	sinks_registry::refresh_format<sinks_registry::Custom>();
 }
 
 NAMESPACE_END(log)
@@ -436,49 +466,43 @@ NAMESPACE_END(log)
 NAMESPACE_BEGIN(kernel::detail)
 
 logging_subsyst::logging_subsyst() {
-	// ensure that log globals are created before kernel
-	// that means log will be alive as long as kernel alive
-	[[maybe_unused]] const spdlog::logger* const init_logs[] = {
-		&log::get_logger("out"), &log::get_logger("err")
-	};
+	// ensure that builtin loggers are created in the very beginning
+	[[maybe_unused]] const auto& _ = builtin_loggers::storage();
+}
+
+auto logging_subsyst::null_logger() -> const std::shared_ptr<spdlog::logger>& {
+	return ::null_logger();
 }
 
 // switch between mt- and st- logs
-auto logging_subsyst::toggle_mt_logs(bool turn_on) -> void {
-	if(are_logs_mt().exchange(turn_on) != turn_on) {
+auto logging_subsyst::toggle_async(bool turn_on) -> void {
+	if(are_logs_async().exchange(turn_on) != turn_on) {
 		// if we're switching from MT -> ST, wait until all pending messages are printed
 		// and shutdown thread pool
 		if(!turn_on) spdlog::shutdown();
-		// drop all previousely created loggers
-		clear_loggers();
-		// if switching to MT logs, create new predefined instances for faster access
-		if(turn_on) {
-			predefined_loggers() = {
-				std::make_unique<log::bs_log>("out"),
-				std::make_unique<log::bs_log>("err")
-			};
+		// reset builtin loggers with new mode
+		builtin_loggers::reset();
 			// setup periodic flush
+		if(turn_on)
 			spdlog::flush_every(std::chrono::seconds(configured_value(
 				"logger.flush-interval", DEF_FLUSH_INTERVAL
 			)));
-		}
 	}
 }
 
 auto logging_subsyst::shutdown() -> void {
 	// wait all messages are flushed & stop spdlog threads
 	spdlog::shutdown();
-	// clear all loggers
-	clear_loggers();
-	// clear all sinks
-	sinks_manager::clear_all();
+	// clear builtin loggers & sinks
+	builtin_loggers::clear();
+	sinks_registry::clear_all();
 }
 
 auto logging_subsyst::add_custom_sink(spdlog::sink_ptr sink, const std::string& logger_name) -> void {
 	if(!sink) return;
 	// add new sink to regisrty
-	sinks_manager::remove_sink<sinks_manager::Custom>(sink, logger_name);
-	sinks_manager::add_sink<sinks_manager::Custom>(sink, logger_name);
+	sinks_registry::remove_sink<sinks_registry::Custom>(sink, logger_name);
+	sinks_registry::add_sink<sinks_registry::Custom>(sink, logger_name);
 
 	if(logger_name.empty())
 		// append sink to existing loggers
@@ -499,7 +523,7 @@ auto logging_subsyst::remove_custom_sink(spdlog::sink_ptr sink, const std::strin
 	else if(auto logger = spdlog::get(logger_name))
 		clear_logger(std::move(logger));
 
-	sinks_manager::remove_sink<sinks_manager::Custom>(sink, logger_name);
+	sinks_registry::remove_sink<sinks_registry::Custom>(sink, logger_name);
 }
 
 NAMESPACE_END(kernel::detail)
@@ -508,11 +532,11 @@ NAMESPACE_END(kernel::detail)
  * access to main log channels
  *----------------------------------------------------------------*/
 log::bs_log& bsout() {
-	return *std::get<0>(predefined_loggers());
+	return builtin_loggers::get<0>();
 }
 
 log::bs_log& bserr() {
-	return *std::get<1>(predefined_loggers());
+	return builtin_loggers::get<1>();
 }
 
 NAMESPACE_END(blue_sky)

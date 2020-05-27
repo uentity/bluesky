@@ -74,7 +74,7 @@ auto kimpl::init() -> error {
 		// configure kernel
 		configure();
 		// switch to mt logs
-		toggle_mt_logs(true);
+		logging_subsyst::toggle_async(true);
 		// init kernel radio subsystem
 		auto er = get_radio()->init();
 		init_ok = er.ok();
