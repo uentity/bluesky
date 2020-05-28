@@ -15,9 +15,6 @@
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
 
-#include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
-
 NAMESPACE_BEGIN(blue_sky::tree)
 NAMESPACE_BEGIN()
 
@@ -25,7 +22,14 @@ NAMESPACE_BEGIN()
 //  nil link actor
 //
 struct BS_HIDDEN_API nil_link_actor : link_actor {
-	using link_actor::link_actor;
+	using super = link_actor;
+
+	nil_link_actor(caf::actor_config& cfg, caf::group home, sp_limpl Limpl)
+		: super(cfg, std::move(home), std::move(Limpl))
+	{
+		// join kernel's group
+		join(KRADIO.khome());
+	}
 
 	auto data_ex(obj_processor_f f, ReqOpts) -> void override {
 		using R = result_or_errbox<sp_obj>;
@@ -42,7 +46,7 @@ struct BS_HIDDEN_API nil_link_actor : link_actor {
 		[=](a_lnk_otid) -> std::string { return nil_otid; },
 
 		// deny rename
-		[=](a_lnk_rename, std::string, bool) -> void {},
+		[=](a_lnk_rename, const std::string&, bool) -> void {},
 
 		// status alwaye Error
 		[=](a_lnk_status, Req, ReqReset, ReqStatus, ReqStatus) -> ReqStatus {
@@ -82,7 +86,8 @@ struct nil_link_impl : link_impl {
 	}
 
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override {
-		return spawn_lactor<nil_link_actor, caf::spawn_options::hide_flag>(std::move(limpl));
+		// spawn actor with nil home group
+		return kernel::radio::system().spawn<nil_link_actor>(caf::group{}, std::move(limpl));
 	}
 
 	auto clone(bool deep) const -> sp_limpl override {
@@ -93,23 +98,13 @@ struct nil_link_impl : link_impl {
 		return tl::make_unexpected(Error::EmptyData);
 	}
 
-	auto type_id() const -> std::string_view override { return type_id_(); }
-
-	static auto type_id_() -> std::string_view {
-		// generate random type ID (UUID string)
-		static const auto session_nil = []() -> std::string_view {
-			static auto buf = std::array<char, 36>{}; // length of UUID string
-			auto x = to_string(boost::uuids::random_generator()());
-			std::copy(x.begin(), x.end(), buf.begin());
-			return { buf.data(), buf.size() };
-		}();
-
-		return session_nil;
-	}
+	LIMPL_TYPE_DECL
 };
 
+LIMPL_TYPE_DEF(nil_link_impl, "__nil_link__")
+
 // return global instance of nil link inside optional to destroy at any moment
-inline auto nil_link_internals() -> std::pair<sp_limpl, sp_ahandle>& {
+auto nil_link_internals() -> std::pair<sp_limpl, sp_ahandle>& {
 	static auto self_ = [] {
 		sp_limpl nl_impl = std::make_shared<nil_link_impl>();
 		auto nl_actor = std::make_shared<link::actor_handle>(nl_impl->spawn_actor(nl_impl));

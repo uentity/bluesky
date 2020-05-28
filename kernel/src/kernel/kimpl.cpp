@@ -44,7 +44,10 @@ NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(kernel)
 
 kimpl::kimpl() : init_state_(InitState::NonInitialized) {}
 
-kimpl::~kimpl() = default;
+kimpl::~kimpl() {
+	// [NOTE] shutdown is required to preperly terminate logs, etc
+	shutdown();
+}
 
 auto kimpl::get_radio() -> detail::radio_subsyst* {
 	std::call_once(radio_up_, [&] { radio_ss_ = std::make_unique<detail::radio_subsyst>(); });
