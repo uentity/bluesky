@@ -78,7 +78,6 @@ struct objbase_actor : public caf::event_based_actor {
 	auto on_exit() -> void override {
 		// say bye-bye to self group
 		send(home_, a_bye());
-		leave(home_);
 	}
 };
 

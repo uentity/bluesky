@@ -39,14 +39,11 @@ struct ev_listener_actor : caf::event_based_actor {
 	using safe_callback_t = decltype(make_safe_callback(std::declval<callback_t>()));
 	safe_callback_t f;
 
-	// listen to messages from this group
-	caf::group home;
-
 	ev_listener_actor(
-		caf::actor_config& cfg, caf::group tgt_grp, callback_t cb,
+		caf::actor_config& cfg, const caf::group&, callback_t cb,
 		std::function< caf::message_handler(ev_listener_actor*) > make_event_behavior
 	)
-		: super(cfg), f(make_safe_callback(std::move(cb))), home(std::move(tgt_grp))
+		: super(cfg), f(make_safe_callback(std::move(cb)))
 	{
 		// silently drop all other messages not in my character
 		set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
@@ -62,11 +59,6 @@ struct ev_listener_actor : caf::event_based_actor {
 		character = make_event_behavior(this).or_else(caf::message_handler{
 			[=](a_bye) { quit(); }
 		});
-	}
-
-	auto on_exit() -> void override {
-		leave(home);
-		leave(KRADIO.khome());
 	}
 
 	auto make_behavior() -> behavior_type override {
