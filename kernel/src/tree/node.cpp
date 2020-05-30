@@ -22,15 +22,13 @@ NAMESPACE_BEGIN(tree)
  *  node
  *-----------------------------------------------------------------------------*/
 node::node(std::string custom_id)
-	: objbase(true, std::move(custom_id)), pimpl_(std::make_shared<node_impl>(this)),
-	factor_(system())
+	: objbase(true, std::move(custom_id)), pimpl_(std::make_shared<node_impl>(this))
 {
 	start_engine();
 }
 
 node::node(const node& src)
-	: objbase(src), pimpl_(std::make_shared<node_impl>(*src.pimpl_, this)),
-	factor_(system())
+	: objbase(src), pimpl_(std::make_shared<node_impl>(*src.pimpl_, this))
 {
 	start_engine();
 }
@@ -53,6 +51,10 @@ auto node::start_engine(std::string gid) -> void {
 }
 
 auto node::raw_actor() const -> const caf::actor& { return pimpl_->actor_; }
+
+auto node::factor() const -> const caf::scoped_actor& {
+	return pimpl_->factor();
+}
 
 auto node::home() const -> const caf::group& { return pimpl_->home_; }
 

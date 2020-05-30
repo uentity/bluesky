@@ -22,6 +22,8 @@
 #include <bs/detail/spinlock.h>
 #endif
 
+#include <optional>
+
 // helper macro to inject link type ids
 #define LIMPL_TYPE_DECL                            \
 static auto type_id_() -> std::string_view;        \
@@ -47,9 +49,9 @@ inline const auto nil_otid = blue_sky::defaults::nil_type_name;
 
 using link_impl_mutex = std::mutex;
 
-///////////////////////////////////////////////////////////////////////////////
-//  actor_handle
-//
+/*-----------------------------------------------------------------------------
+ *  actor_handle
+ *-----------------------------------------------------------------------------*/
 struct link::actor_handle {
 	caf::actor actor_;
 
@@ -58,9 +60,9 @@ struct link::actor_handle {
 };
 using sp_ahandle = std::shared_ptr<link::actor_handle>;
 
-///////////////////////////////////////////////////////////////////////////////
-//  base link_impl
-//
+/*-----------------------------------------------------------------------------
+ *  base link impl
+ *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API link_impl :
 	public std::enable_shared_from_this<link_impl>, public bs_detail::sharded_mutex<link_impl_mutex>
 {
@@ -68,6 +70,9 @@ public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 	using sp_limpl = std::shared_ptr<link_impl>;
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  private link messaging interface
+	//
 	using primary_actor_type = link::actor_type::extend<
 		// obtain link impl
 		caf::replies_to<a_impl>::with<sp_limpl>
@@ -102,20 +107,25 @@ public:
 	// complete private actor type
 	using actor_type = primary_actor_type::extend_with<ack_actor_type>;
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  member variables
+	//
+	// scoped actor for requests
+	std::optional<const caf::scoped_actor> factor_;
+	// timeout for most queries
+	const caf::duration timeout;
+	// link's home group
+	caf::group home;
+
+	// core link attributes
 	lid_type id_;
 	std::string name_;
 	Flags flags_;
 
-	// timeout for most queries
-	const caf::duration timeout;
-
-	// keep local link group
-	caf::group home;
-
-	/// owner node
+	// node that owns this link
 	std::weak_ptr<tree::node> owner_;
 
-	/// status of operations
+	// status of operations
 	struct status_handle {
 		ReqStatus value = ReqStatus::Void;
 
@@ -127,6 +137,9 @@ public:
 	};
 	status_handle status_[2];
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  methods
+	//
 	link_impl();
 	link_impl(std::string name, Flags f);
 	virtual ~link_impl();
@@ -135,15 +148,20 @@ public:
 		return caf::actor_cast<actor_type>(L.raw_actor());
 	}
 
+	inline auto factor() noexcept -> const caf::scoped_actor& {
+		//if(!factor_) factor_.emplace(kernel::radio::system());
+		return *factor_;
+	}
+
 	// make request to given link L
 	template<typename R, typename Link, typename... Args>
 	auto actorf(const Link& L, Args&&... args) {
-		return blue_sky::actorf<R>( L.factor(), Link::actor(L), timeout, std::forward<Args>(args)... );
+		return blue_sky::actorf<R>(factor(), link::actor(L), timeout, std::forward<Args>(args)...);
 	}
 	// same as above but with configurable timeout
 	template<typename R, typename Link, typename... Args>
 	auto actorf(const Link& L, timespan timeout, Args&&... args) {
-		return blue_sky::actorf<R>( L.factor(), Link::actor(L), timeout, std::forward<Args>(args)... );
+		return blue_sky::actorf<R>(factor(), link::actor(L), timeout, std::forward<Args>(args)...);
 	}
 
 	// raw spawn actor corresponding to this impl type
@@ -166,6 +184,7 @@ public:
 
 	// if pointee is a node - set node's handle to self and return pointee
 	virtual auto propagate_handle(const link& L) -> result_or_err<sp_node>;
+
 	static auto set_node_handle(const link& h, const sp_node& N) -> void;
 
 	/// switch link's owner

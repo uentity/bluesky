@@ -10,6 +10,7 @@
 #include "node_impl.h"
 #include "link_impl.h"
 #include "node_actor.h"
+
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/detail/tuple_utils.h>
@@ -21,6 +22,7 @@
 #include <boost/uuid/string_generator.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
+namespace kradio = kernel::radio;
 
 auto to_uuid(std::string_view s) noexcept -> std::optional<lid_type> {
 	static const auto gen = boost::uuids::string_generator{};
@@ -31,15 +33,21 @@ auto to_uuid(std::string_view s) noexcept -> std::optional<lid_type> {
 }
 
 node_impl::node_impl(node* super) :
-	timeout(def_timeout(true)), super_(super)
+	factor_(std::in_place, kradio::system()), timeout(def_timeout(true)), super_(super)
 {}
 
 // implement shallow links copy ctor
 node_impl::node_impl(const node_impl& rhs, node* super) :
-	timeout(rhs.timeout), super_(super)
+	factor_(std::in_place, kradio::system()), timeout(rhs.timeout), super_(super)
 {
 	*this = rhs;
 }
+
+node_impl::node_impl(node_impl&& rhs, node* super) :
+	factor_(std::in_place, kradio::system()), timeout(std::move(rhs.timeout)),
+	actor_(std::move(rhs.actor_)), home_(std::move(rhs.home_)),
+	links_(std::move(rhs.links_)), handle_(std::move(rhs.handle_)), super_(super)
+{}
 
 auto node_impl::operator=(const node_impl& rhs) -> node_impl& {
 	// [TODO] fix this in safer way after node is refactored
@@ -50,12 +58,6 @@ auto node_impl::operator=(const node_impl& rhs) -> node_impl& {
 	// correct this by manually calling `node::propagate_owner()` after copy is constructed
 	return *this;
 }
-
-node_impl::node_impl(node_impl&& rhs, node* super) :
-	links_(std::move(rhs.links_)), handle_(std::move(rhs.handle_)),
-	timeout(std::move(rhs.timeout)), actor_(std::move(rhs.actor_)), home_(std::move(rhs.home_)),
-	super_(super)
-{}
 
 auto node_impl::start_engine(sp_nimpl nimpl, std::string gid) -> void {
 	if(!actor_)

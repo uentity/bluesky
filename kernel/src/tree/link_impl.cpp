@@ -7,16 +7,18 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include "link_impl.h"
+#include "link_actor.h"
+
 #include <bs/atoms.h>
 #include <bs/actor_common.h>
 #include <bs/log.h>
 #include <bs/kernel/tools.h>
-#include "link_impl.h"
-#include "link_actor.h"
 
 #include <boost/uuid/random_generator.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
+namespace kradio = kernel::radio;
 
 // global random UUID generator for BS links
 static boost::uuids::random_generator idgen;
@@ -25,7 +27,8 @@ static boost::uuids::random_generator idgen;
  *  link_impl
  *-----------------------------------------------------------------------------*/
 link_impl::link_impl(std::string name, Flags f)
-	: id_(idgen()), name_(std::move(name)), flags_(f), timeout(def_timeout(true))
+	: factor_(std::in_place, kradio::system()), timeout(def_timeout(true)),
+	id_(idgen()), name_(std::move(name)), flags_(f)
 {}
 
 link_impl::link_impl()

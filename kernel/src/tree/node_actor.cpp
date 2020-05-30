@@ -77,6 +77,9 @@ auto node_actor::on_exit() -> void {
 
 	// be polite with everyone
 	goodbye();
+
+	// helper `scoped_actor` instance MUST follow into death with master
+	pimpl_->factor_.reset();
 	// [IMPORTANT] manually reset pimpl, otherwise cycle won't break:
 	// actor dtor never called until at least one strong ref to it still exists
 	// (even though behavior is terminated by sending `exit` message)

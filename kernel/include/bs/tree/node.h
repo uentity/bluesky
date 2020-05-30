@@ -108,6 +108,9 @@ public:
 		return N.actor();
 	}
 
+	/// get link's scoped actor that can be used to make direct requests to internal actor
+	auto factor() const -> const caf::scoped_actor&;
+
 	/// number of elements in this node
 	auto size() const -> std::size_t;
 
@@ -232,8 +235,6 @@ private:
 
 	// PIMPL
 	std::shared_ptr<node_impl> pimpl_;
-	// scoped actor for requests
-	caf::scoped_actor factor_;
 
 	/// return node's raw (dynamic-typed) actor handle
 	auto raw_actor() const -> const caf::actor&;
