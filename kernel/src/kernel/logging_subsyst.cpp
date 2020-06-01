@@ -480,6 +480,7 @@ auto logging_subsyst::toggle_async(bool turn_on) -> void {
 		// if we're switching from MT -> ST, wait until all pending messages are printed
 		// and shutdown thread pool
 		if(!turn_on) spdlog::shutdown();
+		else spdlog::drop_all();
 		// reset builtin loggers with new mode
 		builtin_loggers::reset();
 			// setup periodic flush
