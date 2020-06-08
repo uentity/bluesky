@@ -11,9 +11,6 @@ kboost_libs = ['regex', 'thread', 'serialization', 'locale'];
 
 # init stage
 if build_kind == "init" :
-	if ("unmanaged" not in list(custom_vars.keys ())) :
-		custom_vars.Add ("unmanaged", "Set to 1 to force kernel skip tracking of created objects", "1")
-		custom_vars.Update (custom_env)
 	# query for reuired boost libs
 	boost_require(kboost_libs);
 	includes["bs"] = os.path.join(tar_plugin_dir, "include");
@@ -119,9 +116,6 @@ base_env.AppendUnique(
 );
 if base_env['platform'].startswith('lin') :
 	base_env.Append(LIBS = ['dl']);
-
-if (base_env["unmanaged"] == "1") :
-	base_env.AppendUnique (CPPDEFINES = ["BS_CREATE_UNMANAGED_OBJECTS"])
 
 # are we building with python support?
 if base_env['py'] == '1' :
