@@ -110,7 +110,7 @@ auto bind_misc_api(py::module& m) {
 	m.def("idx_key_storage", &kernel::idx_key_storage, py::return_value_policy::reference);
 
 	m.def("init", &kernel::init, "Call this manually in the very beginning of main()");
-	m.def("shutdown", &kernel::shutdown, "Call this manually before program ends (before exit from main)");
+	m.def("shutdown", &kernel::shutdown, "Call this manually before program ends (before exit from main)", nogil);
 	m.def("unify_serialization", &kernel::unify_serialization);
 	m.def("k_descriptor", &kernel::k_descriptor, py::return_value_policy::reference);
 }

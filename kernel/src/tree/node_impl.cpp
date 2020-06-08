@@ -17,20 +17,8 @@
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
 
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/string_generator.hpp>
-
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace kradio = kernel::radio;
-
-auto to_uuid(std::string_view s) noexcept -> std::optional<lid_type> {
-	static const auto gen = boost::uuids::string_generator{};
-
-	auto res = std::optional<lid_type>{};
-	error::eval_safe([&] { res = gen(s.begin(), s.end()); });
-	return res;
-}
 
 node_impl::node_impl(node* super) :
 	factor_(std::in_place, kradio::system()), timeout(def_timeout(true)), super_(super)
@@ -68,10 +56,8 @@ auto node_impl::start_engine(sp_nimpl nimpl, std::string gid) -> void {
 
 auto node_impl::home(std::string gid, bool silent) -> caf::group& {
 	// generate random UUID for actor groud if passed GID is empty
-	if(gid.empty()) {
-		static auto uuid_gen = boost::uuids::random_generator{};
-		gid = to_string(uuid_gen());
-	}
+	if(gid.empty())
+		gid = to_string(gen_uuid());
 	// make node's group & invite actor
 	home_ = system().groups().get_local(gid);
 	if(!silent)
@@ -111,7 +97,7 @@ auto node_impl::leafs(Key order) const -> links_v {
 auto node_impl::search(const std::string& key, Key key_meaning) const -> link {
 	switch(key_meaning) {
 	case Key::ID:
-		return if_uuid(key, [&](lid_type lid) { return search<Key::ID>(lid); }, {});
+		return to_uuid(key).map([&](lid_type lid) { return search<Key::ID>(lid); }).value_or(link{});
 	case Key::Name:
 		return search<Key::Name>(key);
 	default:
@@ -122,7 +108,7 @@ auto node_impl::search(const std::string& key, Key key_meaning) const -> link {
 auto node_impl::index(const std::string& key, Key key_meaning) const -> existing_index {
 	switch(key_meaning) {
 	case Key::ID:
-		return if_uuid(key, [&](lid_type lid) { return index<Key::ID>(lid); }, {});
+		return to_uuid(key).map([&](lid_type lid) { return index<Key::ID>(lid); }).value_or(existing_index{});
 	case Key::Name:
 		return index<Key::Name>(key);
 	default:
@@ -133,7 +119,9 @@ auto node_impl::index(const std::string& key, Key key_meaning) const -> existing
 auto node_impl::equal_range(const std::string& key, Key key_meaning) const -> links_v {
 	switch(key_meaning) {
 	case Key::ID:
-		return if_uuid(key, [&](lid_type lid) { return equal_range<Key::ID>(lid).extract_values(); }, {});
+		return to_uuid(key).map(
+			[&](lid_type lid) { return equal_range<Key::ID>(lid).extract_values(); }
+		).value_or(links_v{});
 	case Key::Name:
 		return equal_range<Key::Name>(key).extract_values();
 	default:
@@ -263,7 +251,7 @@ auto node_impl::erase_impl(
 auto node_impl::erase(const std::string& key, Key key_meaning, leaf_postproc_fn ppf) -> size_t {
 	switch(key_meaning) {
 	case Key::ID:
-		return if_uuid(key, [&](lid_type lid) { return erase<Key::ID>(lid, ppf); }, 0);
+		return to_uuid(key).map([&](lid_type lid) { return erase<Key::ID>(lid, ppf); }).value_or(0);
 	case Key::Name:
 		return erase<Key::Name>(key, ppf);
 	default:

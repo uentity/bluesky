@@ -14,8 +14,6 @@
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
 
-#include <boost/uuid/string_generator.hpp>
-
 #include <caf/typed_event_based_actor.hpp>
 //#include <caf/actor_ostream.hpp>
 //#include <bs/log.h>
@@ -237,9 +235,9 @@ auto extraidx_deep_search_actor(extraidx_deep_search_api::pointer self, node_imp
 		auto f = caf::scoped_actor{system()};
 		switch(meaning) {
 		case Key::ID:
-			return if_uuid(key, [&](lid_type lid) {
+			return to_uuid(key).map([&](lid_type lid) {
 				return deep_search<Key::ID>(f, Nactor, lid, !search_all);
-			}, {});
+			}).value_or(links_v{});
 		case Key::Name:
 			return deep_search<Key::Name>(f, Nactor, key, !search_all);
 		case Key::OID:

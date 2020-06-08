@@ -10,9 +10,7 @@
 #include <bs/serialize/object_formatter.h>
 #include <bs/objbase.h>
 #include <bs/kernel/misc.h>
-
-#include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
+#include <bs/uuid.h>
 
 #include <map>
 #include <set>
@@ -43,7 +41,7 @@ struct fmaster {
 	static auto self() -> fmaster& {
 		static fmaster& self = []() -> fmaster& {
 			// generate random key
-			auto& kstorage = kernel::idx_key_storage(to_string( boost::uuids::random_generator()() ));
+			auto& kstorage = kernel::idx_key_storage(to_string(gen_uuid()));
 			auto r = kstorage.insert_element(0, fmaster());
 			if(!r.first) throw error("Failed to make impl of object formatters in kernel storage!");
 			return *r.first;

@@ -16,8 +16,6 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
-#include <boost/uuid/uuid_generators.hpp>
-
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 

@@ -9,8 +9,7 @@
 
 #include "common.h"
 #include "timetypes.h"
-
-#include <boost/uuid/uuid.hpp>
+#include "uuid.h"
 
 NAMESPACE_BEGIN(blue_sky::defaults)
 
@@ -28,7 +27,7 @@ NAMESPACE_END(kernel)
 
 NAMESPACE_BEGIN(tree)
 
-BS_API extern const boost::uuids::uuid nil_uid;
+BS_API extern const uuid nil_uid;
 BS_API extern const std::string nil_oid;
 BS_API extern const char* nil_grp_id;
 BS_API extern const char* nil_link_name;

@@ -16,9 +16,6 @@
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
 
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-
 #include <caf/typed_event_based_actor.hpp>
 
 #include <cereal/types/optional.hpp>

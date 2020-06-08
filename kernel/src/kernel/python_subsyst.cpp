@@ -17,8 +17,6 @@
 #include "plugins_subsyst.h"
 #include "radio_subsyst.h"
 
-#include <boost/uuid/uuid_io.hpp>
-
 #include <pybind11/functional.h>
 
 #include <functional>

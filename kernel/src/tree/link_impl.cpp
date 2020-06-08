@@ -15,20 +15,14 @@
 #include <bs/log.h>
 #include <bs/kernel/tools.h>
 
-#include <boost/uuid/random_generator.hpp>
-
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace kradio = kernel::radio;
-
-// global random UUID generator for BS links
-static boost::uuids::random_generator idgen;
-
 /*-----------------------------------------------------------------------------
  *  link_impl
  *-----------------------------------------------------------------------------*/
 link_impl::link_impl(std::string name, Flags f)
 	: factor_(std::in_place, kradio::system()), timeout(def_timeout(true)),
-	id_(idgen()), name_(std::move(name)), flags_(f)
+	id_(gen_uuid()), name_(std::move(name)), flags_(f)
 {}
 
 link_impl::link_impl()

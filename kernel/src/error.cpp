@@ -11,13 +11,12 @@
 #include <bs/tree/errors.h>
 #include <bs/misc.h>
 #include <bs/log.h>
+#include <bs/uuid.h>
 #include <bs/kernel/tools.h>
 #include <bs/kernel/misc.h>
 #include <bs/kernel/radio.h>
 
 #include <fmt/format.h>
-#include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 
 #include <ostream>
 #include <string_view>
@@ -43,7 +42,7 @@ struct cat_registry {
 	static auto self() -> cat_registry& {
 		static cat_registry& self = []() -> cat_registry& {
 			// generate random key
-			auto& kstorage = kernel::idx_key_storage(to_string( boost::uuids::random_generator()() ));
+			auto& kstorage = kernel::idx_key_storage(to_string(gen_uuid()));
 			auto r = kstorage.insert_element(0, cat_registry{});
 			if(!r.first) throw error("Failed to instantiate error categories registry in kernel storage!");
 			return *r.first;

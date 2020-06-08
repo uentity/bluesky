@@ -8,25 +8,16 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/objbase.h>
+#include <bs/uuid.h>
 #include <bs/kernel/types_factory.h>
 #include <bs/tree/errors.h>
 #include <bs/tree/inode.h>
-
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
 
 // -----------------------------------------------------
 // Implementation of class: object_base
 // -----------------------------------------------------
 
 NAMESPACE_BEGIN(blue_sky)
-
-namespace {
-
-// global random UUID generator for BS objects
-static boost::uuids::random_generator gen;
-
-} // eof hidden namespace
 
 objbase::objbase(std::string custom_oid)
 	: objbase(false, custom_oid)
@@ -35,14 +26,14 @@ objbase::objbase(std::string custom_oid)
 }
 
 objbase::objbase(bool is_node, std::string custom_oid)
-	: id_(custom_oid.size() ? std::move(custom_oid) : boost::uuids::to_string(gen())),
+	: id_(custom_oid.size() ? std::move(custom_oid) : to_string(gen_uuid())),
 	is_node_(is_node)
 {
 	start_engine();
 }
 
 objbase::objbase(const objbase& obj)
-	: enable_shared_from_this(obj), id_(boost::uuids::to_string(gen())), is_node_(obj.is_node_)
+	: enable_shared_from_this(obj), id_(to_string(gen_uuid())), is_node_(obj.is_node_)
 {
 	start_engine();
 }

@@ -12,7 +12,6 @@
 #include <bs/kernel/types_factory.h>
 #include <bs/tree/node.h>
 #include <sstream>
-#include <boost/uuid/uuid_io.hpp>
 
 #ifdef _DEBUG
 #ifdef _WIN32

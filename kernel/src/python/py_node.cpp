@@ -10,8 +10,6 @@
 #include <bs/python/tree.h>
 #include <bs/python/container_iterator.h>
 
-#include <boost/uuid/uuid_io.hpp>
-
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 

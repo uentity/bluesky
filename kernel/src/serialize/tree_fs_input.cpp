@@ -9,6 +9,7 @@
 
 #include "tree_fs_impl.h"
 
+#include <bs/uuid.h>
 #include <bs/tree/errors.h>
 #include <bs/tree/node.h>
 #include <bs/kernel/radio.h>
@@ -18,9 +19,6 @@
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
-
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/string_generator.hpp>
 
 #include <cereal/types/vector.hpp>
 #include <fmt/format.h>
@@ -33,8 +31,6 @@
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
 using NodeLoad = tree_fs_input::NodeLoad;
-
-const auto uuid_from_str = boost::uuids::string_generator{};
 
 ///////////////////////////////////////////////////////////////////////////////
 //  tree_fs_input::impl
@@ -170,7 +166,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			auto wanted_order = lids_v(leafs_order.size());
 			std::transform(
 				leafs_order.cbegin(), leafs_order.cend(), wanted_order.begin(),
-				[](const auto& s_uid) { return uuid_from_str(s_uid); }
+				[](const auto& s_uid) { return to_uuid_raw(s_uid); }
 			);
 
 			// extract current order of link IDs

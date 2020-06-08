@@ -11,8 +11,6 @@
 #include <bs/python/result_converter.h>
 #include "../kernel/python_subsyst_impl.h"
 
-#include <boost/uuid/uuid_io.hpp>
-
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 #include <pybind11/operators.h>

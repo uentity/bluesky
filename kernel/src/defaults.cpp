@@ -12,7 +12,6 @@
 #include <bs/kernel/config.h>
 
 #include <boost/uuid/nil_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(defaults)
@@ -31,7 +30,7 @@ NAMESPACE_END(kernel)
 
 NAMESPACE_BEGIN(tree)
 
-const boost::uuids::uuid nil_uid = boost::uuids::nil_uuid();
+const uuid nil_uid = boost::uuids::nil_uuid();
 const std::string nil_oid = to_string(nil_uid);
 const char* nil_grp_id = "__bs_nil_group__";
 const char* nil_link_name = "__bs_nil_link__";

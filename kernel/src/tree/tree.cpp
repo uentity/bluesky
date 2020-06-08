@@ -8,10 +8,10 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/tree/tree.h>
+#include <bs/uuid.h>
 #include "tree_impl.h"
 
 #include <set>
-#include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
@@ -126,7 +126,7 @@ void walk_impl(
 inline std::string link2path_unit(const link& l, Key path_unit) {
 	switch(path_unit) {
 	default:
-	case Key::ID : return boost::uuids::to_string(l.id());
+	case Key::ID : return to_string(l.id());
 	case Key::OID : return l.oid();
 	case Key::Name : return l.name();
 	case Key::Type : return std::string{ l.type_id() };
