@@ -13,9 +13,29 @@
 #include <bs/error.h>
 #include <bs/kernel/misc.h>
 #include <bs/misc.h>
+#include <bs/uuid.h>
 
-NAMESPACE_BEGIN(blue_sky::kernel)
+#include <boost/uuid/string_generator.hpp>
 
+NAMESPACE_BEGIN(blue_sky)
+
+auto gen_uuid() -> uuid {
+	return KIMPL.gen_uuid();
+}
+
+auto to_uuid(std::string_view s) noexcept -> result_or_err<uuid> {
+	auto res = result_or_err<uuid>{};
+	auto er = error::eval_safe([&] {
+		res = boost::uuids::string_generator{}(s.begin(), s.end());
+	});
+	return er.ok() ? res : tl::make_unexpected(std::move(er));
+}
+
+auto to_uuid_raw(std::string_view s) -> uuid {
+	return boost::uuids::string_generator{}(s.begin(), s.end());
+}
+
+NAMESPACE_BEGIN(kernel)
 auto init() -> error {
 	return KIMPL.init();
 }
@@ -41,15 +61,12 @@ auto last_error() -> std::string {
 }
 
 auto str_key_storage(const std::string& key) -> str_any_array& {
-	auto& kimpl = KIMPL;
-	auto solo = std::lock_guard{ kimpl.sync_storage_ };
-	return kimpl.str_key_storage(key);
+	return KIMPL.str_key_storage(key);
 }
 
 auto idx_key_storage(const std::string& key) -> idx_any_array& {
-	auto& kimpl = KIMPL;
-	auto solo = std::lock_guard{ kimpl.sync_storage_ };
-	return kimpl.idx_key_storage(key);
+	return KIMPL.idx_key_storage(key);
 }
 
-NAMESPACE_END(blue_sky::kernel)
+NAMESPACE_END(kernel)
+NAMESPACE_END(blue_sky)

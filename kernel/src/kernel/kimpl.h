@@ -10,10 +10,12 @@
 
 #include <bs/error.h>
 #include <bs/any_array.h>
+#include <bs/uuid.h>
 #include "logging_subsyst.h"
 #include "plugins_subsyst.h"
 #include "config_subsyst.h"
 
+#include <boost/uuid/random_generator.hpp>
 #include <caf/fwd.hpp>
 
 #include <mutex>
@@ -42,8 +44,6 @@ public:
 	using idx_any_map_t = std::map< std::string, idx_any_array, std::less<> >;
 	idx_any_map_t idx_key_storage_;
 
-	std::mutex sync_storage_;
-
 	// indicator of kernel initialization state
 	enum class InitState { NonInitialized, Initialized, Down };
 	std::atomic<InitState> init_state_;
@@ -65,6 +65,9 @@ public:
 
 	auto idx_key_storage(const std::string& key) -> idx_any_array&;
 
+	// UUIDs source
+	auto gen_uuid() -> uuid;
+
 private:
 	// [NOTE] `actor_system` inside `radio_subsyst` starts worker and other service threads in constructor.
 	// BS kernel singleton is constructed during initialization of kernel shared library.
@@ -74,6 +77,10 @@ private:
 	// Python support depends on compile flags and can be 'dumb' or 'real'
 	std::unique_ptr<detail::python_subsyst> pysupport_;
 	std::once_flag radio_up_, py_up_;
+
+	boost::uuids::random_generator uuid_gen_;
+
+	std::mutex sync_storage_, sync_uuid_;
 };
 
 /// Kernel internal singleton

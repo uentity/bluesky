@@ -106,11 +106,18 @@ auto kimpl::find_type(const std::string& key) const -> type_tuple {
 }
 
 auto kimpl::str_key_storage(const std::string& key) -> str_any_array& {
+	auto solo = std::lock_guard{ sync_storage_ };
 	return str_key_storage_[key];
 }
 
 auto kimpl::idx_key_storage(const std::string& key) -> idx_any_array& {
+	auto solo = std::lock_guard{ sync_storage_ };
 	return idx_key_storage_[key];
+}
+
+auto kimpl::gen_uuid() -> boost::uuids::uuid {
+	auto guard = std::lock_guard{ sync_uuid_ };
+	return uuid_gen_();
 }
 
 NAMESPACE_END(kernel)
