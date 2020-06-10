@@ -148,14 +148,14 @@ public:
 	template<typename R, typename Link, typename... Args>
 	static auto actorf(const Link& L, Args&&... args) {
 		return blue_sky::actorf<R>(
-			L.factor(), Link::actor(L), L.pimpl_->timeout, std::forward<Args>(args)...
+			Link::actor(L), L.pimpl_->timeout, std::forward<Args>(args)...
 		);
 	}
 	// same as above but with configurable timeout
 	template<typename R, typename Link, typename... Args>
 	static auto actorf(const Link& L, timespan timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
-			L.factor(), Link::actor(L), timeout, std::forward<Args>(args)...
+			Link::actor(L), timeout, std::forward<Args>(args)...
 		);
 	}
 

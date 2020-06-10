@@ -86,7 +86,7 @@ auto link::weak_ptr::operator<(const weak_ptr& rhs) const -> bool {
 //  link
 //
 link::link()
-	: factor_(system(), true), actor_(nil_link::actor()), pimpl_(nil_link::pimpl())
+	: actor_(nil_link::actor()), pimpl_(nil_link::pimpl())
 {}
 
 link::link(std::string name, sp_obj data, Flags f)
@@ -94,19 +94,18 @@ link::link(std::string name, sp_obj data, Flags f)
 {}
 
 link::link(std::shared_ptr<link_impl> impl, bool start_actor)
-	: factor_(system(), true), actor_(nil_link::actor()),
+	: actor_(nil_link::actor()),
 	pimpl_(impl ? std::move(impl) : nil_link::pimpl())
 {
 	if(start_actor) start_engine();
 }
 
 link::link(const link& rhs)
-	: factor_(system(), true), actor_(rhs.actor_), pimpl_(rhs.pimpl_)
+	: actor_(rhs.actor_), pimpl_(rhs.pimpl_)
 {}
 
 link::link(const link& rhs, std::string_view rhs_type_id)
-	: factor_(system(), true),
-	actor_(rhs.type_id() == rhs_type_id ? rhs.actor_ : nil_link::actor()),
+	: actor_(rhs.type_id() == rhs_type_id ? rhs.actor_ : nil_link::actor()),
 	pimpl_(rhs.type_id() == rhs_type_id ? rhs.pimpl_ : nil_link::pimpl())
 {}
 
@@ -153,10 +152,6 @@ auto link::clone(bool deep) const -> link {
 
 auto link::pimpl() const -> link_impl* {
 	return pimpl_.get();
-}
-
-auto link::factor() const -> const caf::scoped_actor& {
-	return factor_;
 }
 
 auto link::raw_actor() const -> const caf::actor& {

@@ -111,14 +111,14 @@ public:
 	template<typename R, typename... Args>
 	static auto actorf(const node& N, Args&&... args) {
 		return blue_sky::actorf<R>(
-			N.factor(), actor(N), N.pimpl_->timeout, std::forward<Args>(args)...
+			actor(N), N.pimpl_->timeout, std::forward<Args>(args)...
 		);
 	}
 	// same as above but with configurable timeout
 	template<typename R, typename... Args>
 	static auto actorf(const node& N, timespan timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
-			N.factor(), actor(N), timeout, std::forward<Args>(args)...
+			actor(N), timeout, std::forward<Args>(args)...
 		);
 	}
 

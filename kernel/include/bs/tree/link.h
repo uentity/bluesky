@@ -150,9 +150,6 @@ public:
 		return caf::actor_cast<actor_type>(raw_actor());
 	}
 
-	/// get link's scoped actor that can be used to make direct requests to internal actor
-	auto factor() const -> const caf::scoped_actor&;
-
 	/// get link's home group
 	auto home() const -> const caf::group&;
 
@@ -306,9 +303,6 @@ protected:
 	auto propagate_handle() const -> result_or_err<sp_node>;
 
 private:
-	// scoped actor for requests
-	const caf::scoped_actor factor_;
-
 	// strong ref to internal link's actor
 	// [NOTE] trick with shared ptr to handle is required to correctly track `link` instances
 	// and terminate internal actor when no more links exist
