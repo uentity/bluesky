@@ -13,16 +13,15 @@
 #include <bs/atoms.h>
 #include <bs/actor_common.h>
 #include <bs/log.h>
+#include <bs/uuid.h>
 #include <bs/kernel/tools.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-namespace kradio = kernel::radio;
 /*-----------------------------------------------------------------------------
  *  link_impl
  *-----------------------------------------------------------------------------*/
 link_impl::link_impl(std::string name, Flags f)
-	: factor_(std::in_place, kradio::system()), timeout(def_timeout(true)),
-	id_(gen_uuid()), name_(std::move(name)), flags_(f)
+	: id_(gen_uuid()), name_(std::move(name)), flags_(f), timeout(def_timeout(true))
 {}
 
 link_impl::link_impl()

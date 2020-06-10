@@ -69,8 +69,6 @@ auto link_actor::on_exit() -> void {
 
 	// be polite with everyone
 	goodbye();
-	// helper `scoped_actor` instance MUST follow into death with master
-	pimpl_->factor_.reset();
 	// force release strong ref to link's impl
 	pimpl_.reset();
 }

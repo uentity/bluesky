@@ -306,6 +306,9 @@ protected:
 	auto propagate_handle() const -> result_or_err<sp_node>;
 
 private:
+	// scoped actor for requests
+	const caf::scoped_actor factor_;
+
 	// strong ref to internal link's actor
 	// [NOTE] trick with shared ptr to handle is required to correctly track `link` instances
 	// and terminate internal actor when no more links exist

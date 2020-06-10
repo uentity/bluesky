@@ -235,6 +235,8 @@ private:
 
 	// PIMPL
 	std::shared_ptr<node_impl> pimpl_;
+	// scoped actor for requests
+	caf::scoped_actor factor_;
 
 	/// return node's raw (dynamic-typed) actor handle
 	auto raw_actor() const -> const caf::actor&;

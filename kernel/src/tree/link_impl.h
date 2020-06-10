@@ -22,8 +22,6 @@
 #include <bs/detail/spinlock.h>
 #endif
 
-#include <optional>
-
 // helper macro to inject link type ids
 #define LIMPL_TYPE_DECL                            \
 static auto type_id_() -> std::string_view;        \
@@ -110,22 +108,20 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  member variables
 	//
-	// scoped actor for requests
-	std::optional<const caf::scoped_actor> factor_;
-	// timeout for most queries
-	const caf::duration timeout;
-	// link's home group
-	caf::group home;
-
-	// core link attributes
 	lid_type id_;
 	std::string name_;
 	Flags flags_;
 
-	// node that owns this link
+	// timeout for most queries
+	const caf::duration timeout;
+
+	// keep local link group
+	caf::group home;
+
+	/// owner node
 	std::weak_ptr<tree::node> owner_;
 
-	// status of operations
+	/// status of operations
 	struct status_handle {
 		ReqStatus value = ReqStatus::Void;
 
@@ -148,20 +144,19 @@ public:
 		return caf::actor_cast<actor_type>(L.raw_actor());
 	}
 
-	inline auto factor() noexcept -> const caf::scoped_actor& {
-		//if(!factor_) factor_.emplace(kernel::radio::system());
-		return *factor_;
-	}
-
 	// make request to given link L
 	template<typename R, typename Link, typename... Args>
-	auto actorf(const Link& L, Args&&... args) {
-		return blue_sky::actorf<R>(factor(), link::actor(L), timeout, std::forward<Args>(args)...);
+	static auto actorf(const Link& L, Args&&... args) {
+		return blue_sky::actorf<R>(
+			L.factor(), Link::actor(L), L.pimpl_->timeout, std::forward<Args>(args)...
+		);
 	}
 	// same as above but with configurable timeout
 	template<typename R, typename Link, typename... Args>
-	auto actorf(const Link& L, timespan timeout, Args&&... args) {
-		return blue_sky::actorf<R>(factor(), link::actor(L), timeout, std::forward<Args>(args)...);
+	static auto actorf(const Link& L, timespan timeout, Args&&... args) {
+		return blue_sky::actorf<R>(
+			L.factor(), Link::actor(L), timeout, std::forward<Args>(args)...
+		);
 	}
 
 	// raw spawn actor corresponding to this impl type
@@ -184,7 +179,6 @@ public:
 
 	// if pointee is a node - set node's handle to self and return pointee
 	virtual auto propagate_handle(const link& L) -> result_or_err<sp_node>;
-
 	static auto set_node_handle(const link& h, const sp_node& N) -> void;
 
 	/// switch link's owner

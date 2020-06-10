@@ -11,7 +11,6 @@
 #include <bs/actor_common.h>
 #include <bs/log.h>
 #include <bs/tree/node.h>
-#include <bs/kernel/radio.h>
 #include <bs/detail/function_view.h>
 
 #include "node_leafs_storage.h"
@@ -19,8 +18,6 @@
 #include "../kernel/radio_subsyst.h"
 
 #include <cereal/types/vector.hpp>
-
-#include <optional>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace bs_detail = blue_sky::detail;
@@ -38,7 +35,7 @@ public:
 	friend class node;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  private node messaging interface
+	//  private link messaging interface
 	//
 	// public node iface extended with some private messages
 	using primary_actor_type = node::actor_type::extend<
@@ -78,20 +75,19 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  member variables
 	//
-	// scoped actor for requests
-	std::optional<const caf::scoped_actor> factor_;
-	// timeout for most queries
-	const caf::duration timeout;
-	// strong ref to node's actor
-	caf::actor actor_;
-	// local node group
-	caf::group home_;
-
 	// leafs
 	links_container links_;
 
 	// weak ref to parent link
 	link::weak_ptr handle_;
+
+	// timeout for most queries
+	const caf::duration timeout;
+
+	// strong ref to node's actor
+	caf::actor actor_;
+	// local node group
+	caf::group home_;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  methods
@@ -111,20 +107,19 @@ public:
 		return caf::actor_cast<actor_type>(N.pimpl_->actor_);
 	}
 
-	inline auto factor() noexcept -> const caf::scoped_actor& {
-		//if(!factor_) factor_.emplace(kernel::radio::system());
-		return *factor_;
-	}
-
 	// make request to given link L
 	template<typename R, typename... Args>
-	auto actorf(const node& N, Args&&... args) {
-		return blue_sky::actorf<R>(factor(), actor(N), timeout, std::forward<Args>(args)...);
+	static auto actorf(const node& N, Args&&... args) {
+		return blue_sky::actorf<R>(
+			N.factor(), actor(N), N.pimpl_->timeout, std::forward<Args>(args)...
+		);
 	}
 	// same as above but with configurable timeout
 	template<typename R, typename... Args>
-	auto actorf(const node& N, timespan timeout, Args&&... args) {
-		return blue_sky::actorf<R>(factor(), actor(N), timeout, std::forward<Args>(args)...);
+	static auto actorf(const node& N, timespan timeout, Args&&... args) {
+		return blue_sky::actorf<R>(
+			N.factor(), actor(N), timeout, std::forward<Args>(args)...
+		);
 	}
 
 	auto start_engine(std::shared_ptr<node_impl> nimpl, std::string gid = "") -> void;
