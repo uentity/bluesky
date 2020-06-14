@@ -89,9 +89,9 @@ auto python_subsyst_impl::setup_py_kmod(void* kmod_ptr) -> void {
 		adapters_.clear();
 		def_adapter_ = nullptr;
 
-		// shut down radio (normally wait until all actor handles wired into Python are released)
+		// kick all event-based actors (normally wait until all actor handles wired into Python are released)
 		auto _ = py::gil_scoped_release{};
-		KIMPL.get_radio()->shutdown();
+		KIMPL.get_radio()->kick_citizens();
 	}});
 }
 
