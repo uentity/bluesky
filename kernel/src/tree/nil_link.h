@@ -15,7 +15,14 @@ NAMESPACE_BEGIN(blue_sky::tree)
 struct BS_HIDDEN_API nil_link {
 	static auto pimpl() -> const sp_limpl&;
 	static auto actor() -> const sp_ahandle&;
-	static auto stop() -> void;
+
+	static auto stop(bool wait_exit = false) -> void;
+
+private:
+	struct self_actor;
+	struct self_impl;
+
+	static auto reset() -> void;
 };
 
 NAMESPACE_END(blue_sky::tree)

@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "radio_subsyst.h"
+#include "../tree/nil_link.h"
 
 #include <bs/actor_common.h>
 #include <bs/log.h>
@@ -89,6 +90,8 @@ auto radio_subsyst::shutdown() -> void {
 		// send `a_bye` message to all actors in kernel group
 		caf::anon_send(khome_, a_bye());
 		khome_ = nullptr;
+		// explicitly kill nill link
+		tree::nil_link::stop();
 		// [NOTE] explicit wait until all actors done if asked for
 		// because during termination some actor may need to access live actor_system
 		if(get_or(config::config(), "radio.await_actors_before_shutdown", true))
