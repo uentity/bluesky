@@ -52,13 +52,17 @@ struct ev_listener_actor : caf::event_based_actor {
 
 		// put self-into registry (to find later by ID)
 		KRADIO.system().registry().put(id(), this);
-		// register self in kernel's home group
-		join(KRADIO.khome());
+		// exit after kernel
+		KRADIO.register_citizen(this);
 
 		// generate & remember self behavior
 		character = make_event_behavior(this).or_else(caf::message_handler{
 			[=](a_bye) { quit(); }
 		});
+	}
+
+	auto on_exit() -> void override {
+		KRADIO.release_citizen(this);
 	}
 
 	auto make_behavior() -> behavior_type override {

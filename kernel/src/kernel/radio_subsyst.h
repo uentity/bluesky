@@ -11,13 +11,16 @@
 #include <bs/common.h>
 #include <bs/tree/link.h>
 
+#include <caf/actor_addr.hpp>
 #include <caf/actor.hpp>
 #include <caf/typed_actor.hpp>
 #include <caf/actor_system.hpp>
 #include <caf/group.hpp>
+#include <caf/detail/shared_spinlock.hpp>
 
 #include <optional>
 #include <set>
+#include <unordered_set>
 
 #define KRADIO ::blue_sky::singleton<::blue_sky::kernel::detail::radio_subsyst>::Instance()
 
@@ -28,9 +31,6 @@ using khome_actor_type = caf::typed_actor<
 >;
 
 struct BS_HIDDEN_API radio_subsyst {
-	// get kernel's home group
-	auto khome() -> const caf::group&;
-
 	// store links that will be visible to the world
 	std::set< tree::link, std::less<> > publinks;
 
@@ -43,6 +43,22 @@ struct BS_HIDDEN_API radio_subsyst {
 		return (this->*get_actor_sys_)();
 	}
 
+	// collect event-based actor adresses that must exit with kernel
+	auto register_citizen(caf::actor_addr citizen) -> void;
+	inline auto register_citizen(const caf::abstract_actor* citizen) {
+		register_citizen(citizen->address());
+	}
+
+	// returns whether zitizen were found and removed from registry
+	auto release_citizen(const caf::actor_addr& citizen) -> void;
+	inline auto release_citizen(const caf::abstract_actor* citizen) {
+		release_citizen(citizen->address());
+	}
+
+	// send exit message to all citizens & wait until they exit
+	auto kick_citizens() -> void;
+
+	// server actor management
 	auto toggle(bool on) -> error;
 
 	auto start_server() -> void;
@@ -63,8 +79,10 @@ private:
 	auto normal_as_getter() -> caf::actor_system&;
 	auto always_throw_as_getter() -> caf::actor_system&;
 
-	// kernel's home group
-	caf::group khome_;
+	// storage for actor addresses
+	using citizens_registry_t = std::unordered_set<caf::actor_addr>;
+	citizens_registry_t citizens_;
+	caf::detail::shared_spinlock guard_;
 
 	caf::actor radio_;
 };

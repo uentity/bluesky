@@ -47,8 +47,8 @@ struct objbase_actor : public caf::event_based_actor {
 	objbase_actor(caf::actor_config& cfg, caf::group home) :
 		super(cfg), home_(std::move(home))
 	{
-		// self-register in kernel's group
-		join(KRADIO.khome());
+		// exit after kernel
+		KRADIO.register_citizen(this);
 	}
 
 	auto make_typed_behavior() -> typed_behavior {
@@ -78,6 +78,8 @@ struct objbase_actor : public caf::event_based_actor {
 	auto on_exit() -> void override {
 		// say bye-bye to self group
 		send(home_, a_bye());
+
+		KRADIO.release_citizen(this);
 	}
 };
 

@@ -22,6 +22,7 @@
 #include <caf/io/middleman.hpp>
 
 #include <iostream>
+#include <mutex>
 
 #define BSCONFIG ::blue_sky::kernel::config::config()
 
@@ -79,28 +80,71 @@ auto radio_subsyst::init() -> error {
 		if(actor_sys_.emplace(actor_config()); !actor_sys_)
 			return error{ "Can't create CAF actor_system!" };
 		get_actor_sys_ = &radio_subsyst::normal_as_getter;
-		// init kernel group
-		khome_ = actor_sys_->groups().anonymous();
 	}
 	return perfect;
 }
 
 auto radio_subsyst::shutdown() -> void {
 	if(actor_sys_) {
-		// send `a_bye` message to all actors in kernel group
-		caf::anon_send(khome_, a_bye());
-		khome_ = nullptr;
+		std::cout << "~~~ radio shutdown start" << std::endl;
+
+		kick_citizens();
+
 		// explicitly kill nill link
 		tree::nil_link::stop();
-		// [NOTE] explicit wait until all actors done if asked for
+
+		// explicit wait until all actors done if asked for
 		// because during termination some actor may need to access live actor_system
+		std::cout << "~~~ Waiting for " << actor_sys_->registry().running() << " actors" << std::endl;
 		if(get_or(config::config(), "radio.await_actors_before_shutdown", true))
 			actor_sys_->await_all_actors_done();
+		std::cout << "~~~ Waiting actors finished" << std::endl;
 		// destroy actor_system
 		actor_sys_->await_actors_before_shutdown(false);
 		get_actor_sys_ = &radio_subsyst::always_throw_as_getter;
 		actor_sys_.reset();
+		std::cout << "~~~ radio shutdown finished" << std::endl;
 	}
+}
+
+auto radio_subsyst::register_citizen(caf::actor_addr citizen) -> void {
+	{
+		auto poly = std::shared_lock{guard_};
+		if(auto pos = citizens_.find(citizen); pos != citizens_.end())
+			return;
+	}
+	auto solo = std::lock_guard{guard_};
+	citizens_.insert(std::move(citizen));
+}
+
+auto radio_subsyst::release_citizen(const caf::actor_addr& citizen) -> void {
+	auto solo = std::lock_guard{guard_};
+	citizens_.erase(citizen);
+}
+
+auto radio_subsyst::kick_citizens() -> void {
+	const auto kick_out = [&] {
+		auto solo = std::unique_lock{guard_};
+		if(citizens_.empty()) return false;
+
+		auto waiter = caf::scoped_actor{system(), false};
+		std::vector<caf::actor> alive;
+		alive.reserve(citizens_.size());
+		for(const auto& caddr : citizens_) {
+			if(auto A = caf::actor_cast<caf::actor>(caddr)) {
+				waiter->send_exit(A, caf::exit_reason::user_shutdown);
+				alive.push_back(std::move(A));
+			}
+		}
+		citizens_.clear();
+		solo.unlock();
+		// wait until citizen gone
+		std::cout << "~~~ kick out " << alive.size() << " actors" << std::endl;
+		waiter->wait_for(std::move(alive));
+		std::cout << "~~~ kick out finished" << std::endl;
+		return true;
+	};
+	while(kick_out()) {};
 }
 
 auto radio_subsyst::normal_as_getter() -> caf::actor_system& {
@@ -108,10 +152,6 @@ auto radio_subsyst::normal_as_getter() -> caf::actor_system& {
 }
 auto radio_subsyst::always_throw_as_getter() -> caf::actor_system& {
 	throw error{"Kernel's radio subsystem is down"};
-}
-
-auto radio_subsyst::khome() -> const caf::group& {
-	return khome_;
 }
 
 auto radio_subsyst::toggle(bool on) -> error {

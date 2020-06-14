@@ -48,8 +48,8 @@ node_actor::node_actor(caf::actor_config& cfg, sp_nimpl Nimpl)
 		return *pimpl_;
 	}())
 {
-	// self-register in kernel's group
-	join(KRADIO.khome());
+	// exit after kernel
+	KRADIO.register_citizen(this);
 
 	// prevent termination in case some errors happens in group members
 	// for ex. if they receive unexpected messages (translators normally do)
@@ -78,6 +78,8 @@ auto node_actor::on_exit() -> void {
 	// actor dtor never called until at least one strong ref to it still exists
 	// (even though behavior is terminated by sending `exit` message)
 	pimpl_.reset();
+
+	KRADIO.release_citizen(this);
 }
 
 auto node_actor::goodbye() -> void {

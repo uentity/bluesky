@@ -43,8 +43,8 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
 	if(impl.home)
 		adbg(this) << "joined self group " << impl.home.get()->identifier() << std::endl;
 
-	// self-register in kernel's group
-	join(KRADIO.khome());
+	// exit after kernel
+	KRADIO.register_citizen(this);
 
 	// prevent termination in case some errors happens in group members
 	// for ex. if they receive unexpected messages (translators normally do)
@@ -72,6 +72,8 @@ auto link_actor::on_exit() -> void {
 	// force release strong ref to link's impl
 	pimpl_->release_factors();
 	pimpl_.reset();
+
+	KRADIO.release_citizen(this);
 }
 
 auto link_actor::goodbye() -> void {
