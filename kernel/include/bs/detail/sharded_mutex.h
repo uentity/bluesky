@@ -10,9 +10,9 @@
 
 #include "../common.h"
 
-#include <tuple>
 #include <mutex>
 #include <shared_mutex>
+#include <tuple>
 
 NAMESPACE_BEGIN(blue_sky::detail)
 
@@ -23,6 +23,21 @@ inline constexpr auto noop_mutex = noop_mutex_tag{};
 struct shared_tag {};
 inline constexpr auto shared = shared_tag{};
 
+// detect if mutex support shared locking
+template<typename Mutex, typename = void>
+struct has_shared_lock : std::false_type {};
+
+template<typename Mutex>
+struct has_shared_lock<
+	Mutex, std::void_t<decltype( std::declval<Mutex>().lock_shared() )>
+> : std::true_type {};
+
+template<typename Mutex>
+inline constexpr auto has_shared_lock_v = has_shared_lock<Mutex>::value;
+
+/*-----------------------------------------------------------------------------
+ *  sharded_mutex
+ *-----------------------------------------------------------------------------*/
 template<typename M, typename... Ms>
 struct sharded_mutex {
 	template<size_t... Is>
@@ -62,7 +77,7 @@ private:
 
 	// resolve lock type from mutex type
 	template<typename Mi> using shared_lock_t = std::conditional_t<
-		std::is_same_v<Mi, std::shared_mutex>, std::shared_lock<Mi>, noop_lock
+		has_shared_lock_v<Mi>, std::shared_lock<Mi>, noop_lock
 	>;
 	template<typename Mi> using unique_lock_t = std::conditional_t<
 		std::is_same_v<Mi, std::shared_mutex>, std::unique_lock<Mi>, std::conditional_t<
