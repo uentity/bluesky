@@ -18,9 +18,9 @@
 
 #include "../kernel/radio_subsyst.h"
 
-#if defined(_MSC_VER)
-#include <bs/detail/spinlock.h>
-#endif
+#include <caf/detail/shared_spinlock.hpp>
+
+#include <unordered_map>
 
 // helper macro to inject link type ids
 #define LIMPL_TYPE_DECL                            \
@@ -45,7 +45,8 @@ using defaults::tree::nil_uid;
 using defaults::tree::nil_oid;
 inline const auto nil_otid = blue_sky::defaults::nil_type_name;
 
-using link_impl_mutex = std::mutex;
+using link_impl_mutex = caf::detail::shared_spinlock;
+//using link_impl_mutex = std::mutex;
 
 /*-----------------------------------------------------------------------------
  *  actor_handle
@@ -62,11 +63,15 @@ using sp_ahandle = std::shared_ptr<link::actor_handle>;
  *  base link impl
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API link_impl :
-	public std::enable_shared_from_this<link_impl>, public bs_detail::sharded_mutex<link_impl_mutex>
+	public std::enable_shared_from_this<link_impl>,
+	public bs_detail::sharded_same_mutex<link_impl_mutex, 2>
 {
 public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 	using sp_limpl = std::shared_ptr<link_impl>;
+	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
+
+	enum LockRole { Owner, Requesters };
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  private link messaging interface
@@ -106,34 +111,6 @@ public:
 	using actor_type = primary_actor_type::extend_with<ack_actor_type>;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  member variables
-	//
-	lid_type id_;
-	std::string name_;
-	Flags flags_;
-
-	// timeout for most queries
-	const caf::duration timeout;
-
-	// keep local link group
-	caf::group home;
-
-	/// owner node
-	std::weak_ptr<tree::node> owner_;
-
-	/// status of operations
-	struct status_handle {
-		ReqStatus value = ReqStatus::Void;
-
-#ifdef _MSC_VER
-		mutable bs_detail::spinlock guard;
-#else
-		mutable std::mutex guard;
-#endif
-	};
-	status_handle status_[2];
-
-	///////////////////////////////////////////////////////////////////////////////
 	//  methods
 	//
 	link_impl();
@@ -145,19 +122,22 @@ public:
 	}
 
 	// make request to given link L
-	template<typename R, typename Link, typename... Args>
-	static auto actorf(const Link& L, Args&&... args) {
-		return blue_sky::actorf<R>(
-			Link::actor(L), L.pimpl_->timeout, std::forward<Args>(args)...
-		);
-	}
 	// same as above but with configurable timeout
 	template<typename R, typename Link, typename... Args>
-	static auto actorf(const Link& L, timespan timeout, Args&&... args) {
+	static auto actorf(const Link& L, caf::duration timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
-			Link::actor(L), timeout, std::forward<Args>(args)...
+			*L.pimpl_->factor(&L), Link::actor(L), timeout, std::forward<Args>(args)...
 		);
 	}
+
+	template<typename R, typename Link, typename... Args>
+	static auto actorf(const Link& L, Args&&... args) {
+		return actorf<R>(L, L.pimpl_->timeout, std::forward<Args>(args)...);
+	}
+
+	auto factor(const link* L) -> sp_scoped_actor; 
+	auto release_factor(const link* L) -> void;
+	auto release_factors() -> void;
 
 	// raw spawn actor corresponding to this impl type
 	virtual auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor;
@@ -196,6 +176,34 @@ public:
 	/// create or set or create inode for given target object
 	/// [NOTE] if `new_info` is non-null, returned inode may be NOT EQUAL to `new_info`
 	static auto make_inode(const sp_obj& target, inodeptr new_info = nullptr) -> inodeptr;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  member variables
+	//
+	lid_type id_;
+	std::string name_;
+	Flags flags_;
+
+	// timeout for most queries
+	const caf::duration timeout;
+
+	// keep local link group
+	caf::group home;
+
+	/// owner node
+	std::weak_ptr<tree::node> owner_;
+
+	/// status of operations
+	struct status_handle {
+		ReqStatus value = ReqStatus::Void;
+		mutable link_impl_mutex guard;
+	};
+	status_handle status_[2];
+
+private:
+	// requesters pool { link addr -> `scoped_actor` instance }
+	using rpool_t = std::unordered_map<const link*, sp_scoped_actor>;
+	rpool_t rpool_;
 };
 
 using sp_limpl = link_impl::sp_limpl;
