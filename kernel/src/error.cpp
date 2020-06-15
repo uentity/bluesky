@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/error.h>
+#include <bs/actor_common.h>
 #include <bs/tree/errors.h>
 #include <bs/misc.h>
 #include <bs/log.h>
@@ -217,7 +218,7 @@ error::box::box(int ec_, std::string domain_, std::string message_) noexcept
 ///////////////////////////////////////////////////////////////////////////////
 //  CAF errors passthrough
 //
-auto forward_caf_error(const caf::error& er) -> error {
+auto forward_caf_error(const caf::error& er ) -> error {
 	// produce std::error_code from CAF error
 	static const auto caf_error_code = [](const caf::error& er) -> std::error_code {
 		struct caf_category : error::category<caf_category> {
