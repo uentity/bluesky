@@ -127,7 +127,8 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			bool res_exists = false;
 			if(auto er = error::eval([&] {
 				for(int i = 0; (res_exists = fs::exists(res_fname)) && i < 100000; ++i) {
-					res_fname = fmt::format("{}_{}{}", start_fname, i, fmt_ext);
+					res_fname = start_fname;
+					res_fname += "_" + std::to_string(i) + fmt_ext;
 				}
 			})) return tl::make_unexpected(std::move(er));
 
