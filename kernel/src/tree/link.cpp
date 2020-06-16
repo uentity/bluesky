@@ -49,7 +49,7 @@ auto link::weak_ptr::lock() const -> link {
 	auto res = link{ pimpl_.lock(), false };
 	if(res) res.actor_ = actor_.lock();
 	// if handle actor is dead -> self = nil
-	if(!res.actor_) res = link{};
+	if(!res.actor_) res.reset();
 	return res;
 }
 
@@ -82,44 +82,74 @@ auto link::weak_ptr::operator<(const weak_ptr& rhs) const -> bool {
 	return pimpl_.owner_before(rhs.pimpl_);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-//  link
-//
-link::link()
-	: actor_(nil_link::actor()), pimpl_(nil_link::pimpl())
-{}
-
-link::link(std::string name, sp_obj data, Flags f)
-	: link(hard_link{std::move(name), std::move(data), f})
-{}
-
-link::link(std::shared_ptr<link_impl> impl, bool start_actor)
-	: actor_(nil_link::actor()),
+/*-----------------------------------------------------------------------------
+ *  link
+ *-----------------------------------------------------------------------------*/
+link::link(std::shared_ptr<actor_handle> actor, std::shared_ptr<link_impl> impl) :
+	actor_(actor ? std::move(actor) : nil_link::actor()),
 	pimpl_(impl ? std::move(impl) : nil_link::pimpl())
+{}
+
+link::~link() {
+	if(pimpl_) pimpl_->release_factor(this);
+}
+
+link::link() :
+	link(nil_link::actor(), nil_link::pimpl())
+{}
+
+link::link(std::string name, sp_obj data, Flags f) :
+	link(hard_link{std::move(name), std::move(data), f})
+{}
+
+link::link(std::shared_ptr<link_impl> impl, bool start_actor) :
+	link(nil_link::actor(), std::move(impl))
 {
 	if(start_actor) start_engine();
 }
 
-link::link(const link& rhs)
-	: actor_(rhs.actor_), pimpl_(rhs.pimpl_)
+link::link(const link& rhs) :
+	link(rhs.actor_, rhs.pimpl_)
 {}
 
-link::link(const link& rhs, std::string_view rhs_type_id)
-	: actor_(rhs.type_id() == rhs_type_id ? rhs.actor_ : nil_link::actor()),
-	pimpl_(rhs.type_id() == rhs_type_id ? rhs.pimpl_ : nil_link::pimpl())
+link::link(const link& rhs, std::string_view rhs_type_id) :
+	link(
+		rhs.type_id() == rhs_type_id ? rhs.actor_ : nil_link::actor(),
+		rhs.type_id() == rhs_type_id ? rhs.pimpl_ : nil_link::pimpl()
+	)
 {}
 
-link::~link() = default;
+link::link(link&& rhs) :
+	link(std::move(rhs.actor_), std::move(rhs.pimpl_))
+{
+	pimpl_->release_factor(&rhs);
+}
 
 auto link::operator=(const link& rhs) -> link& {
-	actor_ = rhs.actor_;
-	pimpl_ = rhs.pimpl_;
+	if(*this != rhs) {
+		pimpl_->release_factor(this);
+		actor_ = rhs.actor_;
+		pimpl_ = rhs.pimpl_;
+	}
+	return *this;
+}
+
+auto link::operator=(link&& rhs) -> link& {
+	if(*this != rhs) {
+		pimpl_->release_factor(this);
+		actor_ = std::move(rhs.actor_);
+		pimpl_ = std::move(rhs.pimpl_);
+		pimpl_->release_factor(&rhs);
+	}
 	return *this;
 }
 
 auto link::reset() -> void {
-	actor_ = nil_link::actor();
-	pimpl_ = nil_link::pimpl();
+	if(!is_nil()) {
+		pimpl_->release_factor(this);
+		actor_ = nil_link::actor();
+		pimpl_ = nil_link::pimpl();
+	}
 }
 
 auto link::start_engine() -> bool {
@@ -152,6 +182,10 @@ auto link::clone(bool deep) const -> link {
 
 auto link::pimpl() const -> link_impl* {
 	return pimpl_.get();
+}
+
+auto link::factor() const -> sp_scoped_actor {
+	return pimpl_->factor(this);
 }
 
 auto link::raw_actor() const -> const caf::actor& {
@@ -246,9 +280,9 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const 
 	).value_or(ReqStatus::Error);
 }
 
-/*-----------------------------------------------------------------------------
- *  sync API
- *-----------------------------------------------------------------------------*/
+///////////////////////////////////////////////////////////////////////////////
+//  sync API
+//
 /// obtain link's human-readable name
 auto link::name() const -> std::string {
 	return pimpl_->actorf<std::string>(*this, a_lnk_name()).value_or("");
@@ -328,43 +362,43 @@ auto link::propagate_handle() const -> result_or_err<sp_node> {
 template<bool AsyncApply = false>
 static auto make_apply_impl(const link& L, data_modificator_f m, bool silent) {
 return [=, wL = link::weak_ptr(L), m = std::move(m)](result_or_errbox<sp_obj> obj) mutable {
-		auto finally = [=](error&& er) {
-			// set status after modificator invoked
-			if(!silent)
-				L.rs_reset(Req::Data, er.ok() ? ReqStatus::OK : ReqStatus::Error);
-			return std::move(er);
-		};
-
-		// deliver error if couldn't obtain link's data
-		if(!obj) {
-			auto er = finally( error::unpack(obj.error()) );
-			if constexpr(!AsyncApply) return er;
-		}
-
-		// put modificator into object's queue
-		if constexpr(AsyncApply) {
-			(*obj)->apply(
-				launch_async,
-				[m = std::move(m), finally = std::move(finally)](sp_obj obj) -> error {
-					finally(error::eval_safe(
-						[&]{ return m(std::move(obj)); }
-					));
-					return perfect;
-				}
-			);
-		}
-		else
-			return finally( (*obj)->apply(std::move(m)) );
+	auto finally = [=](error&& er) {
+		// set status after modificator invoked
+		if(!silent)
+			L.rs_reset(Req::Data, er.ok() ? ReqStatus::OK : ReqStatus::Error);
+		return std::move(er);
 	};
+
+	// deliver error if couldn't obtain link's data
+	if(!obj) {
+		auto er = finally( error::unpack(obj.error()) );
+		if constexpr(!AsyncApply) return er;
+	}
+
+	// put modificator into object's queue
+	if constexpr(AsyncApply) {
+		(*obj)->apply(
+			launch_async,
+			[m = std::move(m), finally = std::move(finally)](sp_obj obj) -> error {
+				finally(error::eval_safe(
+					[&]{ return m(std::move(obj)); }
+				));
+				return perfect;
+			}
+		);
+	}
+	else
+		return finally( (*obj)->apply(std::move(m)) );
+};
 }
 
 auto link::data_apply(data_modificator_f m, bool silent) const -> error {
 	return make_apply_impl(*this, std::move(m), silent)( data_ex(true) );
 }
 
-/*-----------------------------------------------------------------------------
- *  async API
- *-----------------------------------------------------------------------------*/
+///////////////////////////////////////////////////////////////////////////////
+//  async API
+//
 auto link::data(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
 		actor(*this), def_timeout(true), high_priority,

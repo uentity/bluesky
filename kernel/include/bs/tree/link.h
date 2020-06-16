@@ -118,7 +118,7 @@ public:
 	/// empty ctor will construct nil link
 	link();
 
-	/// will make hard link
+	/// makes hard link
 	link(std::string name, sp_obj data, Flags f = Plain);
 
 	virtual ~link();
@@ -126,9 +126,9 @@ public:
 	/// copy ctor & assignment
 	link(const link& rhs);
 	auto operator=(const link& rhs) -> link&;
-
-	/// [NOTE] move operations CAN be implemeted, but will be MORE expensive than copy
-	/// Call `reset()` to make link nill explicitly
+	/// move ctor & assignment
+	link(link&& rhs);
+	auto operator=(link&& rhs) -> link&;
 
 	/// makes link nil
 	auto reset() -> void;
@@ -149,6 +149,11 @@ public:
 	auto actor() const -> actor_type {
 		return caf::actor_cast<actor_type>(raw_actor());
 	}
+
+	/// get managed requester that can be used to talk with link's actor iface
+	/// [NOTE] shared_ptr is used because `scoped_actor` cannot be copied or moved
+	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
+	auto factor() const -> sp_scoped_actor;
 
 	/// get link's home group
 	auto home() const -> const caf::group&;
@@ -311,6 +316,9 @@ private:
 	// string ref to link's impl
 	friend class link_impl;
 	std::shared_ptr<link_impl> pimpl_;
+
+	// for internal usage
+	link(std::shared_ptr<actor_handle>, std::shared_ptr<link_impl>);
 };
 
 /// handy aliases

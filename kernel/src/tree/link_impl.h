@@ -69,7 +69,7 @@ class BS_HIDDEN_API link_impl :
 public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 	using sp_limpl = std::shared_ptr<link_impl>;
-	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
+	using sp_scoped_actor = link::sp_scoped_actor;
 
 	enum LockRole { Owner, Requesters };
 

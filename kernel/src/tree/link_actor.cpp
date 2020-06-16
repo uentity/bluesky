@@ -70,6 +70,7 @@ auto link_actor::on_exit() -> void {
 	// be polite with everyone
 	goodbye();
 	// force release strong ref to link's impl
+	pimpl_->release_factors();
 	pimpl_.reset();
 }
 
