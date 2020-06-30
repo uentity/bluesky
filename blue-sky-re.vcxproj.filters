@@ -435,6 +435,9 @@
     <ClInclude Include="kernel\include\bs\tree\context.h">
       <Filter>Заголовочные файлы\bs\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\engine.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\include\bs\python\any_array.h">
       <Filter>Заголовочные файлы\bs\python</Filter>
     </ClInclude>
@@ -553,6 +556,9 @@
     </ClCompile>
     <ClCompile Include="kernel\src\serialize\link.cpp">
       <Filter>Файлы исходного кода\serialize</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\engine.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\hard_link.cpp">
       <Filter>Файлы исходного кода\tree</Filter>

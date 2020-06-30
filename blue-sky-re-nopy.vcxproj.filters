@@ -369,6 +369,9 @@
     <ClInclude Include="kernel\include\bs\kernel\radio.h">
       <Filter>Заголовочные файлы\bs\kernel</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\engine.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\include\bs\tree\errors.h">
       <Filter>Заголовочные файлы\bs\tree</Filter>
     </ClInclude>
@@ -471,6 +474,9 @@
       <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\hard_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\engine.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\link.cpp">
