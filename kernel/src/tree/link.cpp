@@ -96,18 +96,6 @@ auto link::start_engine() -> bool {
 	return false;
 }
 
-auto link::operator==(const link& rhs) const -> bool {
-	return pimpl_ == rhs.pimpl_;
-}
-
-auto link::operator!=(const link& rhs) const -> bool {
-	return !(*this == rhs);
-}
-
-auto link::operator<(const link& rhs) const -> bool {
-	return id() < rhs.id();
-}
-
 auto link::clone(bool deep) const -> link {
 	return { pimpl()->clone(deep) };
 }

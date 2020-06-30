@@ -93,19 +93,13 @@ public:
 	link(const link& rhs);
 	auto operator=(const link& rhs) -> link&;
 
-	/// [NOTE] move ctor & assignment are doable but disabled
+	/// [NOTE] move sematics is doable but disabled
 	/// reason: moved from object MUST be immediately reset into nil link to not break invariants
 	/// and that operation alone is equivalent to copy ctor/assignment call
-	/// so, there's just no win
+	/// so, there's just no worth in it
 
 	/// makes link nil
 	auto reset() -> void;
-
-	/// links are comparison
-	auto operator==(const link& lhs) const -> bool;
-	auto operator!=(const link& lhs) const -> bool;
-	/// and sorting
-	auto operator<(const link& rhs) const -> bool;
 
 	/// get link's typed actor handle
 	template<typename Link>
@@ -126,8 +120,6 @@ public:
 	/// get link's home group
 	auto home() const -> const caf::group&;
 
-	/// because we cannot make explicit copies of link
-	/// we need a dedicated function to make links clones
 	/// if `deep` flag is set, then clone pointed object as well
 	auto clone(bool deep = false) const -> link;
 

@@ -109,4 +109,16 @@ auto engine::swap(engine& rhs) noexcept -> void {
 	std::swap(pimpl_, rhs.pimpl_);
 }
 
+auto engine::operator==(const engine& rhs) const -> bool {
+	return pimpl_ == rhs.pimpl_;
+}
+
+auto engine::operator!=(const engine& rhs) const -> bool {
+	return !(*this == rhs);
+}
+
+auto engine::operator<(const engine& rhs) const -> bool {
+	return pimpl_.owner_before(rhs.pimpl_);
+}
+
 NAMESPACE_END(blue_sky::tree)
