@@ -10,6 +10,7 @@
 
 #include <bs/actor_common.h>
 #include <bs/defaults.h>
+#include <bs/objbase.h>
 #include <bs/kernel/radio.h>
 #include <bs/detail/enumops.h>
 #include <bs/detail/function_view.h>
@@ -49,22 +50,12 @@ using link_impl_mutex = caf::detail::shared_spinlock;
 //using link_impl_mutex = std::mutex;
 
 /*-----------------------------------------------------------------------------
- *  actor_handle
- *-----------------------------------------------------------------------------*/
-struct link::actor_handle {
-	caf::actor actor_;
-
-	actor_handle(caf::actor Lactor);
-	~actor_handle();
-};
-using sp_ahandle = std::shared_ptr<link::actor_handle>;
-
-/*-----------------------------------------------------------------------------
  *  base link impl
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API link_impl :
 	public std::enable_shared_from_this<link_impl>,
-	public bs_detail::sharded_same_mutex<link_impl_mutex, 2>
+	public bs_detail::sharded_same_mutex<link_impl_mutex, 2>,
+	public engine::impl
 {
 public:
 	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
@@ -126,24 +117,21 @@ public:
 	template<typename R, typename Link, typename... Args>
 	static auto actorf(const Link& L, caf::duration timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
-			*L.pimpl_->factor(&L), Link::actor(L), timeout, std::forward<Args>(args)...
+			*L.pimpl()->factor(&L), Link::actor(L), timeout, std::forward<Args>(args)...
 		);
 	}
 
 	template<typename R, typename Link, typename... Args>
 	static auto actorf(const Link& L, Args&&... args) {
-		return actorf<R>(L, L.pimpl_->timeout, std::forward<Args>(args)...);
+		return actorf<R>(L, L.pimpl()->timeout, std::forward<Args>(args)...);
 	}
 
 	auto factor(const link* L) -> sp_scoped_actor; 
 	auto release_factor(const link* L) -> void;
 	auto release_factors() -> void;
 
-	// raw spawn actor corresponding to this impl type
-	virtual auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor;
-
-	/// return type ID of link
-	virtual auto type_id() const -> std::string_view = 0;
+	/// spawn raw actor corresponding to this impl type
+	virtual auto spawn_actor(sp_limpl limpl) const -> caf::actor;
 
 	/// clone this impl
 	virtual auto clone(bool deep = false) const -> sp_limpl = 0;

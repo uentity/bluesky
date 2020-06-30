@@ -8,11 +8,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include "common.h"
+#include "engine.h"
 #include "../atoms.h"
 #include "../error.h"
-#include "../objbase.h"
 #include "../propdict.h"
-#include "common.h"
 
 #include <cereal/access.hpp>
 
@@ -30,7 +30,8 @@ NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  base class of all links
  *-----------------------------------------------------------------------------*/
-class BS_API link {
+class BS_API link : public engine, public engine::access<link> {
+	friend class engine::weak_ptr<link>;
 	// serialization support
 	friend class blue_sky::atomizer;
 	// my private impl
@@ -42,42 +43,8 @@ class BS_API link {
 	friend class node_actor;
 
 public:
-	/// handle that wraps strong ref to link's internal actor
-	/// and terminates it on destruction
-	struct actor_handle;
-
-	/// holds weak ptr to given link with semantics similar to `std::weak_ptr`
-	struct BS_API weak_ptr {
-
-		weak_ptr() = default;
-		auto operator=(const weak_ptr&) -> weak_ptr& = default;
-
-		/// construct & assign from link
-		weak_ptr(const link& src);
-		auto operator=(const link& rhs) -> weak_ptr&;
-
-		/// comparison
-		auto operator==(const weak_ptr& rhs) const -> bool;
-		auto operator!=(const weak_ptr& rhs) const -> bool;
-		auto operator==(const link& rhs) const -> bool;
-		auto operator!=(const link& rhs) const -> bool;
-		/// ordering
-		auto operator<(const weak_ptr& rhs) const -> bool;
-
-		/// obtain 'normal' link
-		auto lock() const -> link;
-
-		/// check if ptr is expired
-		auto expired() const -> bool;
-
-		/// resets link and makes it expired
-		auto reset() -> void;
-
-	private:
-		std::weak_ptr<link::actor_handle> actor_;
-		std::weak_ptr<link_impl> pimpl_;
-	};
-
+	using engine_impl = link_impl;
+	using weak_ptr = engine::weak_ptr<link>;
 
 	/// Interface of link actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
@@ -177,9 +144,6 @@ public:
 	auto is_nil() const -> bool;
 	operator bool() const { return !is_nil(); }
 
-	/// hash for appropriate containers
-	auto hash() const noexcept -> std::size_t;
-
 	///////////////////////////////////////////////////////////////////////////////
 	//  Fast API
 	//
@@ -277,18 +241,13 @@ public:
 	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
 protected:
+	using engine::operator=;
+
 	/// accept link impl and optionally start internal actor
-	/// if `self_tid` specified - ensure that `impl` is of requested type
-	link(std::shared_ptr<link_impl> impl, bool start_actor = true);
+	link(sp_engine_impl impl, bool start_actor = true);
 
 	/// ensure that rhs type id matches requested, otherwise link is nil
 	link(const link& rhs, std::string_view rhs_type_id);
-
-	/// get access to link's impl for derived links
-	auto pimpl() const -> link_impl*;
-
-	/// return link's raw (dynamic-typed) actor handle
-	auto raw_actor() const -> const caf::actor&;
 
 	/// maually start internal actor (if not started already)
 	auto start_engine() -> bool;
@@ -308,17 +267,8 @@ protected:
 	auto propagate_handle() const -> result_or_err<sp_node>;
 
 private:
-	// strong ref to internal link's actor
-	// [NOTE] trick with shared ptr to handle is required to correctly track `link` instances
-	// and terminate internal actor when no more links exist
-	std::shared_ptr<actor_handle> actor_;
-
-	// string ref to link's impl
-	friend class link_impl;
-	std::shared_ptr<link_impl> pimpl_;
-
-	// for internal usage
-	link(std::shared_ptr<actor_handle>, std::shared_ptr<link_impl>);
+	link(sp_ahandle ah, sp_engine_impl pimpl);
+	link(engine&&);
 };
 
 /// handy aliases

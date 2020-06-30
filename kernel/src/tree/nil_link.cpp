@@ -15,6 +15,8 @@
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
 
+#include <atomic>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
 //  nil link actor
@@ -26,7 +28,7 @@ struct nil_link::self_actor : caf::event_based_actor {
 		: super(cfg)
 	{}
 
-	auto make_behavior() -> behavior_type override { return link::actor_type::behavior_type {
+	auto make_behavior() -> behavior_type override { return link::actor_type::behavior_type{
 	
 		[=](a_home) -> caf::group { return {}; },
 		[=](a_lnk_id) -> lid_type { return nil_uid; },
@@ -74,19 +76,45 @@ struct nil_link::self_impl : link_impl {
 	using super = link_impl;
 	using super::super;
 
-	// return global instance of nil link inside optional to destroy at any moment
-	using internals_t = std::pair<sp_limpl, sp_ahandle>;
-	static auto internals() -> internals_t& {
-		static auto self_ = internals_t(
-			std::make_shared<nil_link::self_impl>(),
-			std::make_shared<link::actor_handle>( kernel::radio::system().spawn<nil_link::self_actor>() )
+	struct nil_engine : public engine {
+		friend struct nil_link;
+		using engine::engine;
+
+		nil_engine(caf::actor engine_actor, sp_engine_impl pimpl) :
+			engine(std::move(engine_actor), std::move(pimpl)),
+			online_(bool(pimpl_))
+		{}
+
+		auto reset() -> void {
+			online_ = false;
+			static_cast<link_impl&>(*pimpl_).release_factors();
+		}
+
+		auto stop(bool wait_exit) -> void {
+			if(online_) {
+				auto nil_actor = raw_actor();
+				auto waiter = caf::scoped_actor{KRADIO.system(), false};
+				waiter->send_exit(nil_actor, caf::exit_reason::kill);
+				if(wait_exit)
+					waiter->wait_for(nil_actor);
+			}
+		}
+
+	private:
+		std::atomic<bool> online_;
+	};
+
+	static auto internals() -> nil_engine& {
+		static auto self_ = nil_engine(
+			kernel::radio::system().spawn<nil_link::self_actor>(),
+			std::make_shared<nil_link::self_impl>()
 		);
 		return self_;
 	}
 
 	// always return same actor from internals
 	auto spawn_actor(sp_limpl) const -> caf::actor override {
-		return internals().second->actor_;
+		return internals().raw_actor();
 	}
 
 	auto clone(bool deep) const -> sp_limpl override {
@@ -111,27 +139,24 @@ LIMPL_TYPE_DEF(nil_link::self_impl, "__nil_link__")
 ///////////////////////////////////////////////////////////////////////////////
 //  nil link
 //
+auto nil_link::nil_engine() -> const engine& {
+	return nil_link::self_impl::internals();
+}
+
+auto nil_link::pimpl() -> const engine::sp_engine_impl& {
+	return nil_link::self_impl::internals().pimpl_;
+}
+
+auto nil_link::actor() -> const engine::sp_ahandle& {
+	return nil_link::self_impl::internals().actor_;
+}
+
 auto nil_link::reset() -> void {
-	// explicitly reset signleton nil link acctor handle & internals
-	auto& [nl_impl, nl_actor] = nil_link::self_impl::internals();
-	nl_actor->actor_ = nullptr;
-	nl_actor.reset();
-	nl_impl.reset();
+	nil_link::self_impl::internals().reset();
 }
 
 auto nil_link::stop(bool wait_exit) -> void {
-	auto& [_, nil_handle] = nil_link::self_impl::internals();
-	if(nil_handle) {
-		auto nil_actor = nil_handle->actor_;
-		auto waiter = caf::scoped_actor{KRADIO.system(), false};
-		waiter->send_exit(nil_actor, caf::exit_reason::kill);
-		if(wait_exit)
-			waiter->wait_for(nil_actor);
-	}
+	nil_link::self_impl::internals().stop(wait_exit);
 }
-
-auto nil_link::pimpl() -> const sp_limpl& { return nil_link::self_impl::internals().first; }
-
-auto nil_link::actor() -> const sp_ahandle& { return nil_link::self_impl::internals().second; }
 
 NAMESPACE_END(blue_sky::tree)

@@ -129,7 +129,7 @@ struct BS_HIDDEN_API fast_link_actor : public link_actor {
 
 // helper for generating `link_impl::spawn_actor()` implementations
 template<typename Actor, caf::spawn_options Os = caf::no_spawn_options, class... Ts>
-inline auto spawn_lactor(std::shared_ptr<link_impl> limpl, Ts&&... args) {
+inline auto spawn_lactor(sp_limpl limpl, Ts&&... args) {
 	// spawn actor
 	auto& AS = kernel::radio::system();
 	auto lgrp = AS.groups().get_local(to_string(limpl->id_));

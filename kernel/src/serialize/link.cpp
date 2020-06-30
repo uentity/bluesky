@@ -68,6 +68,8 @@ BSS_FCN_INL_BEGIN(serialize, tree::link_impl)
 	);
 BSS_FCN_INL_END(serialize, tree::link_impl)
 
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::engine::impl, tree::link_impl)
+
 ///////////////////////////////////////////////////////////////////////////////
 //  ilink_impl
 //

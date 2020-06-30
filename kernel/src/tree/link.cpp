@@ -20,141 +20,82 @@ NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 using bs_detail::shared;
 
-///////////////////////////////////////////////////////////////////////////////
-//  actor_handle
-//
-link::actor_handle::actor_handle(caf::actor Lactor)
-	: actor_(std::move(Lactor))
-{}
-
-// destructor of actor handle terminates wrapped actor
-link::actor_handle::~actor_handle() {
-	caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//  link_weak_ptr
-//
-link::weak_ptr::weak_ptr(const link& src)
-	: actor_(src.actor_), pimpl_(src.pimpl_)
-{}
-
-auto link::weak_ptr::operator=(const link& rhs) -> weak_ptr& {
-	pimpl_ = rhs.pimpl_;
-	actor_ = rhs.actor_;
-	return *this;
-}
-
-auto link::weak_ptr::lock() const -> link {
-	auto res = link{ pimpl_.lock(), false };
-	if(res) res.actor_ = actor_.lock();
-	// if handle actor is dead -> self = nil
-	if(!res.actor_) res.reset();
-	return res;
-}
-
-auto link::weak_ptr::expired() const -> bool {
-	return actor_.expired();
-}
-
-auto link::weak_ptr::reset() -> void {
-	pimpl_.reset();
-	actor_.reset();
-}
-
-auto link::weak_ptr::operator==(const weak_ptr& rhs) const -> bool {
-	return pimpl_.lock() == rhs.pimpl_.lock();
-}
-
-auto link::weak_ptr::operator!=(const weak_ptr& rhs) const -> bool {
-	return !(*this == rhs);
-}
-
-auto link::weak_ptr::operator==(const link& rhs) const -> bool {
-	return pimpl_.lock() == rhs.pimpl_;
-}
-
-auto link::weak_ptr::operator!=(const link& rhs) const -> bool {
-	return !(*this == rhs);
-}
-
-auto link::weak_ptr::operator<(const weak_ptr& rhs) const -> bool {
-	return pimpl_.owner_before(rhs.pimpl_);
-}
-
 /*-----------------------------------------------------------------------------
  *  link
  *-----------------------------------------------------------------------------*/
-link::link(std::shared_ptr<actor_handle> actor, std::shared_ptr<link_impl> impl) :
-	actor_(actor ? std::move(actor) : nil_link::actor()),
-	pimpl_(impl ? std::move(impl) : nil_link::pimpl())
-{}
+// [NOTE] the purpose of link constructors is to ALWAYS produce a valid link
+// 'valid' means that `pimpl()` returns non-null value, `raw_actor()` returns valid handle
+// at worst link may become 'nil link' that is also a valid link
+// but if destructor is called for moved from link, then `pimpl_` may already be NULL, so check it
 
 link::~link() {
-	if(pimpl_) pimpl_->release_factor(this);
+	if(auto self = pimpl()) self->release_factor(this);
+}
+
+link::link(engine&& e) :
+	engine(std::move(e))
+{
+	if(!has_engine())
+		*this = nil_link::nil_engine();
+}
+
+link::link(sp_ahandle ah, sp_engine_impl pimpl) :
+	engine(std::move(ah), std::move(pimpl))
+{
+	if(!has_engine())
+		*this = nil_link::nil_engine();
 }
 
 link::link() :
-	link(nil_link::actor(), nil_link::pimpl())
+	engine(nil_link::nil_engine())
+{}
+
+link::link(const link& rhs) :
+	link(rhs.actor_, rhs.pimpl_)
+{}
+
+link::link(link&& rhs) :
+	link(std::move(rhs.actor_), std::move(rhs.pimpl_))
+{
+	// `rhs` destructor won't be able to release factor, because pimpl is moved from rhs
+	pimpl()->release_factor(&rhs);
+}
+
+link::link(sp_engine_impl impl, bool start_actor) :
+	engine(nil_link::actor(), std::move(impl))
+{
+	if(start_actor) start_engine();
+}
+
+link::link(const link& rhs, std::string_view rhs_type_id) :
+	link(
+		rhs.type_id() == rhs_type_id ? rhs.actor_ : nullptr,
+		rhs.type_id() == rhs_type_id ? rhs.pimpl_ : nullptr
+	)
 {}
 
 link::link(std::string name, sp_obj data, Flags f) :
 	link(hard_link{std::move(name), std::move(data), f})
 {}
 
-link::link(std::shared_ptr<link_impl> impl, bool start_actor) :
-	link(nil_link::actor(), std::move(impl))
-{
-	if(start_actor) start_engine();
-}
-
-link::link(const link& rhs) :
-	link(rhs.actor_, rhs.pimpl_)
-{}
-
-link::link(const link& rhs, std::string_view rhs_type_id) :
-	link(
-		rhs.type_id() == rhs_type_id ? rhs.actor_ : nil_link::actor(),
-		rhs.type_id() == rhs_type_id ? rhs.pimpl_ : nil_link::pimpl()
-	)
-{}
-
-link::link(link&& rhs) :
-	link(std::move(rhs.actor_), std::move(rhs.pimpl_))
-{
-	pimpl_->release_factor(&rhs);
-}
-
 auto link::operator=(const link& rhs) -> link& {
-	if(*this != rhs) {
-		pimpl_->release_factor(this);
-		actor_ = rhs.actor_;
-		pimpl_ = rhs.pimpl_;
-	}
+	link(rhs).swap(*this);
 	return *this;
 }
 
 auto link::operator=(link&& rhs) -> link& {
-	if(*this != rhs) {
-		pimpl_->release_factor(this);
-		actor_ = std::move(rhs.actor_);
-		pimpl_ = std::move(rhs.pimpl_);
-		pimpl_->release_factor(&rhs);
-	}
+	link(std::move(rhs)).swap(*this);
 	return *this;
 }
 
 auto link::reset() -> void {
-	if(!is_nil()) {
-		pimpl_->release_factor(this);
-		actor_ = nil_link::actor();
-		pimpl_ = nil_link::pimpl();
-	}
+	if(!is_nil())
+		link{}.swap(*this);
 }
 
 auto link::start_engine() -> bool {
 	if(actor_ == nil_link::actor()) {
-		actor_ = std::make_shared<actor_handle>(pimpl_->spawn_actor(pimpl_));
+		install_raw_actor(pimpl()->spawn_actor(std::static_pointer_cast<link_impl>(pimpl_)));
 		return true;
 	}
 	return false;
@@ -173,41 +114,27 @@ auto link::operator<(const link& rhs) const -> bool {
 }
 
 auto link::is_nil() const -> bool {
-	return pimpl_ == nil_link::pimpl();
+	return (!pimpl_ || pimpl_ == nil_link::pimpl());
 }
 
 auto link::clone(bool deep) const -> link {
-	return { pimpl_->clone(deep) };
-}
-
-auto link::pimpl() const -> link_impl* {
-	return pimpl_.get();
+	return { pimpl()->clone(deep) };
 }
 
 auto link::factor() const -> sp_scoped_actor {
-	return pimpl_->factor(this);
-}
-
-auto link::raw_actor() const -> const caf::actor& {
-	return actor_->actor_;
+	return pimpl()->factor(this);
 }
 
 auto link::home() const -> const caf::group& {
-	return pimpl_->home;
+	return pimpl()->home;
 }
 
 auto link::type_id() const -> std::string_view {
-	return pimpl_->type_id();
+	return pimpl()->type_id();
 }
 
-/// access link's unique ID
 auto link::id() const -> lid_type {
-	// ID cannot change
-	return pimpl_->id_;
-}
-
-auto link::hash() const noexcept -> std::size_t {
-	return std::hash<std::shared_ptr<link_impl>>{}(pimpl_);
+	return pimpl()->id_;
 }
 
 auto link::rename(std::string new_name) const -> void {
@@ -218,18 +145,17 @@ auto link::rename_silent(std::string new_name) const -> void {
 	caf::anon_send(actor(*this), a_lnk_rename(), std::move(new_name), true);
 }
 
-/// get link's container
 auto link::owner() const -> sp_node {
-	auto guard = pimpl_->lock(shared);
-	return pimpl_->owner_.lock();
+	auto guard = pimpl()->lock(shared);
+	return pimpl()->owner_.lock();
 }
 
 auto link::reset_owner(const sp_node& new_owner) const -> void {
-	pimpl_->reset_owner(new_owner);
+	pimpl()->reset_owner(new_owner);
 }
 
 auto link::info() const -> result_or_err<inode> {
-	return pimpl_->actorf<result_or_errbox<inodeptr>>(*this, a_lnk_inode())
+	return pimpl()->actorf<result_or_errbox<inodeptr>>(*this, a_lnk_inode())
 	.and_then([](const inodeptr& i) {
 		return i ?
 			result_or_err<inode>(*i) :
@@ -238,7 +164,7 @@ auto link::info() const -> result_or_err<inode> {
 }
 
 auto link::info(unsafe_t) const -> result_or_err<inode> {
-	return pimpl_->get_inode()
+	return pimpl()->get_inode()
 	.and_then([](const inodeptr& i) {
 		return i ?
 			result_or_err<inode>(*i) :
@@ -247,11 +173,11 @@ auto link::info(unsafe_t) const -> result_or_err<inode> {
 }
 
 auto link::flags() const -> Flags {
-	return pimpl_->actorf<Flags>(*this, a_lnk_flags()).value_or(Flags::Plain);
+	return pimpl()->actorf<Flags>(*this, a_lnk_flags()).value_or(Flags::Plain);
 }
 
 auto link::flags(unsafe_t) const -> Flags {
-	return pimpl_->flags_;
+	return pimpl()->flags_;
 }
 
 auto link::set_flags(Flags new_flags) const -> void {
@@ -259,23 +185,23 @@ auto link::set_flags(Flags new_flags) const -> void {
 }
 
 auto link::req_status(Req request) const -> ReqStatus {
-	return pimpl_->req_status(request);
+	return pimpl()->req_status(request);
 }
 
 auto link::rs_reset(Req request, ReqStatus new_rs) const -> ReqStatus {
-	return pimpl_->actorf<ReqStatus>(
+	return pimpl()->actorf<ReqStatus>(
 		*this, a_lnk_status(), request, ReqReset::Always, new_rs, ReqStatus::Void
 	).value_or(ReqStatus::Error);
 }
 
 auto link::rs_reset_if_eq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
-	return pimpl_->actorf<ReqStatus>(
+	return pimpl()->actorf<ReqStatus>(
 		*this, a_lnk_status(), request, ReqReset::IfEq, new_rs, self
 	).value_or(ReqStatus::Error);
 }
 
 auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
-	return pimpl_->actorf<ReqStatus>(
+	return pimpl()->actorf<ReqStatus>(
 		*this, a_lnk_status(), request, ReqReset::IfNeq, new_rs, self
 	).value_or(ReqStatus::Error);
 }
@@ -285,57 +211,57 @@ auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const 
 //
 /// obtain link's human-readable name
 auto link::name() const -> std::string {
-	return pimpl_->actorf<std::string>(*this, a_lnk_name()).value_or("");
+	return pimpl()->actorf<std::string>(*this, a_lnk_name()).value_or("");
 }
 
 auto link::name(unsafe_t) const -> std::string {
-	return pimpl_->name_;
+	return pimpl()->name_;
 }
 
 // get link's object ID
 std::string link::oid() const {
-	return pimpl_->actorf<std::string>(*this, a_lnk_oid())
+	return pimpl()->actorf<std::string>(*this, a_lnk_oid())
 		.value_or(nil_oid);
 }
 
 std::string link::oid(unsafe_t) const {
-	return pimpl_->data()
+	return pimpl()->data()
 		.map([](const sp_obj& obj) { return obj ? obj->id() : nil_oid; })
 		.value_or(nil_oid);
 }
 
 std::string link::obj_type_id() const {
-	return pimpl_->actorf<std::string>(*this, a_lnk_otid())
+	return pimpl()->actorf<std::string>(*this, a_lnk_otid())
 		.value_or( nil_otid );
 }
 
 std::string link::obj_type_id(unsafe_t) const {
-	return pimpl_->data()
+	return pimpl()->data()
 		.map([](const sp_obj& obj) { return obj ? obj->type_id() : nil_otid; })
 		.value_or(nil_otid);
 }
 
 auto link::data_ex(bool wait_if_busy) const -> result_or_err<sp_obj> {
-	return pimpl_->actorf<result_or_errbox<sp_obj>>(*this, a_lnk_data(), wait_if_busy);
+	return pimpl()->actorf<result_or_errbox<sp_obj>>(*this, a_lnk_data(), wait_if_busy);
 }
 
 auto link::data(unsafe_t) const -> sp_obj {
-	return pimpl_->data(unsafe);
+	return pimpl()->data(unsafe);
 }
 
 auto link::data_node_ex(bool wait_if_busy) const -> result_or_err<sp_node> {
-	return pimpl_->actorf<result_or_errbox<sp_node>>(*this, a_lnk_dnode(), wait_if_busy);
+	return pimpl()->actorf<result_or_errbox<sp_node>>(*this, a_lnk_dnode(), wait_if_busy);
 }
 
 auto link::data_node(unsafe_t) const -> sp_node {
-	if(auto obj = pimpl_->data(unsafe)) {
+	if(auto obj = pimpl()->data(unsafe)) {
 		if(obj->is_node()) return std::static_pointer_cast<node>(obj);
 	}
 	return nullptr;
 }
 
 auto link::data_node_gid() const -> result_or_err<std::string> {
-	return pimpl_->actorf<result_or_errbox<std::string>>(*this, a_node_gid());
+	return pimpl()->actorf<result_or_errbox<std::string>>(*this, a_node_gid());
 }
 
 auto link::data_node_gid(unsafe_t) const -> std::string {
@@ -353,7 +279,7 @@ void link::self_handle_node(const sp_node& N) const {
 }
 
 auto link::propagate_handle() const -> result_or_err<sp_node> {
-	return pimpl_->propagate_handle(*this);
+	return pimpl()->propagate_handle(*this);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
