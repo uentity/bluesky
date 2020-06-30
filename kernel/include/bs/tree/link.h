@@ -92,9 +92,11 @@ public:
 	/// copy ctor & assignment
 	link(const link& rhs);
 	auto operator=(const link& rhs) -> link&;
-	/// move ctor & assignment
-	link(link&& rhs);
-	auto operator=(link&& rhs) -> link&;
+
+	/// [NOTE] move ctor & assignment are doable but disabled
+	/// reason: moved from object MUST be immediately reset into nil link to not break invariants
+	/// and that operation alone is equivalent to copy ctor/assignment call
+	/// so, there's just no win
 
 	/// makes link nil
 	auto reset() -> void;

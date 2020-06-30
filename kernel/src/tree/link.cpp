@@ -26,10 +26,9 @@ using bs_detail::shared;
 // [NOTE] the purpose of link constructors is to ALWAYS produce a valid link
 // 'valid' means that `pimpl()` returns non-null value, `raw_actor()` returns valid handle
 // at worst link may become 'nil link' that is also a valid link
-// but if destructor is called for moved from link, then `pimpl_` may already be NULL, so check it
 
 link::~link() {
-	if(auto self = pimpl()) self->release_factor(this);
+	pimpl()->release_factor(this);
 }
 
 link::link(engine&& e) :
@@ -50,17 +49,6 @@ link::link() :
 	engine(nil_link::nil_engine())
 {}
 
-link::link(const link& rhs) :
-	link(rhs.actor_, rhs.pimpl_)
-{}
-
-link::link(link&& rhs) :
-	link(std::move(rhs.actor_), std::move(rhs.pimpl_))
-{
-	// `rhs` destructor won't be able to release factor, because pimpl is moved from rhs
-	pimpl()->release_factor(&rhs);
-}
-
 link::link(sp_engine_impl impl, bool start_actor) :
 	engine(nil_link::actor(), std::move(impl))
 {
@@ -78,14 +66,17 @@ link::link(std::string name, sp_obj data, Flags f) :
 	link(hard_link{std::move(name), std::move(data), f})
 {}
 
+link::link(const link& rhs) :
+	link(rhs.actor_, rhs.pimpl_)
+{}
+
 auto link::operator=(const link& rhs) -> link& {
 	link(rhs).swap(*this);
 	return *this;
 }
 
-auto link::operator=(link&& rhs) -> link& {
-	link(std::move(rhs)).swap(*this);
-	return *this;
+auto link::is_nil() const -> bool {
+	return pimpl_ == nil_link::pimpl();
 }
 
 auto link::reset() -> void {
@@ -115,10 +106,6 @@ auto link::operator!=(const link& rhs) const -> bool {
 
 auto link::operator<(const link& rhs) const -> bool {
 	return id() < rhs.id();
-}
-
-auto link::is_nil() const -> bool {
-	return (!pimpl_ || pimpl_ == nil_link::pimpl());
 }
 
 auto link::clone(bool deep) const -> link {
@@ -222,24 +209,23 @@ auto link::name(unsafe_t) const -> std::string {
 	return pimpl()->name_;
 }
 
-// get link's object ID
-std::string link::oid() const {
+auto link::oid() const -> std::string {
 	return pimpl()->actorf<std::string>(*this, a_lnk_oid())
 		.value_or(nil_oid);
 }
 
-std::string link::oid(unsafe_t) const {
+auto link::oid(unsafe_t) const -> std::string {
 	return pimpl()->data()
 		.map([](const sp_obj& obj) { return obj ? obj->id() : nil_oid; })
 		.value_or(nil_oid);
 }
 
-std::string link::obj_type_id() const {
+auto link::obj_type_id() const -> std::string {
 	return pimpl()->actorf<std::string>(*this, a_lnk_otid())
 		.value_or( nil_otid );
 }
 
-std::string link::obj_type_id(unsafe_t) const {
+auto link::obj_type_id(unsafe_t) const -> std::string {
 	return pimpl()->data()
 		.map([](const sp_obj& obj) { return obj ? obj->type_id() : nil_otid; })
 		.value_or(nil_otid);
