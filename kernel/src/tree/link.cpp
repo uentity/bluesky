@@ -93,6 +93,10 @@ auto link::reset() -> void {
 		link{}.swap(*this);
 }
 
+auto link::pimpl() const -> link_impl* {
+	return static_cast<link_impl*>(pimpl_.get());
+}
+
 auto link::start_engine() -> bool {
 	if(actor_ == nil_link::actor()) {
 		install_raw_actor(pimpl()->spawn_actor(std::static_pointer_cast<link_impl>(pimpl_)));

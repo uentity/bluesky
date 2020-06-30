@@ -89,22 +89,6 @@ public:
 		}
 	};
 
-	template<typename Item>
-	struct access {
-		/// get access to tree item impl
-		auto pimpl() const {
-			return static_cast<typename Item::engine_impl*>(
-				static_cast<const Item*>(this)->pimpl_.get()
-			);
-		}
-
-		template<typename F>
-		auto pimpl_apply(F&& f) const -> void {
-			if(auto self = static_cast<const Item*>(this)->pimpl_)
-				f(*static_cast<typename Item::engine_impl*>(self.get()));
-		}
-	};
-
 	/// hash for appropriate containers
 	auto hash() const noexcept -> std::size_t;
 

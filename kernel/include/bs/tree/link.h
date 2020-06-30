@@ -30,7 +30,7 @@ NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  base class of all links
  *-----------------------------------------------------------------------------*/
-class BS_API link : public engine, public engine::access<link> {
+class BS_API link : public engine {
 	friend class engine::weak_ptr<link>;
 	// serialization support
 	friend class blue_sky::atomizer;
@@ -43,7 +43,6 @@ class BS_API link : public engine, public engine::access<link> {
 	friend class node_actor;
 
 public:
-	using engine_impl = link_impl;
 	using weak_ptr = engine::weak_ptr<link>;
 
 	/// Interface of link actor, you can only send messages matching it
@@ -243,6 +242,8 @@ public:
 protected:
 	using engine::operator=;
 
+	auto pimpl() const -> link_impl*;
+
 	/// accept link impl and optionally start internal actor
 	link(sp_engine_impl impl, bool start_actor = true);
 
@@ -255,7 +256,7 @@ protected:
 	/// set handle of passed node to self
 	auto self_handle_node(const sp_node& N) const -> void;
 
-	// silent replace old name with new in link's internals
+	/// silent replace old name with new
 	auto rename_silent(std::string new_name) const -> void;
 
 	/// switch link's owner
