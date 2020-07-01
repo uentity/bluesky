@@ -23,7 +23,7 @@ namespace kradio = kernel::radio;
  *  link_impl
  *-----------------------------------------------------------------------------*/
 link_impl::link_impl(std::string name, Flags f)
-	: id_(gen_uuid()), name_(std::move(name)), flags_(f), timeout(def_timeout(true))
+	: id_(gen_uuid()), name_(std::move(name)), flags_(f), timeout(kernel::radio::timeout())
 {}
 
 link_impl::link_impl()

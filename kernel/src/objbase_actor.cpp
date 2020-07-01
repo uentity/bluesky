@@ -104,7 +104,7 @@ auto objbase::home() const -> const caf::group& { return home_; }
 
 auto objbase::apply(modificator_f m) const -> error {
 	return actorf<error>(
-		actor(), def_timeout(true), a_apply(), make_closed_modificator(std::move(m))
+		actor(), kernel::radio::timeout(true), a_apply(), make_closed_modificator(std::move(m))
 	);
 }
 

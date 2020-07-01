@@ -202,7 +202,7 @@ auto radio_subsyst::start_client(const std::string& host) -> error {
 
 	actor_config().add_message_type<tree::link>("link");
 	auto station = actor_sys_->middleman().remote_spawn<radio_station_handle>(
-		*netnode, "radio_station", caf::make_message(), def_timeout(true)
+		*netnode, "radio_station", caf::make_message(), kernel::radio::timeout(true)
 	);
 	if(!station) return { actor_sys_->render(station.error()) };
 

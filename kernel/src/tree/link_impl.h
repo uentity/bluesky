@@ -22,8 +22,6 @@
 
 #include <caf/detail/shared_spinlock.hpp>
 
-#include <unordered_map>
-
 // helper macro to inject link type ids
 #define LIMPL_TYPE_DECL                            \
 static auto type_id_() -> std::string_view;        \
@@ -178,13 +176,7 @@ public:
 		mutable engine_impl_mutex guard;
 	};
 	status_handle status_[2];
-
-private:
-	// requesters pool { link addr -> `scoped_actor` instance }
-	using rpool_t = std::unordered_map<const link*, sp_scoped_actor>;
-	rpool_t rpool_;
 };
-
 using sp_limpl = link_impl::sp_limpl;
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -306,7 +306,7 @@ auto link::data_apply(data_modificator_f m, bool silent) const -> error {
 //
 auto link::data(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
-		actor(*this), def_timeout(true), high_priority,
+		actor(*this), kernel::radio::timeout(true), high_priority,
 		[f = std::move(f), wself = weak_ptr(*this)](result_or_errbox<sp_obj> eobj) {
 			if(auto self = wself.lock())
 				f(std::move(eobj), std::move(self));
@@ -317,7 +317,7 @@ auto link::data(process_data_cb f, bool high_priority) const -> void {
 
 auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
-		actor(*this), def_timeout(true), high_priority,
+		actor(*this), kernel::radio::timeout(true), high_priority,
 		[f = std::move(f), wself = weak_ptr(*this)](result_or_errbox<sp_node> eobj) {
 			if(auto self = wself.lock())
 				f(std::move(eobj), std::move(self));
@@ -328,7 +328,7 @@ auto link::data_node(process_data_cb f, bool high_priority) const -> void {
 
 auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -> void {
 	anon_request(
-		actor(*this), def_timeout(true), false,
+		actor(*this), kernel::radio::timeout(true), false,
 		make_apply_impl<true>(*this, std::move(m), silent),
 		a_lnk_data(), true
 	);

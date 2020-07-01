@@ -13,8 +13,7 @@
 
 #include <boost/uuid/nil_generator.hpp>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(defaults)
+NAMESPACE_BEGIN(blue_sky::defaults)
 
 const char* nil_type_name = "__bs_nil_type__";
 
@@ -43,17 +42,5 @@ const timespan timeout = std::chrono::seconds(10);
 const timespan long_timeout = std::chrono::seconds(60);
 
 NAMESPACE_END(radio)
-NAMESPACE_END(defaults)
-
-// extract timeout from kernel config
-auto def_timeout(bool for_long_task) -> caf::duration {
-	using namespace kernel::config;
-	// [NOTE] defaults are encoded here
-
-	return caf::duration{ for_long_task ?
-		get_or( config(), "radio.long-timeout", defaults::radio::long_timeout ) :
-		get_or( config(), "radio.timeout", defaults::radio::timeout )
-	};
-}
 
 NAMESPACE_END(blue_sky::defaults)

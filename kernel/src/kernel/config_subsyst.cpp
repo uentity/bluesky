@@ -7,7 +7,9 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/defaults.h>
 #include <bs/log.h>
+#include <bs/kernel/radio.h>
 #include "config_subsyst.h"
 
 #include <caf/config_option_adder.hpp>
@@ -16,6 +18,7 @@
 #include <caf/detail/parser/read_ini.hpp>
 #include <caf/detail/parser/read_string.hpp>
 #include <caf/io/middleman.hpp>
+
 #include <fmt/ostream.h>
 
 #include <sstream>
@@ -85,7 +88,14 @@ auto extract_config_file_path(caf::config_option_set& opts, caf::settings& S, st
 	}
 	return "";
 	//return std::move(evalue.error());
-	//return none;
+}
+
+// separetely store configured timeouts for faster access
+// returns { normal timeout, long op timeout }
+using timeouts_pair = std::pair<duration, duration>;
+inline auto timeouts() -> timeouts_pair& {
+	static auto ts_ = timeouts_pair{};
+	return ts_;
 }
 
 NAMESPACE_END() // eof hidden ns
@@ -205,6 +215,7 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 				<< to_string(res.first) << log::end;
 		}
 	};
+
 	// Generate help text if needed.
 	// These options are one-shot
 	if(get_or(confdata_, "help", false) || get_or(confdata_, "long-help", false)) {
@@ -229,6 +240,12 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 		put(confdata_, "dump-config", false);
 	}
 
+	// update timeout values
+	timeouts() = timeouts_pair{
+		get_or( confdata_, "radio.timeout", defaults::radio::timeout ),
+		get_or( confdata_, "radio.long-timeout", defaults::radio::long_timeout )
+	};
+
 	// [NOTE] load networking module after kernel & CAF are configured (do it only once!)
 	if(!kernel_configured)
 		actor_cfg_.load<caf::io::middleman>();
@@ -248,3 +265,12 @@ auto config_subsyst::is_configured() -> bool {
 bool config_subsyst::kernel_configured = false;
 
 NAMESPACE_END(blue_sky::kernel::detail)
+
+NAMESPACE_BEGIN(blue_sky::kernel::radio)
+
+auto timeout(bool for_long_task) -> caf::duration {
+	auto& [normal_to, long_to] = kernel::detail::timeouts();
+	return for_long_task ? long_to : normal_to;
+}	
+
+NAMESPACE_END(blue_sky::kernel::radio)

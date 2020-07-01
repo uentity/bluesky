@@ -89,7 +89,7 @@ auto request_impl(
 			system().spawn(std::move(worker));
 
 		// make request and invoke result processor
-		LA.request(worker_actor, def_timeout(true), a_ack())
+		LA.request(worker_actor, kernel::radio::timeout(true), a_ack())
 		.then(std::move(make_result));
 	}
 }

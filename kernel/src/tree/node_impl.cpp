@@ -10,6 +10,7 @@
 #include "node_impl.h"
 #include "link_impl.h"
 #include "node_actor.h"
+
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/detail/tuple_utils.h>
@@ -19,7 +20,7 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 
 node_impl::node_impl(node* super) :
-	timeout(def_timeout(true)), super_(super)
+	timeout(kernel::radio::timeout()), super_(super)
 {}
 
 // implement shallow links copy ctor

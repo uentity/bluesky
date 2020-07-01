@@ -9,14 +9,19 @@
 #pragma once
 
 #include "../common.h"
+#include "../timetypes.h"
 #include "../error.h"
 
 #include <caf/fwd.hpp>
+#include <caf/duration.hpp>
 
 NAMESPACE_BEGIN(blue_sky::kernel::radio)
 
 /// access actor system
 BS_API auto system() -> caf::actor_system&;
+
+/// obtain configured timeout for actor requests
+BS_API auto timeout(bool for_long_task = false) -> caf::duration;
 
 /// obtain actor with given ID from registry and sends it `a_bye` message
 /// returns whether actor was found

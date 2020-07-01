@@ -116,7 +116,7 @@ public:
 	}
 	// same as above but with configurable timeout
 	template<typename R, typename... Args>
-	static auto actorf(const node& N, timespan timeout, Args&&... args) {
+	static auto actorf(const node& N, caf::duration timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
 			actor(N), timeout, std::forward<Args>(args)...
 		);

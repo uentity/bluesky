@@ -269,7 +269,7 @@ return {
 		// others via extra sorted leafs
 		auto rp = make_response_promise();
 		request(
-			system().spawn(extraidx_search_actor), def_timeout(true),
+			system().spawn(extraidx_search_actor), kernel::radio::timeout(true),
 			a_node_leafs(), order, impl.leafs(Key::AnyOrder)
 		).then(
 			[=](const links_v& leafs) mutable {

@@ -72,7 +72,7 @@ auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) c
 	using result_t = result_or_errbox<sp_node>;
 
 	anon_request(
-		actor(*this), def_timeout(true), false,
+		actor(*this), kernel::radio::timeout(true), false,
 		[f = std::move(f), self = *this](result_t data) mutable {
 			f( std::move(data), std::move(self) );
 		},
