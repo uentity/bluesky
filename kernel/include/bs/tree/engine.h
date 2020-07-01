@@ -22,13 +22,8 @@ public:
 	using sp_ahandle = std::shared_ptr<actor_handle>;
 
 	/// tree element must inherit impl class from this one
-	struct impl {
-		using sp_engine_impl = std::shared_ptr<impl>;
-
-		/// return engine's type ID
-		virtual auto type_id() const -> std::string_view = 0;
-	};
-	using sp_engine_impl = impl::sp_engine_impl;
+	struct impl;
+	using sp_engine_impl = std::shared_ptr<impl>;
 
 private:
 	/// core of `weak_ptr`

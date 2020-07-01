@@ -147,8 +147,8 @@
     <ClInclude Include="kernel\src\kernel\python_subsyst_impl.h" />
     <ClInclude Include="kernel\src\kernel\radio_subsyst.h" />
     <ClInclude Include="kernel\src\serialize\tree_fs_impl.h" />
-    <ClInclude Include="kernel\src\tree\actor_common.h" />
     <ClInclude Include="kernel\src\tree\actor_debug.h" />
+    <ClInclude Include="kernel\src\tree\engine_impl.h" />
     <ClInclude Include="kernel\src\tree\ev_listener_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
@@ -219,6 +219,7 @@
     <ClCompile Include="kernel\src\timetypes.cpp" />
     <ClCompile Include="kernel\src\tree\context.cpp" />
     <ClCompile Include="kernel\src\tree\engine.cpp" />
+    <ClCompile Include="kernel\src\tree\engine_impl.cpp" />
     <ClCompile Include="kernel\src\tree\errors.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link_actor.cpp" />

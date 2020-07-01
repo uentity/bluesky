@@ -68,6 +68,7 @@ kernel_cpp_list = [
 	"src/serialize/objfrm_manager.cpp",
 
 	"src/tree/engine.cpp",
+	"src/tree/engine_impl.cpp",
 	"src/tree/inode.cpp",
 	"src/tree/link.cpp",
 	"src/tree/link_actor.cpp",

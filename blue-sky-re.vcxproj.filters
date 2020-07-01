@@ -459,6 +459,9 @@
     <ClInclude Include="kernel\src\tree\actor_debug.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\src\tree\engine_impl.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\src\tree\ev_listener_actor.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
@@ -558,6 +561,9 @@
       <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\engine.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\engine_impl.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\hard_link.cpp">

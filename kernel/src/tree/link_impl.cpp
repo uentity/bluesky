@@ -32,28 +32,6 @@ link_impl::link_impl()
 
 link_impl::~link_impl() = default;
 
-auto link_impl::factor(const link* L) -> sp_scoped_actor {
-	// check if elem is already inserted and find insertion position
-	{
-		auto guard = lock<Requesters>(detail::shared);
-		if(auto pf = rpool_.find(L); pf != rpool_.end())
-			return pf->second;
-	}
-	// make insertion
-	auto mguard = lock<Requesters>();
-	return rpool_.try_emplace( L, std::make_shared<caf::scoped_actor>(kradio::system()) ).first->second;
-}
-
-auto link_impl::release_factor(const link* L) -> void {
-	auto guard = lock<Requesters>();
-	rpool_.erase(L);
-}
-
-auto link_impl::release_factors() -> void {
-	auto guard = lock<Requesters>();
-	rpool_.clear();
-}
-
 auto link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<link_actor>(std::move(limpl));
 }
@@ -71,7 +49,7 @@ auto link_impl::set_node_handle(const link& h, const sp_node& N) -> void {
 }
 
 auto link_impl::reset_owner(const sp_node& new_owner) -> void {
-	auto guard = lock<Owner>();
+	auto guard = lock();
 	owner_ = new_owner;
 }
 

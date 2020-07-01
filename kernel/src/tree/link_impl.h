@@ -17,6 +17,7 @@
 #include <bs/detail/sharded_mutex.h>
 #include <bs/tree/node.h>
 
+#include "engine_impl.h"
 #include "../kernel/radio_subsyst.h"
 
 #include <caf/detail/shared_spinlock.hpp>
@@ -46,23 +47,17 @@ using defaults::tree::nil_uid;
 using defaults::tree::nil_oid;
 inline const auto nil_otid = blue_sky::defaults::nil_type_name;
 
-using link_impl_mutex = caf::detail::shared_spinlock;
-//using link_impl_mutex = std::mutex;
-
 /*-----------------------------------------------------------------------------
  *  base link impl
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API link_impl :
 	public std::enable_shared_from_this<link_impl>,
-	public bs_detail::sharded_same_mutex<link_impl_mutex, 2>,
+	public bs_detail::sharded_mutex<engine_impl_mutex>,
 	public engine::impl
 {
 public:
-	using mutex_t = bs_detail::sharded_mutex<link_impl_mutex>;
 	using sp_limpl = std::shared_ptr<link_impl>;
-	using sp_scoped_actor = link::sp_scoped_actor;
-
-	enum LockRole { Owner, Requesters };
+	using sp_scoped_actor = engine::impl::sp_scoped_actor;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  private link messaging interface
@@ -126,10 +121,6 @@ public:
 		return actorf<R>(L, L.pimpl()->timeout, std::forward<Args>(args)...);
 	}
 
-	auto factor(const link* L) -> sp_scoped_actor; 
-	auto release_factor(const link* L) -> void;
-	auto release_factors() -> void;
-
 	/// spawn raw actor corresponding to this impl type
 	virtual auto spawn_actor(sp_limpl limpl) const -> caf::actor;
 
@@ -184,7 +175,7 @@ public:
 	/// status of operations
 	struct status_handle {
 		ReqStatus value = ReqStatus::Void;
-		mutable link_impl_mutex guard;
+		mutable engine_impl_mutex guard;
 	};
 	status_handle status_[2];
 
