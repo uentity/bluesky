@@ -265,8 +265,8 @@ public:
 	auto construct(Args&&... args) const -> shared_ptr_cast {
 		using Fnorm = normalized_ctor_t<Args...>;
 		if(auto creator = creators_.find(typeid(Fnorm)); creator != creators_.end()) {
-			auto& f = reinterpret_cast<Fnorm&>(creator->second);
-			return f(std::forward<Args>(args)...);
+			auto* f = reinterpret_cast<Fnorm*>(&creator->second);
+			return (*f)(std::forward<Args>(args)...);
 		}
 		return {};
 	}
