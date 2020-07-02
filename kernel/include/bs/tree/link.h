@@ -43,6 +43,7 @@ class BS_API link : public engine {
 	friend class node_actor;
 
 public:
+	using engine_impl = link_impl;
 	using weak_ptr = engine::weak_ptr<link>;
 
 	/// Interface of link actor, you can only send messages matching it

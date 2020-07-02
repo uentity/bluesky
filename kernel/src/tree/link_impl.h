@@ -22,17 +22,8 @@
 
 #include <caf/detail/shared_spinlock.hpp>
 
-// helper macro to inject link type ids
-#define LIMPL_TYPE_DECL                            \
-static auto type_id_() -> std::string_view;        \
-auto type_id() const -> std::string_view override;
-
-#define LIMPL_TYPE_DEF(limpl_class, typename)                                \
-auto limpl_class::type_id_() -> std::string_view { return typename; }        \
-auto limpl_class::type_id() const -> std::string_view { return type_id_(); }
-
 #define LINK_TYPE_DEF(lnk_class, limpl_class, typename)                            \
-LIMPL_TYPE_DEF(limpl_class, typename)                                              \
+ENGINE_TYPE_DEF(limpl_class, typename)                                              \
 auto lnk_class::type_id_() -> std::string_view { return limpl_class::type_id_(); }
 
 #define LINK_CONVERT_TO(lnk_class)                               \
@@ -105,20 +96,6 @@ public:
 		return caf::actor_cast<actor_type>(L.raw_actor());
 	}
 
-	// make request to given link L
-	// same as above but with configurable timeout
-	template<typename R, typename Link, typename... Args>
-	static auto actorf(const Link& L, caf::duration timeout, Args&&... args) {
-		return blue_sky::actorf<R>(
-			*L.pimpl()->factor(&L), Link::actor(L), timeout, std::forward<Args>(args)...
-		);
-	}
-
-	template<typename R, typename Link, typename... Args>
-	static auto actorf(const Link& L, Args&&... args) {
-		return actorf<R>(L, L.pimpl()->timeout, std::forward<Args>(args)...);
-	}
-
 	/// spawn raw actor corresponding to this impl type
 	virtual auto spawn_actor(sp_limpl limpl) const -> caf::actor;
 
@@ -127,7 +104,7 @@ public:
 
 	/// download pointee data
 	virtual auto data() -> result_or_err<sp_obj> = 0;
-	/// return cached pointee data (if any) - be default calls data()
+	/// return cached pointee data (if any) - default impl calls `data()`
 	virtual auto data(unsafe_t) -> sp_obj;
 
 	/// obtain inode pointer
@@ -160,9 +137,6 @@ public:
 	lid_type id_;
 	std::string name_;
 	Flags flags_;
-
-	// timeout for most queries
-	const caf::duration timeout;
 
 	// keep local link group
 	caf::group home;
@@ -209,7 +183,7 @@ struct BS_HIDDEN_API hard_link_impl : ilink_impl {
 	auto data() -> result_or_err<sp_obj> override;
 	auto set_data(sp_obj obj) -> void;
 
-	LIMPL_TYPE_DECL
+	ENGINE_TYPE_DECL
 };
 
 struct BS_HIDDEN_API weak_link_impl : ilink_impl {
@@ -229,7 +203,7 @@ struct BS_HIDDEN_API weak_link_impl : ilink_impl {
 
 	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
 
-	LIMPL_TYPE_DECL
+	ENGINE_TYPE_DECL
 };
 
 struct BS_HIDDEN_API sym_link_impl : link_impl {
@@ -250,7 +224,7 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 
 	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
 
-	LIMPL_TYPE_DECL
+	ENGINE_TYPE_DECL
 };
 
 auto to_string(Req) -> const char*;

@@ -22,6 +22,10 @@ inline constexpr auto launch_async = launch_async_t{};
 using unsafe_t = caf::atom_constant<caf::atom("bs unsafe")>;
 inline constexpr auto unsafe = unsafe_t{};
 
+/// denote operation that can take long time
+using long_op_t = caf::atom_constant<caf::atom("bs long op")>;
+inline constexpr auto long_op = long_op_t{};
+
 // discover neighbourhood
 using a_hi = caf::atom_constant<caf::atom("bs hi")>;
 // used to inform others that I'm quit

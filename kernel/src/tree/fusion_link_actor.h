@@ -57,7 +57,7 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 
 	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
 
-	LIMPL_TYPE_DECL
+	ENGINE_TYPE_DECL
 };
 
 /*-----------------------------------------------------------------------------

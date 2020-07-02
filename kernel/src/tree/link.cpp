@@ -204,9 +204,9 @@ auto link::oid() const -> std::string {
 }
 
 auto link::oid(unsafe_t) const -> std::string {
-	return pimpl()->data()
-		.map([](const sp_obj& obj) { return obj ? obj->id() : nil_oid; })
-		.value_or(nil_oid);
+	if(auto obj = pimpl()->data(unsafe))
+		return obj->id();
+	return nil_oid;
 }
 
 auto link::obj_type_id() const -> std::string {
@@ -215,13 +215,15 @@ auto link::obj_type_id() const -> std::string {
 }
 
 auto link::obj_type_id(unsafe_t) const -> std::string {
-	return pimpl()->data()
-		.map([](const sp_obj& obj) { return obj ? obj->type_id() : nil_otid; })
-		.value_or(nil_otid);
+	if(auto obj = pimpl()->data(unsafe))
+		return obj->type_id();
+	return nil_otid;
 }
 
 auto link::data_ex(bool wait_if_busy) const -> result_or_err<sp_obj> {
-	return pimpl()->actorf<result_or_errbox<sp_obj>>(*this, a_lnk_data(), wait_if_busy);
+	return pimpl()->actorf<result_or_errbox<sp_obj>>(
+		long_op, *this, a_lnk_data(), wait_if_busy
+	);
 }
 
 auto link::data(unsafe_t) const -> sp_obj {
@@ -229,7 +231,9 @@ auto link::data(unsafe_t) const -> sp_obj {
 }
 
 auto link::data_node_ex(bool wait_if_busy) const -> result_or_err<sp_node> {
-	return pimpl()->actorf<result_or_errbox<sp_node>>(*this, a_lnk_dnode(), wait_if_busy);
+	return pimpl()->actorf<result_or_errbox<sp_node>>(
+		long_op, *this, a_lnk_dnode(), wait_if_busy
+	);
 }
 
 auto link::data_node(unsafe_t) const -> sp_node {

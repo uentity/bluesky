@@ -15,15 +15,13 @@
 #include <bs/log.h>
 #include <bs/uuid.h>
 #include <bs/kernel/tools.h>
-#include <bs/kernel/radio.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-namespace kradio = kernel::radio;
 /*-----------------------------------------------------------------------------
  *  link_impl
  *-----------------------------------------------------------------------------*/
 link_impl::link_impl(std::string name, Flags f)
-	: id_(gen_uuid()), name_(std::move(name)), flags_(f), timeout(kernel::radio::timeout())
+	: id_(gen_uuid()), name_(std::move(name)), flags_(f)
 {}
 
 link_impl::link_impl()
