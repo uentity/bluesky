@@ -14,7 +14,7 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace kradio = kernel::radio;
 
-auto engine::impl::factor(const void* L) -> sp_scoped_actor {
+auto engine::impl::factor(const engine* L) -> sp_scoped_actor {
 	// check if elem is already inserted and find insertion position
 	{
 		auto guard = guard_.lock(detail::shared);
@@ -26,7 +26,7 @@ auto engine::impl::factor(const void* L) -> sp_scoped_actor {
 	return rpool_.try_emplace( L, std::make_shared<caf::scoped_actor>(kradio::system()) ).first->second;
 }
 
-auto engine::impl::release_factor(const void* L) -> void {
+auto engine::impl::release_factor(const engine* L) -> void {
 	auto guard = guard_.lock();
 	rpool_.erase(L);
 }

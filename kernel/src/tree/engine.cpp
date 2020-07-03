@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/tree/engine.h>
+#include "engine_impl.h"
 
 #include <caf/send.hpp>
 
@@ -15,15 +16,11 @@ NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  weak_ptr
  *-----------------------------------------------------------------------------*/
-engine::weak_ptr_base::weak_ptr_base(const sp_ahandle& ah, const sp_engine_impl& pimpl)
-	: actor_(ah), pimpl_(pimpl)
-{
-	if(!ah || !pimpl) reset();
-}
-
 engine::weak_ptr_base::weak_ptr_base(const engine& src)
-	: weak_ptr_base(src.actor_, src.pimpl_)
-{}
+	: actor_(src.actor_), pimpl_(src.pimpl_)
+{
+	if(!src.actor_ || !src.pimpl_) reset();
+}
 
 auto engine::weak_ptr_base::assign(const engine& rhs) -> void {
 	pimpl_ = rhs.pimpl_;
@@ -88,6 +85,39 @@ engine::engine(caf::actor engine_actor, sp_engine_impl pimpl) :
 	engine(std::make_shared<actor_handle>(std::move(engine_actor)), std::move(pimpl))
 {}
 
+engine::engine(engine&& rhs)
+	: actor_(std::move(rhs.actor_)), pimpl_(std::move(rhs.pimpl_))
+{
+	if(pimpl_) pimpl_->release_factor(&rhs);
+}
+
+engine::~engine() {
+	// can be NULL for moved from object
+	if(pimpl_) pimpl_->release_factor(this);
+}
+
+auto engine::operator=(const engine& rhs) -> engine& {
+	engine(rhs).swap(*this);
+	return *this;
+}
+
+auto engine::operator=(engine&& rhs) -> engine& {
+	engine(std::move(rhs)).swap(*this);
+	return *this;
+}
+
+auto engine::operator==(const engine& rhs) const -> bool {
+	return pimpl_ == rhs.pimpl_;
+}
+
+auto engine::operator!=(const engine& rhs) const -> bool {
+	return !(*this == rhs);
+}
+
+auto engine::operator<(const engine& rhs) const -> bool {
+	return pimpl_.owner_before(rhs.pimpl_);
+}
+
 auto engine::has_engine() const noexcept -> bool {
 	return pimpl_ && actor_;
 }
@@ -109,16 +139,8 @@ auto engine::swap(engine& rhs) noexcept -> void {
 	std::swap(pimpl_, rhs.pimpl_);
 }
 
-auto engine::operator==(const engine& rhs) const -> bool {
-	return pimpl_ == rhs.pimpl_;
-}
-
-auto engine::operator!=(const engine& rhs) const -> bool {
-	return !(*this == rhs);
-}
-
-auto engine::operator<(const engine& rhs) const -> bool {
-	return pimpl_.owner_before(rhs.pimpl_);
+auto engine::factor() const -> sp_scoped_actor {
+	return pimpl_->factor(this);
 }
 
 NAMESPACE_END(blue_sky::tree)

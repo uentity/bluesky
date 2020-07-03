@@ -27,20 +27,8 @@ using bs_detail::shared;
 // [NOTE] the purpose of link constructors is to ALWAYS produce a valid link
 // 'valid' means that `pimpl()` returns non-null value, `raw_actor()` returns valid handle
 // at worst link may become 'nil link' that is also a valid link
-
-link::~link() {
-	pimpl()->release_factor(this);
-}
-
-link::link(engine&& e) :
+link::link(engine e) :
 	engine(std::move(e))
-{
-	if(!has_engine())
-		*this = nil_link::nil_engine();
-}
-
-link::link(sp_ahandle ah, sp_engine_impl pimpl) :
-	engine(std::move(ah), std::move(pimpl))
 {
 	if(!has_engine())
 		*this = nil_link::nil_engine();
@@ -57,24 +45,14 @@ link::link(sp_engine_impl impl, bool start_actor) :
 }
 
 link::link(const link& rhs, std::string_view rhs_type_id) :
-	link(
-		rhs.type_id() == rhs_type_id ? rhs.actor_ : nullptr,
-		rhs.type_id() == rhs_type_id ? rhs.pimpl_ : nullptr
-	)
-{}
+	link(rhs)
+{
+	if(type_id() != rhs_type_id) reset();
+}
 
 link::link(std::string name, sp_obj data, Flags f) :
 	link(hard_link{std::move(name), std::move(data), f})
 {}
-
-link::link(const link& rhs) :
-	link(rhs.actor_, rhs.pimpl_)
-{}
-
-auto link::operator=(const link& rhs) -> link& {
-	link(rhs).swap(*this);
-	return *this;
-}
 
 auto link::is_nil() const -> bool {
 	return pimpl_ == nil_link::pimpl();
@@ -82,7 +60,7 @@ auto link::is_nil() const -> bool {
 
 auto link::reset() -> void {
 	if(!is_nil())
-		link{}.swap(*this);
+		*this = nil_link::nil_engine();
 }
 
 auto link::pimpl() const -> link_impl* {
@@ -99,10 +77,6 @@ auto link::start_engine() -> bool {
 
 auto link::clone(bool deep) const -> link {
 	return { pimpl()->clone(deep) };
-}
-
-auto link::factor() const -> sp_scoped_actor {
-	return pimpl()->factor(this);
 }
 
 auto link::home() const -> const caf::group& {

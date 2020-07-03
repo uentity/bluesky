@@ -10,6 +10,8 @@
 
 #include "common.h"
 
+#include <caf/scoped_actor.hpp>
+
 #include <functional>
 
 NAMESPACE_BEGIN(blue_sky::tree)
@@ -45,7 +47,6 @@ private:
 
 	protected:
 		weak_ptr_base() = default;
-		weak_ptr_base(const sp_ahandle&, const sp_engine_impl&);
 		weak_ptr_base(const engine&);
 
 		/// assign from engine-based tree handle
@@ -68,9 +69,7 @@ public:
 		weak_ptr() = default;
 
 		/// construct from item
-		weak_ptr(const Item& src) :
-			weak_ptr_base{src.actor_, src.pimpl_}
-		{}
+		weak_ptr(const Item& src) : weak_ptr_base{src} {}
 
 		/// assign from item
 		auto operator=(const Item& rhs) -> weak_ptr& {
@@ -97,10 +96,24 @@ public:
 
 	auto swap(engine& rhs) noexcept -> void;
 
-protected:
+	/// get managed requester that can be used to talk with engine actor
+	/// [NOTE] shared_ptr is used because `scoped_actor` cannot be copied or moved
+	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
+	auto factor() const -> sp_scoped_actor;
+
+	/// special members
 	engine(caf::actor engine_actor, sp_engine_impl pimpl);
 	engine(sp_ahandle ah, sp_engine_impl pimpl);
+	// [NOTE] engine is NOT designed for polymorphic usage!
+	~engine();
 
+	engine(const engine&) = default;
+	auto operator=(const engine&) -> engine&;
+
+	engine(engine&&);
+	auto operator=(engine&&) -> engine&;
+
+protected:
 	/// return engine's raw (dynamic-typed) actor handle
 	// [NOTE] uncheked access
 	auto raw_actor() const noexcept -> const caf::actor&;

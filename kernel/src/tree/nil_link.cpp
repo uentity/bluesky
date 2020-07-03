@@ -131,10 +131,10 @@ struct nil_link::self_impl : link_impl {
 		id_ = nil_uid;
 	}
 
-	LIMPL_TYPE_DECL
+	ENGINE_TYPE_DECL
 };
 
-LIMPL_TYPE_DEF(nil_link::self_impl, "__nil_link__")
+ENGINE_TYPE_DEF(nil_link::self_impl, "__nil_link__")
 
 ///////////////////////////////////////////////////////////////////////////////
 //  nil link

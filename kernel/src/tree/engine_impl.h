@@ -53,8 +53,8 @@ public:
 	/// return engine's type ID
 	virtual auto type_id() const -> std::string_view = 0;
 
-	auto factor(const void* L) -> sp_scoped_actor;
-	auto release_factor(const void* L) -> void;
+	auto factor(const engine* L) -> sp_scoped_actor;
+	auto release_factor(const engine* L) -> void;
 	auto release_factors() -> void;
 
 	/// this function can be shadowed in derived handle impl class
@@ -84,7 +84,7 @@ public:
 
 private:
 	// requesters pool { link addr -> `scoped_actor` instance }
-	using rpool_t = std::unordered_map<const void*, sp_scoped_actor>;
+	using rpool_t = std::unordered_map<const engine*, sp_scoped_actor>;
 	rpool_t rpool_;
 
 	blue_sky::detail::sharded_mutex<engine_impl_mutex> guard_;

@@ -88,16 +88,12 @@ public:
 	/// makes hard link
 	link(std::string name, sp_obj data, Flags f = Plain);
 
-	virtual ~link();
-
-	/// copy ctor & assignment
-	link(const link& rhs);
-	auto operator=(const link& rhs) -> link&;
-
-	/// [NOTE] move sematics is doable but disabled
+	/// [NOTE] move sematics is doable but disabled (by explicit copy ctor)
 	/// reason: moved from object MUST be immediately reset into nil link to not break invariants
 	/// and that operation alone is equivalent to copy ctor/assignment call
 	/// so, there's just no worth in it
+	link(const link&) = default;
+	auto operator=(const link&) -> link& = default;
 
 	/// makes link nil
 	auto reset() -> void;
@@ -112,11 +108,6 @@ public:
 	auto actor() const -> actor_type {
 		return caf::actor_cast<actor_type>(raw_actor());
 	}
-
-	/// get managed requester that can be used to talk with link's actor iface
-	/// [NOTE] shared_ptr is used because `scoped_actor` cannot be copied or moved
-	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
-	auto factor() const -> sp_scoped_actor;
 
 	/// get link's home group
 	auto home() const -> const caf::group&;
@@ -263,8 +254,7 @@ protected:
 	auto propagate_handle() const -> result_or_err<sp_node>;
 
 private:
-	link(sp_ahandle ah, sp_engine_impl pimpl);
-	link(engine&&);
+	link(engine);
 };
 
 /// handy aliases
