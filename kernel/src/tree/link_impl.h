@@ -40,9 +40,8 @@ inline const auto nil_otid = blue_sky::defaults::nil_type_name;
  *  base link impl
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API link_impl :
-	public std::enable_shared_from_this<link_impl>,
-	public bs_detail::sharded_mutex<engine_impl_mutex>,
-	public engine::impl
+	public engine::impl,
+	public bs_detail::sharded_mutex<engine_impl_mutex>
 {
 public:
 	using sp_limpl = std::shared_ptr<link_impl>;

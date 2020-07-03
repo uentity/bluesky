@@ -30,6 +30,8 @@ node_impl::node_impl(const node_impl& rhs, node* super) :
 	*this = rhs;
 }
 
+ENGINE_TYPE_DEF(node_impl, "node")
+
 auto node_impl::operator=(const node_impl& rhs) -> node_impl& {
 	// [TODO] fix this in safer way after node is refactored
 	auto& raw_leafs = links_.get<Key_tag<Key::AnyOrder>>();

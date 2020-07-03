@@ -135,7 +135,8 @@
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
     <ClInclude Include="kernel\src\tree\link_actor.h" />
     <ClInclude Include="kernel\src\tree\link_impl.h" />
-    <ClInclude Include="kernel\src\tree\nil_link.h" />
+    <ClInclude Include="kernel\src\tree\nil_engine.h" />
+    <ClInclude Include="kernel\src\tree\nil_engine_impl.h" />
     <ClInclude Include="kernel\src\tree\node_actor.h" />
     <ClInclude Include="kernel\src\tree\node_extraidx_actor.h" />
     <ClInclude Include="kernel\src\tree\node_impl.h" />
@@ -202,6 +203,7 @@
     <ClCompile Include="kernel\src\tree\link_events.cpp" />
     <ClCompile Include="kernel\src\tree\link_impl.cpp" />
     <ClCompile Include="kernel\src\tree\nil_link.cpp" />
+    <ClCompile Include="kernel\src\tree\nil_node.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
     <ClCompile Include="kernel\src\tree\node_actor.cpp" />
     <ClCompile Include="kernel\src\tree\node_ack_behavior.cpp" />

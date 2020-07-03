@@ -7,15 +7,13 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include "nil_link.h"
-#include "link_actor.h"
+#include "nil_engine.h"
+#include "nil_engine_impl.h"
+#include "link_impl.h"
 
 #include <bs/defaults.h>
-#include <bs/kernel/radio.h>
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
-
-#include <atomic>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
@@ -72,45 +70,9 @@ struct nil_link::self_actor : caf::event_based_actor {
 ///////////////////////////////////////////////////////////////////////////////
 //  nil link impl
 //
-struct nil_link::self_impl : link_impl {
-	using super = link_impl;
+struct nil_link::self_impl : nil_engine_impl<nil_link, link_impl> {
+	using super = nil_engine_impl<nil_link, link_impl>;
 	using super::super;
-
-	struct nil_engine : public engine {
-		friend struct nil_link;
-		using engine::engine;
-
-		nil_engine(caf::actor engine_actor, sp_engine_impl pimpl) :
-			engine(std::move(engine_actor), std::move(pimpl)),
-			online_(bool(pimpl_))
-		{}
-
-		auto reset() -> void {
-			online_ = false;
-			static_cast<link_impl&>(*pimpl_).release_factors();
-		}
-
-		auto stop(bool wait_exit) -> void {
-			if(online_) {
-				auto nil_actor = raw_actor();
-				auto waiter = caf::scoped_actor{KRADIO.system(), false};
-				waiter->send_exit(nil_actor, caf::exit_reason::kill);
-				if(wait_exit)
-					waiter->wait_for(nil_actor);
-			}
-		}
-
-	private:
-		std::atomic<bool> online_;
-	};
-
-	static auto internals() -> nil_engine& {
-		static auto self_ = nil_engine(
-			kernel::radio::system().spawn<nil_link::self_actor>(),
-			std::make_shared<nil_link::self_impl>()
-		);
-		return self_;
-	}
 
 	// always return same actor from internals
 	auto spawn_actor(sp_limpl) const -> caf::actor override {

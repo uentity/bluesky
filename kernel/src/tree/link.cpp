@@ -9,7 +9,7 @@
 
 #include "engine_impl.h"
 #include "link_actor.h"
-#include "nil_link.h"
+#include "nil_engine.h"
 
 #include <bs/log.h>
 #include <bs/kernel/radio.h>

@@ -30,7 +30,7 @@ enum class EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
 /*-----------------------------------------------------------------------------
  *  node_impl
  *-----------------------------------------------------------------------------*/
-class BS_HIDDEN_API node_impl {
+class BS_HIDDEN_API node_impl : public engine::impl {
 public:
 	friend class node;
 
@@ -349,6 +349,8 @@ public:
 
 	// setup home group ID + optionally invite actor
 	auto home(std::string gid, bool silent = false) -> caf::group&;
+
+	ENGINE_TYPE_DECL
 
 private:
 	node* super_;

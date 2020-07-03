@@ -8,15 +8,13 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include "link.h"
+#include "errors.h"
 #include "../objbase.h"
-#include "../tree/errors.h"
 #include "../detail/is_container.h"
 #include "../detail/enumops.h"
-#include "link.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
-
-class node_actor;
 
 class BS_API node : public objbase {
 public:
@@ -25,6 +23,7 @@ public:
 	using insert_status = std::pair<existing_index, bool>;
 	using sp_node = std::shared_ptr<node>;
 	using sp_cnode = std::shared_ptr<const node>;
+	using engine_impl = node_impl;
 
 	/// Interface of node actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
