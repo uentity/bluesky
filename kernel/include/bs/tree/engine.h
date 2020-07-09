@@ -88,6 +88,9 @@ public:
 	auto operator!=(const engine& rhs) const -> bool;
 	auto operator<(const engine& rhs) const -> bool;
 
+	/// returns engine's string type ID
+	auto type_id() const -> std::string_view;
+
 	/// hash for appropriate containers
 	auto hash() const noexcept -> std::size_t;
 

@@ -135,12 +135,17 @@ auto engine::hash() const noexcept -> std::size_t {
 }
 
 auto engine::swap(engine& rhs) noexcept -> void {
-	std::swap(actor_, rhs.actor_);
-	std::swap(pimpl_, rhs.pimpl_);
+	using std::swap;
+	swap(actor_, rhs.actor_);
+	swap(pimpl_, rhs.pimpl_);
 }
 
 auto engine::factor() const -> sp_scoped_actor {
 	return pimpl_->factor(this);
+}
+
+auto engine::type_id() const -> std::string_view {
+	return pimpl_->type_id();
 }
 
 NAMESPACE_END(blue_sky::tree)

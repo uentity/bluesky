@@ -83,10 +83,6 @@ auto link::home() const -> const caf::group& {
 	return pimpl()->home;
 }
 
-auto link::type_id() const -> std::string_view {
-	return pimpl()->type_id();
-}
-
 auto link::id() const -> lid_type {
 	return pimpl()->id_;
 }

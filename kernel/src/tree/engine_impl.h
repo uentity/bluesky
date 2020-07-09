@@ -21,9 +21,9 @@
 static auto type_id_() -> std::string_view;        \
 auto type_id() const -> std::string_view override;
 
-#define ENGINE_TYPE_DEF(limpl_class, typename)                               \
-auto limpl_class::type_id_() -> std::string_view { return typename; }        \
-auto limpl_class::type_id() const -> std::string_view { return type_id_(); }
+#define ENGINE_TYPE_DEF(eimpl_class, typename)                               \
+auto eimpl_class::type_id_() -> std::string_view { return typename; }        \
+auto eimpl_class::type_id() const -> std::string_view { return type_id_(); }
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
