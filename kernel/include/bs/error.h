@@ -250,4 +250,15 @@ inline constexpr auto perfect = error::success_tag{};
 template<class T> using result_or_err = tl::expected<T, error>;
 template<class T> using result_or_errbox = tl::expected<T, error::box>;
 
+/// denote unexpected error
+template<typename... Args>
+inline auto unexpected_err(Args&&... args) noexcept {
+	return tl::make_unexpected(error(std::forward<Args>(args)...));
+}
+
+template<typename... Args>
+inline auto unexpected_err_quiet(Args&&... args) noexcept {
+	return tl::make_unexpected(error::quiet(std::forward<Args>(args)...));
+}
+
 NAMESPACE_END(blue_sky)
