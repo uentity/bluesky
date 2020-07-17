@@ -54,6 +54,8 @@ class BS_API error {
 public:
 	// indicates that no error happened
 	struct success_tag {};
+	// indicates that operation failed for some reason
+	struct fail_tag {};
 
 	/// registers inherited error category automatically
 	template<typename Category>
@@ -109,6 +111,8 @@ public:
 	error(Ts&&... args) noexcept : error(IsQuiet::No, std::forward<Ts>(args)...) {}
 	/// construct quiet error with OK status
 	error(success_tag) noexcept;
+	/// construct quiet error with Happened status
+	error(fail_tag) noexcept;
 
 	/// copy & move ctors
 	error(const error& rhs) = default;
@@ -243,8 +247,10 @@ inline auto success(Args&&... args) noexcept -> error {
 	return error::quiet(std::forward<Args>(args)...);
 }
 
-/// signle value indicating correct (no error) result
+/// correct (no error) result indicator
 inline constexpr auto perfect = error::success_tag{};
+/// correct (no error) result indicator
+inline constexpr auto quiet_fail = error::fail_tag{};
 
 /// carries result (of type T) OR error
 template<class T> using result_or_err = tl::expected<T, error>;
