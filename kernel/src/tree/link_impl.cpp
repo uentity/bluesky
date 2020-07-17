@@ -34,19 +34,23 @@ auto link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<link_actor>(std::move(limpl));
 }
 
-auto link_impl::propagate_handle(const link& super) -> result_or_err<sp_node> {
-	return actorf<result_or_errbox<sp_node>>(super, a_lnk_dnode(), false)
-	.and_then( [&](sp_node&& N) -> result_or_err<sp_node> {
-		super.self_handle_node(N);
-		return std::move(N);
-	} );
+auto link_impl::propagate_handle(const link& super) -> node_or_err {
+	if(auto obj = data(unsafe)) {
+		if(auto N = obj->data_node()) {
+			super.self_handle_node(N);
+			return N;
+		}
+		return unexpected_err_quiet(Error::NotANode);
+	}
+	return unexpected_err_quiet(Error::EmptyData);
 }
 
-auto link_impl::set_node_handle(const link& h, const sp_node& N) -> void {
-	h.self_handle_node(N);
+auto link_impl::owner() const -> node {
+	auto guard = lock(detail::shared);
+	return owner_.lock();
 }
 
-auto link_impl::reset_owner(const sp_node& new_owner) -> void {
+auto link_impl::reset_owner(const node& new_owner) -> void {
 	auto guard = lock();
 	owner_ = new_owner;
 }

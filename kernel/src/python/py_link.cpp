@@ -66,9 +66,21 @@ void py_bind_link(py::module& m) {
 	;
 
 	///////////////////////////////////////////////////////////////////////////////
+	//  engine
+	//
+	py::class_<engine>(m, "engine")
+		.def_property_readonly("type_id", &engine::type_id)
+		.def_property_readonly("home_id", &engine::home_id)
+		.def(py::self == py::self)
+		.def(py::self != py::self)
+		.def(py::self < py::self)
+		.def(hash(py::self))
+	;
+
+	///////////////////////////////////////////////////////////////////////////////
 	//  Base link
 	//
-	py::class_<link> link_pyface(m, "link");
+	auto link_pyface = py::class_<link, engine>(m, "link");
 
 	// [TODO] remove it later (added for compatibility)
 	link_pyface.attr("Flags") = m.attr("Flags");
@@ -80,11 +92,9 @@ void py_bind_link(py::module& m) {
 	// link base class
 	link_pyface
 		.def(py::init())
+		.def(py::init<std::string, sp_obj, Flags>(), "name"_a, "data"_a, "f"_a = Plain)
+		.def(py::init<std::string, node, Flags>(), "name"_a, "folder"_a, "f"_a = Plain)
 
-		.def(py::self == py::self)
-		.def(py::self != py::self)
-		.def(py::self < py::self)
-		.def(hash(py::self))
 		.def("__bool__", [](const link& self) { return (bool)self; }, py::is_operator())
 
 		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link", nogil)
@@ -105,7 +115,7 @@ void py_bind_link(py::module& m) {
 
 		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = true, nogil)
 		.def("data_node", py::overload_cast<>(&link::data_node, py::const_), nogil)
-		.def("data_node", py::overload_cast<link::process_data_cb, bool>(&link::data_node, py::const_),
+		.def("data_node", py::overload_cast<link::process_dnode_cb, bool>(&link::data_node, py::const_),
 			"f"_a, "high_priority"_a = false, nogil
 		)
 		.def("data_node", py::overload_cast<unsafe_t>(&link::data_node, py::const_), "Direct access to link's data node cache")
@@ -142,7 +152,6 @@ void py_bind_link(py::module& m) {
 		)
 
 		.def_property_readonly("is_nil", [](const link& self) { return self.is_nil(); })
-		.def_property_readonly("type_id", &link::type_id)
 		.def_property_readonly("id", [](const link& L) { return to_string(L.id()); })
 		.def_property_readonly("owner", &link::owner)
 
@@ -157,37 +166,17 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("info_unsafe", [](const link& L) { return L.info(unsafe); })
 
 		.def("is_node", &link::is_node, "Check if pointee is a node", nogil)
-		.def("data_node_gid", py::overload_cast<>(&link::data_node_gid, py::const_),
+		.def("data_node_hid", py::overload_cast<>(&link::data_node_hid, py::const_),
 			"If pointee is a node, return node's actor group ID", nogil)
-		.def("data_node_gid", py::overload_cast<unsafe_t>(&link::data_node_gid, py::const_))
+		.def("data_node_hid", py::overload_cast<unsafe_t>(&link::data_node_hid, py::const_))
 
 		// events subscrition
 		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
 		.def_static("unsubscribe", &link::unsubscribe, "event_cb_id"_a)
 	;
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  link::weak_ptr
-	//
-	py::class_<link::weak_ptr>(link_pyface, "weak_ptr")
-		.def(py::init())
-		.def(py::init<link>())
-
-		.def(py::self == py::self)
-		.def(py::self != py::self)
-		.def(py::self < py::self)
-		.def("__eq__",
-			[](const link::weak_ptr& self, const link& other){ return self == other; },
-			py::is_operator())
-		.def("__neq__",
-			[](const link::weak_ptr& self, const link& other){ return self != other; },
-			py::is_operator()
-		)
-
-		.def("lock", &link::weak_ptr::lock, "Obtain strong link reference")
-		.def("expired", &link::weak_ptr::expired, "Check if this ptr is expired")
-		.def("reset", &link::weak_ptr::reset, "Resets this ptr (makes it expired)")
-	;
+	// link::weak_ptr
+	bind_weak_ptr(link_pyface);
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Derived links
@@ -223,7 +212,7 @@ void py_bind_link(py::module& m) {
 	//  fusion link/iface
 	//
 	py::class_<fusion_link, link>(m, "fusion_link")
-		.def(py::init<std::string, sp_node, sp_fusion, Flags>(),
+		.def(py::init<std::string, sp_obj, sp_fusion, Flags>(),
 			"name"_a, "data"_a, "bridge"_a = nullptr, "flags"_a = Flags::Plain)
 		.def(py::init<std::string, const char*, std::string, sp_fusion, Flags>(),
 			"name"_a, "obj_type"_a, "oid"_a = "", "bridge"_a = nullptr, "flags"_a = Flags::Plain)
@@ -237,7 +226,7 @@ void py_bind_link(py::module& m) {
 			"child_type_id"_a, "wait_if_busy"_a = true, nogil
 		)
 		.def("populate",
-			py::overload_cast<link::process_data_cb, std::string>(&fusion_link::populate, py::const_),
+			py::overload_cast<link::process_dnode_cb, std::string>(&fusion_link::populate, py::const_),
 			"f"_a, "obj_type_id"_a, nogil
 		)
 	;

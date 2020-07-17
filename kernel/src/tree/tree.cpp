@@ -8,7 +8,9 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/tree/tree.h>
+#include <bs/objbase.h>
 #include <bs/uuid.h>
+#include <bs/kernel/types_factory.h>
 #include "tree_impl.h"
 
 #include <set>
@@ -26,7 +28,7 @@ void walk_impl(
 	std::set<lid_type> active_symlinks = {}
 ) {
 	using detail::can_call_dnode;
-	sp_node cur_node;
+	node cur_node;
 	std::list<link> next_nodes;
 	links_v next_leafs;
 	// for each node
@@ -38,14 +40,14 @@ void walk_impl(
 			continue;
 
 		// obtain node from link honoring LazyLoad flag
-		cur_node = (follow_lazy_links || can_call_dnode(N)) ? N.data_node() : nullptr;
+		cur_node = (follow_lazy_links || can_call_dnode(N)) ? N.data_node() : node::nil();
 
 		next_nodes.clear();
 		next_leafs.clear();
 
 		if(cur_node) {
 			// for each link in node
-			for(const auto& l : cur_node->leafs()) {
+			for(const auto& l : cur_node.leafs()) {
 				// collect nodes
 				if((follow_lazy_links || can_call_dnode(l)) && l.is_node()) {
 					next_nodes.push_back(l);
@@ -72,12 +74,12 @@ void walk_impl(
 }
 
 void walk_impl(
-	const std::list<sp_node>& nodes, walk_nodes_fv step_f,
+	const std::list<node>& nodes, walk_nodes_fv step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links,
 	std::set<lid_type> active_symlinks = {}
 ) {
 	using detail::can_call_dnode;
-	std::list<sp_node> next_nodes;
+	std::list<node> next_nodes;
 	links_v next_leafs;
 
 	// for each node
@@ -91,7 +93,7 @@ void walk_impl(
 		lids_v cur_symlinks;
 
 		// for each link in node
-		for(const auto& l : cur_node->leafs()) {
+		for(const auto& l : cur_node.leafs()) {
 			// remember symlinks
 			if(follow_symlinks && l.type_id() == sym_link::type_id_()) {
 				if(active_symlinks.insert(l.id()).second)
@@ -100,7 +102,7 @@ void walk_impl(
 			}
 
 			// collect nodes
-			auto sub_node = follow_lazy_links || can_call_dnode(l) ? l.data_node() : nullptr;
+			auto sub_node = follow_lazy_links || can_call_dnode(l) ? l.data_node() : node::nil();
 			if(sub_node)
 				next_nodes.push_back(sub_node);
 			else
@@ -137,9 +139,9 @@ NAMESPACE_END()
 
 NAMESPACE_BEGIN(detail)
 
-auto walk_down_tree(const std::string& cur_lid, const sp_node& level, Key path_unit) -> link {
+auto walk_down_tree(const std::string& cur_lid, const node& level, Key path_unit) -> link {
 	if(!level) return {};
-	return level->find(cur_lid, path_unit);
+	return level.find(cur_lid, path_unit);
 }
 
 NAMESPACE_END(detail)
@@ -162,7 +164,7 @@ auto abspath(link L, Key path_unit) -> std::string {
 			break;
 		}
 
-		if(( L = parent->handle() ))
+		if(( L = parent.handle() ))
 			parent = L.owner();
 		else
 			parent.reset();
@@ -174,9 +176,9 @@ auto abspath(link L, Key path_unit) -> std::string {
 ///////////////////////////////////////////////////////////////////////////////
 //  find_root & find_root_handle
 //
-auto find_root(link L) -> sp_node {
+auto find_root(link L) -> node {
 	if(auto root = L.owner()) {
-		while(const auto root_h = root->handle()) {
+		while(const auto root_h = root.handle()) {
 			if(auto parent = root_h.owner())
 				root = std::move(parent);
 			else return root;
@@ -187,9 +189,9 @@ auto find_root(link L) -> sp_node {
 }
 
 // [NOTE] avoid `data_node()` call
-auto find_root(sp_node N) -> sp_node {
+auto find_root(node N) -> node {
 	if(N) {
-		while(const auto root_h = N->handle()) {
+		while(const auto root_h = N.handle()) {
 			if(auto parent = root_h.owner())
 				N = std::move(parent);
 			else break;
@@ -203,7 +205,7 @@ NAMESPACE_BEGIN()
 const auto find_root_handle_impl = [](auto L) {
 	if(L) {
 		while(const auto root = L.owner()) {
-			if(auto root_h = root->handle())
+			if(auto root_h = root.handle())
 				L = std::move(root_h);
 			else break;
 		}
@@ -217,8 +219,8 @@ auto find_root_handle(link L) -> link {
 	return find_root_handle_impl(std::move(L));
 }
 
-auto find_root_handle(const sp_node& N) -> link {
-	return find_root_handle_impl(N->handle());
+auto find_root_handle(node N) -> link {
+	return find_root_handle_impl(N.handle());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -231,12 +233,12 @@ std::string convert_path(
 ) {
 	std::vector<std::string> res_path;
 	const auto converter = [&res_path, src_path_unit, dst_path_unit](
-		std::string next_level, const sp_node& cur_level
+		std::string next_level, const node& cur_level
 	) {
 		link res;
 		if(next_level.empty() || next_level == "." || next_level == "..")
 			res_path.emplace_back(std::move(next_level));
-		else if(auto next = cur_level->find(next_level, src_path_unit)) {
+		else if(auto next = cur_level.find(next_level, src_path_unit)) {
 			res = std::move(next);
 			res_path.emplace_back(link2path_unit(res, dst_path_unit));
 		}
@@ -245,7 +247,7 @@ std::string convert_path(
 
 	// do conversion
 	boost::trim(src_path);
-	if(detail::deref_path_impl<true>(src_path, std::move(start), nullptr, follow_lazy_links, converter)) {
+	if(detail::deref_path_impl<true>(src_path, std::move(start), node::nil(), follow_lazy_links, converter)) {
 		return boost::join(res_path, "/");
 	}
 	return "";
@@ -258,11 +260,11 @@ link deref_path(
 	const std::string& path, link start, Key path_unit, bool follow_lazy_links
 ) {
 	return detail::deref_path_impl(
-		path, std::move(start), nullptr, follow_lazy_links, detail::gen_walk_down_tree(path_unit)
+		path, std::move(start), node::nil(), follow_lazy_links, detail::gen_walk_down_tree(path_unit)
 	);
 }
 link deref_path(
-	const std::string& path, sp_node start, Key path_unit, bool follow_lazy_links
+	const std::string& path, node start, Key path_unit, bool follow_lazy_links
 ) {
 	return detail::deref_path_impl(
 		path, {}, std::move(start), follow_lazy_links, detail::gen_walk_down_tree(path_unit)
@@ -280,17 +282,17 @@ auto walk(
 }
 
 auto walk(
-	const sp_node& root, walk_links_fv step_f,
+	const node& root, walk_links_fv step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links
 ) -> void {
 	if(!root) return;
-	auto hr = root->handle();
-	if(!hr) hr = hard_link("/", root);
+	auto hr = root.handle();
+	if(!hr) hr = hard_link("/", std::make_shared<objnode>(root));
 	walk_impl({std::move(hr)}, step_f, topdown, follow_symlinks, follow_lazy_links);
 }
 
 auto walk(
-	sp_node root, walk_nodes_fv step_f,
+	node root, walk_nodes_fv step_f,
 	bool topdown, bool follow_symlinks, bool follow_lazy_links
 ) -> void {
 	walk_impl({std::move(root)}, step_f, topdown, follow_symlinks, follow_lazy_links);
@@ -300,14 +302,15 @@ auto walk(
 //  misc
 //
 auto make_root_link(
-	const std::string& link_type, std::string name, sp_node root_node
+	std::string_view link_type, std::string name, sp_obj root_obj
 ) -> link {
-	if(!root_node) root_node = std::make_shared<node>();
+	if(!root_obj) root_obj = std::make_shared<objnode>();
 	// create link depending on type
 	if(link_type == fusion_link::type_id_())
-		return link::make_root<fusion_link>(std::move(name), std::move(root_node));
-	else
-		return link::make_root<hard_link>(std::move(name), std::move(root_node));
+		return link::make_root<fusion_link>(std::move(name), std::move(root_obj));
+	else if(link_type == hard_link::type_id_())
+		return link::make_root<hard_link>(std::move(name), std::move(root_obj));
+	return link{};
 }
 
 NAMESPACE_END(blue_sky::tree)

@@ -13,6 +13,7 @@
 #include <bs/detail/sharded_mutex.h>
 
 #include <caf/detail/shared_spinlock.hpp>
+#include <caf/group.hpp>
 
 #include <unordered_map>
 
@@ -47,12 +48,21 @@ public:
 	using sp_engine_impl = std::shared_ptr<impl>;
 	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
 
+	// engine home group
+	caf::group home;
+
+	auto swap(impl& rhs) -> void;
+
 	// required, `engine` holds a pointer to `impl`
 	virtual ~impl() = default;
 
 	/// return engine's type ID
 	virtual auto type_id() const -> std::string_view = 0;
 
+	/// get engine's home group ID (empty for invalid / not started home)
+	auto home_id() const -> std::string;
+
+	/// requesters (scoped_actor instances) management
 	auto factor(const engine* L) -> sp_scoped_actor;
 	auto release_factor(const engine* L) -> void;
 	auto release_factors() -> void;
@@ -67,7 +77,7 @@ public:
 	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
 	static auto actorf(const Handle& H, caf::duration timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
-			*get_impl(H).factor(&H), Handle::actor(H), timeout, std::forward<Args>(args)...
+			*get_impl(H).factor(&H), Handle::engine_impl::actor(H), timeout, std::forward<Args>(args)...
 		);
 	}
 

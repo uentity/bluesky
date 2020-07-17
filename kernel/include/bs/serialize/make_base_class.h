@@ -30,14 +30,14 @@ NAMESPACE_END(detail)
 
 template<typename Base, typename Derived, typename Archive>
 inline auto make_base_class(Archive& ar, Derived const* derived) {
-	if constexpr(std::is_same_v<Base, objbase> || std::is_same_v<Base, tree::node>) {
+	if constexpr(std::is_same_v<Base, objbase> || std::is_same_v<Base, objnode>) {
 		// get registered formatter for given object
 		bool stores_node = true;
 		if(auto frm = get_obj_formatter(static_cast<objbase const*>(derived))) {
 			// formatter registered => we're in process of tree save/load via Tee FS archive =>
 			// objbase metadata is already saved
 			if constexpr(std::is_same_v<Base, objbase>)
-				return cereal::base_class<Base>((Derived const*)nullptr);
+				return cereal::base_class<Base>(static_cast<Derived const*>(nullptr));
 			stores_node = frm->stores_node;
 		}
 		return cereal::base_class<Base>(stores_node ? derived : nullptr);
@@ -47,14 +47,14 @@ inline auto make_base_class(Archive& ar, Derived const* derived) {
 
 template<typename Base, typename Derived, typename Archive>
 inline auto make_virtual_base_class(Archive& ar, Derived const* derived) {
-	if constexpr(std::is_same_v<Base, objbase> || std::is_same_v<Base, tree::node>) {
+	if constexpr(std::is_same_v<Base, objbase> || std::is_same_v<Base, objnode>) {
 		// get registered formatter for given object
 		bool stores_node = true;
 		if(auto frm = get_obj_formatter(static_cast<objbase const*>(derived))) {
 			// formatter registered => we're in process of tree save/load via Tee FS archive =>
 			// objbase metadata is already saved
 			if constexpr(std::is_same_v<Base, objbase>)
-				return cereal::virtual_base_class<Base>((Derived const*)nullptr);
+				return cereal::virtual_base_class<Base>(static_cast<Derived const*>(nullptr));
 			stores_node = frm->stores_node;
 		}
 		return cereal::virtual_base_class<Base>(stores_node ? derived : nullptr);

@@ -23,7 +23,7 @@
 #include <caf/detail/shared_spinlock.hpp>
 
 #define LINK_TYPE_DEF(lnk_class, limpl_class, typename)                            \
-ENGINE_TYPE_DEF(limpl_class, typename)                                              \
+ENGINE_TYPE_DEF(limpl_class, typename)                                             \
 auto lnk_class::type_id_() -> std::string_view { return limpl_class::type_id_(); }
 
 #define LINK_CONVERT_TO(lnk_class)                               \
@@ -84,16 +84,19 @@ public:
 	// complete private actor type
 	using actor_type = primary_actor_type::extend_with<ack_actor_type>;
 
+	// engine::impl::actorf() will resolve actor type using this function
+	template<typename Link>
+	static auto actor(const Link& L) {
+		// [NOTE] return private (extended) interface
+		return caf::actor_cast<typename Link::engine_impl::actor_type>(L.raw_actor());
+	}
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  methods
 	//
 	link_impl();
 	link_impl(std::string name, Flags f);
 	virtual ~link_impl();
-
-	static auto actor(const link& L) {
-		return caf::actor_cast<actor_type>(L.raw_actor());
-	}
 
 	/// spawn raw actor corresponding to this impl type
 	virtual auto spawn_actor(sp_limpl limpl) const -> caf::actor;
@@ -102,7 +105,7 @@ public:
 	virtual auto clone(bool deep = false) const -> sp_limpl = 0;
 
 	/// download pointee data
-	virtual auto data() -> result_or_err<sp_obj> = 0;
+	virtual auto data() -> obj_or_err = 0;
 	/// return cached pointee data (if any) - default impl calls `data()`
 	virtual auto data(unsafe_t) -> sp_obj;
 
@@ -111,11 +114,12 @@ public:
 	virtual auto get_inode() -> result_or_err<inodeptr>;
 
 	// if pointee is a node - set node's handle to self and return pointee
-	virtual auto propagate_handle(const link& L) -> result_or_err<sp_node>;
-	static auto set_node_handle(const link& h, const sp_node& N) -> void;
+	// [NOTE] unsafe -- operates directly on data
+	virtual auto propagate_handle(const link& L) -> node_or_err;
 
-	/// switch link's owner
-	auto reset_owner(const sp_node& new_owner) -> void;
+	/// manipulate with owner (protected by mutex)
+	auto owner() const -> node;
+	auto reset_owner(const node& new_owner) -> void;
 
 	auto req_status(Req request) const -> ReqStatus;
 
@@ -137,11 +141,7 @@ public:
 	std::string name_;
 	Flags flags_;
 
-	// keep local link group
-	caf::group home;
-
-	/// owner node
-	std::weak_ptr<tree::node> owner_;
+	sp_obj data_;
 
 	/// status of operations
 	struct status_handle {
@@ -149,6 +149,10 @@ public:
 		mutable engine_impl_mutex guard;
 	};
 	status_handle status_[2];
+
+private:
+	/// owner node
+	node::weak_ptr owner_;
 };
 using sp_limpl = link_impl::sp_limpl;
 
@@ -179,7 +183,8 @@ struct BS_HIDDEN_API hard_link_impl : ilink_impl {
 
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
-	auto data() -> result_or_err<sp_obj> override;
+	auto data() -> obj_or_err override;
+	auto data(unsafe_t) -> sp_obj override;
 	auto set_data(sp_obj obj) -> void;
 
 	ENGINE_TYPE_DECL
@@ -197,10 +202,11 @@ struct BS_HIDDEN_API weak_link_impl : ilink_impl {
 
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
-	auto data() -> result_or_err<sp_obj> override;
+	auto data() -> obj_or_err override;
+	auto data(unsafe_t) -> sp_obj override;
 	auto set_data(const sp_obj& obj) -> void;
 
-	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
+	auto propagate_handle(const link&) -> node_or_err override;
 
 	ENGINE_TYPE_DECL
 };
@@ -217,11 +223,11 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
-	auto data() -> result_or_err<sp_obj> override;
+	auto data() -> obj_or_err override;
 
-	auto target() const -> result_or_err<link>;
+	auto target() const -> link_or_err;
 
-	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
+	auto propagate_handle(const link&) -> node_or_err override;
 
 	ENGINE_TYPE_DECL
 };

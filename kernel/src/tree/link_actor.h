@@ -62,8 +62,8 @@ public:
 	template<typename... Args>
 	auto forward_up(Args&&... args) -> void {
 		// link forward messages directly to owner's home group
-		if(auto master = impl.owner_.lock())
-			send(master->home(), std::forward<Args>(args)...);
+		if(auto master = impl.owner())
+			send(master.home(), std::forward<Args>(args)...);
 	}
 
 	// forward 'ack' message to upper level, auto prepend it with this link ID info
@@ -77,7 +77,7 @@ public:
 	virtual auto data_ex(obj_processor_f cb, ReqOpts opts) -> void;
 
 	// return tree::node if contained object is a node, never returns invalid (NULL) sp_obj
-	using node_processor_f = std::function< void(result_or_errbox<sp_node>) >;
+	using node_processor_f = std::function< void(node_or_errbox) >;
 	virtual auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void;
 
 	// parts of behavior
@@ -115,9 +115,9 @@ struct BS_HIDDEN_API fast_link_actor : public link_actor {
 		// get inode
 		caf::replies_to<a_lnk_inode>::with<result_or_errbox<inodeptr>>,
 		// get data
-		caf::replies_to<a_lnk_data, bool>::with<result_or_errbox<sp_obj>>,
+		caf::replies_to<a_data, bool>::with<result_or_errbox<sp_obj>>,
 		// get data node
-		caf::replies_to<a_lnk_dnode, bool>::with<result_or_errbox<sp_node>>
+		caf::replies_to<a_data_node, bool>::with<node_or_errbox>
 	>;
 
 	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;

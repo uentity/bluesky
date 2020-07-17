@@ -11,13 +11,12 @@
 #include <bs/atoms.h>
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
+#include <bs/tree/tree.h>
 #include <bs/serialize/serialize.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::on_serialized_f)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::link)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::error::box)
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
@@ -137,7 +136,7 @@ auto load_actor(
 ) -> caf::behavior {
 	return {
 		[ar, filename = std::move(filename), cb = std::move(cb)](a_apply) mutable
-		-> result_or_errbox<link> {
+		-> link_or_errbox {
 			// launch work
 			link r;
 			auto er = ar == TreeArchive::FS ? load_fs(r, filename) : load_generic(r, filename, ar);
@@ -184,7 +183,7 @@ BS_API auto save_tree(
 /*-----------------------------------------------------------------------------
  *  tree load impl
  *-----------------------------------------------------------------------------*/
-auto load_tree(std::string filename, TreeArchive ar) -> result_or_err<link> {
+auto load_tree(std::string filename, TreeArchive ar) -> link_or_err {
 	link r;
 	auto er = ar == TreeArchive::FS ? load_fs(r, filename) : load_generic(r, filename, ar);
 	if(er.ok())
@@ -201,7 +200,7 @@ auto load_tree(std::string filename, TreeArchive ar) -> result_or_err<link> {
 	//);
 
 	//// wait for result
-	//return actorf<result_or_errbox<link>>(Af, a_apply());
+	//return actorf<link_or_errbox>(Af, a_apply());
 }
 
 auto load_tree(

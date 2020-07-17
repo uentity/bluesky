@@ -126,6 +126,8 @@ return {
 
 	[=](a_home) { return impl.home; },
 
+	[=](a_home_id) { return impl.home_id(); },
+
 	[=](a_impl) -> sp_limpl {
 		return pimpl_;
 	},
@@ -141,7 +143,7 @@ return {
 		// [NOTE] assume that if status is OK then getting data is fast (data is cached)
 		auto res = std::string{};
 		data_ex(
-			[&](result_or_errbox<sp_obj> obj) mutable {
+			[&](obj_or_errbox obj) mutable {
 				res = obj ? obj.value()->id() : nil_oid;
 				adbg(this) << "<- a_lnk_oid: " << res << std::endl;
 			},
@@ -156,7 +158,7 @@ return {
 		auto res = std::string{};
 		//auto tstart = make_timestamp();
 		data_ex(
-			[&](result_or_errbox<sp_obj> obj) mutable {
+			[&](obj_or_errbox obj) mutable {
 				res = obj ? obj.value()->type_id() : nil_otid;
 				adbg(this) << "<- a_lnk_otid: " << res << std::endl;
 			},
@@ -166,19 +168,19 @@ return {
 	},
 
 	// get node's group ID
-	[=](a_node_gid) -> result_or_errbox<std::string> {
-		adbg(this) << "<- a_node_gid" << std::endl;
-		auto res = result_or_err<std::string>{};
-		data_node_ex(
-			[&](result_or_errbox<sp_node> N) {
-				N.map([&](const sp_node& N) {
-					res = N->gid();
-				});
-			},
-			ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke
-		);
-		return res;
-	},
+	//[=](a_node_gid) -> result_or_errbox<std::string> {
+	//	adbg(this) << "<- a_node_gid" << std::endl;
+	//	auto res = result_or_err<std::string>{};
+	//	data_node_ex(
+	//		[&](node_or_errbox N) {
+	//			N.map([&](const node& N) {
+	//				res = N->gid();
+	//			});
+	//		},
+	//		ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke
+	//	);
+	//	return res;
+	//},
 
 	// get name
 	[=](a_lnk_name) -> std::string {
@@ -213,26 +215,26 @@ return {
 	},
 
 	// get data
-	[=](a_lnk_data, bool wait_if_busy) -> caf::result< result_or_errbox<sp_obj> > {
-		adbg(this) << "<- a_lnk_data, status = " <<
+	[=](a_data, bool wait_if_busy) -> caf::result< obj_or_errbox > {
+		adbg(this) << "<- a_data, status = " <<
 			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
-		auto res = make_response_promise< result_or_errbox<sp_obj> >();
+		auto res = make_response_promise< obj_or_errbox >();
 		data_ex(
-			[=](result_or_errbox<sp_obj> obj) mutable { res.deliver(std::move(obj)); },
+			[=](obj_or_errbox obj) mutable { res.deliver(std::move(obj)); },
 			(wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy) //| ReqOpts::Detached
 		);
 		return res;
 	},
 
 	// get data node
-	[=](a_lnk_dnode, bool wait_if_busy) -> caf::result< result_or_errbox<sp_node> > {
-		adbg(this) << "<- a_lnk_dnode, status = " <<
+	[=](a_data_node, bool wait_if_busy) -> caf::result< node_or_errbox > {
+		adbg(this) << "<- a_data_node, status = " <<
 			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
-		auto res = make_response_promise< result_or_errbox<sp_node> >();
+		auto res = make_response_promise< node_or_errbox >();
 		data_node_ex(
-			[=](result_or_errbox<sp_node> N) mutable { res.deliver(std::move(N)); },
+			[=](node_or_errbox N) mutable { res.deliver(std::move(N)); },
 			(wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy) //| ReqOpts::Detached
 		);
 		return res;
@@ -261,40 +263,40 @@ auto fast_link_actor::make_typed_behavior() -> typed_behavior {
 			return impl.get_inode();
 		},
 
-		[=](a_lnk_data, bool) -> result_or_errbox<sp_obj> {
-			adbg(this) << "<- a_lnk_data fast, status = " <<
+		[=](a_data, bool) -> obj_or_errbox {
+			adbg(this) << "<- a_data fast, status = " <<
 				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
 			return pimpl_->data().and_then([](auto&& obj) {
 				return obj ?
-					result_or_errbox<sp_obj>{ std::move(obj) } :
-					tl::make_unexpected(error::quiet(Error::EmptyData));
+					obj_or_errbox(std::move(obj)) :
+					unexpected_err_quiet(Error::EmptyData);
 			});
 
-			//auto res = result_or_errbox<sp_obj>{};
+			//auto res = obj_or_errbox{};
 			//data_ex(
-			//	[&](result_or_errbox<sp_obj> obj) { res = std::move(obj); },
+			//	[&](obj_or_errbox obj) { res = std::move(obj); },
 			//	ReqOpts::WaitIfBusy
 			//);
 			//return res;
 		},
 
-		[=](a_lnk_dnode, bool) -> result_or_errbox<sp_node> {
-			adbg(this) << "<- a_lnk_dnode fast, status = " <<
+		[=](a_data_node, bool) -> node_or_errbox {
+			adbg(this) << "<- a_data_node fast, status = " <<
 				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
 
-			return pimpl_->data().and_then([](auto&& obj) {
-				return obj ?
-					( obj->is_node() ?
-						result_or_err<sp_node>(std::static_pointer_cast<tree::node>(std::move(obj))) :
-						tl::make_unexpected(error::quiet(Error::NotANode))
-					) :
-					tl::make_unexpected(error::quiet(Error::EmptyData));
+			return pimpl_->data().and_then([](const auto& obj) -> node_or_errbox {
+				if(obj) {
+					if(auto n = obj->data_node())
+						return n;
+					return unexpected_err_quiet(Error::NotANode);
+				}
+				return unexpected_err_quiet(Error::EmptyData);
 			});
 
-			//auto res = result_or_errbox<sp_node>();
+			//auto res = node_or_errbox();
 			//data_node_ex(
-			//	[&](result_or_errbox<sp_node> N) { res = std::move(N); },
+			//	[&](node_or_errbox N) { res = std::move(N); },
 			//	ReqOpts::WaitIfBusy
 			//);
 			//return res;

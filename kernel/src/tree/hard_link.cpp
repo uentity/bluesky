@@ -34,19 +34,19 @@ hard_link_impl::hard_link_impl()
 	: super()
 {}
 
-auto hard_link_impl::data() -> result_or_err<sp_obj> { return data_; }
+auto hard_link_impl::data() -> obj_or_err { return data_; }
+
+auto hard_link_impl::data(unsafe_t) -> sp_obj { return data_; }
 
 auto hard_link_impl::set_data(sp_obj obj) -> void {
-	inode_ = make_inode(obj, inode_);
 	if(data_ = std::move(obj); data_) {
 		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK);
-		rs_reset(
-			Req::DataNode, ReqReset::Always,
-			data_->is_node() ? ReqStatus::OK : ReqStatus::Void
-		);
+		if(data_->data_node())
+			rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::OK);
 		//std::cout << "hard link " << to_string(id_) << ", name " << name_ << ": impl created " <<
 		//	(int)status_[0].value << (int)status_[1].value << std::endl;
 	}
+	inode_ = make_inode(data_, inode_);
 }
 
 auto hard_link_impl::clone(bool deep) const -> sp_limpl {
@@ -63,7 +63,15 @@ auto hard_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 //  class
 //
 hard_link::hard_link(std::string name, sp_obj data, Flags f) :
-	super(std::make_shared<hard_link_impl>(std::move(name), data, f))
+	super(std::make_shared<hard_link_impl>(
+		std::move(name), std::move(data), f
+	))
+{}
+
+hard_link::hard_link(std::string name, node folder, Flags f) :
+	super(std::make_shared<hard_link_impl>(
+		std::move(name), std::make_shared<objnode>(std::move(folder)), f
+	))
 {}
 
 hard_link::hard_link() :
@@ -89,23 +97,24 @@ weak_link_impl::weak_link_impl()
 	: super()
 {}
 
-auto weak_link_impl::data() -> result_or_err<sp_obj> {
-	using result_t = result_or_err<sp_obj>;
-	return data_.expired() ?
-		tl::make_unexpected(error::quiet(Error::LinkExpired)) :
-		result_t{ data_.lock() };
+auto weak_link_impl::data() -> obj_or_err {
+	if(data_.expired())
+		return unexpected_err_quiet(Error::LinkExpired);
+	else if(auto obj = data_.lock())
+		return obj;
+	return unexpected_err_quiet(Error::EmptyData);
 }
 
+auto weak_link_impl::data(unsafe_t) -> sp_obj { return data_.lock(); }
+
 auto weak_link_impl::set_data(const sp_obj& obj) -> void {
-	inode_ = make_inode(obj, inode_);
 	if(data_ = obj; obj) {
 		// set status silently
 		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK);
-		rs_reset(
-			Req::DataNode, ReqReset::Always,
-			obj->is_node() ? ReqStatus::OK : ReqStatus::Void
-		);
+		if(obj->data_node())
+			rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::OK);
 	}
+	inode_ = make_inode(obj, inode_);
 }
 
 auto weak_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
@@ -114,12 +123,17 @@ auto weak_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 
 auto weak_link_impl::clone(bool deep) const -> sp_limpl {
 	// cannot make deep copy of object pointee
-	return deep ? nullptr : std::make_shared<weak_link_impl>(name_, data_.lock(), flags_);
+	return std::make_shared<weak_link_impl>(name_, data_.lock(), flags_);
 }
 
-auto weak_link_impl::propagate_handle(const link& super) -> result_or_err<sp_node> {
+auto weak_link_impl::propagate_handle(const link& super) -> node_or_err {
 	// weak link cannot be a node's handle
-	return actorf<result_or_errbox<sp_node>>(super, a_lnk_dnode(), true);
+	return data().and_then([](const sp_obj& obj) -> node_or_err {
+		if(auto N = obj->data_node())
+			return N;
+		return unexpected_err_quiet(Error::NotANode);
+	});
+	//return actorf<node_or_errbox>(super, a_data_node(), true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

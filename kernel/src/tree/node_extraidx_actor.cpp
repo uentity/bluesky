@@ -154,7 +154,7 @@ auto deep_search(
 			continue;
 		// search on next level
 		if(auto next_n = l.data_node()) {
-			auto next_l = deep_search<K>(f, next_n->actor(), key, return_first, active_symlinks);
+			auto next_l = deep_search<K>(f, next_n.actor(), key, return_first, active_symlinks);
 			std::copy(next_l.begin(), next_l.end(), std::back_inserter(res));
 			if(return_first && !res.empty()) return res;
 		}

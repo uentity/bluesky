@@ -13,10 +13,22 @@
 #include "node.h"
 #include "errors.h"
 #include "../detail/function_view.h"
+#include "../detail/enumops.h"
 
 #include <list>
 
 NAMESPACE_BEGIN(blue_sky::tree)
+
+enum class TreeWalkOpts : unsigned {
+	Nil = 0,
+	WalkUp = 1,
+	FollowSymLinks = 2,
+	FollowLazyLinks = 4,
+	HighPriority = 256
+};
+
+inline constexpr auto def_deref_opts = TreeWalkOpts::FollowLazyLinks;
+inline constexpr auto def_walk_opts = TreeWalkOpts::FollowSymLinks;
 
 /*-----------------------------------------------------------------------------
  *  Sync API
@@ -26,13 +38,13 @@ NAMESPACE_BEGIN(blue_sky::tree)
 BS_API auto abspath(link L, Key path_unit = Key::ID) -> std::string;
 
 /// find root node from given link (can call `data_node()` if and only if root handle is passed)
-BS_API auto find_root(link L) -> sp_node;
+BS_API auto find_root(link L) -> node;
 /// ... and from given node (avoids call to `data_node()` at all)
-BS_API auto find_root(sp_node N) -> sp_node;
+BS_API auto find_root(node N) -> node;
 
 /// same, but returns link to root node -- root's handle
 BS_API auto find_root_handle(link L) -> link;
-BS_API auto find_root_handle(const sp_node& N) -> link;
+BS_API auto find_root_handle(node N) -> link;
 
 /// convert path one path representaion to another
 BS_API auto convert_path(
@@ -50,7 +62,7 @@ BS_API link deref_path(
 );
 /// sometimes it may be more convinient
 BS_API link deref_path(
-	const std::string& path, sp_node start, Key path_unit = Key::ID,
+	const std::string& path, node start, Key path_unit = Key::ID,
 	bool follow_lazy_links = true
 );
 
@@ -62,9 +74,9 @@ BS_API void walk(
 );
 
 /// alt walk implementation
-using walk_nodes_fv = function_view<void (const sp_node&, std::list<sp_node>&, std::vector<link>&)>;
+using walk_nodes_fv = function_view<void (node, std::list<node>&, std::vector<link>&)>;
 BS_API void walk(
-	sp_node root, walk_nodes_fv step_f,
+	node root, walk_nodes_fv step_f,
 	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
 );
 
@@ -83,37 +95,37 @@ BS_API auto deref_path(
 /*-----------------------------------------------------------------------------
  *  Misc utility functions
  *-----------------------------------------------------------------------------*/
-// unify access to owner of link or node
+/// unify access to owner of link or node
 inline auto owner(const link& lnk) {
 	return lnk.owner();
 }
 inline auto owner(const link* lnk) {
-	return lnk->owner();
+	return lnk ? owner(*lnk) : node::nil();
+}
+inline auto owner(const node& N) {
+	const auto& h = N.handle();
+	return h ? h.owner() : node::nil();
 }
 inline auto owner(const node* N) {
-	const auto& h = N->handle();
-	return h ? h.owner() : nullptr;
-}
-// for shared ptrs
-template<typename T>
-auto owner(const std::shared_ptr<T>& obj) {
-	return owner(obj.get());
-}
-// with conversion to target type
-template<typename TargetOwner, typename T>
-auto owner_t(T&& obj) {
-	return std::static_pointer_cast<TargetOwner>( owner(std::forward<T>(obj)) );
+	return N ? owner(*N) : node::nil();
 }
 
-/// make root link to node which handle is preset to returned link
+/// produce link to given object, if object contains node it's handle will point to returned link
+/// if `root_obj` is omitted, empty `objnode` will be substituted
 BS_API auto make_root_link(
-	const std::string& link_type, std::string name = "/",
-	sp_node root_node = nullptr
+	std::string_view link_type, std::string name = "/", sp_obj root_obj = nullptr
 ) -> link;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Tree save/load to JSON or binary archive
-//
+/// same as above, but with `root_obj` as first arg and hard link by default
+inline auto make_root_link(sp_obj root_obj, std::string name = "/", std::string_view link_type = {}) {
+	return make_root_link(
+		link_type.empty() ? hard_link::type_id_() : link_type, std::move(name), std::move(root_obj)
+	);
+}
+
+/*-----------------------------------------------------------------------------
+ *  Tree save/load to different archives
+ *-----------------------------------------------------------------------------*/
 enum class TreeArchive { Text, Binary, FS };
 using on_serialized_f = std::function<void(link, error)>;
 
@@ -129,7 +141,7 @@ BS_API auto save_tree(
 
 BS_API auto load_tree(
 	std::string filename, TreeArchive ar = TreeArchive::FS
-) -> result_or_err<link>;
+) -> link_or_err;
 // async load
 BS_API auto load_tree(
 	on_serialized_f callback, std::string filename,

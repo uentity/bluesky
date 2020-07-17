@@ -36,5 +36,14 @@ auto engine::impl::release_factors() -> void {
 	rpool_.clear();
 }
 
+auto engine::impl::home_id() const -> std::string {
+	return home ? home.get()->identifier() : "";
+}
+
+auto engine::impl::swap(impl& rhs) -> void {
+	using std::swap;
+	swap(home, rhs.home);
+	swap(rpool_, rhs.rpool_);
+}
 
 NAMESPACE_END(blue_sky::tree)

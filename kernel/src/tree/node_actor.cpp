@@ -32,7 +32,7 @@ using namespace std::chrono_literals;
 [[maybe_unused]] auto adbg_impl(node_actor* A) -> caf::actor_ostream {
 	auto res = caf::aout(A);
 	res << "[N] ";
-	if(auto pgrp = A->home(unsafe).get())
+	if(auto pgrp = A->impl.home.get())
 		res << "[" << pgrp->identifier() << "]";
 	else
 		res << "[homeless]";
@@ -42,12 +42,17 @@ using namespace std::chrono_literals;
 /*-----------------------------------------------------------------------------
  *  node_actor
  *-----------------------------------------------------------------------------*/
-node_actor::node_actor(caf::actor_config& cfg, sp_nimpl Nimpl)
+node_actor::node_actor(caf::actor_config& cfg, caf::group nhome, sp_nimpl Nimpl)
 	: super(cfg), pimpl_(std::move(Nimpl)), impl([this]() -> node_impl& {
 		if(!pimpl_) throw error{"node actor: bad (null) node impl passed"};
 		return *pimpl_;
 	}())
 {
+	// remember link's local group
+	impl.home = std::move(nhome);
+	if(impl.home)
+		adbg(this) << "joined self group " << impl.home.get()->identifier() << std::endl;
+
 	// exit after kernel
 	KRADIO.register_citizen(this);
 
@@ -84,7 +89,7 @@ auto node_actor::on_exit() -> void {
 
 auto node_actor::goodbye() -> void {
 	adbg(this) << "goodbye" << std::endl;
-	if(auto& H = home(unsafe)) {
+	if(auto& H = impl.home) {
 		send(H, a_bye());
 		leave(H);
 	}
@@ -92,26 +97,6 @@ auto node_actor::goodbye() -> void {
 
 auto node_actor::name() const -> const char* {
 	return "node_actor";
-}
-
-auto node_actor::home() -> caf::group& {
-	return impl.home_ ? impl.home_ : home({});
-}
-auto node_actor::home(unsafe_t) const -> caf::group& {
-	return impl.home_;
-}
-
-auto node_actor::home(std::string gid) -> caf::group& {
-	// [IMPORTANT] pass silent = true to prevent feedback
-	join(impl.home( std::move(gid), true ));
-	return impl.home_;
-}
-
-auto node_actor::gid() -> const std::string& {
-	return home().get()->identifier();
-}
-auto node_actor::gid(unsafe_t) const -> std::string {
-	return impl.home_ ? impl.home_.get()->identifier() : "";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -126,7 +111,7 @@ auto node_actor::insert(
 	return impl.insert(std::move(L), pol, [=](const link& child_L) {
 		// send message that link inserted (with position)
 		if(!silent) send<high_prio>(
-			home(unsafe), a_ack(), this, a_node_insert(),
+			impl.home, a_ack(), this, a_node_insert(),
 			child_L.id(), impl.index(impl.find<Key::ID>(child_L.id())), pol
 		);
 	});
@@ -153,11 +138,11 @@ auto node_actor::insert(
 	if(!silent) {
 		if(res.second) // normal insert
 			send<high_prio>(
-				home(unsafe), a_ack(), this, a_node_insert(), std::move(lid), to_idx, pol
+				impl.home, a_ack(), this, a_node_insert(), std::move(lid), to_idx, pol
 			);
 		else if(to != from) // move
 			send<high_prio>(
-				home(unsafe), a_ack(), this, a_node_insert(), std::move(lid), to_idx, *res_idx
+				impl.home, a_ack(), this, a_node_insert(), std::move(lid), to_idx, *res_idx
 			);
 	}
 	return { to_idx, res.second };
@@ -179,7 +164,7 @@ auto on_erase(const link& L, node_actor& self) {
 
 	// send message that link erased
 	self.send<high_prio>(
-		self.home(unsafe), a_ack(), &self, a_node_erase(), std::move(lids)
+		self.impl.home, a_ack(), &self, a_node_erase(), std::move(lids)
 	);
 }
 
@@ -202,33 +187,16 @@ auto node_actor::erase(const lid_type& victim, EraseOpts opts) -> size_t {
 auto node_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
 	// unconditionally join home group - used after deserialization
-	[=](a_hi) { join(home()); },
+	[=](a_hi) { join(impl.home); },
 
 	[=](a_bye) { if(current_sender() != this) quit(); },
 
-	[=](a_home) { return impl.home_; },
+	[=](a_home) { return impl.home; },
 
-	[=](a_node_gid) -> std::string { return gid(); },
+	[=](a_home_id) -> std::string { return impl.home_id(); },
 
-	// get handle
-	[=](a_node_handle) { return link{ impl.handle() }; },
+	[=](a_node_handle) { return impl.handle(); },
 
-	// set handle
-	[=](a_node_handle, link new_handle) {
-		// remove node from existing owner if it differs from owner of new handle
-		if(const auto old_handle = impl.handle()) {
-			const auto owner = old_handle.owner();
-			if(owner && (!new_handle || owner != new_handle.owner()))
-				owner->erase(old_handle.id());
-		}
-
-		if(new_handle)
-			impl.handle_ = new_handle;
-		else
-			impl.handle_.reset();
-	},
-
-	// get size
 	[=](a_node_size) { return impl.size(); },
 
 	[=](a_node_leafs, Key order) -> caf::result<links_v> {

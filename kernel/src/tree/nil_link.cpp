@@ -29,12 +29,10 @@ struct nil_link::self_actor : caf::event_based_actor {
 	auto make_behavior() -> behavior_type override { return link::actor_type::behavior_type{
 	
 		[=](a_home) -> caf::group { return {}; },
+		[=](a_home_id) -> std::string { return nil_oid; },
 		[=](a_lnk_id) -> lid_type { return nil_uid; },
 		[=](a_lnk_oid) -> std::string { return nil_oid; },
 		[=](a_lnk_otid) -> std::string { return nil_otid; },
-		[=](a_node_gid) -> result_or_errbox<std::string> {
-			return tl::make_unexpected(error{Error::EmptyData});
-		},
 
 		// deny rename
 		[=](a_lnk_name) -> std::string { return defaults::tree::nil_link_name; },
@@ -51,13 +49,13 @@ struct nil_link::self_actor : caf::event_based_actor {
 
 		// all data is null
 		[=](a_lnk_inode) -> result_or_errbox<inodeptr> {
-			return tl::make_unexpected(error{Error::EmptyInode});
+			return unexpected_err(Error::EmptyInode);
 		},
-		[=](a_lnk_data, bool) -> result_or_errbox<sp_obj> {
-			return tl::make_unexpected(error{Error::EmptyData});
+		[=](a_data, bool) -> obj_or_errbox {
+			return unexpected_err(Error::EmptyData);
 		},
-		[=](a_lnk_dnode, bool) -> result_or_errbox<sp_node> {
-			return tl::make_unexpected(error{Error::EmptyData});
+		[=](a_data_node, bool) -> node_or_errbox {
+			return unexpected_err(Error::EmptyData);
 		}
 
 	}.unbox(); }
@@ -83,7 +81,7 @@ struct nil_link::self_impl : nil_engine_impl<nil_link, link_impl> {
 		return nullptr;
 	}
 
-	auto data() -> result_or_err<sp_obj> override {
+	auto data() -> obj_or_err override {
 		return tl::make_unexpected(Error::EmptyData);
 	}
 

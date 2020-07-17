@@ -26,6 +26,9 @@ inline constexpr auto unsafe = unsafe_t{};
 using long_op_t = caf::atom_constant<caf::atom("bs long op")>;
 inline constexpr auto long_op = long_op_t{};
 
+///////////////////////////////////////////////////////////////////////////////
+//  generic BS API
+//
 // discover neighbourhood
 using a_hi = caf::atom_constant<caf::atom("bs hi")>;
 // used to inform others that I'm quit
@@ -38,15 +41,18 @@ using a_apply = caf::atom_constant<caf::atom("bs apply")>;
 using a_impl = caf::atom_constant<caf::atom("bs impl")>;
 // get home group of entity
 using a_home = caf::atom_constant<caf::atom("bs home")>;
+// get home group ID
+using a_home_id = caf::atom_constant<caf::atom("bs home id")>;
+// obtain data (retrive object)
+using a_data = caf::atom_constant<caf::atom("bs data")>;
+// obtain data node (retrive node)
+using a_data_node = caf::atom_constant<caf::atom("bs dnode")>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  link API
 //
 // async invoke `link::data()`
-using a_lnk_data = caf::atom_constant<caf::atom("tl data")>;
 using a_lnk_dcache = caf::atom_constant<caf::atom("tl dcache")>;
-// async invoke `link::data_node()`
-using a_lnk_dnode = caf::atom_constant<caf::atom("tl dnode")>;
 // async invoke `fusion_link::populate()`
 using a_flnk_populate = caf::atom_constant<caf::atom("tfl pull")>;
 using a_flnk_bridge = caf::atom_constant<caf::atom("tfl bridge")>;
@@ -78,7 +84,6 @@ using a_node_erase = caf::atom_constant<caf::atom("tn erase")>;
 using a_node_clear = caf::atom_constant<caf::atom("tn clear")>;
 
 // query node's actor group ID
-using a_node_gid = caf::atom_constant<caf::atom("tn gid")>;
 using a_node_disconnect = caf::atom_constant<caf::atom("tn unplug")>;
 using a_node_handle = caf::atom_constant<caf::atom("tn handle")>;
 using a_node_rearrange = caf::atom_constant<caf::atom("tn rearng")>;

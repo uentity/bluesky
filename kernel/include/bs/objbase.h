@@ -12,6 +12,7 @@
 #include "atoms.h"
 #include "error.h"
 #include "type_descriptor.h"
+#include "tree/node.h"
 
 #include <caf/actor.hpp>
 #include <caf/typed_actor.hpp>
@@ -22,13 +23,10 @@
 
 NAMESPACE_BEGIN(blue_sky)
 
-/// @brief Base class for all BS objects
+/*-----------------------------------------------------------------------------
+ *  Base class of all BS objects
+ *-----------------------------------------------------------------------------*/
 class BS_API objbase : public std::enable_shared_from_this<objbase> {
-	friend class tree::link_impl;
-	friend class tree::link_actor;
-	friend class tree::node;
-	friend class atomizer;
-
 public:
 	/// function that performs any action on this object passed as argument
 	using modificator_f = std::function< error(sp_obj) >;
@@ -42,35 +40,24 @@ public:
 		caf::replies_to<a_apply, closed_modificator_f>::with<error::box>
 	>;
 
-	/// return objects's typed actor handle
-	auto actor() const {
-		return caf::actor_cast<actor_type>(raw_actor());
-	}
-
-	template<typename T>
-	static auto actor(const T& obj) {
-		return caf::actor_cast<typename T::actor_type>(obj.raw_actor());
-	}
-
-	/// get object's home group
-	auto home() const -> const caf::group&;
-
 	/// default ctor that accepts custom ID string
 	/// if ID is empty it will be auto-generated
-	objbase(std::string custom_oid = "");
-	/// default copy ctor
-	objbase(const objbase&);
-	/// default move ctor
-	objbase(objbase&&) = default;
-	// virtual destructor
+	objbase(std::string custom_oid = {});
+
+	/// polymorphic support
 	virtual ~objbase();
 
-	/// default move assignment is fine
-	objbase& operator=(objbase&&) = default;
-	/// copy-assignment - will make a copy with different ID
+	/// will make copy with new unique ID
+	objbase(const objbase&);
 	objbase& operator=(const objbase& rhs);
+	/// default move is fine
+	objbase(objbase&&) = default;
+	objbase& operator=(objbase&&) = default;
 
 	auto swap(objbase& rhs) -> void;
+
+	/// type_descriptor of objbase class
+	static auto bs_type() -> const type_descriptor&;
 
 	/// `shared_from_this()` casted to derived type
 	template<typename Derived>
@@ -87,28 +74,21 @@ public:
 		);
 	}
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  Core API that can't be shadowed in derived types
-	//  [NOTE] using `virtual ... final` trick ('virtuality' will be optimized away by compiler)
-	//
-	/// obtain type ID: for C++ types typeid is type_descriptor.name
-	virtual auto type_id() const -> std::string final;
-	/// obtain object's ID
-	virtual auto id() const -> std::string final;
+	/// return objects's typed actor handle
+	auto actor() const {
+		return caf::actor_cast<actor_type>(raw_actor());
+	}
 
-	/// check if object is actually a tree::node
-	virtual auto is_node() const -> bool final;
+	template<typename T>
+	static auto actor(const T& obj) {
+		return caf::actor_cast<typename T::actor_type>(obj.raw_actor());
+	}
 
-	/// access inode (if exists)
-	virtual auto info() const -> result_or_err<tree::inode> final;
+	/// get object's home group
+	auto home() const -> const caf::group&;
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  Type-related API that derived types must provide
-	//
-	/// type_descriptor of objbase class
-	static auto bs_type() -> const type_descriptor&;
-	/// derived types must override this and return correct `type_descriptor`
-	virtual auto bs_resolve_type() const -> const type_descriptor&;
+	/// get objects's home group ID (empty for invalid / not started home)
+	auto home_id() const -> std::string;
 
 	/// runs modificator in message queue of this object
 	auto apply(modificator_f m) const -> error;
@@ -122,19 +102,44 @@ public:
 		};
 	}
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  Core API that can't be shadowed in derived types
+	//  [NOTE] using `virtual ... final` trick ('virtuality' will be optimized away by compiler)
+	//
+	/// obtain type ID: for C++ types typeid is type_descriptor.name
+	virtual auto type_id() const -> std::string final;
+	/// obtain object's ID
+	virtual auto id() const -> std::string final;
+
+	/// access inode (if exists)
+	virtual auto info() const -> result_or_err<tree::inode> final;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  Customization points for derived types
+	//
+	/// derived types must override this and return correct `type_descriptor`
+	virtual auto bs_resolve_type() const -> const type_descriptor&;
+
+	/// node service - default impl returns nil node
+	virtual auto data_node() const -> tree::node;
+
 protected:
-	/// string ID storage
 	std::string id_;
+
+	/// allow delay engine start
+	objbase(std::string custom_oid, bool start_actor);
+
+	/// start internal actor (if not started already)
+	auto start_engine() -> bool;
 
 	/// return object's raw (dynamic-typed) actor handle
 	auto raw_actor() const -> const caf::actor&;
 
-	/// maually start internal actor (if not started already)
-	auto start_engine() -> bool;
-
 private:
-	/// flag indicating that this object is actually a tree::node
-	bool is_node_;
+	friend class ::cereal::access;
+	friend class atomizer;
+	friend class tree::link_impl;
+
 	/// pointer to associated inode
 	std::weak_ptr<tree::inode> inode_;
 	/// object's internal actor
@@ -142,16 +147,39 @@ private:
 	/// internal home group
 	caf::group home_;
 
-	/// dedicated ctor that sets `is_node` flag
-	objbase(bool is_node, std::string custom_oid = "");
+	auto reset_home(std::string new_hid, bool silent) -> void;
 };
-
 // alias
 using sp_obj  = std::shared_ptr<objbase>;
 using sp_cobj = std::shared_ptr<const objbase>;
-
 using obj_ptr  = object_ptr<objbase>;
 using cobj_ptr = object_ptr<const objbase>;
+
+/*-----------------------------------------------------------------------------
+ *  Base class for objects that can contain nested subobjects
+ *-----------------------------------------------------------------------------*/
+class BS_API objnode : public objbase {
+public:
+	/// default ctor will start empty internal node
+	objnode(std::string custom_oid = {});
+
+	/// install external node into this objects
+	objnode(tree::node N, std::string custom_oid = {});
+
+	auto swap(objnode&) -> void;
+
+	/// returns internal node
+	auto data_node() const -> tree::node override;
+
+protected:
+	/// bundeled node
+	tree::node node_;
+
+	BS_TYPE_DECL
+	friend class atomizer;
+};
+using sp_objnode = std::shared_ptr<objnode>;
+using sp_cobjnode = std::shared_ptr<const objnode>;
 
 NAMESPACE_END(blue_sky)
 

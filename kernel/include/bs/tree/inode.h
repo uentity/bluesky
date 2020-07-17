@@ -9,7 +9,6 @@
 
 #pragma once
 #include "../error.h"
-#include "../objbase.h"
 #include "../detail/enumops.h"
 #include "../timetypes.h"
 

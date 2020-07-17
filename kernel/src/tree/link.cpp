@@ -10,6 +10,7 @@
 #include "engine_impl.h"
 #include "link_actor.h"
 #include "nil_engine.h"
+#include "node.h"
 
 #include <bs/log.h>
 #include <bs/kernel/radio.h>
@@ -19,7 +20,6 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
-using bs_detail::shared;
 
 /*-----------------------------------------------------------------------------
  *  link
@@ -51,8 +51,18 @@ link::link(const link& rhs, std::string_view rhs_type_id) :
 }
 
 link::link(std::string name, sp_obj data, Flags f) :
-	link(hard_link{std::move(name), std::move(data), f})
+	link(hard_link(std::move(name), std::move(data), f))
 {}
+
+link::link(std::string name, node folder, Flags f) :
+	link(hard_link(std::move(name), std::move(folder), f))
+{}
+
+auto link::make_root_(engine donor) -> link {
+	auto res = link(std::move(donor));
+	if(res) res.propagate_handle();
+	return res;
+}
 
 auto link::is_nil() const -> bool {
 	return pimpl_ == nil_link::pimpl();
@@ -79,10 +89,6 @@ auto link::clone(bool deep) const -> link {
 	return { pimpl()->clone(deep) };
 }
 
-auto link::home() const -> const caf::group& {
-	return pimpl()->home;
-}
-
 auto link::id() const -> lid_type {
 	return pimpl()->id_;
 }
@@ -95,12 +101,11 @@ auto link::rename_silent(std::string new_name) const -> void {
 	caf::anon_send(actor(*this), a_lnk_rename(), std::move(new_name), true);
 }
 
-auto link::owner() const -> sp_node {
-	auto guard = pimpl()->lock(shared);
-	return pimpl()->owner_.lock();
+auto link::owner() const -> node {
+	return pimpl()->owner();
 }
 
-auto link::reset_owner(const sp_node& new_owner) const -> void {
+auto link::reset_owner(const node& new_owner) const -> void {
 	pimpl()->reset_owner(new_owner);
 }
 
@@ -190,9 +195,9 @@ auto link::obj_type_id(unsafe_t) const -> std::string {
 	return nil_otid;
 }
 
-auto link::data_ex(bool wait_if_busy) const -> result_or_err<sp_obj> {
-	return pimpl()->actorf<result_or_errbox<sp_obj>>(
-		long_op, *this, a_lnk_data(), wait_if_busy
+auto link::data_ex(bool wait_if_busy) const -> obj_or_err {
+	return pimpl()->actorf<obj_or_errbox>(
+		long_op, *this, a_data(), wait_if_busy
 	);
 }
 
@@ -200,38 +205,43 @@ auto link::data(unsafe_t) const -> sp_obj {
 	return pimpl()->data(unsafe);
 }
 
-auto link::data_node_ex(bool wait_if_busy) const -> result_or_err<sp_node> {
-	return pimpl()->actorf<result_or_errbox<sp_node>>(
-		long_op, *this, a_lnk_dnode(), wait_if_busy
+auto link::data_node_ex(bool wait_if_busy) const -> node_or_err {
+	return pimpl()->actorf<node_or_errbox>(
+		long_op, *this, a_data_node(), wait_if_busy
 	);
 }
 
-auto link::data_node(unsafe_t) const -> sp_node {
-	if(auto obj = pimpl()->data(unsafe)) {
-		if(obj->is_node()) return std::static_pointer_cast<node>(obj);
-	}
-	return nullptr;
+auto link::data_node() const -> node {
+	return data_node_ex().value_or(node::nil());
 }
 
-auto link::data_node_gid() const -> result_or_err<std::string> {
-	return pimpl()->actorf<result_or_errbox<std::string>>(*this, a_node_gid());
+auto link::data_node(unsafe_t) const -> node {
+	if(auto obj = pimpl()->data(unsafe))
+		return obj->data_node();
+	return node::nil();
 }
 
-auto link::data_node_gid(unsafe_t) const -> std::string {
+auto link::data_node_hid() const -> result_or_err<std::string> {
+	// [TODO] enable this more efficient path later
+	//return pimpl()->actorf<result_or_errbox<std::string>>(*this, a_node_gid());
+	return data_node_ex().map([](const node& N) { return N.home_id(); });
+}
+
+auto link::data_node_hid(unsafe_t) const -> std::string {
 	if(auto me = data_node(unsafe))
-		return me->gid();
+		return me.home().get()->identifier();
 	return {};
 }
 
 auto link::is_node() const -> bool {
-	return !data_node_gid().value_or("").empty();
+	return !data_node_hid().value_or("").empty();
 }
 
-void link::self_handle_node(const sp_node& N) const {
-	if(N) N->set_handle(*this);
+void link::self_handle_node(const node& N) const {
+	if(N) N.set_handle(*this);
 }
 
-auto link::propagate_handle() const -> result_or_err<sp_node> {
+auto link::propagate_handle() const -> node_or_err {
 	return pimpl()->propagate_handle(*this);
 }
 
@@ -240,7 +250,7 @@ auto link::propagate_handle() const -> result_or_err<sp_node> {
 //
 template<bool AsyncApply = false>
 static auto make_apply_impl(const link& L, data_modificator_f m, bool silent) {
-return [=, wL = link::weak_ptr(L), m = std::move(m)](result_or_errbox<sp_obj> obj) mutable {
+return [=, wL = link::weak_ptr(L), m = std::move(m)](obj_or_errbox obj) mutable {
 	auto finally = [=](error&& er) {
 		// set status after modificator invoked
 		if(!silent)
@@ -281,22 +291,22 @@ auto link::data_apply(data_modificator_f m, bool silent) const -> error {
 auto link::data(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
 		actor(*this), kernel::radio::timeout(true), high_priority,
-		[f = std::move(f), wself = weak_ptr(*this)](result_or_errbox<sp_obj> eobj) {
+		[f = std::move(f), wself = weak_ptr(*this)](obj_or_errbox eobj) {
 			if(auto self = wself.lock())
 				f(std::move(eobj), std::move(self));
 		},
-		a_lnk_data(), true
+		a_data(), true
 	);
 }
 
-auto link::data_node(process_data_cb f, bool high_priority) const -> void {
+auto link::data_node(process_dnode_cb f, bool high_priority) const -> void {
 	anon_request(
 		actor(*this), kernel::radio::timeout(true), high_priority,
-		[f = std::move(f), wself = weak_ptr(*this)](result_or_errbox<sp_node> eobj) {
+		[f = std::move(f), wself = weak_ptr(*this)](node_or_errbox enode) {
 			if(auto self = wself.lock())
-				f(std::move(eobj), std::move(self));
+				f(std::move(enode), std::move(self));
 		},
-		a_lnk_dnode(), true
+		a_data_node(), true
 	);
 }
 
@@ -304,7 +314,7 @@ auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -
 	anon_request(
 		actor(*this), kernel::radio::timeout(true), false,
 		make_apply_impl<true>(*this, std::move(m), silent),
-		a_lnk_data(), true
+		a_data(), true
 	);
 }
 

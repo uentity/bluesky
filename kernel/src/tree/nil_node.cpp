@@ -30,7 +30,7 @@ struct nil_node::self_actor : caf::event_based_actor {
 	auto make_behavior() -> behavior_type override { return node::actor_type::behavior_type{
 	
 		[=](a_home) -> caf::group { return {}; },
-		[=](a_node_gid) -> std::string { return nil_oid; },
+		[=](a_home_id) -> std::string { return nil_oid; },
 		[=](a_node_handle) -> link { return link{}; },
 		[=](a_node_size) -> std::size_t { return 0; },
 
@@ -79,11 +79,6 @@ struct nil_node::self_actor : caf::event_based_actor {
 //  nil node impl
 //
 struct nil_node::self_impl : nil_engine_impl<nil_node, node_impl> {
-	using super = nil_engine_impl<nil_node, node_impl>;
-	using super::super;
-
-	self_impl() : super(nullptr) {}
-
 	ENGINE_TYPE_DECL
 };
 

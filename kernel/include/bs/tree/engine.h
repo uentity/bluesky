@@ -83,27 +83,6 @@ public:
 		}
 	};
 
-	/// compare & sort support
-	auto operator==(const engine& rhs) const -> bool;
-	auto operator!=(const engine& rhs) const -> bool;
-	auto operator<(const engine& rhs) const -> bool;
-
-	/// returns engine's string type ID
-	auto type_id() const -> std::string_view;
-
-	/// hash for appropriate containers
-	auto hash() const noexcept -> std::size_t;
-
-	/// check whether engine is valid
-	auto has_engine() const noexcept -> bool;
-
-	auto swap(engine& rhs) noexcept -> void;
-
-	/// get managed requester that can be used to talk with engine actor
-	/// [NOTE] shared_ptr is used because `scoped_actor` cannot be copied or moved
-	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
-	auto factor() const -> sp_scoped_actor;
-
 	/// special members
 	engine(caf::actor engine_actor, sp_engine_impl pimpl);
 	engine(sp_ahandle ah, sp_engine_impl pimpl);
@@ -115,6 +94,39 @@ public:
 
 	engine(engine&&);
 	auto operator=(engine&&) -> engine&;
+
+	/// compare & sort support
+	auto operator==(const engine& rhs) const -> bool;
+	auto operator!=(const engine& rhs) const -> bool;
+	auto operator<(const engine& rhs) const -> bool;
+
+	/// hash for appropriate containers
+	auto hash() const noexcept -> std::size_t;
+
+	/// check whether engine is valid
+	auto has_engine() const noexcept -> bool;
+
+	auto swap(engine& rhs) noexcept -> void;
+
+	/*
+	 * [NOTE] Despite that move semantics is supported by engine (for performance reasons),
+	 * API below can only be invoked for VALID engine (`pimpl_` is non null), otherwise UB.
+	 * Engine is intended to be used in derived tree handles that will always fallback to valid `nil` state.
+	 */
+
+	/// returns engine's string type ID
+	auto type_id() const -> std::string_view;
+
+	/// get engine's home group
+	auto home() const -> const caf::group&;
+
+	/// get engine's home group ID (empty for invalid / not started home)
+	auto home_id() const -> std::string;
+
+	/// get managed requester that can be used to talk with engine actor
+	/// [NOTE] shared_ptr is used because `scoped_actor` cannot be copied or moved
+	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
+	auto factor() const -> sp_scoped_actor;
 
 protected:
 	/// return engine's raw (dynamic-typed) actor handle

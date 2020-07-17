@@ -148,4 +148,12 @@ auto engine::type_id() const -> std::string_view {
 	return pimpl_->type_id();
 }
 
+auto engine::home() const -> const caf::group& {
+	return pimpl_->home;
+}
+
+auto engine::home_id() const -> std::string {
+	return pimpl_->home_id();
+}
+
 NAMESPACE_END(blue_sky::tree)

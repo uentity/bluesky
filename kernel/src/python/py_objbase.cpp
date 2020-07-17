@@ -32,7 +32,7 @@ void py_bind_objbase(py::module& m) {
 		.def("swap", &objbase::swap)
 		.def("type_id", &objbase::type_id)
 		.def("id", &objbase::id)
-		.def_property_readonly("is_node", &objbase::is_node)
+		.def("data_node", &objbase::data_node)
 		.def_property_readonly("info", &objbase::info)
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
@@ -42,6 +42,13 @@ void py_bind_objbase(py::module& m) {
 			},
 			"m"_a, "Place given modificator `m` to object's queue and return immediately", nogil
 		)
+	;
+
+	// objnode
+	py::class_<objnode, objbase, sp_objnode>(m, "objnode")
+		BSPY_EXPORT_DEF(objnode)
+		.def(py::init<std::string>(), "custom_oid"_a = "")
+		.def(py::init<tree::node, std::string>(), "N"_a, "custom_oid"_a = "")
 	;
 
 	// object formatters

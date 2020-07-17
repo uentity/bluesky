@@ -30,19 +30,22 @@ enum class EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
 /*-----------------------------------------------------------------------------
  *  node_impl
  *-----------------------------------------------------------------------------*/
-class BS_HIDDEN_API node_impl : public engine::impl {
+class BS_HIDDEN_API node_impl :
+	public engine::impl,
+	public bs_detail::sharded_mutex<engine_impl_mutex>
+{
 public:
 	friend class node;
+	using sp_nimpl = std::shared_ptr<node_impl>;
+	using sp_scoped_actor = engine::impl::sp_scoped_actor;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  private link messaging interface
+	//  private node messaging interface
 	//
 	// public node iface extended with some private messages
 	using primary_actor_type = node::actor_type::extend<
 		// join self group
 		caf::reacts_to<a_hi>,
-		// rebind node to new handle
-		caf::reacts_to<a_node_handle, link>,
 		// erase link by ID with specified options
 		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>
 	>::extend_with<kernel::detail::khome_actor_type>;
@@ -72,57 +75,44 @@ public:
 	// append private behavior to public iface
 	using actor_type = primary_actor_type::extend_with< ack_actor_type >;
 
+	// engine::impl::actorf() will resolve actor type using this function
+	static auto actor(const node& N) {
+		return caf::actor_cast<actor_type>(N.raw_actor());
+	}
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  member variables
 	//
 	// leafs
 	links_container links_;
 
-	// weak ref to parent link
-	link::weak_ptr handle_;
-
-	// timeout for most queries
-	const caf::duration timeout;
-
-	// strong ref to node's actor
-	caf::actor actor_;
-	// local node group
-	caf::group home_;
-
 	///////////////////////////////////////////////////////////////////////////////
 	//  methods
 	//
-	// default & copy ctor
-	node_impl(node* super);
-	node_impl(const node_impl&, node* super);
-	node_impl(node_impl&&, node* super);
-	// assignment
-	auto operator=(const node_impl&) -> node_impl&;
+	// ctors
+	node_impl(const links_v& leafs = {});
 
-	auto actor() const {
-		return caf::actor_cast<actor_type>(actor_);
-	}
+	// construct node handle from stored engine weak ref
+	auto super() const -> node;
 
-	static auto actor(const node& N) {
-		return caf::actor_cast<actor_type>(N.pimpl_->actor_);
-	}
+	// manipulate with node's handle (protected by mutex)
+	auto handle() const -> link;
+	auto set_handle(const link& handle) -> void;
 
-	// make request to given link L
-	template<typename R, typename... Args>
-	static auto actorf(const node& N, Args&&... args) {
-		return blue_sky::actorf<R>(
-			actor(N), N.pimpl_->timeout, std::forward<Args>(args)...
-		);
-	}
-	// same as above but with configurable timeout
-	template<typename R, typename... Args>
-	static auto actorf(const node& N, caf::duration timeout, Args&&... args) {
-		return blue_sky::actorf<R>(
-			actor(N), timeout, std::forward<Args>(args)...
-		);
-	}
+	// setup super (weak engine ptr) + correct leafs owner
+	// node is REQUIRED to call this after engine is started
+	auto propagate_owner(const engine& S, bool deep) -> void;
 
-	auto start_engine(std::shared_ptr<node_impl> nimpl, std::string gid = "") -> void;
+	/// clone this impl
+	auto clone(bool deep = false) const -> sp_nimpl;
+
+	static auto spawn_actor(sp_nimpl nimpl) -> caf::actor;
+
+	// postprocessing of just inserted link
+	// if link points to node, return it
+	static auto adjust_inserted_link(const link& lnk, const node& target) -> node;
+
+	ENGINE_TYPE_DECL
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  iterate
@@ -334,26 +324,11 @@ public:
 		return perfect;
 	}
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  misc
-	//
-	auto handle() const -> link;
-	void set_handle(const link& handle);
-
-	// postprocessing of just inserted link
-	// if link points to node, return it
-	static auto adjust_inserted_link(const link& lnk, const sp_node& target) -> sp_node;
-
-	// obtain pointer to owner node
-	auto super() const -> sp_node;
-
-	// setup home group ID + optionally invite actor
-	auto home(std::string gid, bool silent = false) -> caf::group&;
-
-	ENGINE_TYPE_DECL
-
 private:
-	node* super_;
+	// weak ref to engine that I am part of
+	node::weak_ptr super_;
+	// weak ref to parent link
+	link::weak_ptr handle_;
 
 	// returns index of removed element
 	// [NOTE] don't do range checking
@@ -376,6 +351,6 @@ private:
 		return res;
 	}
 };
-using sp_nimpl = std::shared_ptr<node_impl>;
+using sp_nimpl = node_impl::sp_nimpl;
 
 NAMESPACE_END(blue_sky::tree)

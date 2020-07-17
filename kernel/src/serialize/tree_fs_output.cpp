@@ -58,10 +58,11 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	auto begin_node(const tree::node& N) -> error {
 		return error::eval_safe(
 			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); },
+			// skip empty nodes
 			[&]{ return enter_root(); },
 			// [NOTE] delay enter node's dir until first head is added
 			// this prevents creation of empty dirs (for nodes without leafs)
-			[&]{ cur_path_ /= N.gid(); }
+			[&]{ if(N) cur_path_ /= N.home_id(); }
 		);
 	}
 
@@ -70,17 +71,19 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		return error::eval_safe(
 			// write down node's metadata nessessary to load it later
 			[&]{ return head().map( [&](auto* ar) {
-				// node directory
-				(*ar)(cereal::make_nvp("node_dir", N.gid()));
+				if(N) {
+					// node directory
+					(*ar)(cereal::make_nvp("node_dir", N.home_id()));
 
-				// custom leafs order
-				std::vector<std::string> leafs_order = N.skeys(tree::Key::ID, tree::Key::AnyOrder);
-				(*ar)(cereal::make_nvp("leafs_order", leafs_order));
+					// custom leafs order
+					std::vector<std::string> leafs_order = N.skeys(tree::Key::ID, tree::Key::AnyOrder);
+					(*ar)(cereal::make_nvp("leafs_order", leafs_order));
+				}
 				// and finish
 				epilogue(*ar, N);
 			}); },
 			// enter parent dir
-			[&] { return enter_dir(cur_path_.parent_path(), cur_path_); }
+			[&] { return N ? enter_dir(cur_path_.parent_path(), cur_path_) : perfect; }
 		);
 	}
 
@@ -102,14 +105,26 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			epilogue(**cur_head, obj);
 		} };
 
-		// obtain formatter
+		// 1. obtain & write down formatter
 		auto F = get_active_formatter(obj.type_id());
 		if(!F) return { obj.type_id(), Error::MissingFormatter };
 		obj_fmt = F->name;
-
-		// 1. write down object formatter name
+		// write down object formatter name
 		ar(cereal::make_nvp("fmt", obj_fmt));
 		fmt_ok = true;
+
+		// 2. if object is node and formatter don't store leafs, then save 'em explicitly
+		// otherwise store object's metadata (objbase)
+		if(!F->stores_node)
+			ar(cereal::make_nvp( "node", obj.data_node() ));
+		else
+			(**cur_head)(cereal::make_nvp( "object", obj ));
+
+		// 3. if object is pure node - we're done and can skip data processing
+		if(obj.bs_resolve_type() == objnode::bs_type()) {
+			filename_ok = true;
+			return perfect;
+		}
 
 		// enter objects directory
 		EVAL
@@ -137,27 +152,14 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			return res_fname;
 		};
 
-		// 2. write down object filename
-		auto is_node = obj.is_node();
-		auto obj_path = find_free_filename(
-			is_node ?
-				objects_path_ / static_cast<const tree::node&>(obj).gid() :
-				objects_path_ / obj.id(),
-			std::string(".") + obj_fmt
-		);
+		// 4. write down object filename
+		auto obj_path = find_free_filename(objects_path_ / obj.home_id(), std::string(".") + obj_fmt);
 		if(!obj_path) return obj_path.error();
 		obj_filename = obj_path->filename().u8string();
 		ar(cereal::make_nvp("filename", obj_filename));
 		filename_ok = true;
 
-		// 3. if object is node and formatter don't store leafs, then save 'em explicitly
-		// otherwise store object's metadata (objbase)
-		if(is_node && !F->stores_node)
-			ar(cereal::make_nvp( "node", static_cast<const tree::node&>(obj) ));
-		else
-			(**cur_head)(cereal::make_nvp( "object", obj ));
-
-		// 4. and actually save object data to file
+		// 5. and actually save object data to file
 		caf::anon_send(
 			manager_, caf::actor_cast<caf::actor>(manager_),
 			obj.shared_from_this(), obj_fmt, fs::absolute(*obj_path).u8string()

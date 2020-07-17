@@ -14,6 +14,7 @@
 #include "carray.h"
 
 BSS_FCN_DECL(serialize, blue_sky::objbase)
+BSS_FCN_DECL(serialize, blue_sky::objnode)
 
 NAMESPACE_BEGIN(cereal)
 

@@ -22,7 +22,7 @@ using namespace tree;
 
 using links_v = tree::links_v;
 using links_l = std::list<link>;
-using nodes_l = std::list<sp_node>;
+using nodes_l = std::list<node>;
 
 // [IMPORTANT] point that we must return elements BY VALUE from links vector & list
 NAMESPACE_BEGIN(detail)
@@ -135,11 +135,11 @@ void py_bind_tree(py::module& m) {
 		"lnk"_a, "path_unit"_a = Key::ID, "Get link's absolute path", nogil);
 	m.def("find_root", py::overload_cast<link>(&find_root),
 		"L"_a, "Return root node of a tree that given link belongs to", nogil);
-	m.def("find_root", py::overload_cast<sp_node>(&find_root),
+	m.def("find_root", py::overload_cast<node>(&find_root),
 		"N"_a, "Return root node of a tree that given node belongs to", nogil);
 	m.def("find_root_handle", py::overload_cast<link>(&find_root_handle),
 		"L"_a, "Return handle (link) of a tree root that given link belongs to", nogil);
-	m.def("find_root_handle", py::overload_cast<const sp_node&>(&find_root_handle),
+	m.def("find_root_handle", py::overload_cast<node>(&find_root_handle),
 		"L"_a, "Return handle (link) of a tree root that given node belongs to", nogil);
 	m.def("convert_path", &convert_path,
 		"src_path"_a, "start"_a, "src_path_unit"_a = Key::ID, "dst_path_unit"_a = Key::Name,
@@ -150,7 +150,7 @@ void py_bind_tree(py::module& m) {
 		"path"_a, "start"_a, "path_unit"_a = Key::ID, "follow_lazy_links"_a = true,
 		"Quick link search by given path relative to `start`", nogil
 	);
-	m.def("deref_path",py::overload_cast<const std::string&, sp_node, Key, bool>(&deref_path),
+	m.def("deref_path",py::overload_cast<const std::string&, node, Key, bool>(&deref_path),
 		"path"_a, "start"_a, "path_unit"_a = Key::ID, "follow_lazy_links"_a = true,
 		"Quick link search by given path relative to `start`", nogil
 	);
@@ -165,7 +165,7 @@ void py_bind_tree(py::module& m) {
 	// walk
 	// [HINT] pass vectors to be modified as pointers - in this case pybind11 applies reference policy
 	using py_walk_links_cb = std::function<void(const link&, links_l*, links_v*)>;
-	using py_walk_nodes_cb = std::function<void(const sp_node&, nodes_l*, links_v*)>;
+	using py_walk_nodes_cb = std::function<void(const node&, nodes_l*, links_v*)>;
 
 	m.def("walk",
 		[](
@@ -179,7 +179,7 @@ void py_bind_tree(py::module& m) {
 	);
 	m.def("walk",
 		[](
-			sp_node root, py_walk_nodes_cb cb,
+			node root, py_walk_nodes_cb cb,
 			bool topdown, bool follow_symlinks, bool follow_lazy_links
 		) {
 			py_walk(std::move(root), std::move(cb), topdown, follow_symlinks, follow_lazy_links);
@@ -189,11 +189,14 @@ void py_bind_tree(py::module& m) {
 	);
 
 	// make root link
-	m.def("make_root_link", &make_root_link,
-		"link_type"_a = "hard_link", "name"_a = "/", "root_node"_a = nullptr,
-		"Make root link pointing to node which handle is preset to returned link", nogil
+	m.def("make_root_link", py::overload_cast<std::string_view, std::string, sp_obj>(&make_root_link),
+		"link_type"_a = "hard_link", "name"_a = "/", "root_obj"_a = nullptr,
+		"If object contains node it's handle will point to returned link", nogil
 	);
-
+	m.def("make_root_link", py::overload_cast<sp_obj, std::string, std::string_view>(&make_root_link),
+		"root_obj"_a, "name"_a = "/", "link_type"_a = "hard_link",
+		"If object contains node it's handle will point to returned link", nogil
+	);
 	// save/load tree
 	py::enum_<TreeArchive>(m, "TreeArchive")
 		.value("Text", TreeArchive::Text)
@@ -216,19 +219,14 @@ void py_bind_tree(py::module& m) {
 	using existing_tag = context::existing_tag;
 
 	auto py_qth = py::class_<context>(m, "tree_context")
-		.def(py::init<sp_node>(), "root"_a = nullptr)
+		.def(py::init<node>(), "root"_a = nullptr)
 		.def(py::init<link>(), "root"_a)
 		.def("root", &context::root)
 		.def_property_readonly("root_link", &context::root_link)
 		.def_property_readonly("root_path", &context::root_path)
 
-		.def(
-			"farewell_on_exit", &context::farewell_on_exit, "actor_id"_a,
-			"Send `a_bye` message to actor with give ID on destruction"
-		)
-
 		.def("reset", py::overload_cast<link>(&context::reset), "root"_a, "Reset context to new root")
-		.def("reset", py::overload_cast<sp_node, link>(&context::reset),
+		.def("reset", py::overload_cast<node, link>(&context::reset),
 			"root"_a, "root_handle"_a = link{}, "Reset context to new root")
 
 		// [NOTE] it's essential to keep returned tags in Python as long as context exists

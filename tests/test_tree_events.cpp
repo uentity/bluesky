@@ -47,14 +47,14 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 
 	auto hN = make_persons_tree();
 	auto N = hN.data_node();
-	auto L = N->find("hard_Citizen_0", Key::Name);
+	auto L = N.find("hard_Citizen_0", Key::Name);
 	// make deeper tree
-	auto N1 = std::make_shared<node>();
-	N1->insert("N", N);
-	auto N2 = std::make_shared<node>();
-	N2->insert("N1", N1);
-	auto N3 = std::make_shared<node>();
-	N3->insert("N2", N2);
+	auto N1 = node();
+	N1.insert("N", N);
+	auto N2 = node();
+	N2.insert("N1", N1);
+	auto N3 = node();
+	N3.insert("N2", N2);
 
 	// test link rename
 
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 		return rename_cnt;
 	};
 
-	std::cout << "### rename link->node calls: " << test_rename(*N3, L) << std::endl;
+	std::cout << "### rename link->node calls: " << test_rename(N3, L) << std::endl;
 	std::cout << "### rename link->link calls: " << test_rename(L, L) << std::endl;
 
 	/////////////////////////////////////////////////////////////////////////////////
@@ -115,6 +115,6 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 	};
 
 	// summary
-	std::cout << "### status link->node calls: " << test_status(*N3, L) << std::endl;
+	std::cout << "### status link->node calls: " << test_status(N3, L) << std::endl;
 	std::cout << "### status link->link calls: " << test_status(L, L) << std::endl;
 }

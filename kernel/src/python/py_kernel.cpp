@@ -118,7 +118,7 @@ auto bind_misc_api(py::module& m) {
 auto bind_tools(py::module& m) -> void {
 	m.def("print_loaded_types", &kernel::tools::print_loaded_types);
 	m.def("print_link", [](const tree::link& l) { kernel::tools::print_link(l, 0); }, nogil);
-	m.def("print_link", [](tree::sp_node n, std::string name = "/") {
+	m.def("print_link", [](tree::node n, std::string name = "/") {
 		kernel::tools::print_link(tree::hard_link(name, std::move(n)), 0);
 	}, "node"_a, "root_name"_a = "/", nogil);
 }

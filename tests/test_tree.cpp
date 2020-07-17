@@ -40,12 +40,12 @@ using namespace std::chrono_literals;
 NAMESPACE_BEGIN()
 
 class fusion_client : public fusion_iface {
-	auto populate(const sp_node& root, const std::string& child_type_id = "") -> error override {
+	auto populate(sp_obj root, const std::string& child_type_id = "") -> error override {
 		bsout() << "fusion_client::populate() called" << end;
 		return error::quiet();
 	}
 
-	auto pull_data(const sp_obj& root) -> error override {
+	auto pull_data(sp_obj root) -> error override {
 		bsout() << "fusion_client::pull_data() called" << end;
 		return error::quiet();
 	}
@@ -57,30 +57,30 @@ NAMESPACE_BEGIN(blue_sky)
 
 auto make_persons_tree() -> tree::link {
 	// create root link and node
-	sp_node N = kernel::tfactory::create_object("node");
+	node N = node();
 	// create several persons and insert 'em into node
 	for(int i = 0; i < 10; ++i) {
 		std::string p_name = "Citizen_" + std::to_string(i);
-		N->insert(hard_link{
+		N.insert(hard_link{
 			p_name, kernel::tfactory::create_object("bs_person", p_name, double(i + 20))
 		});
 	}
 	// create hard link referencing first object
-	N->insert(hard_link{
-		"hard_Citizen_0", N->find(0).data()
+	N.insert(hard_link{
+		"hard_Citizen_0", N.find(0).data()
 	});
 	// create weak link referencing 2nd object
-	N->insert(weak_link{
-		"weak_Citizen_1", N->find(1).data()
+	N.insert(weak_link{
+		"weak_Citizen_1", N.find(1).data()
 	});
 	// create sym link referencing 3rd object
-	N->insert(sym_link{
-		"sym_Citizen_2", abspath(N->find(2))
+	N.insert(sym_link{
+		"sym_Citizen_2", abspath(N.find(2))
 	});
-	N->insert(sym_link{
-		"sym_Citizen_3", abspath( deref_path(abspath(N->find(3), Key::Name), N, Key::Name) )
+	N.insert(sym_link{
+		"sym_Citizen_3", abspath( deref_path(abspath(N.find(3), Key::Name), N, Key::Name) )
 	});
-	N->insert(sym_link{
+	N.insert(sym_link{
 		"sym_dot", "."
 	});
 
@@ -107,12 +107,12 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	bsout() << "root node abspath: {}" << abspath(hN) << bs_end;
 	bsout() << "root node abspath: {}" << convert_path(abspath(hN), hN, Key::ID, Key::Name) << bs_end;
 	bsout() << "sym_Citizen_2 abspath: {}" << convert_path(
-		abspath(N->find("sym_Citizen_2", Key::Name)), hN, Key::ID, Key::Name
+		abspath(N.find("sym_Citizen_2", Key::Name)), hN, Key::ID, Key::Name
 	) << bs_end;
 	kernel::tools::print_link(hN, false);
 
 	// serializze node
-	auto N1 = sp_node{};
+	auto N1 = node();
 	test_json(N, N1);
 
 	// print loaded tree content
@@ -120,7 +120,7 @@ BOOST_AUTO_TEST_CASE(test_tree) {
 	auto RL = link::make_root<hard_link>("r", N1);
 	kernel::tools::print_link(RL, false);
 	BOOST_TEST(N1);
-	BOOST_TEST(N1->size() == N->size());
+	BOOST_TEST(N1.size() == N.size());
 
 	// serialize to FS
 	bsout() << "\n===========================\n" << bs_end;

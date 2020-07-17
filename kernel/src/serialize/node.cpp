@@ -14,15 +14,16 @@
 
 #include <cereal/types/vector.hpp>
 
-NAMESPACE_BEGIN(blue_sky)
+using namespace blue_sky;
 using namespace cereal;
-using namespace tree;
-using blue_sky::detail::shared;
 
+NAMESPACE_BEGIN(blue_sky)
 /*-----------------------------------------------------------------------------
  *  node::node_impl
  *-----------------------------------------------------------------------------*/
 namespace {
+using namespace tree;
+
 // proxy leafs view to serialize 'em as separate block or 'unit'
 struct leafs_view {
 	node_impl& N;
@@ -55,9 +56,14 @@ struct leafs_view {
 
 } // eof hidden namespace
 
-BSS_FCN_INL_BEGIN(serialize, node_impl)
+NAMESPACE_END(blue_sky)
+
+BSS_FCN_INL_BEGIN(serialize, blue_sky::tree::node_impl)
 	ar(make_nvp("leafs", leafs_view(t)));
 BSS_FCN_INL_END(save, node_impl)
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::engine::impl, tree::node_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::node_impl, "node")
 
 /*-----------------------------------------------------------------------------
  *  node
@@ -65,31 +71,23 @@ BSS_FCN_INL_END(save, node_impl)
 BSS_FCN_BEGIN(serialize, node)
 	// properly save & restore node's group BEFORE any other actions
 	if constexpr(Archive::is_saving::value) {
-		// save actor group's ID
-		ar(make_nvp("gid", t.gid()));
+		// for nil links save empty impl pointer
+		auto Limpl = t ? t.pimpl_ : tree::sp_limpl{};
+		ar(make_nvp("node", Limpl));
 	}
 	else {
-		// load gid
-		std::string ngid;
-		ar(make_nvp("gid", ngid));
-		// and start engine
-		t.start_engine(ngid);
+		ar(make_nvp("node", t.pimpl_));
+		if(t.pimpl_) {
+			// impl is ready, we can start internal actor
+			t.start_engine();
+			// correct owner of all loaded links
+			t.pimpl()->propagate_owner(t, false);
+		}
+		else
+			t = tree::node::nil();
 	}
-
-	ar(
-		make_nvp("objbase", base_class<objbase>(&t)),
-		make_nvp("node_impl", *t.pimpl_)
-	);
-
-	// correct owner of all loaded links
-	if constexpr(Archive::is_loading::value)
-		t.propagate_owner();
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, node)
-
-NAMESPACE_END(blue_sky)
-
-BSS_REGISTER_TYPE(blue_sky::tree::node)
 
 BSS_REGISTER_DYNAMIC_INIT(node)

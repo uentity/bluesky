@@ -25,8 +25,12 @@ class atomizer;
 
 // objbase & command
 class objbase;
-typedef std::shared_ptr< objbase > sp_obj;
-typedef std::shared_ptr< const objbase > sp_cobj;
+using sp_obj = std::shared_ptr<objbase>;
+using sp_cobj = std::shared_ptr<const objbase>;
+
+class objnode;
+using sp_objnode = std::shared_ptr<objnode>;
+using sp_cobjnode = std::shared_ptr<const objnode>;
 
 // signals & slots
 class bs_signal;
@@ -42,9 +46,9 @@ namespace log {
 	class bs_log;
 }
 
-// exception
 class error;
 
+// array
 template< template< class > class > class any_array;
 
 template< class > class bs_arrbase;
@@ -62,7 +66,8 @@ class link;
 class link_actor;
 class link_impl;
 class node;
-typedef std::shared_ptr< node > sp_node;
+class node_actor;
+class node_impl;
 
 }
 

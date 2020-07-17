@@ -11,37 +11,14 @@
 #include <bs/kernel/types_factory.h>
 #include "fusion_link_actor.h"
 
-NAMESPACE_BEGIN(blue_sky::tree)
-
-// default destructor for fusion_iface
-fusion_iface::~fusion_iface() = default;
-
-auto fusion_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
-	return spawn_lactor<fusion_link_actor>(std::move(limpl));
-}
-
-auto fusion_link_impl::clone(bool deep) const -> sp_limpl {
-	return std::make_shared<fusion_link_impl>(
-		name_,
-		deep ? kernel::tfactory::clone_object(data_) : data_,
-		bridge_, flags_
-	);
-}
-auto fusion_link_impl::propagate_handle(const link& L) -> result_or_err<sp_node> {
-	// set handle of cached node object to this link instance
-	set_node_handle(L, data_);
-	return data_ ? result_or_err<sp_node>(data_) : tl::make_unexpected(Error::EmptyData);
-}
-
-/*-----------------------------------------------------------------------------
- *  fusion_link
- *-----------------------------------------------------------------------------*/
 #define FIMPL static_cast<fusion_link_impl&>(*pimpl())
 
+NAMESPACE_BEGIN(blue_sky::tree)
+
 fusion_link::fusion_link(
-	std::string name, sp_node data, sp_fusion bridge, Flags f
+	std::string name, sp_obj data, sp_fusion bridge, Flags f
 ) : // set LazyLoad flag by default
-	super(std::make_shared<fusion_link_impl>( std::move(name), data, bridge, Flags(f | LazyLoad) ))
+	super(std::make_shared<fusion_link_impl>( std::move(name), std::move(data), bridge, Flags(f | LazyLoad) ))
 {}
 
 fusion_link::fusion_link(
@@ -62,14 +39,14 @@ fusion_link::fusion_link()
 {}
 
 auto fusion_link::populate(const std::string& child_type_id, bool wait_if_busy) const
--> result_or_err<sp_node> {
-	return pimpl()->actorf<result_or_errbox<sp_node>>(
+-> node_or_err {
+	return pimpl()->actorf<node_or_errbox>(
 		*this, a_flnk_populate(), child_type_id, wait_if_busy
 	);
 }
 
-auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) const -> void {
-	using result_t = result_or_errbox<sp_node>;
+auto fusion_link::populate(link::process_dnode_cb f, std::string child_type_id) const -> void {
+	using result_t = node_or_errbox;
 
 	anon_request(
 		actor(*this), kernel::radio::timeout(true), false,

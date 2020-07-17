@@ -100,19 +100,22 @@ auto data_node_request(link_actor& LA, ReqOpts opts, C&& res_processor) {
 
 	request_impl<ManageStatus>(
 		LA, Req::DataNode, opts,
-		[&LA, opts]() mutable -> result_or_errbox<sp_node> {
+		[&LA, opts]() mutable -> node_or_errbox {
 			// directly invoke 'Data' request, store returned value in `res` and return it
-			auto res = result_or_errbox<sp_node>{};
+			auto res = node_or_errbox{};
 			request_impl<ManageStatus>(
 				LA, Req::Data, static_cast<ReqOpts>(enumval(opts) | enumval(ReqOpts::DirectInvoke)),
 				[&LA] {
-					return LA.pimpl_->data().and_then([](sp_obj&& obj) {
-						return obj && obj->is_node() ?
-							result_or_err<sp_node>(std::static_pointer_cast<tree::node>(std::move(obj))) :
-							tl::make_unexpected(error::quiet(Error::NotANode));
+					return LA.pimpl_->data().and_then([](const sp_obj& obj) -> node_or_err {
+						if(obj) {
+							if(auto n = obj->data_node())
+								return n;
+							return unexpected_err_quiet(Error::NotANode);
+						}
+						return unexpected_err_quiet(Error::EmptyData);
 					});
 				},
-				[&res](result_or_errbox<sp_node>&& N) { res = std::move(N); }
+				[&res](node_or_errbox&& N) { res = std::move(N); }
 			);
 			return res;
 		},
