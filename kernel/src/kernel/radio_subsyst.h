@@ -85,6 +85,8 @@ private:
 	caf::detail::shared_spinlock guard_;
 
 	caf::actor radio_;
+
+	auto reset_timeouts(timespan typical, timespan slow) -> void;
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)

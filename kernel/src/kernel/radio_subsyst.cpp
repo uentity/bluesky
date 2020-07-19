@@ -32,6 +32,7 @@ inline constexpr std::uint16_t def_groups_port = 9340;
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 using namespace kernel::config;
+using namespace std::chrono_literals;
 
 /*-----------------------------------------------------------------------------
  *  BS main network actor
@@ -94,6 +95,9 @@ auto radio_subsyst::shutdown() -> void {
 		// explicitly kill nill link
 		tree::nil_node::stop();
 		tree::nil_link::stop();
+
+		// force all pending requests to exit immediately
+		reset_timeouts(0s, 0s);
 
 		// explicit wait until all actors done if asked for
 		// because during termination some actor may need to access live actor_system

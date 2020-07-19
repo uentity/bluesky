@@ -10,7 +10,9 @@
 #include <bs/defaults.h>
 #include <bs/log.h>
 #include <bs/kernel/radio.h>
+
 #include "config_subsyst.h"
+#include "radio_subsyst.h"
 
 #include <caf/config_option_adder.hpp>
 #include <caf/parser_state.hpp>
@@ -263,6 +265,10 @@ auto config_subsyst::is_configured() -> bool {
 }
 
 bool config_subsyst::kernel_configured = false;
+
+auto radio_subsyst::reset_timeouts(timespan typical, timespan slow) -> void {
+	timeouts() = timeouts_pair{ typical, slow };
+}
 
 NAMESPACE_END(blue_sky::kernel::detail)
 
