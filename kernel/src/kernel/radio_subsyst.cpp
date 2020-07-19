@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "radio_subsyst.h"
-#include "../tree/nil_link.h"
+#include "../tree/nil_engine.h"
 
 #include <bs/actor_common.h>
 #include <bs/log.h>
@@ -23,6 +23,7 @@
 
 #include <iostream>
 #include <mutex>
+#include <shared_mutex>
 
 #define BSCONFIG ::blue_sky::kernel::config::config()
 
@@ -91,6 +92,7 @@ auto radio_subsyst::shutdown() -> void {
 		kick_citizens();
 
 		// explicitly kill nill link
+		tree::nil_node::stop();
 		tree::nil_link::stop();
 
 		// explicit wait until all actors done if asked for
@@ -202,7 +204,7 @@ auto radio_subsyst::start_client(const std::string& host) -> error {
 
 	actor_config().add_message_type<tree::link>("link");
 	auto station = actor_sys_->middleman().remote_spawn<radio_station_handle>(
-		*netnode, "radio_station", caf::make_message(), def_timeout(true)
+		*netnode, "radio_station", caf::make_message(), kernel::radio::timeout(true)
 	);
 	if(!station) return { actor_sys_->render(station.error()) };
 

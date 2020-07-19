@@ -109,6 +109,7 @@
     <ClInclude Include="kernel\include\bs\timetypes.h" />
     <ClInclude Include="kernel\include\bs\tree\common.h" />
     <ClInclude Include="kernel\include\bs\tree\context.h" />
+    <ClInclude Include="kernel\include\bs\tree\engine.h" />
     <ClInclude Include="kernel\include\bs\tree\errors.h" />
     <ClInclude Include="kernel\include\bs\tree\fusion.h" />
     <ClInclude Include="kernel\include\bs\tree\inode.h" />
@@ -127,14 +128,15 @@
     <ClInclude Include="kernel\src\kernel\python_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\radio_subsyst.h" />
     <ClInclude Include="kernel\src\serialize\tree_fs_impl.h" />
-    <ClInclude Include="kernel\src\tree\actor_common.h" />
     <ClInclude Include="kernel\src\tree\actor_debug.h" />
+    <ClInclude Include="kernel\src\tree\engine_impl.h" />
     <ClInclude Include="kernel\src\tree\ev_listener_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
     <ClInclude Include="kernel\src\tree\link_actor.h" />
     <ClInclude Include="kernel\src\tree\link_impl.h" />
-    <ClInclude Include="kernel\src\tree\nil_link.h" />
+    <ClInclude Include="kernel\src\tree\nil_engine.h" />
+    <ClInclude Include="kernel\src\tree\nil_engine_impl.h" />
     <ClInclude Include="kernel\src\tree\node_actor.h" />
     <ClInclude Include="kernel\src\tree\node_extraidx_actor.h" />
     <ClInclude Include="kernel\src\tree\node_impl.h" />
@@ -187,6 +189,8 @@
     <ClCompile Include="kernel\src\str_utils.cpp" />
     <ClCompile Include="kernel\src\timetypes.cpp" />
     <ClCompile Include="kernel\src\tree\context.cpp" />
+    <ClCompile Include="kernel\src\tree\engine.cpp" />
+    <ClCompile Include="kernel\src\tree\engine_impl.cpp" />
     <ClCompile Include="kernel\src\tree\errors.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link_actor.cpp" />
@@ -199,6 +203,7 @@
     <ClCompile Include="kernel\src\tree\link_events.cpp" />
     <ClCompile Include="kernel\src\tree\link_impl.cpp" />
     <ClCompile Include="kernel\src\tree\nil_link.cpp" />
+    <ClCompile Include="kernel\src\tree\nil_node.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
     <ClCompile Include="kernel\src\tree\node_actor.cpp" />
     <ClCompile Include="kernel\src\tree\node_ack_behavior.cpp" />

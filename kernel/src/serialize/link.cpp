@@ -68,6 +68,8 @@ BSS_FCN_INL_BEGIN(serialize, tree::link_impl)
 	);
 BSS_FCN_INL_END(serialize, tree::link_impl)
 
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::engine::impl, tree::link_impl)
+
 ///////////////////////////////////////////////////////////////////////////////
 //  ilink_impl
 //
@@ -128,8 +130,7 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::weak_link_impl)
 //  sym_link_impl
 //
 BSS_FCN_INL_BEGIN(serialize, tree::sym_link_impl)
-	// serialize inode
-	ar(make_nvp("inode", t.path_));
+	ar(make_nvp("path", t.path_));
 
 	serialize<tree::link_impl>::go(ar, t, version);
 BSS_FCN_INL_END(serialize, tree::sym_link_impl)

@@ -29,7 +29,7 @@ struct sym_link_actor : public link_actor {
 
 	using super::super;
 
-	auto target() const -> result_or_err<link> {
+	auto target() const -> link_or_err {
 		return static_cast<sym_link_impl&>(impl).target();
 	}
 
@@ -63,8 +63,8 @@ struct sym_link_actor : public link_actor {
 				return delegate_target<std::string>(nil_otid, a_lnk_otid());
 			},
 
-			[this](a_node_gid) -> caf::result< result_or_errbox<std::string> > {
-				return delegate_target< result_or_errbox<std::string> >(a_node_gid());
+			[this](a_home_id) -> caf::result< std::string > {
+				return delegate_target< std::string >(nil_oid, a_home_id());
 			},
 
 			[this](a_lnk_inode) -> caf::result< result_or_errbox<inodeptr> > {
@@ -84,19 +84,19 @@ sym_link_impl::sym_link_impl()
 	: super()
 {}
 
-auto sym_link_impl::target() const -> result_or_err<link> {
-	const auto parent = owner_.lock();
-	if(!parent) return tl::make_unexpected( error::quiet(Error::UnboundSymLink) );
+auto sym_link_impl::target() const -> link_or_err {
+	const auto parent = owner();
+	if(!parent) return unexpected_err_quiet(Error::UnboundSymLink);
 
 	link src_link;
 	if(auto er = error::eval_safe([&] { src_link = deref_path(path_, parent); }); er)
 		return tl::make_unexpected(std::move(er));
 	else if(src_link)
 		return src_link;
-	return tl::make_unexpected( error::quiet(Error::LinkExpired) );
+	return unexpected_err_quiet(Error::LinkExpired);
 }
 
-auto sym_link_impl::data() -> result_or_err<sp_obj> {
+auto sym_link_impl::data() -> obj_or_err {
 	auto res = target().and_then([](const link& src_link) {
 		return src_link.data_ex();
 	});
@@ -119,9 +119,12 @@ auto sym_link_impl::clone(bool deep) const -> sp_limpl {
 	return std::make_shared<sym_link_impl>(name_, path_, flags_);
 }
 
-auto sym_link_impl::propagate_handle(const link& super) -> result_or_err<sp_node> {
-	// weak link cannot be a node's handle
-	return actorf<result_or_errbox<sp_node>>(super, a_lnk_dnode(), true);
+auto sym_link_impl::propagate_handle(const link& super) -> node_or_err {
+	// sym link cannot be a node's handle
+	return target().and_then([](const link& src_link) {
+		return src_link.data_node_ex();
+	});
+	// return actorf<node_or_errbox>(super, a_data_node(), true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -150,7 +153,7 @@ bool sym_link::check_alive() {
 	return res;
 }
 
-auto sym_link::target() const -> result_or_err<link> {
+auto sym_link::target() const -> link_or_err {
 	return SIMPL.target();
 }
 
@@ -159,7 +162,7 @@ std::string sym_link::target_path(bool human_readable) const {
 	auto res = std::string(SIMPL.path_);
 	if(human_readable) {
 		if(const auto parent = owner())
-			res = convert_path(res, parent->handle());
+			res = convert_path(res, parent.handle());
 	}
 	return res;
 }

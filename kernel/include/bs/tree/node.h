@@ -8,30 +8,29 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "../objbase.h"
-#include "../tree/errors.h"
+#include "link.h"
+#include "errors.h"
 #include "../detail/is_container.h"
 #include "../detail/enumops.h"
-#include "link.h"
+
+#include <optional>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-class node_actor;
-
-class BS_API node : public objbase {
+class BS_API node : public engine {
 public:
 	// some useful type aliases
 	using existing_index = std::optional<std::size_t>;
 	using insert_status = std::pair<existing_index, bool>;
-	using sp_node = std::shared_ptr<node>;
-	using sp_cnode = std::shared_ptr<const node>;
+	using engine_impl = node_impl;
+	using weak_ptr = engine::weak_ptr<node>;
 
 	/// Interface of node actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
 		// get home group
 		caf::replies_to<a_home>::with<caf::group>,
 		// get node's group ID
-		caf::replies_to<a_node_gid>::with<std::string>,
+		caf::replies_to<a_home_id>::with<std::string>,
 		// get node's handle
 		caf::replies_to<a_node_handle>::with<link>,
 		// get number of leafs
@@ -97,10 +96,29 @@ public:
 		caf::replies_to<a_node_rearrange, lids_v>::with<error::box>
 	>;
 
-public:
-	/// Main API
+	///////////////////////////////////////////////////////////////////////////////
+	//  constructors & maintance
+	//
+	/// create empty node and optionally add leafs
+	node(links_v = {});
 
-	// return node's actor handle
+	/// copy ctor & assignment
+	node(const node& src) = default;
+	auto operator=(const node& rhs) -> node& = default;
+
+	/// obtain/make node nil
+	static auto nil() -> node;
+	auto reset() -> void;
+
+	/// test if node is nil
+	auto is_nil() const -> bool;
+	operator bool() const { return !is_nil(); }
+
+	/// obtain link to this node conained in owner (parent) node
+	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)
+	auto handle() const -> link;
+
+	/// return node's typed actor handle
 	auto actor() const {
 		return caf::actor_cast<actor_type>(raw_actor());
 	}
@@ -108,6 +126,12 @@ public:
 		return N.actor();
 	}
 
+	/// `deep` flag is propagated to leafs
+	auto clone(bool deep = false) const -> node;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  public API
+	//
 	/// number of elements in this node
 	auto size() const -> std::size_t;
 
@@ -152,11 +176,14 @@ public:
 	/// insert link at given index
 	auto insert(link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames) const
 	-> insert_status;
-	/// auto-create and insert hard link that points to object
-	auto insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) const
-	-> insert_status;
 	/// insert bunch of links
 	auto insert(links_v ls, InsertPolicy pol = InsertPolicy::AllowDupNames) const -> std::size_t;
+	/// create and insert hard link that points to object
+	auto insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) const
+	-> insert_status;
+	/// create `objnode` with given node and insert hard link that points to it
+	auto insert(std::string name, node N, InsertPolicy pol = InsertPolicy::AllowDupNames) const
+	-> insert_status;
 
 	/// insert links from given container
 	/// [NOTE] container elements will be moved from passed container!
@@ -192,62 +219,33 @@ public:
 	auto rearrange(std::vector<std::size_t> new_order) const -> error;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  track node events
+	//  events handling
 	//
-	using handle_event_cb = std::function< void(sp_cnode, Event, prop::propdict) >;
+	using handle_event_cb = std::function< void(node, Event, prop::propdict) >;
 
 	/// returns ID of suscriber that is required for unsubscribe
 	auto subscribe(handle_event_cb f, Event listen_to = Event::All) const -> std::uint64_t;
 	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
-	/// obtain link to this node conained in owner (parent) node
-	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)
-	auto handle() const -> link;
-
-	/// ensure that owner of all contained leafs is correctly set to this node
-	/// if deep is true, correct owners in all subtree
-	auto propagate_owner(bool deep = false) -> void;
-
-	/// obtain node's group ID
-	auto gid() const -> std::string;
-	/// get node's home group
-	auto home() const -> const caf::group&;
-
-	/// ctor - creates hard self link with given name
-	node(std::string custom_id = "");
-	/// copy ctor makes deep copy of contained links
-	node(const node& src);
-	/// assignemnt support
-	auto operator=(const node& rhs) -> node&;
-
-	virtual ~node();
-
 private:
-	friend class blue_sky::atomizer;
-	friend class cereal::access;
+	friend atomizer;
+	friend weak_ptr;
+	friend link;
+	friend node_impl;
+	friend node_actor;
 
-	friend class link;
-	friend class node_impl;
-	friend class node_actor;
+	using engine::operator=;
 
-	// PIMPL
-	std::shared_ptr<node_impl> pimpl_;
+	auto pimpl() const -> node_impl*;
 
-	/// return node's raw (dynamic-typed) actor handle
-	auto raw_actor() const -> const caf::actor&;
-
-	/// maually start internal actor (if not started already)
-	auto start_engine(std::string gid = "") -> void;
+	auto start_engine() -> bool;
 
 	// set node's handle
-	auto set_handle(const link& handle) -> void;
+	auto set_handle(const link& handle) const -> void;
 
-	BS_TYPE_DECL
+	node(sp_engine_impl impl);
+
+	node(engine);
 };
-// handy aliases
-using sp_node = node::sp_node;
-using sp_cnode = node::sp_cnode;
-using node_ptr = object_ptr<node>;
-using cnode_ptr = object_ptr<const node>;
 
 NAMESPACE_END(blue_sky::tree)

@@ -21,6 +21,7 @@
 #include <caf/event_based_actor.hpp>
 #include <caf/stateful_actor.hpp>
 #include <caf/typed_behavior.hpp>
+#include <caf/is_actor_handle.hpp>
 
 #include <optional>
 
@@ -35,15 +36,15 @@ constexpr auto cast_timeout(T t) {
 		return t;
 }
 
+template<typename T>
+using if_actor_handle = std::enable_if_t<caf::is_actor_handle<T>::value>;
+
 NAMESPACE_END(detail)
 
 /// tag value for high priority messages
 inline constexpr auto high_prio = caf::message_priority::high;
 
 BS_API auto forward_caf_error(const caf::error& er) -> error;
-
-/// obtain configured timeout for queries
-BS_API auto def_timeout(bool for_long_task = false) -> caf::duration;
 
 /// @brief blocking invoke actor & return response like a function
 /// @return always return `result_or_errbox<R>`
@@ -108,7 +109,10 @@ auto actorf(const caf::scoped_actor& caller, const Actor& tgt, T timeout, Args&&
 }
 
 /// constructs scoped actor inside from passed handle & timeout
-template<typename R, typename Actor, typename T, typename... Args>
+template<
+	typename R, typename Actor, typename T, typename... Args,
+	typename = detail::if_actor_handle<Actor>
+>
 auto actorf(const Actor& tgt, T timeout, Args&&... args) {
 	return actorf<R>(
 		caf::scoped_actor{kernel::radio::system()}, tgt, timeout, std::forward<Args>(args)...
@@ -116,10 +120,14 @@ auto actorf(const Actor& tgt, T timeout, Args&&... args) {
 }
 
 /// @brief spawn temp actor that makes specified request to `A` and pass result to callback `f`
-template<caf::spawn_options Os = caf::no_spawn_options, typename Actor, typename F, typename... Args>
-auto anon_request(Actor A, caf::duration timeout, bool high_priority, F f, Args&&... args) -> void {
+template<
+	caf::spawn_options Os = caf::no_spawn_options,
+	typename Actor, typename T, typename F, typename... Args,
+	typename = detail::if_actor_handle<Actor>
+>
+auto anon_request(Actor A, T timeout, bool high_priority, F f, Args&&... args) -> void {
 	kernel::radio::system().spawn<Os>([
-		high_priority, f = std::move(f), A = std::move(A), t = std::move(timeout),
+		high_priority, f = std::move(f), A = std::move(A), t = detail::cast_timeout(timeout),
 		args = std::make_tuple(std::forward<Args>(args)...)
 	] (caf::event_based_actor* self) mutable -> caf::behavior {
 		std::apply([self, high_priority, A = std::move(A), t = std::move(t)](auto&&... args) {
@@ -134,15 +142,19 @@ auto anon_request(Actor A, caf::duration timeout, bool high_priority, F f, Args&
 }
 
 /// @brief same as above but allows to receive result value returned from callback
-template<caf::spawn_options Os = caf::no_spawn_options, typename Actor, typename F, typename... Args>
-auto anon_request_result(Actor A, caf::duration timeout, bool high_priority, F f, Args&&... args) {
+template<
+	caf::spawn_options Os = caf::no_spawn_options,
+	typename Actor, typename T, typename F, typename... Args,
+	typename = detail::if_actor_handle<Actor>
+>
+auto anon_request_result(Actor A, T timeout, bool high_priority, F f, Args&&... args) {
 	struct rstate {
 		// used to deliver result of `f()`
 		caf::response_promise res;
 	};
 	// spawn worker actor that will make request and invoke `f`
 	return kernel::radio::system().spawn<Os>([
-		high_priority, f = std::move(f), A = std::move(A), t = std::move(timeout),
+		high_priority, f = std::move(f), A = std::move(A), t = detail::cast_timeout(timeout),
 		args = std::make_tuple(std::forward<Args>(args)...)
 	] (caf::stateful_actor<rstate>* self) mutable -> caf::behavior {
 		// prepare response

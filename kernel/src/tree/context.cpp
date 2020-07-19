@@ -67,7 +67,7 @@ static auto concat(Path&& lhs, lid_type rhs) {
 }
 
 // enters data node only if allowed to (don't auto-expand lazy links)
-static auto data_node(const link& L) -> sp_node {
+static auto data_node(const link& L) -> node {
 	return L.data_node(unsafe);
 }
 
@@ -77,7 +77,7 @@ static auto deref_path(PathIterator from, PathIterator to, const link& root) -> 
 	auto res = link{};
 	for(auto level = root; from != to; ++from) {
 		if(auto N = data_node(level)) {
-			if(( res = N->find(*from) ))
+			if(( res = N.find(*from) ))
 				level = res;
 			else
 				break;
@@ -102,10 +102,7 @@ struct BS_HIDDEN_API context::impl {
 	using idata_t = std::unordered_map<path_t, link::weak_ptr, path_hash_t>;
 	idata_t idata_;
 
-	using followers_t = std::unordered_set<std::uint64_t>;
-	followers_t followers_;
-
-	sp_node root_;
+	node root_;
 	link root_lnk_;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -117,33 +114,17 @@ struct BS_HIDDEN_API context::impl {
 		verify();
 	}
 
-	impl(sp_node root) :
+	impl(node root) :
 		root_(std::move(root)), root_lnk_(link::make_root<hard_link>("/", root_))
 	{
 		verify();
-	}
-
-	~impl() {
-		goodbye_followers();
-	}
-
-	auto goodbye_followers() -> void {
-		std::for_each(
-			followers_.begin(), followers_.end(),
-			[](auto fid) { kernel::radio::bye_actor(fid); }
-		);
-		followers_.clear();
-	}
-
-	auto farewell_on_exit(std::uint64_t actor_id) -> void {
-		followers_.insert(actor_id);
 	}
 
 	auto verify() -> void {
 		if(!root_) {
 			if(root_lnk_) root_ = data_node(root_lnk_);
 			if(!root_) {
-				root_ = std::make_shared<node>();
+				root_ = node();
 				root_lnk_.reset();
 			}
 		}
@@ -151,10 +132,9 @@ struct BS_HIDDEN_API context::impl {
 			root_lnk_ = link::make_root<hard_link>("/", root_);
 	}
 
-	auto reset(sp_node root, link root_handle) {
+	auto reset(node root, link root_handle) {
 		// cleanup
 		idata_.clear();
-		goodbye_followers();
 		// assign new root
 		root_ = std::move(root);
 		root_lnk_ = root_handle;
@@ -240,13 +220,13 @@ struct BS_HIDDEN_API context::impl {
 			// check that cached parent matches link's parent
 			auto L_row = node::existing_index{};
 			if(L_path.size() == 1 && parent_node == root_)
-				L_row = parent_node->index(L.id());
+				L_row = parent_node.index(L.id());
 			else {
 				auto [parent, _] = make(L_tag);
 				if(parent) {
 					const auto& [_, parent_ptr] = **parent;
 					if(data_node(parent_ptr.lock()) == parent_node)
-						L_row = parent_node->index(L.id());
+						L_row = parent_node.index(L.id());
 				}
 			}
 			// if valid row is found - return, otherwise remove incorrect tag
@@ -286,9 +266,9 @@ struct BS_HIDDEN_API context::impl {
 		auto res = none;
 
 		auto cur_subpath = lids_v{};
-		auto push_subpath = [&](const std::string& next_lid, const sp_node& cur_level) {
-			if(auto item = level->find(next_lid, Key::ID)) {
-				if(auto item_row = level->index(item.id())) {
+		auto push_subpath = [&](const std::string& next_lid, const node& cur_level) {
+			if(auto item = level.find(next_lid, Key::ID)) {
+				if(auto item_row = level.index(item.id())) {
 					cur_subpath.push_back(uuid_from_str(next_lid));
 					res = { push(cur_subpath, item), *item_row };
 					return item;
@@ -347,7 +327,7 @@ struct BS_HIDDEN_API context::impl {
 				auto ltag = push(R_path, Lid, item);
 				if(item.id() == Lid) {
 					if(auto Rnode = data_node(R)) {
-						if(auto row = Rnode->index(Lid))
+						if(auto row = Rnode.index(Lid))
 							res = { std::move(ltag), *row };
 					}
 				}
@@ -371,17 +351,17 @@ struct BS_HIDDEN_API context::impl {
 		//bsout() << "*** index()" << bs_end;
 		// extract parent node & path
 		// [NOTE] empty parent means root
-		auto parent_node = sp_node{};
+		auto parent_node = node::nil();
 		if(auto parent_link = (parent ? (**parent).second.lock() : root_lnk_))
 			parent_node = data_node(parent_link);
 		if(!parent_node) return {};
 
 		// obtain child link
 		auto child_link = [&] {
-			if(auto par_sz = (std::int64_t)parent_node->size(); row < par_sz) {
+			if(auto par_sz = (std::int64_t)parent_node.size(); row < par_sz) {
 				// support negative indexing from node end
 				if(row < 0) row += par_sz;
-				if(row >= 0) return parent_node->find((std::size_t)row);
+				if(row >= 0) return parent_node.find((std::size_t)row);
 			}
 			return link{};
 		}();
@@ -403,7 +383,7 @@ struct BS_HIDDEN_API context::impl {
 		if(child_path.size() < 2) return none;
 
 		// extract grandparent, it's ID is child_path[-3]
-		auto grandpa_node = sp_node{};
+		auto grandpa_node = node::nil();
 		if(child_path.size() < 3)
 			grandpa_node = root_;
 		else if(auto grandpa_link = deref_path(child_path.begin(), child_path.end() - 2, root_lnk_))
@@ -411,9 +391,9 @@ struct BS_HIDDEN_API context::impl {
 		if(!grandpa_node) return none;
 
 		// parent's ID is child_path[-2]
-		auto parent_link = grandpa_node->find(*(child_path.end() - 2));
+		auto parent_link = grandpa_node.find(*(child_path.end() - 2));
 		auto parent_path = lids_v(child_path.begin(), child_path.end() - 1);
-		if(auto parent_row = grandpa_node->index(parent_link.id()))
+		if(auto parent_row = grandpa_node.index(parent_link.id()))
 			return { push(std::move(parent_path), parent_link), *parent_row };
 		else {
 			// remove incorrect path from tags cache
@@ -451,7 +431,7 @@ struct BS_HIDDEN_API context::impl {
 /*-----------------------------------------------------------------------------
  *  context
  *-----------------------------------------------------------------------------*/
-context::context(sp_node root) :
+context::context(node root) :
 	pimpl_{std::make_unique<impl>(std::move(root))}
 {}
 
@@ -462,18 +442,14 @@ context::context(link root) :
 context::~context() = default;
 
 auto context::reset(link root) -> void {
-	pimpl_->reset(nullptr, root);
+	pimpl_->reset(node::nil(), root);
 }
 
-auto context::reset(sp_node root, link root_handle) -> void {
+auto context::reset(node root, link root_handle) -> void {
 	pimpl_->reset(std::move(root), root_handle);
 }
 
-auto context::farewell_on_exit(std::uint64_t actor_id) -> void {
-	pimpl_->farewell_on_exit(actor_id);
-}
-
-auto context::root() const -> sp_node {
+auto context::root() const -> node {
 	return pimpl_->root_;
 }
 

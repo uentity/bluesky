@@ -67,6 +67,8 @@ kernel_cpp_list = [
 	"src/serialize/object_formatter.cpp",
 	"src/serialize/objfrm_manager.cpp",
 
+	"src/tree/engine.cpp",
+	"src/tree/engine_impl.cpp",
 	"src/tree/inode.cpp",
 	"src/tree/link.cpp",
 	"src/tree/link_actor.cpp",
@@ -75,6 +77,7 @@ kernel_cpp_list = [
 	"src/tree/link_events.cpp",
 	"src/tree/link_impl.cpp",
 	"src/tree/nil_link.cpp",
+	"src/tree/nil_node.cpp",
 	"src/tree/hard_link.cpp",
 	"src/tree/sym_link.cpp",
 	"src/tree/fusion_link.cpp",

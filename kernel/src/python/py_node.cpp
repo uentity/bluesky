@@ -136,10 +136,14 @@ void py_bind_node(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  Node
 	//
-	auto node_pyface = py::class_<node, objbase, std::shared_ptr<node>>(m, "node")
-		BSPY_EXPORT_DEF(node)
+	auto node_pyface = py::class_<node, engine>(m, "node")
 		.def(py::init<>())
+
+		.def("__bool__", [](const node& self) { return (bool)self; }, py::is_operator())
 		.def("__len__", &node::size, nogil)
+		.def_property_readonly("is_nil", &node::is_nil, nogil)
+		.def_property_readonly_static("nil", &node::nil)
+
 		// [FIXME] segfaults if `gil_scoped_release` is applied as call guard
 		.def("__iter__", [](const node& N) {
 			py::gil_scoped_release();
@@ -264,14 +268,17 @@ void py_bind_node(py::module& m) {
 		.def_property_readonly("handle", &node::handle,
 			"Returns a single link that owns this node in overall tree"
 		)
-		.def("propagate_owner", &node::propagate_owner, "deep"_a = false,
-			"Set owner of all contained links to this node (if deep, fix owner in entire subtree)"
-		)
+		//.def("propagate_owner", &node::propagate_owner, "deep"_a = false,
+		//	"Set owner of all contained links to this node (if deep, fix owner in entire subtree)"
+		//)
 
 		// events subscrition
 		.def("subscribe", &node::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
 		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
 	;
+
+	// node::weak_ptr
+	bind_weak_ptr(node_pyface);
 
 	// [TODO] remove it later (added for compatibility)
 	node_pyface.attr("Key") = m.attr("Key");

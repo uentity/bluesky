@@ -51,7 +51,7 @@ struct deref_actor : blue_sky::detail::anon_async_api_mixin< deref_actor_t<level
 				const level_process_f& lp, const deref_process_f& f,
 				bool follow_lazy_links
 			) {
-				f(detail::deref_path_impl(path, std::move(lnk), nullptr, follow_lazy_links, lp));
+				f(detail::deref_path_impl(path, std::move(lnk), node::nil(), follow_lazy_links, lp));
 			}
 		};
 	}
@@ -83,4 +83,3 @@ auto deref_path(
 }
 
 NAMESPACE_END(blue_sky::tree)
-

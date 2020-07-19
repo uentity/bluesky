@@ -99,7 +99,7 @@ private:
 
 	// detect pure objects (not nodes)
 	template<typename T>
-	static constexpr auto is_object_v = std::is_base_of_v<objbase, T> && !std::is_same_v<tree::node, T>;
+	static constexpr auto is_object_v = std::is_base_of_v<objbase, T>;
 
 	// generic specialization that forwards everything to base archive
 	template<typename... Ts>

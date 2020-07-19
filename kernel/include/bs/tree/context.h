@@ -26,17 +26,17 @@ public:
 	// combines above with link offset in parent's node
 	using item_index = std::pair<existing_tag, std::int64_t>;
 
-	context(sp_node root = {});
+	context(node root = node::nil());
 	context(link root);
 	// for unique_ptr
 	~context();
 
 	/// reset context to new root
 	auto reset(link root) -> void;
-	auto reset(sp_node root, link root_handle = {}) -> void;
+	auto reset(node root, link root_handle = {}) -> void;
 
 	/// simple accessors to model's data
-	auto root() const -> sp_node;
+	auto root() const -> node;
 	auto root_link() const -> link;
 	auto root_path(Key path_unit) const -> std::string;
 
@@ -49,9 +49,6 @@ public:
 	auto operator()(std::int64_t item_idx, existing_tag parent = {}) -> existing_tag;
 	/// make parent tag from child one
 	auto operator()(existing_tag child) -> item_index;
-
-	/// send `a_bye` message to registered actor with given ID
-	auto farewell_on_exit(std::uint64_t actor_id) -> void;
 
 	/// DEBUG
 	auto dump() const -> void;

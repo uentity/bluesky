@@ -13,48 +13,50 @@
 #include <bs/tree/errors.h>
 #include <bs/tree/inode.h>
 
-// -----------------------------------------------------
-// Implementation of class: object_base
-// -----------------------------------------------------
-
 NAMESPACE_BEGIN(blue_sky)
+/*-----------------------------------------------------------------------------
+ *  objbase
+ *-----------------------------------------------------------------------------*/
+objbase::objbase(std::string custom_oid, bool start_actor) {
+	if(custom_oid.empty()) {
+		id_ = to_string(gen_uuid());
+		if(start_actor) reset_home(id_, true);
+	}
+	else
+		id_ = std::move(custom_oid);
+
+	if(start_actor) start_engine();
+}
 
 objbase::objbase(std::string custom_oid)
-	: objbase(false, custom_oid)
-{
-	start_engine();
-}
-
-objbase::objbase(bool is_node, std::string custom_oid)
-	: id_(custom_oid.size() ? std::move(custom_oid) : to_string(gen_uuid())),
-	is_node_(is_node)
-{
-	start_engine();
-}
+	: objbase(std::move(custom_oid), true)
+{}
 
 objbase::objbase(const objbase& obj)
-	: enable_shared_from_this(obj), id_(to_string(gen_uuid())), is_node_(obj.is_node_)
+	: enable_shared_from_this(obj), id_(to_string(gen_uuid()))
 {
 	start_engine();
 }
 
-void objbase::swap(objbase& rhs) {
-	std::swap(is_node_, rhs.is_node_);
-	std::swap(id_, rhs.id_);
-	std::swap(inode_, rhs.inode_);
-	std::swap(actor_, rhs.actor_);
+auto objbase::swap(objbase& rhs) -> void {
+	using std::swap;
+
+	swap(id_, rhs.id_);
+	swap(inode_, rhs.inode_);
+	swap(actor_, rhs.actor_);
+	swap(home_, rhs.home_);
 }
 
-objbase& objbase::operator=(const objbase& rhs) {
+auto objbase::operator=(const objbase& rhs) -> objbase& {
 	objbase(rhs).swap(*this);
 	return *this;
 }
 
-const type_descriptor& objbase::bs_type() {
+auto objbase::bs_type() -> const type_descriptor& {
 	static auto td = [] {
 		auto td = type_descriptor(
 			"objbase", &type_descriptor::nil, detail::make_assigner<objbase>(), nullptr,
-			"Base class of all BlueSky types"
+			"Base class of all BS types"
 		);
 		// add constructor from custom OID
 		td.add_constructor([](const std::string& custom_oid) -> sp_obj {
@@ -80,10 +82,6 @@ std::string objbase::id() const {
 	return id_;
 }
 
-bool objbase::is_node() const {
-	return is_node_;
-}
-
 auto objbase::raw_actor() const -> const caf::actor& {
 	return actor_;
 }
@@ -94,6 +92,34 @@ auto objbase::info() const -> result_or_err<tree::inode> {
 		result_or_err<tree::inode>(*I) :
 		tl::make_unexpected(error::quiet(tree::Error::EmptyInode));
 }
+
+auto objbase::data_node() const -> tree::node {
+	return tree::node::nil();
+}
+
+/*-----------------------------------------------------------------------------
+ *  objnode
+ *-----------------------------------------------------------------------------*/
+objnode::objnode(std::string custom_oid)
+	: objbase(std::move(custom_oid))
+{}
+
+objnode::objnode(tree::node N, std::string custom_oid)
+	: objbase(std::move(custom_oid)), node_(std::move(N))
+{}
+
+auto objnode::swap(objnode& rhs) -> void {
+	using std::swap;
+
+	objbase::swap(rhs);
+	swap(node_, rhs.node_);
+}
+
+auto objnode::data_node() const -> tree::node {
+	return node_;
+}
+
+BS_TYPE_IMPL(objnode, objbase, "objnode", "Object with internal node")
 
 NAMESPACE_END(blue_sky)
 

@@ -10,6 +10,8 @@
 #include "node_impl.h"
 #include "link_impl.h"
 #include "node_actor.h"
+#include "nil_engine.h"
+
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/detail/tuple_utils.h>
@@ -17,62 +19,86 @@
 #include <bs/serialize/tree.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using bs_detail::shared;
+	
+ENGINE_TYPE_DEF(node_impl, "node")
 
-node_impl::node_impl(node* super) :
-	timeout(def_timeout(true)), super_(super)
-{}
-
-// implement shallow links copy ctor
-node_impl::node_impl(const node_impl& rhs, node* super) :
-	timeout(rhs.timeout), super_(super)
+node_impl::node_impl(const links_v& leafs) :
+	links_(leafs.begin(), leafs.end())
 {
-	*this = rhs;
-}
-
-auto node_impl::operator=(const node_impl& rhs) -> node_impl& {
-	// [TODO] fix this in safer way after node is refactored
-	auto& raw_leafs = links_.get<Key_tag<Key::AnyOrder>>();
-	for(const auto& plink : rhs.links_.get<Key_tag<Key::AnyOrder>>())
-		raw_leafs.insert(raw_leafs.end(), plink.clone(true));
 	// [NOTE] links are in invalid state (no owner set) now
 	// correct this by manually calling `node::propagate_owner()` after copy is constructed
-	return *this;
 }
 
-node_impl::node_impl(node_impl&& rhs, node* super) :
-	links_(std::move(rhs.links_)), handle_(std::move(rhs.handle_)),
-	timeout(std::move(rhs.timeout)), actor_(std::move(rhs.actor_)), home_(std::move(rhs.home_)),
-	super_(super)
-{}
-
-auto node_impl::start_engine(sp_nimpl nimpl, std::string gid) -> void {
-	if(!actor_)
-		actor_ = spawn_nactor(std::move(nimpl), home(std::move(gid), true));
-	else // just enter group
-		home(std::move(gid));
+auto node_impl::clone(bool deep) const -> sp_nimpl {
+	auto res = std::make_unique<node_impl>();
+	auto& res_leafs = res->links_.get<Key_tag<Key::AnyOrder>>();
+	for(const auto& leaf : links_.get<Key_tag<Key::AnyOrder>>())
+		res_leafs.insert(res_leafs.end(), leaf.clone(deep));
+	return res;
 }
 
-auto node_impl::home(std::string gid, bool silent) -> caf::group& {
-	// generate random UUID for actor groud if passed GID is empty
-	if(gid.empty())
-		gid = to_string(gen_uuid());
-	// make node's group & invite actor
-	home_ = system().groups().get_local(gid);
-	if(!silent)
-		caf::anon_send<high_prio>(actor(), a_hi());
-	return home_;
-}
-
-auto node_impl::super() const -> sp_node {
-	return super_ ? super_->bs_shared_this<node>() : nullptr;
-}
-
-auto node_impl::set_handle(const link& new_handle) -> void {
-	caf::anon_send<high_prio>(actor(), a_node_handle(), new_handle);
+auto node_impl::super() const -> node {
+	return super_.lock();
 }
 
 auto node_impl::handle() const -> link {
+	auto guard = lock(shared);
 	return handle_.lock();
+}
+
+auto node_impl::set_handle(const link& new_handle) -> void {
+	auto guard = lock();
+	// remove node from existing owner if it differs from owner of new handle
+	// [NOTE] don't call `handle()` here, because mutex is already locked
+	if(const auto old_handle = handle_.lock()) {
+		const auto owner = old_handle.owner();
+		if(owner && (!new_handle || owner != new_handle.owner()))
+			owner.erase(old_handle.id());
+	}
+
+	if(new_handle)
+		handle_ = new_handle;
+	else
+		handle_.reset();
+}
+
+// postprocessing of just inserted link
+// if link points to node, return it
+auto node_impl::adjust_inserted_link(const link& lnk, const node& target) -> node {
+	// sanity
+	if(!lnk) return node::nil();
+
+	// change link's owner
+	if(auto prev_owner = lnk.owner(); prev_owner != target) {
+		lnk.reset_owner(target);
+		// [NOTE] instruct prev node to not reset link's owner - we set above
+		if(prev_owner)
+			caf::anon_send(
+				node_impl::actor(prev_owner), a_node_erase(), lnk.id(), EraseOpts::DontResetOwner
+			);
+	}
+
+	// if we're inserting a node, relink it to ensure a single hard link exists
+	return lnk.propagate_handle().value_or(node::nil());
+}
+
+auto node_impl::propagate_owner(const engine& S, bool deep) -> void {
+	// setup super
+	if(S == nil_node::nil_engine()) return;
+	super_ = S;
+	// properly setup owner in node's leafs
+	for(auto& L : links_) {
+		auto child_node = node_impl::adjust_inserted_link(L, S);
+		if(deep && child_node)
+			child_node.pimpl()->propagate_owner(child_node, true);
+	}
+}
+
+auto node_impl::spawn_actor(sp_nimpl nimpl) -> caf::actor {
+	return spawn_nactor(
+		std::move(nimpl), system().groups().get_local(to_string(gen_uuid()))
+	);
 }
 
 auto node_impl::size() const -> std::size_t {
@@ -173,7 +199,7 @@ auto node_impl::insert(
 	// 2. make insertion
 	// [NOTE] reset link's owner to insert safely (block symlink side effects, etc)
 	const auto prev_owner = L.owner();
-	L.reset_owner(nullptr);
+	L.reset_owner(node::nil());
 	auto res = links_.get<Key_tag<Key::ID>>().insert(L);
 
 	// 3. postprocess
@@ -184,7 +210,7 @@ auto node_impl::insert(
 		if(prev_owner && prev_owner != self)
 			// erase won't touch owner (we set it manually)
 			caf::anon_send(
-				node_impl::actor(*prev_owner), a_node_erase(), res_L.id(), EraseOpts::DontResetOwner
+				node_impl::actor(prev_owner), a_node_erase(), res_L.id(), EraseOpts::DontResetOwner
 			);
 		res_L.propagate_handle();
 		// set owner to this node
@@ -205,31 +231,11 @@ auto node_impl::insert(
 			auto dst_node = res_L.data_node();
 			if(src_node && dst_node) {
 				// insert all links from source node into destination
-				dst_node->insert(src_node->leafs(), pol);
+				dst_node.insert(src_node.leafs(), pol);
 			}
 		}
 	}
 	return res;
-}
-
-// postprocessing of just inserted link
-// if link points to node, return it
-auto node_impl::adjust_inserted_link(const link& lnk, const sp_node& target) -> sp_node {
-	// sanity
-	if(!lnk) return nullptr;
-
-	// change link's owner
-	if(auto prev_owner = lnk.owner(); prev_owner != target) {
-		lnk.reset_owner(target);
-		// [NOTE] instruct prev node to not reset link's owner - we set above
-		if(prev_owner)
-			caf::anon_send(
-				node_impl::actor(*prev_owner), a_node_erase(), lnk.id(), EraseOpts::DontResetOwner
-			);
-	}
-
-	// if we're inserting a node, relink it to ensure a single hard link exists
-	return lnk.propagate_handle().value_or(nullptr);
 }
 
 auto node_impl::erase_impl(
@@ -240,7 +246,7 @@ auto node_impl::erase_impl(
 	ppf(L);
 
 	// erase
-	if(!dont_reset_owner) L.reset_owner(nullptr);
+	if(!dont_reset_owner) L.reset_owner(node::nil());
 	auto res = index<Key::ID>(victim);
 	links_.get<Key_tag<Key::ID>>().erase(victim);
 	return res.value_or(links_.size());

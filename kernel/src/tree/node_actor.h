@@ -36,7 +36,7 @@ public:
 	sp_nimpl pimpl_;
 	node_impl& impl;
 
-	node_actor(caf::actor_config& cfg, sp_nimpl Nimpl);
+	node_actor(caf::actor_config& cfg, caf::group nhome, sp_nimpl Nimpl);
 	~node_actor();
 
 	// return typed actor handle to this
@@ -52,7 +52,7 @@ public:
 			send(link_impl::actor(h), std::forward<Args>(args)...);
 	}
 
-	// forward 'ack' message to upper level, auto prepend it with this link ID info
+	// forward 'ack' message to upper level, auto prepend it with this node actor handle
 	template<typename... Args>
 	auto ack_up(Args&&... args) -> void {
 		forward_up(a_ack(), this, std::forward<Args>(args)...);
@@ -71,16 +71,6 @@ public:
 	// combines primary + ack
 	auto make_behavior() -> behavior_type override;
 
-	// get/set home group ID + optionally invite actor
-	auto home() -> caf::group&;
-	auto home(std::string gid) -> caf::group&;
-	// 'unsafe' means read-only direct access to stored group memeber
-	auto home(unsafe_t) const -> caf::group&;
-
-	// get node's group ID
-	auto gid() -> const std::string&;
-	auto gid(unsafe_t) const -> std::string;
-
 	auto insert(
 		link L, const InsertPolicy pol, bool silent = false
 	) -> insert_status<Key::ID>;
@@ -96,10 +86,7 @@ public:
 template<typename Actor = node_actor, caf::spawn_options Os = caf::no_spawn_options, class... Ts>
 inline auto spawn_nactor(std::shared_ptr<node_impl> nimpl, caf::group nhome, Ts&&... args) {
 	auto& AS = kernel::radio::system();
-	if(nhome)
-		return AS.spawn_in_group<Actor, Os>(nhome, std::move(nimpl), std::forward<Ts>(args)...);
-	else // delayed self group creation
-		return AS.spawn<Actor, Os>(std::move(nimpl), std::forward<Ts>(args)...);
+	return AS.spawn_in_group<Actor, Os>(nhome, nhome, std::move(nimpl), std::forward<Ts>(args)...);
 }
 
 NAMESPACE_END(blue_sky::tree)

@@ -67,13 +67,15 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		return error::eval_safe(
 			// read node's metadata
 			[&]{ return head().map( [&](auto* ar) {
-				(*ar)(cereal::make_nvp("node_dir", node_dir));
-				(*ar)(cereal::make_nvp("leafs_order", leafs_order));
+				if(N) {
+					(*ar)(cereal::make_nvp("node_dir", node_dir));
+					(*ar)(cereal::make_nvp("leafs_order", leafs_order));
+				}
 				// we finished reading node
 				epilogue(*ar, N);
 			}); },
 			// load leafs
-			[&]{ return load_node(ar, N, std::move(node_dir), std::move(leafs_order)); }
+			[&]{ return N ? load_node(ar, N, std::move(node_dir), std::move(leafs_order)) : perfect; }
 		);
 	}
 
@@ -199,22 +201,23 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		prologue(*cur_head.value(), obj);
 		auto finally = scope_guard{ [&]{ epilogue(*cur_head.value(), obj); } };
 
-		// 1, 2. read object format & filename
-		std::string obj_filename, obj_frm;
-		ar(
-			cereal::make_nvp("fmt", obj_frm),
-			cereal::make_nvp("filename", obj_filename)
-		);
-
-		// obtain formatter
+		// 1, read object format & obtain formatter filename
+		std::string obj_frm;
+		ar(cereal::make_nvp("fmt", obj_frm));
 		auto F = get_formatter(obj.type_id(), obj_frm);
 		if(!F) return { fmt::format("{} -> {}", obj.type_id(), obj_frm), Error::MissingFormatter };
 
-		// 3. if object is node and formatter don't store leafs, then load 'em explicitly
-		if(obj.is_node() && !F->stores_node)
-			ar(cereal::make_nvp( "node", static_cast<tree::node&>(obj) ));
+		// 2. if object is node and formatter don't store leafs, then load 'em explicitly
+		if(!F->stores_node)
+			ar(cereal::make_nvp( "node", obj.data_node() ));
 		else
 			(**cur_head)(cereal::make_nvp( "object", obj ));
+
+		// 3. if object is pure node - we're done and can skip data processing
+		if(obj.bs_resolve_type() == objnode::bs_type()) return perfect;
+
+		std::string obj_filename;
+		ar(cereal::make_nvp("filename", obj_filename));
 
 		// 4. read object data from specified file
 		EVAL

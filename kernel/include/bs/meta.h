@@ -48,6 +48,10 @@ inline constexpr bool a1_is_t = [] {
 		return is_base_of_uq<T, A1>;
 }();
 
+/// same as above, but check if A1 is convertible to T
+template<typename T, typename A1 = std::add_pointer_t<T>, typename... Args>
+inline constexpr bool a1_convertible_to_t = std::is_convertible_v<remove_cvref_t<A1>, T>;
+
 /// following can be used to narrow greedy perfect forward ctor by excluding copy & move ctors
 template<typename T, typename... Args>
 inline constexpr bool enable_pf_ctor_v = !(a1_is_t<T, Args...> && sizeof...(Args) == 1);

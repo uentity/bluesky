@@ -14,13 +14,13 @@
 NAMESPACE_BEGIN(blue_sky::tree::detail)
 
 auto walk_down_tree(
-	const std::string& next_lid, const sp_node& cur_level, Key path_unit = Key::ID
+	const std::string& next_lid, const node& cur_level, Key path_unit = Key::ID
 ) -> link;
 
 NAMESPACE_BEGIN()
 // put into hidden namespace to prevent equal multiple instantiations
 auto gen_walk_down_tree(Key path_unit = Key::ID) {
-	return [path_unit](const std::string& next_lid, const sp_node& cur_level) {
+	return [path_unit](const std::string& next_lid, const node& cur_level) {
 		return walk_down_tree(next_lid, cur_level, path_unit);
 	};
 }
@@ -39,7 +39,7 @@ template<
 	typename level_deref_f = decltype(gen_walk_down_tree())
 >
 auto deref_path_impl(
-	const std::string& path, link L, sp_node root = nullptr, bool follow_lazy_links = true,
+	const std::string& path, link L, node root = node::nil(), bool follow_lazy_links = true,
 	level_deref_f deref_f = gen_walk_down_tree()
 ) -> link {
 	// split path into elements
@@ -52,7 +52,7 @@ auto deref_path_impl(
 		// absolute path case
 		root = root ? find_root(root) : find_root(L);
 	}
-	if(root) L = root->handle();
+	if(root) L = root.handle();
 
 	// deref each element
 	for(const auto& part : path_parts) {
@@ -60,12 +60,12 @@ auto deref_path_impl(
 		if(part.empty() || part == ".")
 			is_control_elem = true;
 		else if(part == "..") {
-			root = L ? L.owner() : nullptr;
+			root = L ? L.owner() : node::nil();
 			is_control_elem = true;
 		}
 		else if(!root)
 			root = L && (follow_lazy_links || can_call_dnode(L)) ?
-				L.data_node() : nullptr;
+				L.data_node() : node::nil();
 
 		if constexpr(DerefControlElements) {
 			// intentional ignore of deref return value

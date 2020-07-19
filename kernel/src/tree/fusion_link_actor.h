@@ -26,14 +26,13 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	// bridge
 	sp_fusion bridge_;
 	// contained object
-	sp_node data_;
+	sp_obj data_;
 
 	using actor_type = link_impl::actor_type::extend_with<fusion_link::fusion_actor_type>;
 
 	using super = ilink_impl;
-	using super::owner_;
 
-	fusion_link_impl(std::string name, sp_node data, sp_fusion bridge, Flags f);
+	fusion_link_impl(std::string name, sp_obj data, sp_fusion bridge, Flags f);
 	fusion_link_impl();
 
 	// search for valid (non-null) bridge up the tree
@@ -42,22 +41,19 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	auto reset_bridge(sp_fusion&& new_bridge) -> void;
 
 	// implement `data`
-	auto data() -> result_or_err<sp_obj> override;
+	auto data() -> obj_or_err override;
 
 	// unsafe version returns cached value
 	auto data(unsafe_t) -> sp_obj override;
-
-	// populate with specified child type
-	auto populate(const std::string& child_type_id = "", bool wait_if_busy = true)
-	-> result_or_err<sp_node>;
 
 	auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor override;
 
 	auto clone(bool deep = false) const -> sp_limpl override;
 
-	auto propagate_handle(const link&) -> result_or_err<sp_node> override;
+	// populate with specified child type
+	auto populate(const std::string& child_type_id = "", bool wait_if_busy = true) -> node_or_err;
 
-	LIMPL_TYPE_DECL
+	ENGINE_TYPE_DECL
 };
 
 /*-----------------------------------------------------------------------------
@@ -71,16 +67,14 @@ struct BS_HIDDEN_API fusion_link_actor : public cached_link_actor {
 	using typed_behavior = actor_type::behavior_type;
 	// part of behavior overloaded/added from super actor type
 	using typed_behavior_overload = caf::typed_behavior<
-		caf::replies_to<a_flnk_populate, std::string, bool>::with<result_or_errbox<sp_node>>,
+		caf::replies_to<a_flnk_populate, std::string, bool>::with<node_or_errbox>,
 		caf::replies_to<a_flnk_bridge>::with<sp_fusion>,
 		caf::reacts_to<a_flnk_bridge, sp_fusion>,
 
 		// get pointee OID
 		caf::replies_to<a_lnk_oid>::with<std::string>,
 		// get pointee type ID
-		caf::replies_to<a_lnk_otid>::with<std::string>,
-		// get pointee node group ID
-		caf::replies_to<a_node_gid>::with<result_or_errbox<std::string>>
+		caf::replies_to<a_lnk_otid>::with<std::string>
 	>;
 
 	auto fimpl() -> fusion_link_impl& { return static_cast<fusion_link_impl&>(impl); }

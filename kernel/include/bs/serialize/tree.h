@@ -8,7 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "../tree/tree.h"
+#include "../tree/link.h"
+#include "../tree/node.h"
 #include "serialize_decl.h"
 
 // inode

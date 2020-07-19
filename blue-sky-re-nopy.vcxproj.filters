@@ -369,6 +369,9 @@
     <ClInclude Include="kernel\include\bs\kernel\radio.h">
       <Filter>Заголовочные файлы\bs\kernel</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\engine.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\include\bs\tree\errors.h">
       <Filter>Заголовочные файлы\bs\tree</Filter>
     </ClInclude>
@@ -393,10 +396,16 @@
     <ClInclude Include="kernel\src\tree\actor_debug.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\src\tree\engine_impl.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\src\tree\ev_listener_actor.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\src\tree\nil_link.h">
+    <ClInclude Include="kernel\src\tree\nil_engine.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\src\tree\nil_engine_impl.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
     <ClInclude Include="kernel\src\tree\node_extraidx_actor.h">
@@ -471,6 +480,12 @@
       <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\hard_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\engine.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\engine_impl.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\link.cpp">
@@ -600,6 +615,9 @@
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\nil_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\nil_node.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\node_extraidx_actor.cpp">

@@ -18,27 +18,30 @@ NAMESPACE_BEGIN(blue_sky::tree)
 class BS_API fusion_iface {
 public:
 	/// accept root object and optionally type of child objects to be populated with
-	virtual auto populate(const sp_node& root, const std::string& child_type_id = "") -> error = 0;
+	virtual auto populate(sp_obj root, const std::string& child_type_id = "") -> error = 0;
 	/// download passed object's content from third-party backend
-	virtual auto pull_data(const sp_obj& root) -> error = 0;
+	virtual auto pull_data(sp_obj root) -> error = 0;
 
-	virtual ~fusion_iface();
+	virtual ~fusion_iface() = default;
 };
 using sp_fusion = std::shared_ptr<fusion_iface>;
 
 /*-----------------------------------------------------------------------------
  *  Fusion link populates object children when `data_node()` or `data()` is called
  *-----------------------------------------------------------------------------*/
+struct fusion_link_impl;
+
 class BS_API fusion_link : public link {
 	friend class blue_sky::atomizer;
 	friend class cereal::access;
 
 public:
 	using super = link;
+	using engine_impl = fusion_link_impl;
 
 	using fusion_actor_type = caf::typed_actor<
 		// populate pointee with given children types
-		caf::replies_to<a_flnk_populate, std::string, bool>::with<result_or_errbox<sp_node>>,
+		caf::replies_to<a_flnk_populate, std::string, bool>::with<node_or_errbox>,
 		// get link's bridge
 		caf::replies_to<a_flnk_bridge>::with<sp_fusion>,
 		// set link's bridge
@@ -49,7 +52,7 @@ public:
 
 	// ctors
 	fusion_link(
-		std::string name, sp_node data = nullptr,
+		std::string name, sp_obj data = nullptr,
 		sp_fusion bridge = nullptr, Flags f = Plain
 	);
 
@@ -65,10 +68,10 @@ public:
 	// force `fusion_iface::populate()` call with specified children types
 	// regardless of populate status
 	auto populate(const std::string& child_type_id, bool wait_if_busy = true) const
-		-> result_or_err<sp_node>;
+	-> node_or_err;
 	// async populate
-	auto populate(process_data_cb f, std::string child_type_id) const
-		-> void;
+	auto populate(process_dnode_cb f, std::string child_type_id) const
+	-> void;
 
 	// access to link's fusion bridge
 	auto bridge() const -> sp_fusion;

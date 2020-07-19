@@ -14,9 +14,6 @@
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(detail)
 
-/// correct leafs owner in cloned node object
-BS_API void adjust_cloned_node(const sp_obj&);
-
 NAMESPACE_END(detail)
 
 NAMESPACE_BEGIN()
@@ -86,13 +83,7 @@ auto type_descriptor::operator <(const type_descriptor& td) const -> bool {
 }
 
 auto type_descriptor::clone(bs_type_copy_param src) const -> shared_ptr_cast {
-	if(copy_fun_) {
-		auto res = (*copy_fun_)(src);
-		// nodes need special adjustment
-		detail::adjust_cloned_node(res);
-		return res;
-	}
-	return {};
+	return copy_fun_ ? (*copy_fun_)(src) : nullptr; 
 }
 
 auto type_descriptor::assign(sp_obj target, sp_obj source, prop::propdict params) const -> error {

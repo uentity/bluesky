@@ -9,6 +9,7 @@
 #pragma once
 
 #include "../common.h"
+#include "../error.h"
 #include "../uuid.h"
 #include "../detail/enumops.h"
 #include "../detail/function_view.h"
@@ -57,7 +58,7 @@ enum class InsertPolicy {
 /// link's unique ID type
 using lid_type = uuid;
 /// function that modifies link's pointee
-using data_modificator_f = objbase::modificator_f;
+using data_modificator_f = std::function< error(sp_obj) >;
 
 /// can be passed as callback that does nothing
 inline constexpr auto noop = [](auto&&...) {};
@@ -75,5 +76,12 @@ class link_actor;
 class node;
 class node_impl;
 class node_actor;
+
+using obj_or_err = result_or_err<sp_obj>;
+using obj_or_errbox = result_or_errbox<sp_obj>;
+using link_or_err = result_or_err<link>;
+using link_or_errbox = result_or_errbox<link>;
+using node_or_err = result_or_err<node>;
+using node_or_errbox = result_or_errbox<node>;
 
 NAMESPACE_END(blue_sky::tree)
