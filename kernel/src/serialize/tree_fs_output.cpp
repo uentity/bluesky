@@ -72,9 +72,6 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			// write down node's metadata nessessary to load it later
 			[&]{ return head().map( [&](auto* ar) {
 				if(N) {
-					// node directory
-					(*ar)(cereal::make_nvp("node_dir", N.home_id()));
-
 					// custom leafs order
 					std::vector<std::string> leafs_order = N.skeys(tree::Key::ID, tree::Key::AnyOrder);
 					(*ar)(cereal::make_nvp("leafs_order", leafs_order));

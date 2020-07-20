@@ -62,32 +62,30 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			if(auto er = enter_dir(p, cur_path_)) throw er;
 		}};
 
-		std::string node_dir;
 		std::vector<std::string> leafs_order;
 		return error::eval_safe(
 			// read node's metadata
 			[&]{ return head().map( [&](auto* ar) {
 				if(N) {
-					(*ar)(cereal::make_nvp("node_dir", node_dir));
 					(*ar)(cereal::make_nvp("leafs_order", leafs_order));
 				}
 				// we finished reading node
 				epilogue(*ar, N);
 			}); },
 			// load leafs
-			[&]{ return N ? load_node(ar, N, std::move(node_dir), std::move(leafs_order)) : perfect; }
+			[&]{ return N ? load_node(ar, N, std::move(leafs_order)) : perfect; }
 		);
 	}
 
 	auto load_node(
-		tree_fs_input& ar, tree::node& N, std::string node_dir, std::vector<std::string> leafs_order
+		tree_fs_input& ar, tree::node& N, std::vector<std::string> leafs_order
 	) -> error {
 		using Options = fs::directory_options;
 
 		// skip empty dirs in normal mode
 		if(mode_ == NodeLoad::Normal && leafs_order.empty()) return perfect;
 		// enter node's dir
-		if(auto er = enter_dir(cur_path_ / node_dir, cur_path_)) return er;
+		if(auto er = enter_dir(cur_path_ / N.home_id(), cur_path_)) return er;
 
 		std::string united_err_msg;
 		auto push_error = [&](auto er) {
