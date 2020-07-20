@@ -82,8 +82,15 @@ struct cat_registry {
 	}
 };
 
-const auto ok_err_code = make_error_code(Error::OK);
-const auto fail_err_code = make_error_code(Error::Happened);
+auto ok_err_code() {
+	static const auto v = make_error_code(Error::OK);
+	return v;
+};
+
+auto fail_err_code() {
+   static const auto v = make_error_code(Error::Happened);
+   return v;
+}
 
 #define ECR cat_registry::self()
 
@@ -143,10 +150,13 @@ error::error(IsQuiet quiet, box b) noexcept
 	: error(IsQuiet::Yes, b.message, ECR.make_error_code(b.ec, b.domain))
 {}
 
-error::error(success_tag) noexcept : code(ok_err_code)
+error::error(success_tag) noexcept : code(ok_err_code())
 {}
 
-error::error(fail_tag) noexcept : code(fail_err_code)
+error::error(quiet_fail_tag) noexcept : code(fail_err_code())
+{}
+
+error::error(bool v) noexcept : code(v ? ok_err_code() : fail_err_code())
 {}
 
 // put passed error_category into registry

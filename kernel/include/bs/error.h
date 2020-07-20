@@ -55,7 +55,7 @@ public:
 	// indicates that no error happened
 	struct success_tag {};
 	// indicates that operation failed for some reason
-	struct fail_tag {};
+	struct quiet_fail_tag {};
 
 	/// registers inherited error category automatically
 	template<typename Category>
@@ -95,8 +95,9 @@ private:
 	template<typename A1 = int, typename... As>
 	struct allow_forward {
 		using T1 = std::remove_cv_t<std::remove_reference_t<A1>>;
-		static constexpr bool value = !std::is_same_v<T1, IsQuiet> && !std::is_same_v<T1, success_tag>
-			&& !std::is_base_of_v<error, T1>;
+		static constexpr bool value = !std::is_same_v<T1, IsQuiet> && !std::is_base_of_v<error, T1> &&
+			!std::is_same_v<T1, success_tag> && !std::is_same_v<T1, quiet_fail_tag> &&
+			!std::is_same_v<T1, bool>;
 	};
 
 public:
@@ -112,7 +113,9 @@ public:
 	/// construct quiet error with OK status
 	error(success_tag) noexcept;
 	/// construct quiet error with Happened status
-	error(fail_tag) noexcept;
+	error(quiet_fail_tag) noexcept;
+	/// true -> success, false -> quiet fail
+	error(bool) noexcept;
 
 	/// copy & move ctors
 	error(const error& rhs) = default;
@@ -161,7 +164,8 @@ public:
 		using f_result = std::invoke_result_t<F>;
 		const auto eval_f = [](auto&& ff) -> error {
 			if constexpr(
-				std::is_same_v<f_result, error> || std::is_same_v<f_result, success_tag> ||
+				!allow_forward<f_result>::value ||
+				(std::is_class_v<f_result> && std::is_convertible_v<f_result, bool>) ||
 				std::is_error_code_enum_v<f_result>
 			)
 				return std::invoke(std::forward<F>(ff));
@@ -250,7 +254,7 @@ inline auto success(Args&&... args) noexcept -> error {
 /// correct (no error) result indicator
 inline constexpr auto perfect = error::success_tag{};
 /// correct (no error) result indicator
-inline constexpr auto quiet_fail = error::fail_tag{};
+inline constexpr auto quiet_fail = error::quiet_fail_tag{};
 
 /// carries result (of type T) OR error
 template<class T> using result_or_err = tl::expected<T, error>;
