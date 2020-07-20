@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include "../error.h"
 #include "serialize_decl.h"
 #include "to_string.h"
 #include "base_types.h"
@@ -42,12 +43,23 @@ auto inspect(Inspector& f, T& x)
 > {
 	using vostream = boost::interprocess::basic_ovectorstream< std::vector<char> >;
 	vostream ss;
-	try {
-		cereal::PortableBinaryOutputArchive A(ss);
-		A(x);
+	cereal::PortableBinaryOutputArchive A(ss);
+
+	// for BS types run serialization in object's queue
+	if constexpr(std::is_base_of_v<::blue_sky::objbase, T>) {
+		if(x.apply([&]() -> blue_sky::error {
+			A(x);
+			return blue_sky::perfect;
+		}))
+			return sec::state_not_serializable;
 	}
-	catch(const cereal::Exception&) {
-		return sec::state_not_serializable;
+	else {
+		try {
+			A(x);
+		}
+		catch(...) {
+			return sec::state_not_serializable;
+		}
 	}
 	return f.apply_raw(ss.vector().size()*sizeof(char), (void*)ss.vector().data());
 }
@@ -65,15 +77,26 @@ auto inspect(Inspector& f, T& x)
 > {
 	using vistream = boost::interprocess::basic_ivectorstream< std::vector<char> >;
 	std::vector<char> x_data;
+	vistream ss(x_data);
+	cereal::PortableBinaryInputArchive A(ss);
+
+	// for BS types run serialization in object's queue
 	auto g = caf::detail::make_scope_guard([&]() -> error {
-		try {
-			vistream ss(x_data);
-			cereal::PortableBinaryInputArchive A(ss);
-			A(x);
-			return none;
+		if constexpr(std::is_base_of_v<::blue_sky::objbase, T>) {
+			if(x.apply([&]() -> blue_sky::error {
+				A(x);
+				return blue_sky::perfect;
+			}))
+				return sec::state_not_serializable;
 		}
-		catch(const cereal::Exception&) {
-			return sec::state_not_serializable;
+		else {
+			try {
+				A(x);
+				return none;
+			}
+			catch(...) {
+				return sec::state_not_serializable;
+			}
 		}
 	});
 	return f.apply_raw(x_data.size()*sizeof(char), x_data.data());
@@ -83,7 +106,7 @@ auto inspect(Inspector& f, T& x)
 template<typename T>
 auto to_string(const T& t)
 -> std::enable_if_t< sizeof(decltype(::blue_sky::to_string(std::declval<T>()))) != 0, std::string > {
-	return blue_sky::to_string(t);
+	return ::blue_sky::to_string(t);
 }
 
 } // eof caf namespace

@@ -92,7 +92,10 @@ public:
 
 	/// runs modificator in message queue of this object
 	auto apply(modificator_f m) const -> error;
+	auto apply(closed_modificator_f m) const -> error;
+
 	auto apply(launch_async_t, modificator_f m) const -> void;
+	auto apply(launch_async_t, closed_modificator_f m) const -> void;
 
 	template<typename F>
 	auto make_closed_modificator(F&& f) const -> closed_modificator_f {

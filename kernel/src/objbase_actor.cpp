@@ -128,10 +128,20 @@ auto objbase::reset_home(std::string new_hid, bool silent) -> void {
 		caf::anon_send<high_prio>(objbase_actor::actor(*this), a_home(), std::move(new_hid));
 }
 
+auto objbase::apply(closed_modificator_f m) const -> error {
+	return actorf<error>(
+		actor(), kernel::radio::timeout(true), a_apply(), std::move(m)
+	);
+}
+
 auto objbase::apply(modificator_f m) const -> error {
 	return actorf<error>(
 		actor(), kernel::radio::timeout(true), a_apply(), make_closed_modificator(std::move(m))
 	);
+}
+
+auto objbase::apply(launch_async_t, closed_modificator_f m) const -> void {
+	caf::anon_send(actor(), a_apply(), std::move(m));
 }
 
 auto objbase::apply(launch_async_t, modificator_f m) const -> void {
