@@ -29,10 +29,9 @@ void py_bind_objbase(py::module& m) {
 		}), "custom_oid"_a = "")
 
 		.def("bs_resolve_type", &objbase::bs_resolve_type, py::return_value_policy::reference)
-		.def("swap", &objbase::swap)
-		.def("type_id", &objbase::type_id)
-		.def("id", &objbase::id)
-		.def("data_node", &objbase::data_node)
+		.def_property_readonly("type_id", &objbase::type_id)
+		.def_property_readonly("id", &objbase::id)
+		.def_property_readonly("data_node", &objbase::data_node)
 		.def_property_readonly("info", &objbase::info)
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
