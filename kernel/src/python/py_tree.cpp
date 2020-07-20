@@ -219,11 +219,13 @@ void py_bind_tree(py::module& m) {
 	using existing_tag = context::existing_tag;
 
 	auto py_qth = py::class_<context>(m, "tree_context")
-		.def(py::init<node>(), "root"_a = nullptr)
+		.def(py::init<node>(), "root"_a = node::nil())
+		.def(py::init<sp_obj>(), "root_obj"_a)
 		.def(py::init<link>(), "root"_a)
-		.def("root", &context::root)
+
+		.def_property_readonly("root", &context::root)
 		.def_property_readonly("root_link", &context::root_link)
-		.def_property_readonly("root_path", &context::root_path)
+		.def("root_path", &context::root_path, "path_unit"_a = Key::Name)
 
 		.def("reset", py::overload_cast<link>(&context::reset), "root"_a, "Reset context to new root")
 		.def("reset", py::overload_cast<node, link>(&context::reset),

@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/log.h>
+#include <bs/objbase.h>
 #include <bs/tree/context.h>
 #include <bs/kernel/radio.h>
 #include "tree_impl.h"
@@ -67,7 +68,7 @@ static auto concat(Path&& lhs, lid_type rhs) {
 }
 
 // enters data node only if allowed to (don't auto-expand lazy links)
-static auto data_node(const link& L) -> node {
+inline static auto data_node(const link& L) -> node {
 	return L.data_node(unsafe);
 }
 
@@ -114,8 +115,14 @@ struct BS_HIDDEN_API context::impl {
 		verify();
 	}
 
+	impl(sp_obj root) :
+		root_(root ? root->data_node() : node::nil()), root_lnk_(root_ ? root_.handle() : link{})
+	{
+		verify();
+	}
+
 	impl(node root) :
-		root_(std::move(root)), root_lnk_(link::make_root<hard_link>("/", root_))
+		root_(std::move(root)), root_lnk_(root_ ? root_.handle() : link{})
 	{
 		verify();
 	}
@@ -432,6 +439,10 @@ struct BS_HIDDEN_API context::impl {
  *  context
  *-----------------------------------------------------------------------------*/
 context::context(node root) :
+	pimpl_{std::make_unique<impl>(std::move(root))}
+{}
+
+context::context(sp_obj root) :
 	pimpl_{std::make_unique<impl>(std::move(root))}
 {}
 

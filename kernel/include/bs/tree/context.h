@@ -27,6 +27,7 @@ public:
 	using item_index = std::pair<existing_tag, std::int64_t>;
 
 	context(node root = node::nil());
+	context(sp_obj root);
 	context(link root);
 	// for unique_ptr
 	~context();
