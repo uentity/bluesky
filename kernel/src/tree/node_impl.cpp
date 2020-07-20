@@ -96,9 +96,10 @@ auto node_impl::propagate_owner(const engine& S, bool deep) -> void {
 }
 
 auto node_impl::spawn_actor(sp_nimpl nimpl) -> caf::actor {
-	return spawn_nactor(
-		std::move(nimpl), system().groups().get_local(to_string(gen_uuid()))
-	);
+	// if home group is already started (for ex. by deserializer), then use it
+	// otherwise obtain new group with UUID
+	auto ngrp = nimpl->home ? nimpl->home : system().groups().get_local(to_string(gen_uuid()));
+	return spawn_nactor(std::move(nimpl), std::move(ngrp));
 }
 
 auto node_impl::size() const -> std::size_t {
