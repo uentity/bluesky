@@ -207,17 +207,14 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		auto F = get_formatter(obj.type_id(), obj_frm);
 		if(!F) return { fmt::format("{} -> {}", obj.type_id(), obj_frm), Error::MissingFormatter };
 
-		// 2. if object is node and formatter don't store leafs, then load 'em explicitly
+		// 2. read object's metadata (objbase)
+		(**cur_head)(cereal::make_nvp( "objbase", obj ));
+		// if object is node and formatter don't store leafs, then load 'em explicitly
 		if(!F->stores_node)
 			ar(cereal::make_nvp( "node", obj.data_node() ));
-		else
-			(**cur_head)(cereal::make_nvp( "object", obj ));
 
 		// 3. if object is pure node - we're done and can skip data processing
 		if(obj.bs_resolve_type() == objnode::bs_type()) return perfect;
-
-		std::string obj_filename;
-		ar(cereal::make_nvp("filename", obj_filename));
 
 		// 4. read object data from specified file
 		EVAL
@@ -227,7 +224,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			}
 		RETURN_EVAL_ERR
 
-		auto obj_path = objects_path_ / obj_filename;
+		auto obj_path = objects_path_ / (obj.home_id() + '.' + obj_frm);
 		auto abs_obj_path = fs::path{};
 		SCOPE_EVAL_SAFE
 			abs_obj_path = fs::absolute(obj_path);
@@ -235,7 +232,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 
 		caf::anon_send(
 			manager_, caf::actor_cast<caf::actor>(manager_),
-			const_cast<const objbase&>(obj).shared_from_this(), obj_frm, fs::absolute(obj_path).u8string()
+			const_cast<const objbase&>(obj).shared_from_this(), obj_frm, abs_obj_path.u8string()
 		);
 		// defer wait until save completes
 		if(!has_wait_deferred_) {
@@ -301,18 +298,6 @@ auto prologue(tree_fs_input& ar, tree::node const&) -> void {
 
 auto epilogue(tree_fs_input& ar, tree::node const& N) -> void {
 	ar.end_node(N);
-}
-
-auto prologue(
-	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const&
-) -> void {
-	ar.begin_node();
-}
-
-auto epilogue(
-	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const& N
-) -> void {
-	ar.end_node( *const_cast<cereal::construct<tree::node>&>(N.construct).ptr() );
 }
 
 NAMESPACE_END(blue_sky)

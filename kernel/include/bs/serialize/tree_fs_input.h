@@ -119,18 +119,9 @@ private:
 	std::unique_ptr<impl> pimpl_;
 };
 
-// make prologue/epilogue for different possible node load impl
-// either 1st or 2nd set will be called
-// 1. without `load_and_construct`
+// prologue/epilogue for tree::node
 BS_API auto prologue(tree_fs_input& ar, tree::node const& N) -> void;
 BS_API auto epilogue(tree_fs_input& ar, tree::node const& N) -> void;
-// 2. via `load_and construct`
-BS_API auto prologue(
-	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const& N
-) -> void;
-BS_API auto epilogue(
-	tree_fs_input& ar, cereal::memory_detail::LoadAndConstructLoadWrapper<tree_fs_input, tree::node> const& N
-) -> void;
 
 NAMESPACE_END(blue_sky)
 

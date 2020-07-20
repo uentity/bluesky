@@ -94,13 +94,12 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		if(!cur_head) return cur_head.error();
 		prologue(**cur_head, obj);
 
-		std::string obj_fmt, obj_filename = "<error>";
-		bool fmt_ok = false, filename_ok = false;
+		std::string obj_fmt;
+		bool fmt_ok = false;
 
 		auto finally = scope_guard{ [&]{
 			// if error happened we still need to write values
-			if(!fmt_ok) ar(cereal::make_nvp("fmt", obj_fmt));
-			if(!filename_ok) ar(cereal::make_nvp("filename", obj_filename));
+			if(!fmt_ok) ar(cereal::make_nvp("fmt", "<error>"));
 			// ... and close node
 			epilogue(**cur_head, obj);
 		} };
@@ -113,18 +112,15 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		ar(cereal::make_nvp("fmt", obj_fmt));
 		fmt_ok = true;
 
-		// 2. if object is node and formatter don't store leafs, then save 'em explicitly
-		// otherwise store object's metadata (objbase)
+		// 2. store object's metadata (objbase)
+		(**cur_head)(cereal::make_nvp( "objbase", obj ));
+		// if object is node and formatter don't store leafs, then save 'em explicitly
 		if(!F->stores_node)
 			ar(cereal::make_nvp( "node", obj.data_node() ));
-		else
-			(**cur_head)(cereal::make_nvp( "object", obj ));
 
 		// 3. if object is pure node - we're done and can skip data processing
-		if(obj.bs_resolve_type() == objnode::bs_type()) {
-			filename_ok = true;
+		if(obj.bs_resolve_type() == objnode::bs_type())
 			return perfect;
-		}
 
 		// enter objects directory
 		EVAL
@@ -134,35 +130,15 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			}
 		RETURN_EVAL_ERR
 
-		// generate unique object filename from it's ID
-		const auto find_free_filename = [&](const auto& start_fname, const auto& fmt_ext)
-		-> result_or_err<fs::path> {
-			auto res_fname = start_fname;
-			res_fname += fmt_ext;
-			bool res_exists = false;
-			if(auto er = error::eval([&] {
-				for(int i = 0; (res_exists = fs::exists(res_fname)) && i < 100000; ++i) {
-					res_fname = start_fname;
-					res_fname += "_" + std::to_string(i) + fmt_ext;
-				}
-			})) return tl::make_unexpected(std::move(er));
-
-			if(res_exists)
-				return tl::make_unexpected(error{ start_fname.u8string(), Error::CantMakeFilename });
-			return res_fname;
-		};
-
-		// 4. write down object filename
-		auto obj_path = find_free_filename(objects_path_ / obj.home_id(), std::string(".") + obj_fmt);
-		if(!obj_path) return obj_path.error();
-		obj_filename = obj_path->filename().u8string();
-		ar(cereal::make_nvp("filename", obj_filename));
-		filename_ok = true;
-
-		// 5. and actually save object data to file
+		// 4. and actually save object data to file
+		auto obj_path = objects_path_ / (obj.home_id() + '.' + obj_fmt);
+		auto abs_obj_path = fs::path{};
+		SCOPE_EVAL_SAFE
+			abs_obj_path = fs::absolute(obj_path);
+		RETURN_SCOPE_ERR
 		caf::anon_send(
 			manager_, caf::actor_cast<caf::actor>(manager_),
-			obj.shared_from_this(), obj_fmt, fs::absolute(*obj_path).u8string()
+			obj.shared_from_this(), obj_fmt, abs_obj_path.u8string()
 		);
 		// defer wait until save completes
 		if(!has_wait_deferred_) {
