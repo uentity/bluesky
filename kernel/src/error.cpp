@@ -232,7 +232,7 @@ error::box::box(int ec_, std::string domain_, std::string message_) noexcept
 ///////////////////////////////////////////////////////////////////////////////
 //  CAF errors passthrough
 //
-auto forward_caf_error(const caf::error& er ) -> error {
+auto forward_caf_error(const caf::error& er, std::string_view msg) -> error {
 	// produce std::error_code from CAF error
 	static const auto caf_error_code = [](const caf::error& er) -> std::error_code {
 		struct caf_category : error::category<caf_category> {
@@ -244,7 +244,12 @@ auto forward_caf_error(const caf::error& er ) -> error {
 		return { er.code(), caf_category::self() };
 	};
 
-	return { kernel::radio::system().render(er), caf_error_code(er) };
+	auto ermsg = kernel::radio::system().render(er);
+	if(!msg.empty()) {
+		ermsg += " |> ";
+		ermsg += msg;
+	}
+	return { std::move(ermsg), caf_error_code(er) };
 }
 
 NAMESPACE_END(blue_sky)

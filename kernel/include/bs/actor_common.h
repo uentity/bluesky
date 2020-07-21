@@ -44,7 +44,7 @@ NAMESPACE_END(detail)
 /// tag value for high priority messages
 inline constexpr auto high_prio = caf::message_priority::high;
 
-BS_API auto forward_caf_error(const caf::error& er) -> error;
+BS_API auto forward_caf_error(const caf::error& er, std::string_view msg = {}) -> error;
 
 /// @brief blocking invoke actor & return response like a function
 /// @return always return `result_or_errbox<R>`
