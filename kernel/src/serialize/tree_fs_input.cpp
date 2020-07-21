@@ -24,8 +24,6 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include <caf/all.hpp>
-
 #include <optional>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -41,8 +39,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 	using Error = tree::Error;
 
 	impl(std::string root_fname, NodeLoad mode) :
-		heads_mgr_t{std::move(root_fname)}, mode_(mode),
-		manager_(kernel::radio::system().spawn<fmanager_t>(false))
+		heads_mgr_t{std::move(root_fname)}, mode_(mode)
 	{}
 
 	auto begin_node(tree_fs_input& ar) -> error {
@@ -100,8 +97,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			[&](auto& f) {
 				push_error(error::eval_safe(
 					[&] { add_head(cur_path_ / std::move(f)); },
-					[&] {
-						auto finally = detail::scope_guard{[this]{ pop_head(); }};
+					[&] { // head is removed later by epilogue()
 						tree::link L;
 						ar(L);
 						N.insert(std::move(L));
@@ -128,8 +124,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 				// try load file as a link
 				push_error(error::eval_safe(
 					[&] { add_head(f); },
-					[&] {
-						auto finally = detail::scope_guard{[this]{ pop_head(); }};
+					[&] { // head is removed later by epilogue()
 						tree::link L;
 						ar(L);
 						N.insert(std::move(L));
@@ -148,8 +143,6 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			//		push_error(error::eval_safe(
 			//			[&] { add_head(f); },
 			//			[&] {
-			//				auto finally = detail::scope_guard{[this]{ pop_head(); }};
-
 			//				tree::link L;
 			//				ar(L);
 			//				N.insert(std::move(L));
@@ -229,8 +222,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		RETURN_SCOPE_ERR
 
 		caf::anon_send(
-			manager_, caf::actor_cast<caf::actor>(manager_),
-			const_cast<const objbase&>(obj).shared_from_this(), obj_frm, abs_obj_path.u8string()
+			manager_, obj.shared_from_this(), obj_frm, abs_obj_path.u8string()
 		);
 		// defer wait until save completes
 		if(!has_wait_deferred_) {
@@ -248,7 +240,6 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 
 	NodeLoad mode_;
 	// async loaders manager
-	fmanager_t::actor_type manager_;
 	bool has_wait_deferred_ = false;
 };
 
@@ -263,6 +254,10 @@ tree_fs_input::~tree_fs_input() = default;
 
 auto tree_fs_input::head() -> result_or_err<cereal::JSONInputArchive*> {
 	return pimpl_->head();
+}
+
+auto tree_fs_input::end_link() -> void {
+	return pimpl_->end_link();
 }
 
 auto tree_fs_input::begin_node() -> error {
@@ -290,6 +285,14 @@ auto tree_fs_input::loadBinaryValue(void* data, size_t size, const char* name) -
 ///////////////////////////////////////////////////////////////////////////////
 //  prologue, epilogue
 //
+// noop - link head is added explicitly by `impl::load_node()`
+auto prologue(tree_fs_input& ar, tree::link const&) -> void {}
+
+// remove head after link is read
+auto epilogue(tree_fs_input& ar, tree::link const&) -> void {
+	ar.end_link();
+}
+
 auto prologue(tree_fs_input& ar, tree::node const&) -> void {
 	ar.begin_node();
 }

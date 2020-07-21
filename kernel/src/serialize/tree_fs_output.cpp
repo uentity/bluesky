@@ -25,8 +25,6 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include <caf/typed_event_based_actor.hpp>
-
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
 
@@ -39,8 +37,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	using Error = tree::Error;
 
 	impl(std::string root_fname, std::string objects_dirname) :
-		heads_mgr_t{ std::move(root_fname), std::move(objects_dirname) },
-		manager_(kernel::radio::system().spawn<fmanager_t>(true))
+		heads_mgr_t{ std::move(root_fname), std::move(objects_dirname) }
 	{}
 
 	auto begin_link(const tree::link& L) -> error {
@@ -48,11 +45,6 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		if(cur_path_ == root_path_) return perfect;
 
 		return add_head(cur_path_ / to_string(L.id()));
-	}
-
-	auto end_link() -> error {
-		pop_head();
-		return perfect;
 	}
 
 	auto begin_node(const tree::node& N) -> error {
@@ -134,8 +126,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			abs_obj_path = fs::absolute(obj_path);
 		RETURN_SCOPE_ERR
 		caf::anon_send(
-			manager_, caf::actor_cast<caf::actor>(manager_),
-			obj.shared_from_this(), obj_fmt, abs_obj_path.u8string()
+			manager_, const_cast<objbase&>(obj).shared_from_this(), obj_fmt, abs_obj_path.u8string()
 		);
 		// defer wait until save completes
 		if(!has_wait_deferred_) {
@@ -144,6 +135,12 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		}
 		return perfect;
 	}); }
+
+	auto wait_objects_saved(timespan how_long) -> std::vector<error> {
+		auto res = fmanager_t::wait_jobs_done(manager_, how_long);
+		has_wait_deferred_ = false;
+		return res;
+	}
 
 	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter* {
 		if(auto paf = active_fmt_.find(obj_type_id); paf != active_fmt_.end())
@@ -170,12 +167,6 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		return false;
 	}
 
-	auto wait_objects_saved(timespan how_long) -> std::vector<error> {
-		auto res = fmanager_t::wait_jobs_done(manager_, how_long);
-		has_wait_deferred_ = false;
-		return res;
-	}
-
 	///////////////////////////////////////////////////////////////////////////////
 	//  data
 	//
@@ -183,8 +174,6 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	using active_fmt_t = std::map<std::string_view, std::string, std::less<>>;
 	active_fmt_t active_fmt_;
 
-	// async savers manager
-	fmanager_t::actor_type manager_;
 	bool has_wait_deferred_ = false;
 };
 
@@ -207,7 +196,7 @@ auto tree_fs_output::begin_link(const tree::link& L) -> error {
 	return pimpl_->begin_link(L);
 }
 
-auto tree_fs_output::end_link() -> error {
+auto tree_fs_output::end_link() -> void {
 	return pimpl_->end_link();
 }
 
@@ -246,19 +235,19 @@ auto tree_fs_output::select_active_formatter(std::string_view obj_type_id, std::
 //
 
 auto prologue(tree_fs_output& ar, tree::link const& L) -> void {
-	if(auto er = ar.begin_link(L)) throw er;
+	ar.begin_link(L);
 }
 
 auto epilogue(tree_fs_output& ar, tree::link const&) -> void {
-	if(auto er = ar.end_link()) throw er;
+	ar.end_link();
 }
 
 auto prologue(tree_fs_output& ar, tree::node const& N) -> void {
-	if(auto er = ar.begin_node(N)) throw er;
+	ar.begin_node(N);
 }
 
 auto epilogue(tree_fs_output& ar, tree::node const& N) -> void {
-	if(auto er = ar.end_node(N)) throw er;
+	ar.end_node(N);
 }
 
 NAMESPACE_END(blue_sky)

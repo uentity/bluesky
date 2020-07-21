@@ -9,11 +9,14 @@
 
 #include <bs/atoms.h>
 #include <bs/timetypes.h>
+#include <bs/kernel/radio.h>
 #include <bs/tree/errors.h>
+#include <bs/tree/link.h>
 #include <bs/serialize/serialize_decl.h>
 
 #include <cereal/archives/json.hpp>
 
+#include <caf/send.hpp>
 #include <caf/typed_actor.hpp>
 #include <caf/typed_event_based_actor.hpp>
 
@@ -23,6 +26,45 @@
 
 NAMESPACE_BEGIN(blue_sky::detail)
 namespace fs = std::filesystem;
+
+/*-----------------------------------------------------------------------------
+ *  handle objects save/load jobs
+ *-----------------------------------------------------------------------------*/
+using objfrm_manager_t = caf::typed_actor<
+	// launch object formatting job
+	caf::reacts_to<
+		sp_obj /*what*/, std::string /*formatter name*/, std::string /*filename*/
+	>,
+	// end formatting session
+	caf::reacts_to<a_bye>,
+	// return collected job errors
+	caf::replies_to< a_ack >::with< std::vector<error::box> >
+>;
+
+// [NOTE] manager is valid only for one save/load session!
+// on next session just spawn new manager
+struct BS_HIDDEN_API objfrm_manager : objfrm_manager_t::base {
+	using actor_type = objfrm_manager_t;
+
+	objfrm_manager(caf::actor_config& cfg, bool is_saving);
+
+	auto make_behavior() -> behavior_type override;
+
+	static auto wait_jobs_done(objfrm_manager_t self, timespan how_long) -> std::vector<error>;
+
+private:
+	// deliver session results back to requester
+	auto session_ack() -> void;
+
+	const bool is_saving_;
+	bool session_finished_ = false;
+
+	// errors collection
+	std::vector<error::box> er_stack_;
+	caf::response_promise boxed_errs_;
+	// track running savers
+	size_t nstarted_ = 0, nfinished_ = 0;
+};
 
 /*-----------------------------------------------------------------------------
  *  Manage link file streams and dirs during tree save/load
@@ -127,8 +169,8 @@ struct file_heads_manager {
 		// because of constexpr if?
 		[this, &head_path] {
 			// [NOTE] don't enter parent dir (and reset `cur_path_`) when loading because:
-			// 1. we already antered parent dir on all usage conditions
-			// 2. resetting `cur_path_` is an error, because ther's an optimization for not creating
+			// 1. we already antered parent dir in all usage conditions
+			// 2. resetting `cur_path_` is an error, because there's an optimization for not creating
 			// empty dirs for empty nodes
 			if constexpr(Saving)
 				return enter_dir(head_path.parent_path(), cur_path_);
@@ -160,50 +202,26 @@ struct file_heads_manager {
 					heads_.back()( cereal::make_nvp("objects_dir", objects_dname_) );
 				}
 			)) return tl::make_unexpected(std::move(er));
+			// start new formatters manager
+			manager_ = kernel::radio::system().spawn<objfrm_manager>(Saving);
 		}
 		return &heads_.back();
+	}
+
+	auto end_link() -> void {
+		pop_head();
+		// tell manager that session finished when very first head (root_fname_) is popped
+		if(heads_.empty())
+			caf::anon_send(manager_, a_bye());
 	}
 
 	std::string root_fname_, objects_dname_, root_dname_;
 	fs::path root_path_, cur_path_, objects_path_;
 
+	objfrm_manager_t manager_;
+
 	std::list<neck_t> necks_;
 	std::list<head_t> heads_;
-};
-
-/*-----------------------------------------------------------------------------
- *  handle objects save/load jobs
- *-----------------------------------------------------------------------------*/
-using objfrm_manager_t = caf::typed_actor<
-	// launch object formatting job
-	caf::reacts_to<
-		caf::actor /*self*/, sp_cobj /*what*/, std::string /*formatter name*/, std::string /*filename*/
-	>,
-	// accept result of finished job
-	caf::reacts_to< error::box >,
-	// return collected job errors
-	caf::replies_to< a_ack >::with< std::vector<error::box> >
->;
-
-struct BS_HIDDEN_API objfrm_manager : objfrm_manager_t::base {
-	using actor_type = objfrm_manager_t;
-
-	objfrm_manager(caf::actor_config& cfg, bool is_saving);
-
-	auto make_behavior() -> behavior_type override;
-
-	static auto wait_jobs_done(objfrm_manager_t self, timespan how_long) -> std::vector<error>;
-
-private:
-	auto cut_save_errors();
-
-	const bool is_saving_;
-
-	// errors collection
-	std::vector<error::box> er_stack_;
-	caf::response_promise boxed_errs_;
-	// track running savers
-	size_t nstarted_ = 0, nfinished_ = 0;
 };
 
 NAMESPACE_END(blue_sky::detail)

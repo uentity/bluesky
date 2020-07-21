@@ -34,11 +34,11 @@ public:
 	tree_fs_output(std::string root_fname, std::string objects_dir = ".objects");
 	~tree_fs_output();
 
-	// retrive stream for archive's head (if any)
+	// retrive stream for archive's head
 	auto head() -> result_or_err<cereal::JSONOutputArchive*>;
 
 	auto begin_link(const tree::link& L) -> error;
-	auto end_link() -> error;
+	auto end_link() -> void;
 
 	auto begin_node(const tree::node& N) -> error;
 	auto end_node(const tree::node& N) -> error;

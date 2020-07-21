@@ -37,8 +37,10 @@ public:
 	tree_fs_input(std::string root_fname, NodeLoad mode = NodeLoad::Normal);
 	~tree_fs_input();
 
-	// retrive stream for archive's head (if any)
+	// retrive stream for archive's head
 	auto head() -> result_or_err<cereal::JSONInputArchive*>;
+
+	auto end_link() -> void;
 
 	auto begin_node() -> error;
 	auto end_node(const tree::node& N) -> error;
@@ -119,14 +121,16 @@ private:
 	std::unique_ptr<impl> pimpl_;
 };
 
-// prologue/epilogue for tree::node
+BS_API auto prologue(tree_fs_input& ar, tree::link const& L) -> void;
+BS_API auto epilogue(tree_fs_input& ar, tree::link const& L) -> void;
+
 BS_API auto prologue(tree_fs_input& ar, tree::node const& N) -> void;
 BS_API auto epilogue(tree_fs_input& ar, tree::node const& N) -> void;
 
 NAMESPACE_END(blue_sky)
 
 /*-----------------------------------------------------------------------------
- *  load overloads for different types - repeat JSONOutputArchive code
+ *  load overloads for different types - repeat JSONInputArchive code
  *-----------------------------------------------------------------------------*/
 NAMESPACE_BEGIN(cereal)
 
@@ -166,7 +170,7 @@ inline auto load(blue_sky::tree_fs_input& ar, SizeTag<T>& t) -> void {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  prologue/epilogue for misc types - repeat JSONOutputArchive
+//  prologue/epilogue for misc types - repeat JSONInputArchive
 //
 
 // empty prologue/epilogue for corresponding types
