@@ -10,6 +10,7 @@
 
 #include "../common.h"
 #include "../error.h"
+#include "../meta.h"
 #include "../timetypes.h"
 #include "atomizer.h"
 #include "object_formatter.h"
@@ -43,7 +44,7 @@ public:
 	auto begin_node(const tree::node& N) -> error;
 	auto end_node(const tree::node& N) -> error;
 
-	auto save_object(const objbase& obj) -> error;
+	auto save_object(const objbase& obj, bool has_node) -> error;
 	auto wait_objects_saved(timespan how_long = infinite) const -> std::vector<error>;
 
 	auto get_active_formatter(std::string_view obj_type_id) -> object_formatter*;
@@ -97,17 +98,20 @@ public:
 private:
 	friend class ::blue_sky::atomizer;
 
-	// detect pure objects (not nodes)
+	// detect objects, but skips exactly `objbase` & `objnode`
 	template<typename T>
-	static constexpr auto is_object_v = std::is_base_of_v<objbase, T>;
+	static constexpr auto is_object_v = std::is_base_of_v<objbase, T> &&
+		!std::is_same_v<objbase, T> && !std::is_same_v<objnode, T>;
 
-	// generic specialization that forwards everything to base archive
+	// calls `save_object()` for every BS object, except `objbase` & `objnode`
 	template<typename... Ts>
 	inline auto process(Ts&&... ts) -> void {
 		const auto dispatch_process = [this](auto&& x) {
 			using Tx = decltype(x);
-			if constexpr(is_object_v<std::decay_t<Tx>>)
-				this->save_object(std::forward<Tx>(x));
+			if constexpr(is_object_v<meta::remove_cvref_t<Tx>>)
+				this->save_object(
+					std::forward<Tx>(x), std::is_base_of_v<objnode, meta::remove_cvref_t<Tx>>
+				);
 			else
 				Base::process(std::forward<Tx>(x));
 		};

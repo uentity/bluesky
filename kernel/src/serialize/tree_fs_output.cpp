@@ -76,21 +76,14 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		);
 	}
 
-	auto save_object(tree_fs_output& ar, const objbase& obj) -> error {
+	auto save_object(tree_fs_output& ar, const objbase& obj, bool has_node) -> error {
 	return error::eval_safe([&]() -> error {
-		// open node
-		auto cur_head = head();
-		if(!cur_head) return cur_head.error();
-		prologue(**cur_head, obj);
-
 		std::string obj_fmt;
 		bool fmt_ok = false;
 
 		auto finally = scope_guard{ [&]{
-			// if error happened we still need to write values
+			// if error happened
 			if(!fmt_ok) ar(cereal::make_nvp("fmt", "<error>"));
-			// ... and close node
-			epilogue(**cur_head, obj);
 		} };
 
 		// 1. obtain & write down formatter
@@ -101,17 +94,18 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		ar(cereal::make_nvp("fmt", obj_fmt));
 		fmt_ok = true;
 
-		// 2. store object's metadata (objbase)
-		(**cur_head)(cereal::make_nvp( "objbase", obj ));
-		// if object is node and formatter don't store leafs, then save 'em explicitly
-		if(!F->stores_node)
-			ar(cereal::make_nvp( "node", obj.data_node() ));
+		// 2. write down `objbase` or `objnode` subobject
+		if(has_node) {
+			if(!F->stores_node)
+				ar(cereal::make_nvp( "object", static_cast<const objnode&>(obj) ));
+		}
+		else
+			ar(cereal::make_nvp( "object", obj ));
 
 		// 3. if object is pure node - we're done and can skip data processing
-		if(obj.bs_resolve_type() == objnode::bs_type())
-			return perfect;
+		if(obj.bs_resolve_type() == objnode::bs_type()) return perfect;
 
-		// enter objects directory
+		// 4. enter objects directory
 		EVAL
 			[&]{ return enter_root(); },
 			[&]{ return objects_path_.empty() ?
@@ -119,12 +113,13 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			}
 		RETURN_EVAL_ERR
 
-		// 4. and actually save object data to file
+		// 5. save object data to file
 		auto obj_path = objects_path_ / (obj.home_id() + '.' + obj_fmt);
 		auto abs_obj_path = fs::path{};
 		SCOPE_EVAL_SAFE
 			abs_obj_path = fs::absolute(obj_path);
 		RETURN_SCOPE_ERR
+
 		caf::anon_send(
 			manager_, const_cast<objbase&>(obj).shared_from_this(), obj_fmt, abs_obj_path.u8string()
 		);
@@ -208,8 +203,8 @@ auto tree_fs_output::end_node(const tree::node& N) -> error {
 	return pimpl_->end_node(N);
 }
 
-auto tree_fs_output::save_object(const objbase& obj) -> error {
-	return pimpl_->save_object(*this, obj);
+auto tree_fs_output::save_object(const objbase& obj, bool has_node) -> error {
+	return pimpl_->save_object(*this, obj, has_node);
 }
 
 auto tree_fs_output::wait_objects_saved(timespan how_long) const -> std::vector<error> {

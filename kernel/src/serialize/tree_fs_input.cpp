@@ -184,27 +184,24 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		else return united_err_msg;
 	}
 
-	auto load_object(tree_fs_input& ar, objbase& obj) -> error {
+	auto load_object(tree_fs_input& ar, objbase& obj, bool has_node) -> error {
 	return error::eval_safe([&]() -> error {
-		auto cur_head = head();
-		if(!cur_head) return cur_head.error();
-		// open node & close on exit
-		prologue(*cur_head.value(), obj);
-		auto finally = scope_guard{ [&]{ epilogue(*cur_head.value(), obj); } };
-
 		// 1, read object format & obtain formatter filename
 		std::string obj_frm;
 		ar(cereal::make_nvp("fmt", obj_frm));
 		auto F = get_formatter(obj.type_id(), obj_frm);
 		if(!F) return { fmt::format("{} -> {}", obj.type_id(), obj_frm), Error::MissingFormatter };
 
-		// 2. read object's metadata (objbase)
-		(**cur_head)(cereal::make_nvp( "objbase", obj ));
-		// if object is node and formatter don't store leafs, then load 'em explicitly
-		if(!F->stores_node)
-			ar(cereal::make_nvp( "node", obj.data_node() ));
+		// 2. read `objbase` or `objnode` subobject
+		if(has_node) {
+			if(!F->stores_node)
+				ar(cereal::make_nvp( "object", static_cast<objnode&>(obj) ));
+		}
+		else
+			ar(cereal::make_nvp( "object", obj ));
 
 		// 3. if object is pure node - we're done and can skip data processing
+		// [TODO] resolve this via formatter
 		if(obj.bs_resolve_type() == objnode::bs_type()) return perfect;
 
 		// 4. read object data from specified file
@@ -215,6 +212,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			}
 		RETURN_EVAL_ERR
 
+		// 5. read object data from file
 		auto obj_path = objects_path_ / (obj.home_id() + '.' + obj_frm);
 		auto abs_obj_path = fs::path{};
 		SCOPE_EVAL_SAFE
@@ -268,8 +266,8 @@ auto tree_fs_input::end_node(const tree::node& N) -> error {
 	return pimpl_->end_node(*this, const_cast<tree::node&>(N));
 }
 
-auto tree_fs_input::load_object(objbase& obj) -> error {
-	return pimpl_->load_object(*this, obj);
+auto tree_fs_input::load_object(objbase& obj, bool has_node) -> error {
+	return pimpl_->load_object(*this, obj, has_node);
 }
 
 auto tree_fs_input::wait_objects_loaded(timespan how_long) const -> std::vector<error> {

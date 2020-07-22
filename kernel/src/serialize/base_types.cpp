@@ -41,7 +41,7 @@ BSS_REGISTER_TYPE(blue_sky::objbase)
  *  objnode
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, blue_sky::objnode)
-	ar(cereal::base_class<objbase>(&t));
+	ar(make_nvp("objbase", cereal::base_class<objbase>(&t)));
 	ar(make_nvp("objnode", t.node_));
 BSS_FCN_END
 

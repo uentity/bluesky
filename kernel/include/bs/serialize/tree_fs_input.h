@@ -10,6 +10,7 @@
 
 #include "../common.h"
 #include "../error.h"
+#include "../meta.h"
 #include "../timetypes.h"
 #include "atomizer.h"
 
@@ -45,7 +46,7 @@ public:
 	auto begin_node() -> error;
 	auto end_node(const tree::node& N) -> error;
 
-	auto load_object(objbase& obj) -> error;
+	auto load_object(objbase& obj, bool has_node) -> error;
 	auto wait_objects_loaded(timespan how_long = infinite) const -> std::vector<error>;
 
 	auto loadBinaryValue(void* data, size_t size, const char* name = nullptr) -> void;
@@ -96,21 +97,23 @@ public:
 	template<typename T>
 	static constexpr auto has_empty_epilogue = has_empty<T>::epilogue;
 
-	// details
 private:
 	friend class ::blue_sky::atomizer;
 
-	// detect pure objects (not nodes)
+	// detect objects, but skips exactly `objbase` & `objnode`
 	template<typename T>
-	static constexpr auto is_object_v = std::is_base_of_v<objbase, T>;
+	static constexpr auto is_object_v = std::is_base_of_v<objbase, T> &&
+		!std::is_same_v<objbase, T> && !std::is_same_v<objnode, T>;
 
-	// generic specialization that dispatch args to base or specific processing
+	// calls `load_object()` for every BS object, except `objbase` & `objnode`
 	template<typename... Ts>
 	inline auto process(Ts&&... ts) -> void {
 		const auto dispatch_process = [this](auto&& x) {
 			using Tx = decltype(x);
-			if constexpr(is_object_v<std::decay_t<Tx>>)
-				this->load_object(std::forward<Tx>(x));
+			if constexpr(is_object_v<meta::remove_cvref_t<Tx>>)
+				this->load_object(
+					std::forward<Tx>(x), std::is_base_of_v<objnode, meta::remove_cvref_t<Tx>>
+				);
 			else
 				Base::process(std::forward<Tx>(x));
 		};
