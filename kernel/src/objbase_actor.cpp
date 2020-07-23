@@ -15,8 +15,12 @@
 #include <bs/kernel/config.h>
 #include <bs/kernel/radio.h>
 #include <bs/serialize/cafbind.h>
+#include <bs/serialize/object_formatter.h>
+#include <bs/detail/scope_guard.h>
 
-#include "kernel/radio_subsyst.h"
+#include "objbase_actor.h"
+
+#include <caf/actor_ostream.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
 using namespace kernel::radio;
@@ -27,80 +31,102 @@ using closed_modificator_f = objbase::closed_modificator_f;
 
 NAMESPACE_BEGIN()
 
-class objbase_actor : public caf::event_based_actor {
-public:
-	using super = caf::event_based_actor;
-	using behavior_type = super::behavior_type;
-
-	using home_actor_type = caf::typed_actor<
-		// reset home group
-		caf::reacts_to<a_home, std::string>,
-		// modification ack
-		caf::reacts_to<a_ack, a_lnk_status, tree::ReqStatus>
-	>;
-
-	using actor_type = objbase::actor_type
-		::extend_with<kernel::detail::khome_actor_type>
-		::extend_with<home_actor_type>
+static auto make_frm_job(sp_obj obj, object_formatter* F, std::string fname, bool is_saving) {
+	return is_saving ? objbase::closed_modificator_f{
+		[obj = std::move(obj), F, fname = std::move(fname)] {
+			return F->save(*obj, fname);
+		}
+	} :
+		[obj = std::move(obj), F, fname = std::move(fname)] {
+			return F->save(*obj, fname);
+		}
 	;
-	using typed_behavior = actor_type::behavior_type;
+}
 
-	using modificator_f = objbase::modificator_f;
-
-	caf::group home_;
-
-	static auto actor(const objbase& obj) {
-		return caf::actor_cast<actor_type>(obj.actor());
-	}
-
-	objbase_actor(caf::actor_config& cfg, caf::group home) :
-		super(cfg), home_(std::move(home))
-	{
-		// exit after kernel
-		KRADIO.register_citizen(this);
-	}
-
-	auto make_typed_behavior() -> typed_behavior {
-	return typed_behavior {
-		[=](a_bye) { if(current_sender() != this) quit(); },
-
-		// get home group
-		[=](a_home) { return home_; },
-
-		[=](a_home, const std::string& new_hid) {
-			leave(home_);
-			send(home_, a_bye());
-			join(system().groups().get_local(new_hid));
-		},
-
-		// execute modificator
-		[=](a_apply, const closed_modificator_f& m) -> error::box {
-			// invoke modificator
-			auto er = error::eval_safe(m);
-			auto s = er.ok() ? tree::ReqStatus::OK : tree::ReqStatus::Error;
-			send(home_, a_ack(), a_lnk_status(), s);
-			return er;
-		},
-
-		// skip acks - sent by myself
-		[=](a_ack, a_lnk_status, tree::ReqStatus) {}
-
-	}; }
-
-	auto make_behavior() -> behavior_type override {
-		return make_typed_behavior().unbox();
-	}
-
-	auto on_exit() -> void override {
-		// say bye-bye to self group
-		send(home_, a_bye());
-
-		KRADIO.release_citizen(this);
-	}
-};
 
 NAMESPACE_END()
 
+/*-----------------------------------------------------------------------------
+ *  objbase_actor
+ *-----------------------------------------------------------------------------*/
+objbase_actor::objbase_actor(caf::actor_config& cfg, caf::group home) :
+	super(cfg), home_(std::move(home))
+{
+	// exit after kernel
+	KRADIO.register_citizen(this);
+}
+
+auto objbase_actor::make_typed_behavior() -> typed_behavior {
+return typed_behavior {
+	[=](a_bye) { if(current_sender() != this) quit(); },
+
+	// get home group
+	[=](a_home) { return home_; },
+
+	[=](a_home, const std::string& new_hid) {
+		leave(home_);
+		send(home_, a_bye());
+		join(system().groups().get_local(new_hid));
+	},
+
+	// execute modificator
+	[=](a_apply, const closed_modificator_f& m) -> error::box {
+		// invoke modificator
+		auto er = error::eval_safe(m);
+		auto s = er.ok() ? tree::ReqStatus::OK : tree::ReqStatus::Error;
+		send(home_, a_ack(), a_lnk_status(), s);
+		return er;
+	},
+
+	// skip acks - sent by myself
+	[=](a_ack, a_lnk_status, tree::ReqStatus) {},
+
+	[=](a_delay_load, std::string fmt_name, std::string fname) {
+		auto cur_me = current_behavior();
+		become(caf::message_handler{
+			[=, fmt_name = std::move(fmt_name), fname = std::move(fname)](a_delay_load, sp_obj obj)
+			mutable -> error::box {
+				// trigger only once
+				become(cur_me);
+				// obtain formatter
+				auto F = get_formatter(obj->type_id(), fmt_name);
+				if(!F) return error{obj->type_id(), tree::Error::MissingFormatter};
+
+				// apply load job inplace
+				auto job = caf::make_message(a_apply(), closed_modificator_f{
+					[=, obj = std::move(obj), fname = std::move(fname)] {
+						//caf::aout(this) << "Loading " << fname << std::endl;
+						return F->load(*obj, fname);
+					}
+				});
+				auto res = error::box(quiet_fail);
+				cur_me(job)->extract(
+					[&](error::box er) { res = std::move(er); }
+				);
+				return res;
+			}
+		}.or_else(cur_me));
+		return true;
+	},
+
+	[=](a_delay_load, const sp_obj&) -> error::box { return success(); }
+
+}; }
+
+auto objbase_actor::make_behavior() -> behavior_type {
+	return make_typed_behavior().unbox();
+}
+
+auto objbase_actor::on_exit() -> void {
+	// say bye-bye to self group
+	send(home_, a_bye());
+
+	KRADIO.release_citizen(this);
+}
+
+/*-----------------------------------------------------------------------------
+ *  objbase
+ *-----------------------------------------------------------------------------*/
 auto objbase::start_engine() -> bool {
 	if(!actor_) {
 		if(!home_) reset_home({}, true);

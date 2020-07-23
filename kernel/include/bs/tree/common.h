@@ -13,6 +13,7 @@
 #include "../uuid.h"
 #include "../detail/enumops.h"
 #include "../detail/function_view.h"
+#include "errors.h"
 #include "inode.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)

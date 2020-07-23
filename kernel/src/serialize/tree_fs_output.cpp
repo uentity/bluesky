@@ -191,8 +191,8 @@ auto tree_fs_output::begin_link(const tree::link& L) -> error {
 	return pimpl_->begin_link(L);
 }
 
-auto tree_fs_output::end_link() -> void {
-	return pimpl_->end_link();
+auto tree_fs_output::end_link(const tree::link& L) -> error {
+	return pimpl_->end_link(L);
 }
 
 auto tree_fs_output::begin_node(const tree::node& N) -> error {
@@ -233,8 +233,8 @@ auto prologue(tree_fs_output& ar, tree::link const& L) -> void {
 	ar.begin_link(L);
 }
 
-auto epilogue(tree_fs_output& ar, tree::link const&) -> void {
-	ar.end_link();
+auto epilogue(tree_fs_output& ar, tree::link const& L) -> void {
+	ar.end_link(L);
 }
 
 auto prologue(tree_fs_output& ar, tree::node const& N) -> void {

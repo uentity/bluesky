@@ -7,7 +7,6 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include "link_actor.h"
 #include <bs/log.h>
 #include <bs/kernel/tools.h>
 #include <bs/kernel/config.h>
@@ -15,6 +14,9 @@
 
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
+
+#include "link_actor.h"
+#include "../objbase_actor.h"
 
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
@@ -57,6 +59,7 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
 		}
 	});
 
+	// completely ignore unexpected messages without error backpropagation
 	set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
 		return caf::none;
 	});
@@ -239,6 +242,9 @@ return {
 		);
 		return res;
 	},
+
+	// noop - implement in derived links
+	[=](a_delay_load) { return false; }
 }; }
 
 auto link_actor::make_typed_behavior() -> typed_behavior {
@@ -301,6 +307,42 @@ auto fast_link_actor::make_typed_behavior() -> typed_behavior {
 			//);
 			//return res;
 		},
+
+		[=](a_delay_load) {
+			auto orig_me = current_behavior();
+
+			// setup request impl that invokes `a_delay_load` on object once
+			const auto load_then_answer = [&](auto req) {
+				using req_t = decltype(req);
+				using R = std::conditional_t<std::is_same_v<req_t, a_data>, obj_or_errbox, node_or_errbox>;
+
+				return [=](req_t, bool) mutable -> caf::result<R> {
+					// this handler triggered only once
+					become(orig_me);
+					// get cached object
+					auto obj = impl.data(unsafe);
+					if(!obj) return unexpected_err_quiet(Error::EmptyData);
+
+					auto res = make_response_promise<R>();
+					auto objA = objbase_actor::actor(*obj);
+					request(std::move(objA), caf::infinite, a_delay_load(), std::move(obj))
+					.then([=, orig_me = std::move(orig_me)](error::box er) mutable {
+						// invoke original behavior inplace
+						auto m = caf::make_message(req_t(), true);
+						orig_me(m)->extract(
+							[&](R r) { res.deliver(std::move(r)); }
+						);
+					});
+					return res;
+				};
+			};
+
+			// setup new behavior for Data & DataNode requests 
+			become(caf::message_handler{
+				load_then_answer(a_data()), load_then_answer(a_data_node())
+			}.or_else(orig_me));
+			return true;
+		}
 	}, super::make_typed_behavior() );
 }
 

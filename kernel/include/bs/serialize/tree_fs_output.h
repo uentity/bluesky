@@ -39,7 +39,7 @@ public:
 	auto head() -> result_or_err<cereal::JSONOutputArchive*>;
 
 	auto begin_link(const tree::link& L) -> error;
-	auto end_link() -> void;
+	auto end_link(const tree::link& L) -> error;
 
 	auto begin_node(const tree::node& N) -> error;
 	auto end_node(const tree::node& N) -> error;

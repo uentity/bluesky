@@ -7,18 +7,18 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/atoms.h>
+#include <bs/actor_common.h>
 #include <bs/timetypes.h>
 #include <bs/kernel/radio.h>
 #include <bs/tree/errors.h>
 #include <bs/tree/link.h>
 #include <bs/serialize/serialize_decl.h>
 
-#include <cereal/archives/json.hpp>
+#include "../tree/link_impl.h"
 
-#include <caf/send.hpp>
-#include <caf/typed_actor.hpp>
 #include <caf/typed_event_based_actor.hpp>
+
+#include <cereal/archives/json.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -208,11 +208,17 @@ struct file_heads_manager {
 		return &heads_.back();
 	}
 
-	auto end_link() -> void {
+	auto end_link(const tree::link& L) -> error {
 		pop_head();
 		// tell manager that session finished when very first head (root_fname_) is popped
 		if(heads_.empty())
 			caf::anon_send(manager_, a_bye());
+		// setup link to trigger dealyed object load
+		if constexpr(!Saving) {
+			if(auto r = tree::link_impl::actorf<bool>(L, a_delay_load()); !r)
+				return std::move(r.error());
+		}
+		return perfect;
 	}
 
 	std::string root_fname_, objects_dname_, root_dname_;

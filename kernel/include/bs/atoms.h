@@ -47,6 +47,8 @@ using a_home_id = caf::atom_constant<caf::atom("bs home id")>;
 using a_data = caf::atom_constant<caf::atom("bs data")>;
 // obtain data node (retrive node)
 using a_data_node = caf::atom_constant<caf::atom("bs dnode")>;
+// delay object load from storage
+using a_delay_load = caf::atom_constant<caf::atom("bs dlyload")>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  link API

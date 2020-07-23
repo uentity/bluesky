@@ -725,6 +725,9 @@
     <ClCompile Include="kernel\src\defaults.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClInclude Include="kernel\src\objbase_actor.h">
+      <Filter>Файлы исходного кода</Filter>
+    </ClInclude>
     <ClCompile Include="kernel\src\objbase_actor.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>

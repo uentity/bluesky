@@ -51,9 +51,7 @@ auto request_impl(
 		std::invoke(
 			std::forward<C>(rp),
 			obj.and_then([](auto&& obj) -> ret_t {
-				return obj ?
-					ret_t(std::move(obj)) :
-					tl::make_unexpected(error::quiet(Error::EmptyData));
+				return obj ? ret_t(std::move(obj)) : unexpected_err_quiet(Error::EmptyData);
 			})
 		);
 	};
@@ -61,11 +59,11 @@ auto request_impl(
 	// check starting conditions
 	if constexpr(ManageStatus) {
 		if(prev_rs != ReqStatus::OK && enumval(opts & ReqOpts::ErrorIfNOK)) {
-			make_result( tl::make_unexpected(error::quiet(Error::EmptyData)) );
+			make_result( unexpected_err_quiet(Error::EmptyData) );
 			return;
 		}
 		if(prev_rs == ReqStatus::Busy && enumval(opts & ReqOpts::ErrorIfBusy)) {
-			make_result( tl::make_unexpected(error::quiet(Error::LinkBusy)) );
+			make_result( unexpected_err_quiet(Error::LinkBusy) );
 			return;
 		}
 	}

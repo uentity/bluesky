@@ -110,6 +110,7 @@ struct BS_HIDDEN_API fast_link_actor : public link_actor {
 
 	using actor_type = super::actor_type;
 	using typed_behavior = actor_type::behavior_type;
+
 	// part of behavior overloaded by this actor
 	using typed_behavior_overload = caf::typed_behavior<
 		// get inode
@@ -117,7 +118,9 @@ struct BS_HIDDEN_API fast_link_actor : public link_actor {
 		// get data
 		caf::replies_to<a_data, bool>::with<result_or_errbox<sp_obj>>,
 		// get data node
-		caf::replies_to<a_data_node, bool>::with<node_or_errbox>
+		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
+		// delayed object load
+		caf::replies_to<a_delay_load>::with<bool>
 	>;
 
 	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;

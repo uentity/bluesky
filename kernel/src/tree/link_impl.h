@@ -52,7 +52,9 @@ public:
 	//
 	using primary_actor_type = link::actor_type::extend<
 		// obtain link impl
-		caf::replies_to<a_impl>::with<sp_limpl>
+		caf::replies_to<a_impl>::with<sp_limpl>,
+		// delayed read for cached links
+		caf::replies_to<a_delay_load>::with<bool>
 	>::extend_with<kernel::detail::khome_actor_type>;
 
 	// ack signals that this link send to home group

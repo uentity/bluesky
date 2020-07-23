@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "tree_fs_impl.h"
+#include "../objbase_actor.h"
 
 #include <bs/uuid.h>
 #include <bs/tree/errors.h>
@@ -219,14 +220,21 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			abs_obj_path = fs::absolute(obj_path);
 		RETURN_SCOPE_ERR
 
-		caf::anon_send(
-			manager_, obj.shared_from_this(), obj_frm, abs_obj_path.u8string()
-		);
-		// defer wait until save completes
-		if(!has_wait_deferred_) {
-			ar(cereal::defer(cereal::Functor{ [](auto& ar){ ar.wait_objects_loaded(); } }));
-			has_wait_deferred_ = true;
-		}
+		// instead of posting save job to manager, setup delayed read job
+		if(auto r = actorf<bool>(
+			objbase_actor::actor(obj), kernel::radio::timeout(),
+			a_delay_load(), obj_frm, abs_obj_path.u8string()
+		); !r)
+			return r.error();
+
+		//caf::anon_send(
+		//	manager_, obj.shared_from_this(), obj_frm, abs_obj_path.u8string()
+		//);
+		//// defer wait until save completes
+		//if(!has_wait_deferred_) {
+		//	ar(cereal::defer(cereal::Functor{ [](auto& ar){ ar.wait_objects_loaded(); } }));
+		//	has_wait_deferred_ = true;
+		//}
 		return perfect;
 	}); }
 
@@ -254,8 +262,8 @@ auto tree_fs_input::head() -> result_or_err<cereal::JSONInputArchive*> {
 	return pimpl_->head();
 }
 
-auto tree_fs_input::end_link() -> void {
-	return pimpl_->end_link();
+auto tree_fs_input::end_link(const tree::link& L) -> error {
+	return pimpl_->end_link(L);
 }
 
 auto tree_fs_input::begin_node() -> error {
@@ -287,8 +295,8 @@ auto tree_fs_input::loadBinaryValue(void* data, size_t size, const char* name) -
 auto prologue(tree_fs_input& ar, tree::link const&) -> void {}
 
 // remove head after link is read
-auto epilogue(tree_fs_input& ar, tree::link const&) -> void {
-	ar.end_link();
+auto epilogue(tree_fs_input& ar, tree::link const& L) -> void {
+	ar.end_link(L);
 }
 
 auto prologue(tree_fs_input& ar, tree::node const&) -> void {

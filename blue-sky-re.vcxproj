@@ -137,6 +137,7 @@
     <ClInclude Include="kernel\include\bs\type_descriptor.h" />
     <ClInclude Include="kernel\include\bs\type_info.h" />
     <ClInclude Include="kernel\include\bs\type_macro.h" />
+    <ClInclude Include="kernel\src\objbase_actor.h" />
     <ClInclude Include="kernel\src\kernel\backtrace_tools_unix.h" />
     <ClInclude Include="kernel\src\kernel\backtrace_tools_win.h" />
     <ClInclude Include="kernel\src\kernel\config_subsyst.h" />

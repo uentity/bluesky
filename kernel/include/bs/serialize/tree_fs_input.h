@@ -41,7 +41,7 @@ public:
 	// retrive stream for archive's head
 	auto head() -> result_or_err<cereal::JSONInputArchive*>;
 
-	auto end_link() -> void;
+	auto end_link(const tree::link& L) -> error;
 
 	auto begin_node() -> error;
 	auto end_node(const tree::node& N) -> error;
