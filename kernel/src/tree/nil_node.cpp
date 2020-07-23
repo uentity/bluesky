@@ -25,7 +25,12 @@ struct nil_node::self_actor : caf::event_based_actor {
 
 	self_actor(caf::actor_config& cfg)
 		: super(cfg)
-	{}
+	{
+		// completely ignore unexpected messages without error backpropagation
+		set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
+			return caf::none;
+		});
+	}
 
 	auto make_behavior() -> behavior_type override { return node::actor_type::behavior_type{
 	
