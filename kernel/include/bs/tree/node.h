@@ -199,7 +199,7 @@ public:
 	}
 
 	/// leafs removal
-	/// return removed elemsnt count
+	/// return removed leafs count
 	auto erase(std::size_t idx) const -> std::size_t;
 	auto erase(lid_type link_id) const -> std::size_t;
 	/// erase leaf adressed by string key with specified treatment

@@ -246,7 +246,7 @@ auto node_impl::erase_impl(
 	if(!dont_reset_owner) L.reset_owner(node::nil());
 	auto res = index<Key::ID>(victim);
 	links_.get<Key_tag<Key::ID>>().erase(victim);
-	return res.value_or(links_.size());
+	return res.value_or(0);
 }
 
 auto node_impl::erase(const std::string& key, Key key_meaning, leaf_postproc_fn ppf) -> size_t {

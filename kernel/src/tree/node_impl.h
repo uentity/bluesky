@@ -338,10 +338,8 @@ private:
 		bool dont_reset_owner = false
 	) -> size_t {
 		size_t res = 0;
-		for(auto x = r.begin(); x != r.end();) {
-			erase_impl(project<K, Key::ID>(x++), ppf, dont_reset_owner);
-			++res;
-		}
+		for(auto x = r.begin(); x != r.end();)
+			res += erase_impl(project<K, Key::ID>(x++), ppf, dont_reset_owner);
 		return res;
 	}
 };
