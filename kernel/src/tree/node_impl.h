@@ -246,18 +246,12 @@ public:
 	auto size() const -> std::size_t;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  insert
+	//  insert & erase
 	//
 	using leaf_postproc_fn = function_view< void(const link&) >;
 
-	auto insert(
-		link L, const InsertPolicy pol = InsertPolicy::AllowDupNames,
-		leaf_postproc_fn ppf = noop
-	) -> insert_status<Key::ID>;
+	auto insert(link L, const InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status<Key::ID>;
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  erase
-	//
 	template<Key K = Key::ID>
 	auto erase(
 		const Key_type<K>& key, leaf_postproc_fn ppf = noop,

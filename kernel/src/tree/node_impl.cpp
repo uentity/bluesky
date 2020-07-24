@@ -160,9 +160,7 @@ auto node_impl::equal_range(const std::string& key, Key key_meaning) const -> li
 // hardcode number of rename trials on insertion
 inline constexpr auto rename_trials = 10000;
 
-auto node_impl::insert(
-	link L, const InsertPolicy pol, leaf_postproc_fn ppf
-) -> insert_status<Key::ID> {
+auto node_impl::insert(link L, const InsertPolicy pol) -> insert_status<Key::ID> {
 	using namespace allow_enumops;
 
 	// can't move persistent node from it's owner
@@ -219,8 +217,6 @@ auto node_impl::insert(
 
 		// rename link if needed
 		if(Lname) res_L.rename(std::move(*Lname));
-		// invoke postprocessing of just inserted link
-		ppf(res_L);
 	}
 	else {
 		// restore link's original owner

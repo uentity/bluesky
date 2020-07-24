@@ -108,13 +108,17 @@ auto node_actor::insert(
 	adbg(this) << "{a_lnk_insert}" << (silent ? " silent: " : ": ") <<
 		to_string(L.id()) << std::endl;
 
-	return impl.insert(std::move(L), pol, [=](const link& child_L) {
-		// send message that link inserted (with position)
-		if(!silent) send<high_prio>(
+	// insert
+	auto res = impl.insert(std::move(L), pol);
+	// inform world
+	auto& [pchild, is_inserted] = res;
+	if(!silent && is_inserted) {
+		send(
 			impl.home, a_ack(), this, a_node_insert(),
-			child_L.id(), impl.index(impl.find<Key::ID>(child_L.id())), pol
+			pchild->id(), *impl.index<Key::ID>(pchild), pol
 		);
-	});
+	}
+	return res;
 }
 
 auto node_actor::insert(
@@ -122,30 +126,29 @@ auto node_actor::insert(
 ) -> node::insert_status {
 	// 1. insert an element using ID index
 	// [NOTE] silent insert - send ack message later
-	auto res = insert(std::move(L), pol, true);
-	auto res_idx = impl.index<Key::ID>(res.first);
-	if(!res_idx) return { res_idx, res.second };
+	auto [pchild, is_inserted] = insert(std::move(L), pol, true);
+	auto res_idx = impl.index<Key::ID>(pchild);
+	if(!res_idx) return { res_idx, is_inserted };
 
 	// 2. reposition an element in AnyOrder index
 	to_idx = std::min(to_idx, impl.size());
-	auto from = impl.project<Key::ID>(res.first);
+	auto from = impl.project<Key::ID>(pchild);
 	auto to = std::next(impl.begin(), to_idx);
 	// noop if to == from
 	pimpl_->links_.get<Key_tag<Key::AnyOrder>>().relocate(to, from);
 
 	// detect move and send proper message
-	auto lid = (*res.first).id();
 	if(!silent) {
-		if(res.second) // normal insert
+		if(is_inserted) // normal insert
 			send<high_prio>(
-				impl.home, a_ack(), this, a_node_insert(), std::move(lid), to_idx, pol
+				impl.home, a_ack(), this, a_node_insert(), pchild->id(), to_idx, pol
 			);
 		else if(to != from) // move
 			send<high_prio>(
-				impl.home, a_ack(), this, a_node_insert(), std::move(lid), to_idx, *res_idx
+				impl.home, a_ack(), this, a_node_insert(), pchild->id(), to_idx, *res_idx
 			);
 	}
-	return { to_idx, res.second };
+	return { to_idx, is_inserted };
 }
 
 
