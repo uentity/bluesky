@@ -46,7 +46,7 @@ auto link_impl::propagate_handle(const link& super) -> node_or_err {
 }
 
 auto link_impl::owner() const -> node {
-	auto guard = lock(detail::shared);
+	auto guard = lock(blue_sky::detail::shared);
 	return owner_.lock();
 }
 

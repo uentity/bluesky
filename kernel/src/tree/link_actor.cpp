@@ -102,7 +102,7 @@ auto link_actor::rename(std::string new_name, bool silent) -> void {
 	impl.name_ = std::move(new_name);
 	// send rename ack message
 	if(!silent)
-		send<high_prio>(impl.home, a_ack(), a_lnk_rename(), impl.name_, std::move(old_name));
+		impl.send_home<high_prio>(this, a_ack(), a_lnk_rename(), impl.name_, std::move(old_name));
 }
 
 auto link_actor::rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs, bool silent)
@@ -111,7 +111,7 @@ auto link_actor::rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus pr
 		req, cond, new_rs, prev_rs,
 		silent ? noop :
 			function_view{[=](Req req, ReqStatus new_s, ReqStatus old_s) {
-				send<high_prio>(impl.home, a_ack(), a_lnk_status(), req, new_s, old_s);
+				impl.send_home<high_prio>(this, a_ack(), a_lnk_status(), req, new_s, old_s);
 			}}
 	);
 }

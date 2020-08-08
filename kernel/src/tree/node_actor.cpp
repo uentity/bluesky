@@ -113,8 +113,8 @@ auto node_actor::insert(
 	// inform world
 	auto& [pchild, is_inserted] = res;
 	if(!silent && is_inserted) {
-		send(
-			impl.home, a_ack(), this, a_node_insert(),
+		impl.send_home<high_prio>(
+			this, a_ack(), this, a_node_insert(),
 			pchild->id(), *impl.index<Key::ID>(pchild), pol
 		);
 	}
@@ -140,12 +140,12 @@ auto node_actor::insert(
 	// detect move and send proper message
 	if(!silent) {
 		if(is_inserted) // normal insert
-			send<high_prio>(
-				impl.home, a_ack(), this, a_node_insert(), pchild->id(), to_idx, pol
+			impl.send_home<high_prio>(
+				this, a_ack(), this, a_node_insert(), pchild->id(), to_idx, pol
 			);
 		else if(to != from) // move
-			send<high_prio>(
-				impl.home, a_ack(), this, a_node_insert(), pchild->id(), to_idx, *res_idx
+			impl.send_home<high_prio>(
+				this, a_ack(), this, a_node_insert(), pchild->id(), to_idx, *res_idx
 			);
 	}
 	return { to_idx, is_inserted };
@@ -166,8 +166,8 @@ auto on_erase(const link& L, node_actor& self) {
 	});
 
 	// send message that link erased
-	self.send<high_prio>(
-		self.impl.home, a_ack(), &self, a_node_erase(), std::move(lids)
+	self.impl.send_home<high_prio>(
+		&self, a_ack(), &self, a_node_erase(), std::move(lids)
 	);
 }
 

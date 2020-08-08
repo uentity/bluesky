@@ -8,12 +8,9 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <bs/atoms.h>
 #include <bs/actor_common.h>
-#include <bs/tree/node.h>
-#include <bs/kernel/radio.h>
 
-#include "link_impl.h"
+#include "node_impl.h"
 
 #include <caf/actor_system.hpp>
 
@@ -63,7 +60,9 @@ public:
 	auto forward_up(Args&&... args) -> void {
 		// link forward messages directly to owner's home group
 		if(auto master = impl.owner())
-			send(master.home(), std::forward<Args>(args)...);
+			checked_send<node_impl::home_actor_type, high_prio>(
+				*this, master.home(), std::forward<Args>(args)...
+			);
 	}
 
 	// forward 'ack' message to upper level, auto prepend it with this link ID info

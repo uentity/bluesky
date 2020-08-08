@@ -61,7 +61,7 @@ public:
 	>;
 
 	// all acks processed by node: self acks + self leafs acks + subtree acks
-	// [NOTE] `subtree_ack_actor_type` includes self `ack_actor_type`
+	// [NOTE] `subtree_ack_actor_type` includes `self_ack_actor_type`
 	using ack_actor_type = link_impl::subtree_ack_actor_type::extend<
 		// track leaf rename
 		caf::reacts_to<a_ack, lid_type, a_lnk_rename, std::string, std::string>,
