@@ -44,12 +44,18 @@ private:
 			return H;
 	}
 
+	template<typename Handle>
+	using engine_impl_t = std::remove_reference_t<decltype( get_impl(std::declval<Handle>()) )>;
+
 public:
 	using sp_engine_impl = std::shared_ptr<impl>;
 	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
 
-	// engine home group
+	/// engine home group
 	caf::group home;
+
+	/// get engine's home group ID (empty for invalid / not started home)
+	auto home_id() const -> std::string;
 
 	auto swap(impl& rhs) -> void;
 
@@ -59,16 +65,12 @@ public:
 	/// return engine's type ID
 	virtual auto type_id() const -> std::string_view = 0;
 
-	/// get engine's home group ID (empty for invalid / not started home)
-	auto home_id() const -> std::string;
-
 	/// requesters (scoped_actor instances) management
 	auto factor(const engine* L) -> sp_scoped_actor;
 	auto release_factor(const engine* L) -> void;
 	auto release_factors() -> void;
 
-	/// this function can be shadowed in derived handle impl class
-	/// to further customize timeouts
+	/// can be shadowed in derived handle impl class to further customize timeouts
 	inline auto timeout(bool for_long_task) {
 		return kernel::radio::timeout(for_long_task);
 	}
@@ -90,6 +92,15 @@ public:
 	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
 	static auto actorf(long_op_t, const Handle& H, Args&&... args) {
 		return actorf<R>(H, get_impl(H).timeout(true), std::forward<Args>(args)...);
+	}
+
+	/// send message to home group with compile-time check against home actor type
+	template<
+		caf::message_priority P = caf::message_priority::normal, typename ActorClass, typename... Ts
+	>
+	static auto send_home(ActorClass* src, Ts&&... xs) -> void {
+		using home_actor_t = typename engine_impl_t<decltype(src->impl)>::home_actor_type;
+		checked_send<home_actor_t, P>(*src, src->impl.home, std::forward<Ts>(xs)...);
 	}
 
 private:

@@ -22,6 +22,7 @@
 #include <caf/stateful_actor.hpp>
 #include <caf/typed_behavior.hpp>
 #include <caf/is_actor_handle.hpp>
+#include <caf/send.hpp>
 
 #include <optional>
 
@@ -198,5 +199,23 @@ auto first_then_second(caf::typed_behavior<SigsA...> first, caf::typed_behavior<
 		.or_else( second.unbox() )
 	};
 }
+
+/// @brief send to a group with compie-time check message against explicitly provided group typed iface
+template<
+	typename GroupActorType,
+	caf::message_priority P = caf::message_priority::normal, typename ActorClass, typename... Ts
+>
+auto checked_send(ActorClass& src, const caf::group& dest, Ts&&... xs) -> void {
+	// check if GroupSigs match with Ts
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+	using args_token_t = caf::detail::type_list<caf::detail::strip_and_convert_t<Ts>...>;
+	static_assert(
+		caf::response_type_unbox<caf::signatures_of_t<GroupActorType>, args_token_t>::valid,
+		"receiver does not accept given message"
+	);
+	// resort to actor's `send`
+	src.template send<P>(dest, std::forward<Ts>(xs)...);
+}
+
 
 NAMESPACE_END(blue_sky)
