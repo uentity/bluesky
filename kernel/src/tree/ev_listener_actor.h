@@ -27,12 +27,12 @@ struct ev_listener_actor : caf::event_based_actor {
 	using behavior_type = super::behavior_type;
 
 	// event processor callback
-	using callback_t = std::function< void(Source, Event, prop::propdict) >;
+	using callback_t = typename Source::event_handler;
 
 	static auto make_safe_callback(callback_t&& f) {
-		return [f = std::move(f)](Source L, Event ev, prop::propdict props) -> void {
-			error::eval_safe([&]{ f(std::move(L), ev, std::move(props)); });
-		};
+		return callback_t{[f = std::move(f)](auto&&... xs) -> void {
+			error::eval_safe([&]{ f(std::forward<decltype(xs)>(xs)...); });
+		}};
 	}
 
 	// safe callback wrapped into error::eval_safe()

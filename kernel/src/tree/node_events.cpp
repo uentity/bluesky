@@ -9,6 +9,7 @@
 
 #include "node_actor.h"
 #include "ev_listener_actor.h"
+
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
 #include <bs/serialize/cafbind.h>
@@ -16,7 +17,7 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-auto node::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t {
+auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	using namespace kernel::radio;
 	using namespace allow_enumops;
 	using baby_t = ev_listener_actor<node>;

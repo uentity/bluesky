@@ -221,10 +221,10 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  events handling
 	//
-	using handle_event_cb = std::function< void(node, Event, prop::propdict) >;
+	using event_handler = std::function< void(node, Event, prop::propdict) >;
 
 	/// returns ID of suscriber that is required for unsubscribe
-	auto subscribe(handle_event_cb f, Event listen_to = Event::All) const -> std::uint64_t;
+	auto subscribe(event_handler f, Event listen_to = Event::All) const -> std::uint64_t;
 	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
 private:

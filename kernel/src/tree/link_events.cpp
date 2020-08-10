@@ -16,7 +16,7 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-auto link::subscribe(handle_event_cb f, Event listen_to) const -> std::uint64_t {
+auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	using namespace kernel::radio;
 	using namespace allow_enumops;
 	using baby_t = ev_listener_actor<link>;
