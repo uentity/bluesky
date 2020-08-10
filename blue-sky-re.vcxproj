@@ -147,6 +147,7 @@
     <ClInclude Include="kernel\src\kernel\python_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\python_subsyst_impl.h" />
     <ClInclude Include="kernel\src\kernel\radio_subsyst.h" />
+    <ClInclude Include="kernel\src\serialize\tree_impl.h" />
     <ClInclude Include="kernel\src\serialize\tree_fs_impl.h" />
     <ClInclude Include="kernel\src\tree\actor_debug.h" />
     <ClInclude Include="kernel\src\tree\engine_impl.h" />

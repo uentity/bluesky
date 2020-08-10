@@ -11,6 +11,7 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/boost_uuid.h>
 
+#include "tree_impl.h"
 #include "../tree/link_actor.h"
 #include "../tree/fusion_link_actor.h"
 
@@ -59,16 +60,17 @@ BSS_FCN_EXPORT(load, tree::inode)
 /*-----------------------------------------------------------------------------
  *  link_impl
  *-----------------------------------------------------------------------------*/
-BSS_FCN_INL_BEGIN(serialize, tree::link_impl)
+BSS_FCN_BEGIN(serialize, tree::link_impl)
 	// [NOTE] intentionally do net serialize owner, it will be set up when parent node is loaded
 	ar(
 		make_nvp("id", t.id_),
 		make_nvp("name", t.name_),
 		make_nvp("flags", t.flags_)
 	);
-BSS_FCN_INL_END(serialize, tree::link_impl)
+BSS_FCN_END
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::engine::impl, tree::link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::link_impl, "link")
 
 ///////////////////////////////////////////////////////////////////////////////
 //  ilink_impl
@@ -103,6 +105,7 @@ BSS_FCN_INL_BEGIN(serialize, tree::hard_link_impl)
 BSS_FCN_INL_END(serialize, tree::hard_link_impl)
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::hard_link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::hard_link_impl, "hard_link")
 
 ///////////////////////////////////////////////////////////////////////////////
 //  weak_link_impl
@@ -125,6 +128,7 @@ BSS_FCN_INL_BEGIN(serialize, tree::weak_link_impl)
 BSS_FCN_INL_END(serialize, tree::weak_link_impl)
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::weak_link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::weak_link_impl, "weak_link")
 
 ///////////////////////////////////////////////////////////////////////////////
 //  sym_link_impl
@@ -136,6 +140,7 @@ BSS_FCN_INL_BEGIN(serialize, tree::sym_link_impl)
 BSS_FCN_INL_END(serialize, tree::sym_link_impl)
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link_impl, tree::sym_link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::sym_link_impl, "sym_link")
 
 ///////////////////////////////////////////////////////////////////////////////
 //  fusion_link_impl
@@ -158,11 +163,6 @@ BSS_FCN_INL_BEGIN(serialize, tree::fusion_link_impl)
 BSS_FCN_INL_END(serialize, tree::fusion_link_impl)
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::fusion_link_impl)
-
-// instantiate code for polymorphic types
-CEREAL_REGISTER_TYPE_WITH_NAME(tree::hard_link_impl, "hard_link")
-CEREAL_REGISTER_TYPE_WITH_NAME(tree::weak_link_impl, "weak_link")
-CEREAL_REGISTER_TYPE_WITH_NAME(tree::sym_link_impl, "sym_link")
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::fusion_link_impl, "fusion_link")
 
 /*-----------------------------------------------------------------------------

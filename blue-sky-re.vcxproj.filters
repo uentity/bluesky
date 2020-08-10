@@ -453,6 +453,9 @@
     <ClInclude Include="kernel\include\bs\python\vector.h">
       <Filter>Заголовочные файлы\bs\python</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\src\serialize\tree_impl.h">
+      <Filter>Файлы исходного кода\serialize</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\src\serialize\tree_fs_impl.h">
       <Filter>Файлы исходного кода\serialize</Filter>
     </ClInclude>

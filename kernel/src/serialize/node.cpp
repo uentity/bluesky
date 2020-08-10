@@ -11,6 +11,8 @@
 #include <bs/kernel/radio.h>
 #include <bs/serialize/serialize.h>
 #include <bs/serialize/tree.h>
+
+#include "tree_impl.h"
 #include "../tree/node_actor.h"
 
 #include <cereal/types/vector.hpp>
@@ -59,7 +61,7 @@ struct leafs_view {
 
 NAMESPACE_END(blue_sky)
 
-BSS_FCN_INL_BEGIN(serialize, blue_sky::tree::node_impl)
+BSS_FCN_BEGIN(serialize, blue_sky::tree::node_impl)
 	// node's home ID is persistent
 	if constexpr(Archive::is_saving::value)
 		ar(make_nvp("home_id", t.home_id()));
@@ -70,7 +72,7 @@ BSS_FCN_INL_BEGIN(serialize, blue_sky::tree::node_impl)
 	}
 	// store leafs
 	ar(make_nvp("leafs", leafs_view(t)));
-BSS_FCN_INL_END(save, node_impl)
+BSS_FCN_END
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::engine::impl, tree::node_impl)
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::node_impl, "node")
