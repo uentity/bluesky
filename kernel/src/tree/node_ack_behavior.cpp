@@ -29,7 +29,7 @@ return {
 		adbg(this) << "{a_node_insert ack}: " << pos << std::endl;
 		// notify handle about data change
 		if(origin == this)
-			forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
+			forward_up(a_lnk_status(), Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
 		forward_up(a_ack(), std::move(origin), a_node_insert(), lid, pos, pol);
 
 		//if(origin != this) {
@@ -45,7 +45,7 @@ return {
 		adbg(this) << "{a_node_insert ack} [move]: " << from << " -> " << to << std::endl;
 		// notify handle about data change
 		if(origin == this)
-			forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
+			forward_up(a_lnk_status(), Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
 		forward_up(a_ack(), std::move(origin), a_node_insert(), lid, to, from);
 
 		//if(origin != this) {
@@ -60,7 +60,7 @@ return {
 		adbg(this) << "{a_node_erase ack}" << std::endl;
 		// notify handle about data change
 		if(origin == this)
-			forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
+			forward_up(a_lnk_status(), Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
 		forward_up(a_ack(), std::move(origin), a_node_erase(), std::move(lids));
 
 		//if(auto S = current_sender(); S != this && !lids.empty()) {
@@ -74,7 +74,7 @@ return {
 		impl.refresh(lid);
 		ack_up(lid, a_lnk_rename(), std::move(new_), std::move(old_));
 		// notify handle about data change
-		forward_up(a_lnk_status(), Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
+		forward_up(a_lnk_status(), Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
 	},
 
 	// track my leaf status

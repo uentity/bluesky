@@ -85,8 +85,8 @@ auto link_impl::rs_reset(
 	) {
 		S.value = new_rs;
 		S.guard.unlock();
-		// Data = OK will always fire (work as 'data changed' signal)
-		if(new_rs != self || (request == Req::Data && new_rs == ReqStatus::OK))
+		// status = OK will always fire (works as 'dirty' signal)
+		if(new_rs != self || new_rs == ReqStatus::OK)
 			on_rs_changed(request, new_rs, self);
 	}
 	else
