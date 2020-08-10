@@ -44,6 +44,8 @@ public:
 	//
 	// public node iface extended with some private messages
 	using primary_actor_type = node::actor_type::extend<
+		// obtain node impl
+		caf::replies_to<a_impl>::with<sp_nimpl>,
 		// join self group
 		caf::reacts_to<a_hi>,
 		// erase link by ID with specified options

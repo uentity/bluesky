@@ -17,6 +17,7 @@
 
 #include "link_actor.h"
 #include "../objbase_actor.h"
+#include "../serialize/tree_impl.h"
 
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"

@@ -10,6 +10,7 @@
 #include "node_actor.h"
 #include "node_extraidx_actor.h"
 #include "link_impl.h"
+#include "../serialize/tree_impl.h"
 
 #include <bs/log.h>
 #include <bs/tree/tree.h>
@@ -189,6 +190,8 @@ auto node_actor::erase(const lid_type& victim, EraseOpts opts) -> size_t {
 //
 auto node_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
+	[=](a_impl) -> sp_nimpl { return pimpl_; },
+
 	// unconditionally join home group - used after deserialization
 	[=](a_hi) { join(impl.home); },
 
