@@ -60,7 +60,7 @@ link::link(std::string name, node folder, Flags f) :
 
 auto link::make_root_(engine donor) -> link {
 	auto res = link(std::move(donor));
-	if(res) res.propagate_handle();
+	if(res) res.pimpl()->propagate_handle();
 	return res;
 }
 
@@ -80,6 +80,8 @@ auto link::pimpl() const -> link_impl* {
 auto link::start_engine() -> bool {
 	if(actor_ == nil_link::actor()) {
 		install_raw_actor(pimpl()->spawn_actor(std::static_pointer_cast<link_impl>(pimpl_)));
+		// explicitly setup weak link from pimpl to engine
+		pimpl()->reset_super_engine(*this);
 		return true;
 	}
 	return false;
@@ -103,10 +105,6 @@ auto link::rename_silent(std::string new_name) const -> void {
 
 auto link::owner() const -> node {
 	return pimpl()->owner();
-}
-
-auto link::reset_owner(const node& new_owner) const -> void {
-	pimpl()->reset_owner(new_owner);
 }
 
 auto link::info() const -> result_or_err<inode> {
@@ -235,14 +233,6 @@ auto link::data_node_hid(unsafe_t) const -> std::string {
 
 auto link::is_node() const -> bool {
 	return !data_node_hid().value_or("").empty();
-}
-
-void link::self_handle_node(const node& N) const {
-	if(N) N.set_handle(*this);
-}
-
-auto link::propagate_handle() const -> node_or_err {
-	return pimpl()->propagate_handle(*this);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

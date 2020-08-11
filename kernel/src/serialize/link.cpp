@@ -181,8 +181,8 @@ BSS_FCN_BEGIN(serialize, tree::link)
 		if(!t.pimpl_) t = tree::link{};
 		// ID is ready, we can start internal actor
 		t.start_engine();
-		// assume link is root by default -- it's safe when restoring link or tree from archive
-		t.propagate_handle();
+		// if pointee is a node, correct it's handle
+		t.pimpl()->propagate_handle();
 	}
 BSS_FCN_END
 

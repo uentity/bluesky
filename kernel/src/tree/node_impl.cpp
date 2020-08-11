@@ -38,10 +38,6 @@ auto node_impl::clone(bool deep) const -> sp_nimpl {
 	return res;
 }
 
-auto node_impl::super() const -> node {
-	return super_.lock();
-}
-
 auto node_impl::handle() const -> link {
 	auto guard = lock(shared);
 	return handle_.lock();
@@ -71,7 +67,7 @@ auto node_impl::adjust_inserted_link(const link& lnk, const node& target) -> nod
 
 	// change link's owner
 	if(auto prev_owner = lnk.owner(); prev_owner != target) {
-		lnk.reset_owner(target);
+		lnk.pimpl()->reset_owner(target);
 		// [NOTE] instruct prev node to not reset link's owner - we set above
 		if(prev_owner)
 			caf::anon_send(
@@ -80,13 +76,13 @@ auto node_impl::adjust_inserted_link(const link& lnk, const node& target) -> nod
 	}
 
 	// if we're inserting a node, relink it to ensure a single hard link exists
-	return lnk.propagate_handle().value_or(node::nil());
+	return lnk.pimpl()->propagate_handle().value_or(node::nil());
 }
 
 auto node_impl::propagate_owner(const engine& S, bool deep) -> void {
 	// setup super
 	if(S == nil_node::nil_engine()) return;
-	super_ = S;
+	reset_super_engine(S);
 	// properly setup owner in node's leafs
 	for(auto& L : links_) {
 		auto child_node = node_impl::adjust_inserted_link(L, S);
@@ -198,29 +194,30 @@ auto node_impl::insert(link L, const InsertPolicy pol) -> insert_status<Key::ID>
 	// 2. make insertion
 	// [NOTE] reset link's owner to insert safely (block symlink side effects, etc)
 	const auto prev_owner = L.owner();
-	L.reset_owner(node::nil());
+	L.pimpl()->reset_owner(node::nil());
 	auto res = links_.get<Key_tag<Key::ID>>().insert(L);
 
 	// 3. postprocess
 	auto& res_L = *res.first;
+	auto& res_L_impl = *res_L.pimpl();
 	if(res.second) {
 		// remove from prev parent and propagate handle while link's owner still NULL (important!)
-		const auto self = super();
+		const auto self = super_engine();
 		if(prev_owner && prev_owner != self)
 			// erase won't touch owner (we set it manually)
 			caf::anon_send(
 				node_impl::actor(prev_owner), a_node_erase(), res_L.id(), EraseOpts::DontResetOwner
 			);
-		res_L.propagate_handle();
+		res_L_impl.propagate_handle();
 		// set owner to this node
-		res_L.reset_owner(self);
+		res_L_impl.reset_owner(self);
 
 		// rename link if needed
 		if(Lname) res_L.rename(std::move(*Lname));
 	}
 	else {
 		// restore link's original owner
-		L.reset_owner(prev_owner);
+		L.pimpl()->reset_owner(prev_owner);
 		// check if we need to deep merge given links
 		// go one step down the hierarchy
 		if(enumval(pol & InsertPolicy::Merge) && res.first != end<Key::ID>()) {
@@ -243,7 +240,7 @@ auto node_impl::erase_impl(
 	ppf(L);
 
 	// erase
-	if(!dont_reset_owner) L.reset_owner(node::nil());
+	if(!dont_reset_owner) L.pimpl()->reset_owner(node::nil());
 	auto res = index<Key::ID>(victim);
 	links_.get<Key_tag<Key::ID>>().erase(victim);
 	return res.value_or(0);

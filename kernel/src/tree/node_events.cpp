@@ -31,7 +31,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			auto subnode = node::nil();
 			if(subn_actor) {
 				actorf<sp_nimpl>(subn_actor, kernel::radio::timeout(), a_impl())
-				.map([&](const sp_nimpl& subn_impl) { subnode = subn_impl->super(); });
+				.map([&](const sp_nimpl& subn_impl) { subnode = subn_impl->super_engine(); });
 			}
 			// invoke callback
 			self->f(std::move(r), std::move(subnode), ev, std::move(params));

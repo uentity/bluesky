@@ -31,11 +31,12 @@ enum class EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
  *  node_impl
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API node_impl :
-	public engine::impl,
+	public engine::impl, public engine::impl::access<node>,
 	public bs_detail::sharded_mutex<engine_impl_mutex>
 {
 public:
-	friend class node;
+	friend node;
+
 	using sp_nimpl = std::shared_ptr<node_impl>;
 	using sp_scoped_actor = engine::impl::sp_scoped_actor;
 
@@ -93,9 +94,6 @@ public:
 	//
 	// ctors
 	node_impl(const links_v& leafs = {});
-
-	// construct node handle from stored engine weak ref
-	auto super() const -> node;
 
 	// manipulate with node's handle (protected by mutex)
 	auto handle() const -> link;
@@ -321,8 +319,6 @@ public:
 	}
 
 private:
-	// weak ref to engine that I am part of
-	node::weak_ptr super_;
 	// weak ref to parent link
 	link::weak_ptr handle_;
 

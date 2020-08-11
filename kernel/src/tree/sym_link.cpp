@@ -119,12 +119,11 @@ auto sym_link_impl::clone(bool deep) const -> sp_limpl {
 	return std::make_shared<sym_link_impl>(name_, path_, flags_);
 }
 
-auto sym_link_impl::propagate_handle(const link& super) -> node_or_err {
+auto sym_link_impl::propagate_handle() -> node_or_err {
 	// sym link cannot be a node's handle
 	return target().and_then([](const link& src_link) {
 		return src_link.data_node_ex();
 	});
-	// return actorf<node_or_errbox>(super, a_data_node(), true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

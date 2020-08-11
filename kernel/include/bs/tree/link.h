@@ -31,17 +31,6 @@ NAMESPACE_BEGIN(blue_sky::tree)
  *  base class of all links
  *-----------------------------------------------------------------------------*/
 class BS_API link : public engine {
-	friend class engine::weak_ptr<link>;
-	// serialization support
-	friend class blue_sky::atomizer;
-	// my private impl
-	friend class link_impl;
-	friend class link_actor;
-	// full access for node
-	friend class node;
-	friend class node_impl;
-	friend class node_actor;
-
 public:
 	using engine_impl = link_impl;
 	using weak_ptr = engine::weak_ptr<link>;
@@ -220,34 +209,29 @@ public:
 protected:
 	using engine::operator=;
 
-	auto pimpl() const -> link_impl*;
-
 	/// accept link impl and optionally start internal actor
 	link(sp_engine_impl impl, bool start_actor = true);
 
 	/// ensure that rhs type id matches requested, otherwise link is nil
 	link(const link& rhs, std::string_view rhs_type_id);
 
-	static auto make_root_(engine donor) -> link;
+	auto pimpl() const -> link_impl*;
 
 	/// maually start internal actor (if not started already)
 	auto start_engine() -> bool;
 
-	/// set handle of passed node to self
-	auto self_handle_node(const node& N) const -> void;
-
 	/// silent replace old name with new
 	auto rename_silent(std::string new_name) const -> void;
 
-	/// switch link's owner
-	auto reset_owner(const node& new_owner) const -> void;
-
-	// if pointee contains node - set node's handle to self and return pointee
-	// default implementation obtains node via `data_node_ex()` and sets it's handle to self
-	// but derived link can change default behaviour
-	auto propagate_handle() const -> node_or_err;
+	static auto make_root_(engine donor) -> link;
 
 private:
+	friend atomizer;
+	friend weak_ptr;
+	friend link_impl;
+	friend link_actor;
+	friend node_impl;
+
 	link(engine);
 };
 

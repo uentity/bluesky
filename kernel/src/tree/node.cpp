@@ -75,10 +75,6 @@ auto node::handle() const -> link {
 	return pimpl()->handle();
 }
 
-auto node::set_handle(const link& handle) const -> void {
-	pimpl()->set_handle(handle);
-}
-
 auto node::clone(bool deep) const -> node {
 	return { pimpl()->clone(deep) };
 }

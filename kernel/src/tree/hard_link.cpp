@@ -126,7 +126,7 @@ auto weak_link_impl::clone(bool deep) const -> sp_limpl {
 	return std::make_shared<weak_link_impl>(name_, data_.lock(), flags_);
 }
 
-auto weak_link_impl::propagate_handle(const link& super) -> node_or_err {
+auto weak_link_impl::propagate_handle() -> node_or_err {
 	// weak link cannot be a node's handle
 	return data().and_then([](const sp_obj& obj) -> node_or_err {
 		if(auto N = obj->data_node())

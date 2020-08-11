@@ -34,10 +34,10 @@ auto link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<link_actor>(std::move(limpl));
 }
 
-auto link_impl::propagate_handle(const link& super) -> node_or_err {
+auto link_impl::propagate_handle() -> node_or_err {
 	if(auto obj = data(unsafe)) {
 		if(auto N = obj->data_node()) {
-			super.self_handle_node(N);
+			N.pimpl()->set_handle(super_engine());
 			return N;
 		}
 		return unexpected_err_quiet(Error::NotANode);

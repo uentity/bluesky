@@ -230,7 +230,7 @@ public:
 private:
 	friend atomizer;
 	friend weak_ptr;
-	friend link;
+	friend link_impl;
 	friend node_impl;
 	friend node_actor;
 
@@ -239,9 +239,6 @@ private:
 	auto pimpl() const -> node_impl*;
 
 	auto start_engine() -> bool;
-
-	// set node's handle
-	auto set_handle(const link& handle) const -> void;
 
 	node(sp_engine_impl impl);
 

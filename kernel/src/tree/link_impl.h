@@ -40,7 +40,7 @@ inline const auto nil_otid = blue_sky::defaults::nil_type_name;
  *  base link impl
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API link_impl :
-	public engine::impl,
+	public engine::impl, public engine::impl::access<link>,
 	public bs_detail::sharded_mutex<engine_impl_mutex>
 {
 public:
@@ -116,8 +116,9 @@ public:
 	virtual auto get_inode() -> result_or_err<inodeptr>;
 
 	// if pointee is a node - set node's handle to self and return pointee
+	// derived link can change default behaviour (for ex. if link cannot serve as node's unique handle)
 	// [NOTE] unsafe -- operates directly on data
-	virtual auto propagate_handle(const link& L) -> node_or_err;
+	virtual auto propagate_handle() -> node_or_err;
 
 	/// manipulate with owner (protected by mutex)
 	auto owner() const -> node;
@@ -208,7 +209,7 @@ struct BS_HIDDEN_API weak_link_impl : ilink_impl {
 	auto data(unsafe_t) -> sp_obj override;
 	auto set_data(const sp_obj& obj) -> void;
 
-	auto propagate_handle(const link&) -> node_or_err override;
+	auto propagate_handle() -> node_or_err override;
 
 	ENGINE_TYPE_DECL
 };
@@ -229,7 +230,7 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 
 	auto target() const -> link_or_err;
 
-	auto propagate_handle(const link&) -> node_or_err override;
+	auto propagate_handle() -> node_or_err override;
 
 	ENGINE_TYPE_DECL
 };
