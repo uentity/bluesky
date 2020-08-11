@@ -71,6 +71,7 @@ BSS_FCN_END
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::engine::impl, tree::link_impl)
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::link_impl, "link")
+BSS_FCN_EXPORT(serialize, tree::link_impl)
 
 ///////////////////////////////////////////////////////////////////////////////
 //  ilink_impl
