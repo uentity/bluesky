@@ -24,7 +24,7 @@ public:
 	using sp_ahandle = std::shared_ptr<actor_handle>;
 
 	/// tree element must inherit impl class from this one
-	struct impl;
+	class impl;
 	using sp_engine_impl = std::shared_ptr<impl>;
 
 private:

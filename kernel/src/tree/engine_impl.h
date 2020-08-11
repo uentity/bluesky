@@ -31,7 +31,7 @@ NAMESPACE_BEGIN(blue_sky::tree)
 using engine_impl_mutex = caf::detail::shared_spinlock;
 
 /// tree element must inherit impl class from this one
-struct engine::impl {
+class engine::impl {
 private:
 	template<typename Handle>
 	using if_engine_handle = std::enable_if_t<std::is_base_of_v<engine, Handle>>;
@@ -46,6 +46,22 @@ private:
 
 	template<typename Handle>
 	using engine_impl_t = std::remove_reference_t<decltype( get_impl(std::declval<Handle>()) )>;
+
+public:
+	// mixin to obtain Item instance from impl
+	template<typename Item>
+	class access {
+	public:
+		auto super_engine() const { return super_.lock(); }
+
+	protected:
+		friend Item;
+
+		auto reset_super_engine(const Item& x) { super_ = x; }
+
+	protected:
+		engine::weak_ptr<Item> super_;
+	};
 
 public:
 	using sp_engine_impl = std::shared_ptr<impl>;
