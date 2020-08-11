@@ -68,13 +68,19 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 		bsout() << "=> {}.{}: {}" << who.type_id() << ev_to_string() << to_string(what) << bs_end;
 	};
 
+	static const auto adapt2node = [](auto cb) {
+		return [cb = std::move(cb)](auto who, auto /*subnode*/, Event ev, prop::propdict what) {
+			cb(std::move(who), ev, std::move(what));
+		};
+	};
+
 	auto hN = make_persons_tree();
 	auto N = hN.data_node();
 	auto L = N.find("hard_Citizen_0", Key::Name);
 
 	// make deeper tree
 	auto N1 = node();
-	N1.subscribe(ev_processor_cb, Event::All);
+	N1.subscribe(adapt2node(ev_processor_cb), Event::All);
 	N1.insert("N", node());
 	N1.find("N", Key::Name).data_node().insert("N", node());
 	N1.find("N", Key::Name).data_node().find("N", Key::Name).data_node().insert("N", node());
@@ -89,7 +95,12 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 			//	get<std::string>(what, "prev_name") << get<std::string>(what, "new_name") << bs_end;
 		};
 
-		auto h_rename = tgt.subscribe(rename_cb, Event::LinkRenamed);
+		auto h_rename = tgt.subscribe([&] {
+			if constexpr(std::is_same_v<std::decay_t<decltype(tgt)>, node>)
+				return adapt2node(rename_cb);
+			else
+				return rename_cb;
+		}(), Event::LinkRenamed);
 		for(int i = 0; i < 1000; ++i)
 			src.rename("Tyler " + std::to_string(i));
 		std::this_thread::sleep_for(200ms);
@@ -121,7 +132,12 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 			//	get<integer>(what, "new_status") << bs_end;
 		};
 
-		auto h_status = tgt.subscribe(status_cb, Event::LinkStatusChanged);
+		auto h_status = tgt.subscribe([&] {
+			if constexpr(std::is_same_v<std::decay_t<decltype(tgt)>, node>)
+				return adapt2node(status_cb);
+			else
+				return status_cb;
+		}(), Event::LinkStatusChanged);
 		for(int i = 0; i < 1000; ++i)
 			src.rs_reset(Req::Data, ReqStatus((int)ReqStatus::OK + i & 1));
 		std::this_thread::sleep_for(200ms);
