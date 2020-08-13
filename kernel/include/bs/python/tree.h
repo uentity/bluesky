@@ -26,12 +26,13 @@ class py_fusion : public Fusion {
 public:
 	using Fusion::Fusion;
 
-	auto populate(sp_obj root, const std::string& child_type_id = "") -> error override {
-		PYBIND11_OVERLOAD_PURE(error, Fusion, populate, root, child_type_id);
+private:
+	auto do_populate(sp_obj root, tree::link root_link, const std::string& child_type_id) -> error override {
+		PYBIND11_OVERLOAD_PURE(error, Fusion, populate, std::move(root), root_link, child_type_id);
 	}
 
-	auto pull_data(sp_obj root) -> error override {
-		PYBIND11_OVERLOAD_PURE(error, Fusion, pull_data, root);
+	auto do_pull_data(sp_obj root, tree::link root_link) -> error override {
+		PYBIND11_OVERLOAD_PURE(error, Fusion, pull_data, std::move(root), root_link);
 	}
 };
 

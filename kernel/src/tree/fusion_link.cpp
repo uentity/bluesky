@@ -14,7 +14,24 @@
 #define FIMPL static_cast<fusion_link_impl&>(*pimpl())
 
 NAMESPACE_BEGIN(blue_sky::tree)
+/*-----------------------------------------------------------------------------
+ *  fusion_iface
+ *-----------------------------------------------------------------------------*/
+auto fusion_iface::populate(sp_obj root, link root_link, const std::string& child_type_id) -> error {
+	// check that passed object contain valid node
+	if(root->data_node())
+		return do_populate(std::move(root), std::move(root_link), child_type_id);
+	else
+		return Error::NotANode;
+}
 
+auto fusion_iface::pull_data(sp_obj root, link root_link) -> error {
+	return do_pull_data(std::move(root), std::move(root_link));
+}
+
+/*-----------------------------------------------------------------------------
+ *  fusion_link
+ *-----------------------------------------------------------------------------*/
 fusion_link::fusion_link(
 	std::string name, sp_obj data, sp_fusion bridge, Flags f
 ) : // set LazyLoad flag by default
@@ -30,8 +47,7 @@ fusion_link::fusion_link(
 	)
 {
 	if(!FIMPL.data_)
-		bserr() << log::E("fusion_link: cannot create object of type '{}'! Empty link!") <<
-			obj_type << log::end;
+		throw error(fmt::format("fusion_link: cannot create object of type '{}'! Empty link!", obj_type));
 }
 
 fusion_link::fusion_link()

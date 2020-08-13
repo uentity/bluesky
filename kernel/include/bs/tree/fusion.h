@@ -13,16 +13,21 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 
 /*-----------------------------------------------------------------------------
- *  Interface of Fusion client that have to populate root item with children
+ *  Interface of Fusion brigde that implements filling target item
  *-----------------------------------------------------------------------------*/
 class BS_API fusion_iface {
 public:
 	/// accept root object and optionally type of child objects to be populated with
-	virtual auto populate(sp_obj root, const std::string& child_type_id = "") -> error = 0;
+	auto populate(sp_obj root, link root_link, const std::string& child_type_id = "") -> error;
 	/// download passed object's content from third-party backend
-	virtual auto pull_data(sp_obj root) -> error = 0;
+	auto pull_data(sp_obj root, link root_link) -> error;
 
 	virtual ~fusion_iface() = default;
+
+private:
+	/// implementation to be overriden in derived fusion bridges
+	virtual auto do_populate(sp_obj root, link root_link, const std::string& child_type_id) -> error = 0;
+	virtual auto do_pull_data(sp_obj root, link root_link) -> error = 0;
 };
 using sp_fusion = std::shared_ptr<fusion_iface>;
 

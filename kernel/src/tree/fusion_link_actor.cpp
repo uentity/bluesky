@@ -60,7 +60,7 @@ auto fusion_link_impl::data() -> obj_or_err {
 		return data_;
 	if(const auto B = bridge()) {
 		if(!data_) data_ = std::make_shared<objnode>();
-		auto err = B->pull_data(data_);
+		auto err = B->pull_data(data_, super_engine());
 		if(err.code == obj_fully_loaded)
 			rs_reset(Req::DataNode, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
 		return err.ok() ? obj_or_err(data_) : tl::make_unexpected(std::move(err));
@@ -81,7 +81,7 @@ auto fusion_link_impl::populate(const std::string& child_type_id, bool wait_if_b
 		return data_->data_node();
 	if(const auto B = bridge()) {
 		if(!data_) data_ = std::make_shared<objnode>();
-		auto err = B->populate(data_, child_type_id);
+		auto err = B->populate(data_, super_engine(), child_type_id);
 		if(err.code == obj_fully_loaded)
 			rs_reset(Req::Data, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
 		return err.ok() ?

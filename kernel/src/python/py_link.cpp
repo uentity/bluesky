@@ -232,9 +232,9 @@ void py_bind_link(py::module& m) {
 	;
 
 	py::class_<fusion_iface, py_fusion<>, std::shared_ptr<fusion_iface>>(m, "fusion_iface")
-		.def("populate", &fusion_iface::populate, "root"_a, "child_type_id"_a = "",
+		.def("populate", &fusion_iface::populate, "root"_a, "root_link"_a, "child_type_id"_a = "",
 			"Populate root object structure (children)")
-		.def("pull_data", &fusion_iface::pull_data, "root"_a,
+		.def("pull_data", &fusion_iface::pull_data, "root"_a, "root_link"_a,
 			"Fill root object content")
 	;
 }
