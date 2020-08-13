@@ -93,21 +93,42 @@ BS_API auto deref_path(
 ) -> void;
 
 /*-----------------------------------------------------------------------------
- *  Misc utility functions
+ *  Walk up the tree by jumping over owners
  *-----------------------------------------------------------------------------*/
 /// unify access to owner of link or node
 inline auto owner(const link& lnk) {
-	return lnk.owner();
-}
-inline auto owner(const link* lnk) {
-	return lnk ? owner(*lnk) : node::nil();
+	return lnk ? lnk.owner() : node::nil();
 }
 inline auto owner(const node& N) {
-	const auto& h = N.handle();
-	return h ? h.owner() : node::nil();
+	if(auto h = N.handle())
+		return h.owner();
+	return node::nil();
 }
-inline auto owner(const node* N) {
-	return N ? owner(*N) : node::nil();
+
+BS_API auto owner(const objbase& obj) -> node;
+inline auto owner(const objbase* obj) {
+	return obj ? owner(*obj) : node::nil();
+}
+
+template<typename T>
+auto owner(const std::shared_ptr<T>& obj) -> std::enable_if_t<std::is_base_of_v<objnode, T>> {
+	return owner(obj.get());
+}
+
+/// obtain link to node that contains `self` (link or node)
+template<typename T>
+auto owner_handle(const T& self) {
+	if(auto super = owner(self))
+		return super.handle();
+	return link{};
+}
+
+/// obtain parent object (inhertied from `objnode`) that contains onwer node
+template<typename R = objnode, typename T>
+auto owner_obj(const T& self) -> std::shared_ptr<R> {
+	if(auto H = owner_handle(self))
+		return std::static_pointer_cast<R>(H.data());
+	return nullptr;
 }
 
 /// produce link to given object, if object contains node it's handle will point to returned link

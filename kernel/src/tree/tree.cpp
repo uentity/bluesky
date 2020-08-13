@@ -11,6 +11,7 @@
 #include <bs/objbase.h>
 #include <bs/uuid.h>
 #include <bs/kernel/types_factory.h>
+
 #include "tree_impl.h"
 
 #include <set>
@@ -311,6 +312,10 @@ auto make_root_link(
 	else if(link_type == hard_link::type_id_())
 		return link::make_root<hard_link>(std::move(name), std::move(root_obj));
 	return link{};
+}
+
+auto owner(const objbase& obj) -> node {
+	return owner(obj.data_node());
 }
 
 NAMESPACE_END(blue_sky::tree)
