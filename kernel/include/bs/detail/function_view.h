@@ -9,6 +9,8 @@
 ///
 /// [NOTE] Credits to Simon Brand AKA TartanLlama & Vittorio Romeo
 /// https://github.com/SuperV1234/vittorioromeo.info/blob/master/extra/passing_functions_to_functions/function_view.hpp
+/// [NOTE] `function_view` DO NOT extend lifetime of passed callable
+/// [WARNING] current impl will only work on platforms where function pointer is of same size as void*
 #pragma once
 
 #include "../meta.h"
@@ -16,8 +18,7 @@
 
 namespace blue_sky {
 
-/// [NOTE] `function_view` DO NOT extend lifetime of passed callable
-/// [WARNING] current impl will only work on platforms where function pointer is of same size as void*
+/// generic declaration that later maatches callables
 template<typename F> class function_view;
 
 namespace detail {
@@ -29,12 +30,12 @@ template<typename F> struct is_function_view< function_view<F> > : std::true_typ
 template<typename T> inline constexpr auto is_function_view_v =
 	is_function_view< meta::remove_cvref_t<T> >::value;
 
+/// treits for deducing callable signature
 template<typename F, typename = void> struct deduce_callable {
 	static_assert(std::is_invocable_v<F>, "Type isn't callable");
 };
 template<typename F> using deduce_callable_t = typename deduce_callable<std::remove_reference_t<F>>::type;
 
-/// treits for deducing callable signature
 template<typename R, typename... Args>
 struct deduce_callable<R (Args...), void> {
 	using type = R (Args...);
@@ -136,9 +137,10 @@ public:
 		return *this;
 	}
 
-	constexpr auto swap(function_view& rhs) -> void {
-		std::swap(fn_, rhs.fn_);
-		std::swap(erased_fn_, rhs.erased_fn_);
+	constexpr friend auto swap(function_view& lhs, function_view& rhs) -> void {
+		using std::swap;
+		swap(lhs.fn_, rhs.fn_);
+		swap(lhs.erased_fn_, rhs.erased_fn_);
 	}
 
 	// call stored callable with passed args
@@ -149,12 +151,6 @@ public:
 		return erased_fn_(fn_, std::forward<Ts>(xs)...);
 	}
 };
-
-// swap support
-template<typename R, typename... Args>
-constexpr auto swap(function_view<R (Args...)>& lhs, function_view<R (Args...)>& rhs) -> void {
-	lhs.swap(rhs);
-}
 
 // deduction guides
 template<typename F>
