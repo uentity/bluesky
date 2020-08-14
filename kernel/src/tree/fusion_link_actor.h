@@ -51,7 +51,7 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	auto clone(bool deep = false) const -> sp_limpl override;
 
 	// populate with specified child type
-	auto populate(const std::string& child_type_id = "", bool wait_if_busy = true) -> node_or_err;
+	auto populate(const std::string& child_type_id = "") -> node_or_err;
 
 	ENGINE_TYPE_DECL
 };
