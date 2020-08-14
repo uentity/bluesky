@@ -39,6 +39,14 @@ fusion_link::fusion_link(
 {}
 
 fusion_link::fusion_link(
+	std::string name, node folder, sp_fusion bridge, Flags f
+) : // set LazyLoad flag by default
+	super(std::make_shared<fusion_link_impl>(
+		std::move(name), std::make_shared<objnode>(std::move(folder)), bridge, Flags(f | LazyLoad)
+	))
+{}
+
+fusion_link::fusion_link(
 	std::string name, const char* obj_type, std::string oid, sp_fusion bridge, Flags f
 ) :
 	fusion_link(

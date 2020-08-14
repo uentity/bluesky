@@ -60,6 +60,10 @@ public:
 		std::string name, sp_obj data = nullptr,
 		sp_fusion bridge = nullptr, Flags f = Plain
 	);
+	fusion_link(
+		std::string name, node folder,
+		sp_fusion bridge = nullptr, Flags f = Plain
+	);
 
 	fusion_link(
 		std::string name, const char* obj_type, std::string oid = "",
