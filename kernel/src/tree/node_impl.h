@@ -101,7 +101,7 @@ public:
 
 	// setup super (weak engine ptr) + correct leafs owner
 	// node is REQUIRED to call this after engine is started
-	auto propagate_owner(const engine& S, bool deep) -> void;
+	auto propagate_owner(const node& super, bool deep) -> void;
 
 	/// clone this impl
 	auto clone(bool deep = false) const -> sp_nimpl;

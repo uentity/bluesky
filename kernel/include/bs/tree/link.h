@@ -232,7 +232,7 @@ private:
 	friend link_actor;
 	friend node_impl;
 
-	link(engine);
+	link(engine&&);
 };
 
 /// handy aliases

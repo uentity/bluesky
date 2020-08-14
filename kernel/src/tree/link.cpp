@@ -27,7 +27,7 @@ using namespace kernel::radio;
 // [NOTE] the purpose of link constructors is to ALWAYS produce a valid link
 // 'valid' means that `pimpl()` returns non-null value, `raw_actor()` returns valid handle
 // at worst link may become 'nil link' that is also a valid link
-link::link(engine e) :
+link::link(engine&& e) :
 	engine(std::move(e))
 {
 	if(!has_engine())

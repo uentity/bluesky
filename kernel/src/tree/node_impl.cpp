@@ -79,13 +79,13 @@ auto node_impl::adjust_inserted_link(const link& lnk, const node& target) -> nod
 	return lnk.pimpl()->propagate_handle().value_or(node::nil());
 }
 
-auto node_impl::propagate_owner(const engine& S, bool deep) -> void {
+auto node_impl::propagate_owner(const node& super, bool deep) -> void {
 	// setup super
-	if(S == nil_node::nil_engine()) return;
-	reset_super_engine(S);
+	if(super == nil_node::nil_engine()) return;
+	reset_super_engine(super);
 	// properly setup owner in node's leafs
 	for(auto& L : links_) {
-		auto child_node = node_impl::adjust_inserted_link(L, S);
+		auto child_node = node_impl::adjust_inserted_link(L, super);
 		if(deep && child_node)
 			child_node.pimpl()->propagate_owner(child_node, true);
 	}

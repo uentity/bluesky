@@ -21,7 +21,7 @@ NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  node
  *-----------------------------------------------------------------------------*/
-node::node(engine e) :
+node::node(engine&& e) :
 	engine(std::move(e))
 {
 	if(!has_engine())
@@ -39,7 +39,7 @@ node::node(links_v leafs) :
 {}
 
 auto node::nil() -> node {
-	return nil_node::nil_engine();
+	return engine(nil_node::nil_engine());
 }
 
 auto node::is_nil() const -> bool {

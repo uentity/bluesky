@@ -242,7 +242,7 @@ private:
 
 	node(sp_engine_impl impl);
 
-	node(engine);
+	node(engine&&);
 };
 
 NAMESPACE_END(blue_sky::tree)
