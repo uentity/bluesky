@@ -20,7 +20,7 @@ NAMESPACE_BEGIN(blue_sky::tree)
 
 template<bool ManageStatus = true, typename F, typename C>
 auto request_impl(
-	link_actor& LA, Req req, ReqOpts opts, F&& f_request, C&& res_processor
+	link_actor& LA, Req req, ReqOpts opts, F f_request, C res_processor
 ) -> void {
 	using namespace kernel::radio;
 	using namespace allow_enumops;
@@ -36,12 +36,12 @@ auto request_impl(
 	}
 
 	// setup request result post-processor
-	auto make_result = [&LA, rp = std::forward<C>(res_processor), req, prev_rs](a_ret_t obj) mutable {
+	auto make_result = [&LA, rp = std::move(res_processor), req, prev_rs](a_ret_t obj) mutable {
 		// set new status
 		if constexpr(ManageStatus)
 			LA.impl.rs_reset(
 				req, ReqReset::Always,
-				obj ? (obj.value() ? ReqStatus::OK : ReqStatus::Void) : ReqStatus::Error, prev_rs,
+				obj ? (*obj ? ReqStatus::OK : ReqStatus::Void) : ReqStatus::Error, prev_rs,
 				[&LA](Req req, ReqStatus new_rs, ReqStatus prev_rs) {
 					LA.send<high_prio>(LA.impl.home, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
 				}
@@ -49,7 +49,7 @@ auto request_impl(
 
 		// invoke result processor
 		std::invoke(
-			std::forward<C>(rp),
+			std::move(rp),
 			obj.and_then([](auto&& obj) -> ret_t {
 				return obj ? ret_t(std::move(obj)) : unexpected_err_quiet(Error::EmptyData);
 			})
@@ -59,25 +59,24 @@ auto request_impl(
 	// check starting conditions
 	if constexpr(ManageStatus) {
 		if(prev_rs != ReqStatus::OK && enumval(opts & ReqOpts::ErrorIfNOK)) {
-			make_result( unexpected_err_quiet(Error::EmptyData) );
+			make_result(unexpected_err_quiet(Error::EmptyData));
 			return;
 		}
 		if(prev_rs == ReqStatus::Busy && enumval(opts & ReqOpts::ErrorIfBusy)) {
-			make_result( unexpected_err_quiet(Error::LinkBusy) );
+			make_result(unexpected_err_quiet(Error::LinkBusy));
 			return;
 		}
 	}
 
 	// invoke request directly or inside spawned actor
 	if(enumval(opts & ReqOpts::DirectInvoke)) {
-		make_result( std::invoke(std::forward<F>(f_request)) );
+		make_result(f_request());
 	}
 	else {
 		// setup worker that will actually invoke `impl.data()`
-		auto worker = [f = std::forward<F>(f_request)](caf::event_based_actor* self) mutable
-		-> caf::behavior {
-			return {
-				[f = std::forward<F>(f)](a_ack) mutable -> a_ret_t { return std::invoke(std::forward<F>(f)); }
+		auto worker = [f = std::move(f_request)](caf::event_based_actor* self) mutable {
+			return caf::behavior{
+				[f = std::move(f)](a_ack) mutable -> a_ret_t { return f(); }
 			};
 		};
 
@@ -87,13 +86,13 @@ auto request_impl(
 			system().spawn(std::move(worker));
 
 		// make request and invoke result processor
-		LA.request(worker_actor, kernel::radio::timeout(true), a_ack())
+		LA.request(worker_actor, caf::infinite, a_ack())
 		.then(std::move(make_result));
 	}
 }
 
 template<bool ManageStatus = true, typename C>
-auto data_node_request(link_actor& LA, ReqOpts opts, C&& res_processor) {
+auto data_node_request(link_actor& LA, ReqOpts opts, C res_processor) {
 	using namespace allow_enumops;
 
 	request_impl<ManageStatus>(
@@ -117,7 +116,7 @@ auto data_node_request(link_actor& LA, ReqOpts opts, C&& res_processor) {
 			);
 			return res;
 		},
-		std::forward<C>(res_processor)
+		std::move(res_processor)
 	);
 }
 
