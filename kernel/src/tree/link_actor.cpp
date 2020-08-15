@@ -171,21 +171,6 @@ return {
 		return res;
 	},
 
-	// get node's group ID
-	//[=](a_node_gid) -> result_or_errbox<std::string> {
-	//	adbg(this) << "<- a_node_gid" << std::endl;
-	//	auto res = result_or_err<std::string>{};
-	//	data_node_ex(
-	//		[&](node_or_errbox N) {
-	//			N.map([&](const node& N) {
-	//				res = N->gid();
-	//			});
-	//		},
-	//		ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke
-	//	);
-	//	return res;
-	//},
-
 	// get name
 	[=](a_lnk_name) -> std::string {
 		adbg(this) << "<- a_lnk_name: " << impl.name_ << std::endl;
@@ -205,6 +190,11 @@ return {
 		adbg(this) << "<- a_lnk_status: " << to_string(req) << " " <<
 			to_string(prev_rs) << "->" << to_string(new_rs) << std::endl;
 		return rs_reset(req, cond, new_rs, prev_rs);
+	},
+
+	// just send notification about just changed status
+	[=](a_lnk_status, Req req, ReqStatus new_rs, ReqStatus prev_rs) {
+		impl.send_home<high_prio>(this, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
 	},
 
 	// get/set flags
@@ -263,13 +253,6 @@ auto link_actor::make_behavior() -> behavior_type {
 // => override slow API to exclude extra delivery messages
 auto fast_link_actor::make_typed_behavior() -> typed_behavior {
 	return first_then_second( typed_behavior_overload{
-		// obtain inode
-		[=](a_lnk_inode) -> result_or_errbox<inodeptr> {
-			adbg(this) << "<- a_lnk_inode" << std::endl;
-
-			return impl.get_inode();
-		},
-
 		[=](a_data, bool) -> obj_or_errbox {
 			adbg(this) << "<- a_data fast, status = " <<
 				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;

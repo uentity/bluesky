@@ -51,6 +51,8 @@ public:
 	//  private link messaging interface
 	//
 	using primary_actor_type = link::actor_type::extend<
+		// ask link's actor to send status changed ack AFTER it has been already changed by handle
+		caf::reacts_to<a_lnk_status, Req, ReqStatus, ReqStatus>,
 		// obtain link impl
 		caf::replies_to<a_impl>::with<sp_limpl>,
 		// delayed read for cached links

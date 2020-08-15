@@ -71,11 +71,11 @@ public:
 		forward_up(a_ack(), impl.id_, std::forward<Args>(args)...);
 	}
 
-	// get pointer to object link is pointing to, never returns invalid (NULL) sp_obj
+	// get link pointee, never returns invalid (NULL) sp_obj
 	using obj_processor_f = std::function<  void(result_or_errbox<sp_obj>) >;
 	virtual auto data_ex(obj_processor_f cb, ReqOpts opts) -> void;
 
-	// return tree::node if contained object is a node, never returns invalid (NULL) sp_obj
+	// return tree::node if contained object is a node, never returns nil node
 	using node_processor_f = std::function< void(node_or_errbox) >;
 	virtual auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void;
 
@@ -112,8 +112,6 @@ struct BS_HIDDEN_API fast_link_actor : public link_actor {
 
 	// part of behavior overloaded by this actor
 	using typed_behavior_overload = caf::typed_behavior<
-		// get inode
-		caf::replies_to<a_lnk_inode>::with<result_or_errbox<inodeptr>>,
 		// get data
 		caf::replies_to<a_data, bool>::with<result_or_errbox<sp_obj>>,
 		// get data node

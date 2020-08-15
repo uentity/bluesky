@@ -35,15 +35,17 @@ auto fusion_iface::pull_data(sp_obj root, link root_link) -> error {
 fusion_link::fusion_link(
 	std::string name, sp_obj data, sp_fusion bridge, Flags f
 ) : // set LazyLoad flag by default
-	super(std::make_shared<fusion_link_impl>( std::move(name), std::move(data), bridge, Flags(f | LazyLoad) ))
+	super(std::make_shared<fusion_link_impl>(
+		std::move(name), std::move(data), std::move(bridge), Flags(f | LazyLoad)
+	))
 {}
 
 fusion_link::fusion_link(
 	std::string name, node folder, sp_fusion bridge, Flags f
 ) : // set LazyLoad flag by default
-	super(std::make_shared<fusion_link_impl>(
-		std::move(name), std::make_shared<objnode>(std::move(folder)), bridge, Flags(f | LazyLoad)
-	))
+	fusion_link(
+		std::move(name), std::make_shared<objnode>(std::move(folder)), std::move(bridge), Flags(f | LazyLoad)
+	)
 {}
 
 fusion_link::fusion_link(
