@@ -96,11 +96,11 @@ auto link::id() const -> lid_type {
 }
 
 auto link::rename(std::string new_name) const -> void {
-	caf::anon_send(actor(*this), a_lnk_rename(), std::move(new_name), false);
+	caf::anon_send(actor(), a_lnk_rename(), std::move(new_name), false);
 }
 
 auto link::rename_silent(std::string new_name) const -> void {
-	caf::anon_send(actor(*this), a_lnk_rename(), std::move(new_name), true);
+	caf::anon_send(actor(), a_lnk_rename(), std::move(new_name), true);
 }
 
 auto link::owner() const -> node {
@@ -134,7 +134,7 @@ auto link::flags(unsafe_t) const -> Flags {
 }
 
 auto link::set_flags(Flags new_flags) const -> void {
-	caf::anon_send(actor(*this), a_lnk_flags(), new_flags);
+	caf::anon_send(actor(), a_lnk_flags(), new_flags);
 }
 
 auto link::req_status(Req request) const -> ReqStatus {
@@ -280,7 +280,7 @@ auto link::data_apply(data_modificator_f m, bool silent) const -> error {
 //
 auto link::data(process_data_cb f, bool high_priority) const -> void {
 	anon_request(
-		actor(*this), kernel::radio::timeout(true), high_priority,
+		actor(), kernel::radio::timeout(true), high_priority,
 		[f = std::move(f), wself = weak_ptr(*this)](obj_or_errbox eobj) {
 			if(auto self = wself.lock())
 				f(std::move(eobj), std::move(self));
@@ -291,7 +291,7 @@ auto link::data(process_data_cb f, bool high_priority) const -> void {
 
 auto link::data_node(process_dnode_cb f, bool high_priority) const -> void {
 	anon_request(
-		actor(*this), kernel::radio::timeout(true), high_priority,
+		actor(), kernel::radio::timeout(true), high_priority,
 		[f = std::move(f), wself = weak_ptr(*this)](node_or_errbox enode) {
 			if(auto self = wself.lock())
 				f(std::move(enode), std::move(self));
@@ -302,7 +302,7 @@ auto link::data_node(process_dnode_cb f, bool high_priority) const -> void {
 
 auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -> void {
 	anon_request(
-		actor(*this), kernel::radio::timeout(true), false,
+		actor(), kernel::radio::timeout(true), false,
 		make_apply_impl<true>(*this, std::move(m), silent),
 		a_data(), true
 	);

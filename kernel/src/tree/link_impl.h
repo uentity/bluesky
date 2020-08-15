@@ -86,13 +86,6 @@ public:
 	// complete private actor type
 	using actor_type = primary_actor_type::extend_with<ack_actor_type>;
 
-	// engine::impl::actorf() will resolve actor type using this function
-	template<typename Link>
-	static auto actor(const Link& L) {
-		// [NOTE] return private (extended) interface
-		return caf::actor_cast<typename Link::engine_impl::actor_type>(L.raw_actor());
-	}
-
 	///////////////////////////////////////////////////////////////////////////////
 	//  methods
 	//

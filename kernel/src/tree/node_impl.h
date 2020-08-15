@@ -78,11 +78,6 @@ public:
 	// append private behavior to public iface
 	using actor_type = primary_actor_type::extend_with< ack_actor_type >;
 
-	// engine::impl::actorf() will resolve actor type using this function
-	static auto actor(const node& N) {
-		return caf::actor_cast<actor_type>(N.raw_actor());
-	}
-
 	///////////////////////////////////////////////////////////////////////////////
 	//  member variables
 	//

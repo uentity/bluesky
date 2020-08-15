@@ -119,11 +119,9 @@ public:
 	auto handle() const -> link;
 
 	/// return node's typed actor handle
-	auto actor() const {
-		return caf::actor_cast<actor_type>(raw_actor());
-	}
-	static auto actor(const node& N) {
-		return N.actor();
+	using engine::actor;
+	auto actor() const -> actor_type {
+		return engine::actor(*this);
 	}
 
 	/// `deep` flag is propagated to leafs

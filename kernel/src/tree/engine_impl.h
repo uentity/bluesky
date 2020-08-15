@@ -91,6 +91,13 @@ public:
 		return kernel::radio::timeout(for_long_task);
 	}
 
+	/// actorf() will resolve actor type using this function
+	template<typename Handle>
+	static auto actor(const Handle& L) {
+		// [NOTE] return private (extended) interface
+		return caf::actor_cast<typename Handle::engine_impl::actor_type>(L.raw_actor());
+	}
+
 	/// make request to engine via tree item handle H
 	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
 	static auto actorf(const Handle& H, caf::duration timeout, Args&&... args) {

@@ -114,6 +114,12 @@ public:
 	 * Engine is intended to be used in derived tree handles that will always fallback to valid `nil` state.
 	 */
 
+	/// get engine's typed actor handle
+	template<typename Handle>
+	static auto actor(Handle&& H) {
+		return caf::actor_cast<typename std::remove_reference_t<Handle>::actor_type>(H.raw_actor());
+	}
+
 	/// returns engine's string type ID
 	auto type_id() const -> std::string_view;
 

@@ -88,15 +88,10 @@ public:
 	/// makes link nil
 	auto reset() -> void;
 
-	/// get link's typed actor handle
-	template<typename Link>
-	static auto actor(const Link& L) {
-		return caf::actor_cast<typename Link::actor_type>(L.raw_actor());
-	}
-
 	/// get typed actor of base link
+	using engine::actor;
 	auto actor() const -> actor_type {
-		return caf::actor_cast<actor_type>(raw_actor());
+		return engine::actor(*this);
 	}
 
 	/// if `deep` flag is set, then clone pointed object as well
