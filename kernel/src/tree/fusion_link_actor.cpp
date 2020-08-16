@@ -20,11 +20,12 @@ using bs_detail::shared;
  *  fusion_link impl
  *-----------------------------------------------------------------------------*/
 fusion_link_impl::fusion_link_impl(std::string name, sp_obj data, sp_fusion bridge, Flags f) :
-	super(std::move(name), data, f), bridge_(std::move(bridge)), data_(std::move(data))
+	super(std::move(name), data, f), bridge_(std::move(bridge)),
+	data_(data ? std::move(data) : std::make_shared<objnode>())
 {}
 
 fusion_link_impl::fusion_link_impl() :
-	super()
+	super(), data_(std::make_shared<objnode>())
 {}
 
 auto fusion_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor {
@@ -56,16 +57,17 @@ auto fusion_link_impl::reset_bridge(sp_fusion&& new_bridge) -> void {
 
 // request data via bridge
 auto fusion_link_impl::data() -> obj_or_err {
-	if(req_status(Req::Data) == ReqStatus::OK)
-		return data_;
-	if(const auto B = bridge()) {
-		if(!data_) data_ = std::make_shared<objnode>();
+	if(req_status(Req::Data) != ReqStatus::OK) {
+		const auto B = bridge();
+		if(!B) return unexpected_err(Error::NoFusionBridge);
+
 		auto err = B->pull_data(data_, super_engine());
 		if(err.code == obj_fully_loaded)
 			rs_reset(Req::DataNode, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
-		return err.ok() ? obj_or_err(data_) : tl::make_unexpected(std::move(err));
+		else if(err)
+			return tl::make_unexpected(std::move(err));
 	}
-	return unexpected_err(Error::NoFusionBridge);
+	return data_;
 }
 
 // unsafe version returns cached value
@@ -77,17 +79,17 @@ auto fusion_link_impl::data(unsafe_t) -> sp_obj {
 auto fusion_link_impl::populate(const std::string& child_type_id) -> node_or_err {
 	// assume that if `child_type_id` is nonepmty,
 	// then we should force `populate()` regardless of status
-	if(child_type_id.empty() && req_status(Req::DataNode) == ReqStatus::OK)
-		return data_->data_node();
-	if(const auto B = bridge()) {
-		if(!data_) data_ = std::make_shared<objnode>();
+	if(req_status(Req::Data) != ReqStatus::OK || child_type_id.empty()) {
+		const auto B = bridge();
+		if(!B) return unexpected_err(Error::NoFusionBridge);
+
 		auto err = B->populate(data_, super_engine(), child_type_id);
 		if(err.code == obj_fully_loaded)
 			rs_reset(Req::Data, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
-		return err.ok() ?
-			node_or_err(data_->data_node()) : tl::make_unexpected(std::move(err));
+		else if(err)
+			return tl::make_unexpected(std::move(err));
 	}
-	return unexpected_err(Error::NoFusionBridge);
+	return data_->data_node();
 }
 
 /*-----------------------------------------------------------------------------
