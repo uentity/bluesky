@@ -56,11 +56,15 @@ auto link_impl::reset_owner(const node& new_owner) -> void {
 }
 
 auto link_impl::req_status(Req request) const -> ReqStatus {
-	if(const auto i = (unsigned)request; i < 2) {
+	if(const auto i = enumval(request); i < 2) {
 		auto guard = std::shared_lock{ status_[i].guard };
 		return status_[i].value;
 	}
-	return ReqStatus::Void;
+	return ReqStatus::Error;
+}
+
+auto link_impl::req_status_handle(Req request) -> status_handle& {
+	return status_[enumval(request) & 1];
 }
 
 auto link_impl::rs_reset(

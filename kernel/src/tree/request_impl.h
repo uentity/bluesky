@@ -28,55 +28,70 @@ auto request_impl(
 	using a_ret_t = result_or_errbox<typename f_ret_t::value_type>;
 	using ret_t = result_or_err<typename f_ret_t::value_type>;
 
-	auto prev_rs = ReqStatus::Void;
+	auto prev_rs = ReqStatus::OK;
 	if constexpr(ManageStatus) {
 		prev_rs = LA.impl.rs_reset(req, ReqReset::IfNeq, ReqStatus::Busy, ReqStatus::OK);
-		if(prev_rs == ReqStatus::OK && enumval(opts & ReqOpts::HasDataCache))
-			opts &= ReqOpts::DirectInvoke;
+		if(prev_rs == ReqStatus::OK) {
+			if(enumval(opts & ReqOpts::HasDataCache)) opts &= ReqOpts::DirectInvoke;
+		}
+		else if(enumval(opts & ReqOpts::ErrorIfNOK)) {
+			// restore status & deliver error
+			LA.impl.rs_reset(req, ReqReset::Always, prev_rs);
+			res_processor(unexpected_err_quiet(Error::EmptyData));
+			return;
+		}
 	}
 
-	// setup request result post-processor
-	auto make_result = [&LA, rp = std::move(res_processor), req, prev_rs](a_ret_t obj) mutable {
-		// set new status
-		if constexpr(ManageStatus)
-			LA.impl.rs_reset(
-				req, ReqReset::Always,
-				obj ? (*obj ? ReqStatus::OK : ReqStatus::Void) : ReqStatus::Error, prev_rs,
-				[&LA](Req req, ReqStatus new_rs, ReqStatus prev_rs) {
-					LA.send<high_prio>(LA.impl.home, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
-				}
-			);
+	// returns extended request result processor
+	const auto make_result = [&] {
+		return [=, &LA, rp = std::move(res_processor)](a_ret_t obj) mutable {
+			// set new status
+			if constexpr(ManageStatus)
+				LA.impl.rs_reset(
+					req, ReqReset::Always,
+					obj ? (*obj ? ReqStatus::OK : ReqStatus::Void) : ReqStatus::Error, prev_rs,
+					[&LA](Req req, ReqStatus new_rs, ReqStatus prev_rs) {
+						LA.send<high_prio>(LA.impl.home, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
+					}
+				);
 
-		// invoke result processor
-		std::invoke(
-			std::move(rp),
-			obj.and_then([](auto&& obj) -> ret_t {
+			// if result is nil -> return error
+			auto res = obj.and_then([](auto&& obj) -> ret_t {
 				return obj ? ret_t(std::move(obj)) : unexpected_err_quiet(Error::EmptyData);
-			})
-		);
+			});
+			// invoke main result processor
+			rp(res);
+
+			// feed waiters
+			auto& waiters = LA.impl.req_status_handle(req).waiters;
+			for(auto& w : waiters)
+				(*reinterpret_cast<C*>(w()))(res);
+			waiters.clear();
+		};
 	};
 
-	// check starting conditions
-	if constexpr(ManageStatus) {
-		if(prev_rs != ReqStatus::OK && enumval(opts & ReqOpts::ErrorIfNOK)) {
-			make_result(unexpected_err_quiet(Error::EmptyData));
-			return;
-		}
-		if(prev_rs == ReqStatus::Busy && enumval(opts & ReqOpts::ErrorIfBusy)) {
-			make_result(unexpected_err_quiet(Error::LinkBusy));
-			return;
-		}
-	}
+	// returns request result waiter
+	const auto make_waiter = [&] {
+		return [rp = std::move(res_processor)]() mutable -> void* { return &rp; };
+	};
+	// [NOTE] either `make_result()` or `make_waiter()` must be called once!
 
-	// invoke request directly or inside spawned actor
-	if(enumval(opts & ReqOpts::DirectInvoke)) {
-		make_result(f_request());
+	// if we were in Busy state, then either deliver error or install waiter
+	if(prev_rs == ReqStatus::Busy) {
+		if(enumval(opts & ReqOpts::ErrorIfBusy))
+			res_processor(unexpected_err_quiet(Error::LinkBusy));
+		else
+			LA.impl.req_status_handle(req).waiters.emplace_back(make_waiter());
 	}
+	// if specified, invoke request directly
+	else if(enumval(opts & ReqOpts::DirectInvoke))
+		make_result()(f_request());
+	// otherwise invoke inside dedicated actor
 	else {
-		// setup worker that will actually invoke `impl.data()`
+		// setup worker that will invoke request and process result
 		auto worker = [f = std::move(f_request)](caf::event_based_actor* self) mutable {
 			return caf::behavior{
-				[f = std::move(f)](a_ack) mutable -> a_ret_t { return f(); }
+				[f = std::move(f)](a_apply) mutable -> a_ret_t { return f(); }
 			};
 		};
 
@@ -85,15 +100,28 @@ auto request_impl(
 			system().spawn<caf::detached>(std::move(worker)) :
 			system().spawn(std::move(worker));
 
-		// make request and invoke result processor
-		LA.request(worker_actor, caf::infinite, a_ack())
-		.then(std::move(make_result));
+		// start work & ensure that result_processor is invoked in LA's body
+		LA.request(worker_actor, caf::infinite, a_apply())
+		.then(make_result());
 	}
 }
 
 template<bool ManageStatus = true, typename C>
 auto data_node_request(link_actor& LA, ReqOpts opts, C res_processor) {
 	using namespace allow_enumops;
+
+	// [TODO] enable this code after simultaneous status manip is implemented
+	//request_impl<ManageStatus>(
+	//	LA, Req::DataNode, opts,
+	//	[Limpl = LA.pimpl_]() { return Limpl->data(); },
+	//	[rp = std::move(res_processor)](const auto& maybe_obj) mutable {
+	//		rp(maybe_obj.and_then( [&](const auto& obj) -> node_or_err {
+	//			if(auto n = obj->data_node())
+	//				return n;
+	//			return unexpected_err_quiet(Error::NotANode);
+	//		} ));
+	//	}
+	//);
 
 	request_impl<ManageStatus>(
 		LA, Req::DataNode, opts,

@@ -44,7 +44,7 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
 	// remember link's local group
 	impl.home = std::move(lgrp);
 	if(impl.home)
-		adbg(this) << "joined self group " << impl.home.get()->identifier() << std::endl;
+		adbg(this) << "joined self group " << std::endl;
 
 	// exit after kernel
 	KRADIO.register_citizen(this);
@@ -211,7 +211,7 @@ return {
 	// get data
 	[=](a_data, bool wait_if_busy) -> caf::result< obj_or_errbox > {
 		adbg(this) << "<- a_data, status = " <<
-			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
+			to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
 		auto res = make_response_promise< obj_or_errbox >();
 		data_ex(
@@ -224,7 +224,7 @@ return {
 	// get data node
 	[=](a_data_node, bool wait_if_busy) -> caf::result< node_or_errbox > {
 		adbg(this) << "<- a_data_node, status = " <<
-			to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
+			to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
 		auto res = make_response_promise< node_or_errbox >();
 		data_node_ex(
@@ -255,7 +255,7 @@ auto fast_link_actor::make_typed_behavior() -> typed_behavior {
 	return first_then_second( typed_behavior_overload{
 		[=](a_data, bool) -> obj_or_errbox {
 			adbg(this) << "<- a_data fast, status = " <<
-				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
+				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
 			return pimpl_->data().and_then([](auto&& obj) {
 				return obj ?
@@ -273,7 +273,7 @@ auto fast_link_actor::make_typed_behavior() -> typed_behavior {
 
 		[=](a_data_node, bool) -> node_or_errbox {
 			adbg(this) << "<- a_data_node fast, status = " <<
-				to_string(impl.status_[0].value) << "," << to_string(impl.status_[1].value) << std::endl;
+				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
 			return pimpl_->data().and_then([](const auto& obj) -> node_or_errbox {
 				if(obj) {
