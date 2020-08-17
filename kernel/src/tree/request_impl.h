@@ -9,6 +9,7 @@
 #pragma once
 
 #include <bs/kernel/radio.h>
+#include <bs/detail/enumops.h>
 #include "link_actor.h"
 // [NOTE] Following includes are required (even though objects involved in messages
 // are marked as unsafe CAF types) - for stringification inspector to work.
@@ -26,38 +27,46 @@ auto request_impl(
 	using namespace allow_enumops;
 	using f_ret_t = std::invoke_result_t<F>;
 	using a_ret_t = result_or_errbox<typename f_ret_t::value_type>;
-	using ret_t = result_or_err<typename f_ret_t::value_type>;
+	using res_t = result_or_err<typename f_ret_t::value_type>;
+
+	// if opts::Uniform is true, then both status values are changed at once
+	// returns scalar prev state of `req` request
+	auto rs_reset = [=](auto& LA, auto... xs) {
+		if(enumval(opts & ReqOpts::Uniform))
+			LA.impl.rs_reset(req == Req::Data ? Req::DataNode : Req::Data, xs...);
+		return LA.impl.rs_reset(req, xs...);
+	};
 
 	auto prev_rs = ReqStatus::OK;
 	if constexpr(ManageStatus) {
-		prev_rs = LA.impl.rs_reset(req, ReqReset::IfNeq, ReqStatus::Busy, ReqStatus::OK);
+		prev_rs = rs_reset(LA, ReqReset::IfNeq, ReqStatus::Busy, ReqStatus::OK);
 		if(prev_rs == ReqStatus::OK) {
 			if(enumval(opts & ReqOpts::HasDataCache)) opts &= ReqOpts::DirectInvoke;
 		}
 		else if(enumval(opts & ReqOpts::ErrorIfNOK)) {
 			// restore status & deliver error
-			LA.impl.rs_reset(req, ReqReset::Always, prev_rs);
-			res_processor(unexpected_err_quiet(Error::EmptyData));
+			rs_reset(LA, ReqReset::Always, prev_rs);
+			res_processor(res_t{ unexpected_err_quiet(Error::EmptyData) });
 			return;
 		}
 	}
 
 	// returns extended request result processor
 	const auto make_result = [&] {
-		return [=, &LA, rp = std::move(res_processor)](a_ret_t obj) mutable {
+		return [=, &LA, rs_reset = std::move(rs_reset), rp = std::move(res_processor)](a_ret_t obj) mutable {
 			// set new status
 			if constexpr(ManageStatus)
-				LA.impl.rs_reset(
-					req, ReqReset::Always,
+				rs_reset(
+					LA, ReqReset::Always,
 					obj ? (*obj ? ReqStatus::OK : ReqStatus::Void) : ReqStatus::Error, prev_rs,
 					[&LA](Req req, ReqStatus new_rs, ReqStatus prev_rs) {
-						LA.send<high_prio>(LA.impl.home, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
+						link_impl::send_home<high_prio>(&LA, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
 					}
 				);
 
-			// if result is nil -> return error
-			auto res = obj.and_then([](auto&& obj) -> ret_t {
-				return obj ? ret_t(std::move(obj)) : unexpected_err_quiet(Error::EmptyData);
+			// if request result is nil -> return error
+			const auto res = obj.and_then([](auto&& obj) {
+				return obj ? res_t(std::move(obj)) : unexpected_err_quiet(Error::EmptyData);
 			});
 			// invoke main result processor
 			rp(res);
@@ -79,7 +88,7 @@ auto request_impl(
 	// if we were in Busy state, then either deliver error or install waiter
 	if(prev_rs == ReqStatus::Busy) {
 		if(enumval(opts & ReqOpts::ErrorIfBusy))
-			res_processor(unexpected_err_quiet(Error::LinkBusy));
+			res_processor(res_t{ unexpected_err_quiet(Error::LinkBusy) });
 		else
 			LA.impl.req_status_handle(req).waiters.emplace_back(make_waiter());
 	}
@@ -109,42 +118,17 @@ auto request_impl(
 template<bool ManageStatus = true, typename C>
 auto data_node_request(link_actor& LA, ReqOpts opts, C res_processor) {
 	using namespace allow_enumops;
-
-	// [TODO] enable this code after simultaneous status manip is implemented
-	//request_impl<ManageStatus>(
-	//	LA, Req::DataNode, opts,
-	//	[Limpl = LA.pimpl_]() { return Limpl->data(); },
-	//	[rp = std::move(res_processor)](const auto& maybe_obj) mutable {
-	//		rp(maybe_obj.and_then( [&](const auto& obj) -> node_or_err {
-	//			if(auto n = obj->data_node())
-	//				return n;
-	//			return unexpected_err_quiet(Error::NotANode);
-	//		} ));
-	//	}
-	//);
-
+	// make monlith request, as node is extracted from downloaded object
 	request_impl<ManageStatus>(
-		LA, Req::DataNode, opts,
-		[&LA, opts]() mutable -> node_or_errbox {
-			// directly invoke 'Data' request, store returned value in `res` and return it
-			auto res = node_or_errbox{};
-			request_impl<ManageStatus>(
-				LA, Req::Data, static_cast<ReqOpts>(enumval(opts) | enumval(ReqOpts::DirectInvoke)),
-				[&LA] {
-					return LA.pimpl_->data().and_then([](const sp_obj& obj) -> node_or_err {
-						if(obj) {
-							if(auto n = obj->data_node())
-								return n;
-							return unexpected_err_quiet(Error::NotANode);
-						}
-						return unexpected_err_quiet(Error::EmptyData);
-					});
-				},
-				[&res](node_or_errbox&& N) { res = std::move(N); }
-			);
-			return res;
-		},
-		std::move(res_processor)
+		LA, Req::DataNode, opts | ReqOpts::Uniform,
+		[Limpl = LA.pimpl_]() { return Limpl->data(); },
+		[rp = std::move(res_processor)](const auto& maybe_obj) mutable {
+			rp(maybe_obj.and_then( [&](const auto& obj) -> node_or_err {
+				if(auto n = obj->data_node())
+					return n;
+				return unexpected_err_quiet(Error::NotANode);
+			} ));
+		}
 	);
 }
 

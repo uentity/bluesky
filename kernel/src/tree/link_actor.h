@@ -18,7 +18,7 @@ NAMESPACE_BEGIN(blue_sky::tree)
 
 enum class ReqOpts {
 	WaitIfBusy = 0, ErrorIfBusy = 1, ErrorIfNOK = 2, Detached = 4, DirectInvoke = 8,
-	HasDataCache = 16
+	HasDataCache = 16, Uniform = 32
 };
 
 /*-----------------------------------------------------------------------------
