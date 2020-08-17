@@ -20,8 +20,8 @@ using bs_detail::shared;
  *  fusion_link impl
  *-----------------------------------------------------------------------------*/
 fusion_link_impl::fusion_link_impl(std::string name, sp_obj data, sp_fusion bridge, Flags f) :
-	super(std::move(name), data, f), bridge_(std::move(bridge)),
-	data_(data ? std::move(data) : std::make_shared<objnode>())
+	super(std::move(name), data, f), data_(data ? std::move(data) : std::make_shared<objnode>()),
+	bridge_(std::move(bridge))
 {}
 
 fusion_link_impl::fusion_link_impl() :
@@ -42,7 +42,10 @@ auto fusion_link_impl::clone(bool deep) const -> sp_limpl {
 
 // search for valid (non-null) bridge up the tree
 auto fusion_link_impl::bridge() const -> sp_fusion {
-	if(bridge_) return bridge_;
+	{
+		auto solo = std::shared_lock{ bridge_guard_ };
+		if(bridge_) return bridge_;
+	}
 	// try to look up in parent link
 	if(auto parent = owner()) {
 		if(auto phandle = fusion_link{ parent.handle() })
@@ -52,6 +55,7 @@ auto fusion_link_impl::bridge() const -> sp_fusion {
 }
 
 auto fusion_link_impl::reset_bridge(sp_fusion&& new_bridge) -> void {
+	auto solo = std::lock_guard{ bridge_guard_ };
 	bridge_ = std::move(new_bridge);
 }
 
@@ -61,10 +65,7 @@ auto fusion_link_impl::data() -> obj_or_err {
 		const auto B = bridge();
 		if(!B) return unexpected_err(Error::NoFusionBridge);
 
-		auto err = B->pull_data(data_, super_engine());
-		if(err.code == obj_fully_loaded)
-			rs_reset(Req::DataNode, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
-		else if(err)
+		if(auto err = B->pull_data(data_, super_engine()))
 			return tl::make_unexpected(std::move(err));
 	}
 	return data_;
@@ -83,10 +84,7 @@ auto fusion_link_impl::populate(const std::string& child_type_id) -> node_or_err
 		const auto B = bridge();
 		if(!B) return unexpected_err(Error::NoFusionBridge);
 
-		auto err = B->populate(data_, super_engine(), child_type_id);
-		if(err.code == obj_fully_loaded)
-			rs_reset(Req::Data, ReqReset::IfNeq, ReqStatus::OK, ReqStatus::Busy);
-		else if(err)
+		if(auto err = B->populate(data_, super_engine(), child_type_id))
 			return tl::make_unexpected(std::move(err));
 	}
 	return data_->data_node();
@@ -97,8 +95,13 @@ auto fusion_link_impl::populate(const std::string& child_type_id) -> node_or_err
  *-----------------------------------------------------------------------------*/
 // both Data & DataNode execute with `HasDataCache` flag set
 auto fusion_link_actor::data_ex(obj_processor_f cb, ReqOpts opts) -> void {
+	// tune req opt
+	opts |= ReqOpts::HasDataCache | ReqOpts::Detached;
+	if(auto B = fimpl().bridge())
+		if(B->is_uniform(fimpl().data_)) opts |= ReqOpts::Uniform;
+	// make request
 	request_impl(
-		*this, Req::Data, opts | ReqOpts::HasDataCache | ReqOpts::Detached,
+		*this, Req::Data, opts,
 		[Limpl = pimpl_] { return static_cast<fusion_link_impl&>(*Limpl).data(); },
 		std::move(cb)
 	);
@@ -106,8 +109,13 @@ auto fusion_link_actor::data_ex(obj_processor_f cb, ReqOpts opts) -> void {
 
 // `data_node` just calls `populate`
 auto fusion_link_actor::data_node_ex(node_processor_f cb, ReqOpts opts) -> void {
+	// tune req opt
+	opts |= ReqOpts::HasDataCache | ReqOpts::Detached;
+	if(auto B = fimpl().bridge())
+		if(B->is_uniform(fimpl().data_)) opts |= ReqOpts::Uniform;
+	// make request
 	request_impl(
-		*this, Req::DataNode, opts | ReqOpts::HasDataCache | ReqOpts::Detached,
+		*this, Req::DataNode, opts,
 		[Limpl = pimpl_] { return static_cast<fusion_link_impl&>(*Limpl).populate(); },
 		std::move(cb)
 	);
@@ -130,16 +138,7 @@ auto fusion_link_actor::make_typed_behavior() -> typed_behavior {
 			return res;
 		},
 
-		// [NOTE] idea is to delegate delivery to parent actor instead of calling
-		[=](a_flnk_bridge) -> caf::result<sp_fusion> {
-			if(fimpl().bridge_) return fimpl().bridge_;
-			// try to look up in parent link
-			if(auto parent = impl.owner()) {
-				if(auto phandle = fusion_link{ parent.handle() })
-					return delegate(link::actor(phandle), a_flnk_bridge());
-			}
-			return nullptr;
-		},
+		[=](a_flnk_bridge) -> sp_fusion { return fimpl().bridge(); },
 
 		[=](a_flnk_bridge, sp_fusion new_bridge) { fimpl().reset_bridge(std::move(new_bridge)); },
 

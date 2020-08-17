@@ -28,14 +28,25 @@ void py_bind_error(py::module& m) {
 
 	py::enum_<tree::Error>(m, "TreeError")
 		.value("OK", tree::Error::OK)
-		.value("OKOK", tree::Error::OKOK)
 		.value("EmptyData", tree::Error::EmptyData)
 		.value("NotANode", tree::Error::NotANode)
 		.value("LinkExpired", tree::Error::LinkExpired)
 		.value("UnboundSymLink", tree::Error::UnboundSymLink)
 		.value("LinkBusy", tree::Error::LinkBusy)
 		.value("NoFusionBridge", tree::Error::NoFusionBridge)
+
 		.value("KeyMismatch", tree::Error::KeyMismatch)
+		.value("WrongOrderSize",    tree::Error::WrongOrderSize)
+
+		.value("EmptyPath",         tree::Error::EmptyPath)
+		.value("PathNotExists",     tree::Error::PathNotExists)
+		.value("PathNotDirectory",  tree::Error::PathNotDirectory)
+		.value("CantReadFile",      tree::Error::CantReadFile)
+		.value("CantWriteFile",     tree::Error::CantWriteFile)
+		.value("LinkWasntStarted",  tree::Error::LinkWasntStarted)
+		.value("NodeWasntStarted",  tree::Error::NodeWasntStarted)
+		.value("MissingFormatter",  tree::Error::MissingFormatter)
+		.value("CantMakeFilename",  tree::Error::CantMakeFilename)
 	;
 
 	/*-----------------------------------------------------------------------------

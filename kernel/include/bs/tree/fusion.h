@@ -17,17 +17,24 @@ NAMESPACE_BEGIN(blue_sky::tree)
  *-----------------------------------------------------------------------------*/
 class BS_API fusion_iface {
 public:
-	/// accept root object and optionally type of child objects to be populated with
-	auto populate(sp_obj root, link root_link, const std::string& child_type_id = "") -> error;
-	/// download passed object's content from third-party backend
+	/// download object's 'Data' content from third-party backend
 	auto pull_data(sp_obj root, link root_link) -> error;
+	/// download object's children metadata (fill bundled node)
+	auto populate(sp_obj root, link root_link, const std::string& child_type_id = "") -> error;
+	// [NOTE] `pull_data()` and `populate()` can be invoked in parallel
+
+	/// test if object is either pure container or pure data and can be fetched using single request
+	/// for such objects Data & DataNode statuses will be changed simultaneousely
+	/// [NOTE] default imlementation always returns `true`
+	/// (most objects are uniform, so match common case)
+	virtual auto is_uniform(const sp_obj& root) const -> bool;
 
 	virtual ~fusion_iface() = default;
 
 private:
-	/// implementation to be overriden in derived fusion bridges
-	virtual auto do_populate(sp_obj root, link root_link, const std::string& child_type_id) -> error = 0;
+	/// derived fusion bridges must override these
 	virtual auto do_pull_data(sp_obj root, link root_link) -> error = 0;
+	virtual auto do_populate(sp_obj root, link root_link, const std::string& child_type_id) -> error = 0;
 };
 using sp_fusion = std::shared_ptr<fusion_iface>;
 

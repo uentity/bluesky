@@ -208,9 +208,10 @@ auto node_impl::insert(link L, const InsertPolicy pol) -> insert_status<Key::ID>
 			caf::anon_send(
 				node_impl::actor(prev_owner), a_node_erase(), res_L.id(), EraseOpts::DontResetOwner
 			);
-		res_L_impl.propagate_handle();
 		// set owner to this node
 		res_L_impl.reset_owner(self);
+		// correct handle of stored nodes
+		res_L_impl.propagate_handle();
 
 		// rename link if needed
 		if(Lname) res_L.rename(std::move(*Lname));

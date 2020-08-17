@@ -182,9 +182,7 @@ const char* error::message() const noexcept {
 }
 
 bool error::ok() const noexcept {
-	static const auto tree_extra_ok = tree::make_error_code(tree::Error::OKOK);
-
-	return !(bool)code || (code == tree_extra_ok);
+	return !(bool)code;
 }
 
 BS_API std::string to_string(const error& er) {

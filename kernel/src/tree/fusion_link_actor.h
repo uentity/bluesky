@@ -21,10 +21,6 @@ NAMESPACE_BEGIN(blue_sky::tree)
  *  fusion_link_impl
  *-----------------------------------------------------------------------------*/
 struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
-	// treat Error::OKOK status as object is fully loaded by fusion_iface
-	inline static const auto obj_fully_loaded = make_error_code(Error::OKOK);
-	// bridge
-	sp_fusion bridge_;
 	// contained object
 	sp_obj data_;
 
@@ -35,7 +31,12 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	fusion_link_impl(std::string name, sp_obj data, sp_fusion bridge, Flags f);
 	fusion_link_impl();
 
+	auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor override;
+
+	auto clone(bool deep = false) const -> sp_limpl override;
+
 	// search for valid (non-null) bridge up the tree
+	// [NOTE] protected by mutex
 	auto bridge() const -> sp_fusion;
 
 	auto reset_bridge(sp_fusion&& new_bridge) -> void;
@@ -46,14 +47,16 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	// unsafe version returns cached value
 	auto data(unsafe_t) -> sp_obj override;
 
-	auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor override;
-
-	auto clone(bool deep = false) const -> sp_limpl override;
-
 	// populate with specified child type
 	auto populate(const std::string& child_type_id = "") -> node_or_err;
 
 	ENGINE_TYPE_DECL
+
+private:
+	friend atomizer;
+	// bridge
+	sp_fusion bridge_;
+	mutable engine_impl_mutex bridge_guard_;
 };
 
 /*-----------------------------------------------------------------------------
