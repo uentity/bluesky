@@ -288,7 +288,7 @@ auto link::data_apply(data_modificator_f m, bool silent) const -> error {
 //  async API
 //
 auto link::data(process_data_cb f, bool high_priority) const -> void {
-	anon_request(
+	anon_request<caf::detached>(
 		actor(), kernel::radio::timeout(true), high_priority,
 		[f = std::move(f), wself = weak_ptr(*this)](obj_or_errbox eobj) {
 			if(auto self = wself.lock())
@@ -299,7 +299,7 @@ auto link::data(process_data_cb f, bool high_priority) const -> void {
 }
 
 auto link::data_node(process_dnode_cb f, bool high_priority) const -> void {
-	anon_request(
+	anon_request<caf::detached>(
 		actor(), kernel::radio::timeout(true), high_priority,
 		[f = std::move(f), wself = weak_ptr(*this)](node_or_errbox enode) {
 			if(auto self = wself.lock())
@@ -310,7 +310,7 @@ auto link::data_node(process_dnode_cb f, bool high_priority) const -> void {
 }
 
 auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -> void {
-	anon_request(
+	anon_request<caf::detached>(
 		actor(), kernel::radio::timeout(true), false,
 		make_apply_impl<true>(*this, std::move(m), silent),
 		a_data(), true
