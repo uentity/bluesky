@@ -37,22 +37,6 @@ using namespace blue_sky::log;
 using namespace blue_sky::tree;
 using namespace std::chrono_literals;
 
-NAMESPACE_BEGIN()
-
-class fusion_client : public fusion_iface {
-	auto populate(sp_obj root, const std::string& child_type_id = "") -> error override {
-		bsout() << "fusion_client::populate() called" << end;
-		return error::quiet();
-	}
-
-	auto pull_data(sp_obj root) -> error override {
-		bsout() << "fusion_client::pull_data() called" << end;
-		return error::quiet();
-	}
-};
-
-NAMESPACE_END()
-
 NAMESPACE_BEGIN(blue_sky)
 
 auto make_persons_tree() -> tree::link {
