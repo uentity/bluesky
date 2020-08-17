@@ -80,7 +80,7 @@ auto fusion_link_impl::data(unsafe_t) -> sp_obj {
 auto fusion_link_impl::populate(const std::string& child_type_id) -> node_or_err {
 	// assume that if `child_type_id` is nonepmty,
 	// then we should force `populate()` regardless of status
-	if(req_status(Req::Data) != ReqStatus::OK || child_type_id.empty()) {
+	if(req_status(Req::Data) != ReqStatus::OK || !child_type_id.empty()) {
 		const auto B = bridge();
 		if(!B) return unexpected_err(Error::NoFusionBridge);
 
