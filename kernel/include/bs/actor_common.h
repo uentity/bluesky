@@ -40,6 +40,13 @@ constexpr auto cast_timeout(T t) {
 template<typename T>
 using if_actor_handle = std::enable_if_t<caf::is_actor_handle<T>::value>;
 
+struct anon_sender {
+	template<caf::message_priority P, typename... Ts>
+	static auto send(Ts&&... xs) {
+		caf::anon_send<P>(std::forward<Ts>(xs)...);
+	};
+};
+
 NAMESPACE_END(detail)
 
 /// tag value for high priority messages
@@ -217,5 +224,14 @@ auto checked_send(ActorClass& src, const caf::group& dest, Ts&&... xs) -> void {
 	src.template send<P>(dest, std::forward<Ts>(xs)...);
 }
 
+/// @brief same as above but with anon send (no source actor available)
+template<
+	typename GroupActorType,
+	caf::message_priority P = caf::message_priority::normal, typename... Ts
+>
+auto checked_send(const caf::group& dest, Ts&&... xs) -> void {
+	detail::anon_sender src;
+	checked_send<GroupActorType, P>(src, dest, std::forward<Ts>(xs)...);
+}
 
 NAMESPACE_END(blue_sky)
