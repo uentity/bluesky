@@ -67,4 +67,9 @@ inline constexpr bool enable_pf_ctor_to_v = enable_pf_ctor_v<T, Args...> &&
 template<typename T, typename U, typename... Args>
 using enable_pf_ctor_to = std::enable_if_t<enable_pf_ctor_to_v<T, U, Args...>>;
 
+/// trait for detecting exactly enum class && not classic enums
+template<typename T>
+inline constexpr auto is_enum_class_v = std::is_enum_v<remove_cvref_t<T>> &&
+	!std::is_convertible_v<remove_cvref_t<T>, int>;
+
 } // eof blue_sky::meta

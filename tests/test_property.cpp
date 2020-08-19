@@ -38,6 +38,9 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	// make property
 	auto p = property("Hello"s);
 	bsout() << "p value index = {}, value = {}" << p.index() << get<std::string>(p) << bs_end;
+	get<std::string>(p) = "Test";
+	p = "Test";
+	BOOST_TEST(get<std::string>(p) == "Test");
 	// test integer scalars list
 	auto intV = {42L, 24L, 27L};
 	p.emplace<list_of<integer>>(intV);
@@ -72,13 +75,21 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	//  propdict
 	//
 	bsout() << "*** testing propdict..." << bs_end;
-	std::map<const char*, std::string> fixt = {{"A", "test1"}, {"B", "test2"}};
 	propdict P = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", std::vector{2L, 3L, 4L}}};
 	bsout() << "P = {}" << P << bs_end;
+
+	static std::map<const char*, std::string> fixt = {{"A", "test1"}, {"B", "test2"}};
 	P = fixt;
 	bsout() << "P = {}" << P << bs_end;
-	P = std::move(fixt);
-	for(const auto& [_, v] : fixt) {
+	auto fixt_copy = fixt;
+	P = std::move(fixt_copy);
+	for(const auto& [_, v] : fixt_copy) {
+		BOOST_TEST(v.empty());
+	}
+	fixt_copy = fixt;
+	P.clear();
+	P.weak_merge_props(std::move(fixt_copy));
+	for(const auto& [_, v] : fixt_copy) {
 		BOOST_TEST(v.empty());
 	}
 
@@ -102,5 +113,22 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	P.ss<timestamp>("now") = make_timestamp();
 	P.ss<timespan>("now duration", get<timestamp>(P, "now") - std::chrono::system_clock::now());
 	bsout() << "P = {}" << P << bs_end;
-}
 
+	enum class E { One, Two, Three };
+	property ep = E::One;
+	BOOST_TEST((get<E>(ep) == E::One));
+	E e1 = get<E>(ep);
+	BOOST_TEST((e1 == E::One));
+	e1 = get_or<E>(&ep, E::Three);
+	BOOST_TEST((e1 == E::One));
+	ep = 2.3;
+	e1 = get_or<E>(&ep, E::Three);
+	BOOST_TEST((e1 == E::Three));
+
+	enum EC { Four, Five };
+	ep = Four;
+	BOOST_TEST((get<EC>(ep) == Four));
+	BOOST_TEST((get_or<EC>(&ep, Five) == Four));
+	ep = 2.3;
+	BOOST_TEST((get_or<EC>(&ep, Five) == Five));
+}
