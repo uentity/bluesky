@@ -136,6 +136,16 @@ return {
 		return pimpl_;
 	},
 
+	[=](a_apply, transaction tr) -> error::box {
+		return tr();
+	},
+
+	[=](a_apply, link_transaction tr) -> error::box {
+		if(auto self = impl.super_engine())
+			return tr(std::move(self));
+		return error{Error::EmptyData};
+	},
+
 	// get id
 	[=](a_lnk_id) -> lid_type {
 		adbg(this) << "<- a_lnk_id: " << to_string(impl.id_) << std::endl;

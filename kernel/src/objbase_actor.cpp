@@ -26,26 +26,6 @@ NAMESPACE_BEGIN(blue_sky)
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 
-using modificator_f = objbase::modificator_f;
-using closed_modificator_f = objbase::closed_modificator_f;
-
-NAMESPACE_BEGIN()
-
-static auto make_frm_job(sp_obj obj, object_formatter* F, std::string fname, bool is_saving) {
-	return is_saving ? objbase::closed_modificator_f{
-		[obj = std::move(obj), F, fname = std::move(fname)] {
-			return F->save(*obj, fname);
-		}
-	} :
-		[obj = std::move(obj), F, fname = std::move(fname)] {
-			return F->save(*obj, fname);
-		}
-	;
-}
-
-
-NAMESPACE_END()
-
 /*-----------------------------------------------------------------------------
  *  objbase_actor
  *-----------------------------------------------------------------------------*/
@@ -70,7 +50,7 @@ return typed_behavior {
 	},
 
 	// execute modificator
-	[=](a_apply, const closed_modificator_f& m) -> error::box {
+	[=](a_apply, const transaction& m) -> error::box {
 		// invoke modificator
 		auto er = error::eval_safe(m);
 		auto s = er.ok() ? tree::ReqStatus::OK : tree::ReqStatus::Error;
@@ -93,7 +73,7 @@ return typed_behavior {
 				if(!F) return error{obj->type_id(), tree::Error::MissingFormatter};
 
 				// apply load job inplace
-				auto job = caf::make_message(a_apply(), closed_modificator_f{
+				auto job = caf::make_message(a_apply(), transaction{
 					[=, obj = std::move(obj), fname = std::move(fname)] {
 						//caf::aout(this) << "Loading " << fname << std::endl;
 						return F->load(*obj, fname);
@@ -154,24 +134,24 @@ auto objbase::reset_home(std::string new_hid, bool silent) -> void {
 		caf::anon_send<high_prio>(objbase_actor::actor(*this), a_home(), std::move(new_hid));
 }
 
-auto objbase::apply(closed_modificator_f m) const -> error {
+auto objbase::apply(transaction m) const -> error {
 	return actorf<error>(
 		actor(), kernel::radio::timeout(true), a_apply(), std::move(m)
 	);
 }
 
-auto objbase::apply(modificator_f m) const -> error {
+auto objbase::apply(obj_transaction tr) const -> error {
 	return actorf<error>(
-		actor(), kernel::radio::timeout(true), a_apply(), make_closed_modificator(std::move(m))
+		actor(), kernel::radio::timeout(true), a_apply(), make_transaction(std::move(tr))
 	);
 }
 
-auto objbase::apply(launch_async_t, closed_modificator_f m) const -> void {
+auto objbase::apply(launch_async_t, transaction m) const -> void {
 	caf::anon_send(actor(), a_apply(), std::move(m));
 }
 
-auto objbase::apply(launch_async_t, modificator_f m) const -> void {
-	caf::anon_send(actor(), a_apply(), make_closed_modificator(std::move(m)));
+auto objbase::apply(launch_async_t, obj_transaction tr) const -> void {
+	caf::anon_send(actor(), a_apply(), make_transaction(std::move(tr)));
 }
 
 NAMESPACE_END(blue_sky)

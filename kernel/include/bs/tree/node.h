@@ -216,6 +216,13 @@ public:
 	auto rearrange(std::vector<lid_type> new_order) const -> error;
 	auto rearrange(std::vector<std::size_t> new_order) const -> error;
 
+	/// applies functor to node atomically (invoke in node's queue)
+	auto apply(transaction tr) const -> error;
+	auto apply(node_transaction tr) const -> error;
+
+	auto apply(launch_async_t, transaction tr) const -> void;
+	auto apply(launch_async_t, node_transaction tr) const -> void;
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  events handling
 	//

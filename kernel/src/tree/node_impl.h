@@ -45,6 +45,9 @@ public:
 	//
 	// public node iface extended with some private messages
 	using primary_actor_type = node::actor_type::extend<
+		// run transaction in node's queue
+		caf::replies_to<a_apply, transaction>::with<error::box>,
+		caf::replies_to<a_apply, node_transaction>::with<error::box>,
 		// obtain node impl
 		caf::replies_to<a_impl>::with<sp_nimpl>,
 		// join self group

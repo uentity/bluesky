@@ -192,6 +192,16 @@ auto node_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
 	[=](a_impl) -> sp_nimpl { return pimpl_; },
 
+	[=](a_apply, transaction tr) -> error::box {
+		return tr();
+	},
+
+	[=](a_apply, node_transaction tr) -> error::box {
+		if(auto self = impl.super_engine())
+			return tr(std::move(self));
+		return error{Error::EmptyData};
+	},
+
 	// unconditionally join home group - used after deserialization
 	[=](a_hi) { join(impl.home); },
 

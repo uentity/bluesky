@@ -28,16 +28,12 @@ NAMESPACE_BEGIN(blue_sky)
  *-----------------------------------------------------------------------------*/
 class BS_API objbase : public std::enable_shared_from_this<objbase> {
 public:
-	/// function that performs any action on this object passed as argument
-	using modificator_f = std::function< error(sp_obj) >;
-	using closed_modificator_f = std::function< error() >;
-
 	/// Interface of object actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<
 		// get home group
 		caf::replies_to<a_home>::with<caf::group>,
-		// runs modificator in message queue of this object
-		caf::replies_to<a_apply, closed_modificator_f>::with<error::box>
+		// runs transaction in message queue of this object
+		caf::replies_to<a_apply, transaction>::with<error::box>
 	>;
 
 	/// default ctor that accepts custom ID string
@@ -91,15 +87,15 @@ public:
 	auto home_id() const -> std::string;
 
 	/// runs modificator in message queue of this object
-	auto apply(modificator_f m) const -> error;
-	auto apply(closed_modificator_f m) const -> error;
+	auto apply(transaction tr) const -> error;
+	auto apply(obj_transaction tr) const -> error;
 
-	auto apply(launch_async_t, modificator_f m) const -> void;
-	auto apply(launch_async_t, closed_modificator_f m) const -> void;
+	auto apply(launch_async_t, transaction tr) const -> void;
+	auto apply(launch_async_t, obj_transaction tr) const -> void;
 
 	template<typename F>
-	auto make_closed_modificator(F&& f) const -> closed_modificator_f {
-		return [f = std::forward<F>(f), self = const_cast<objbase*>(this)->shared_from_this()]() mutable
+	auto make_transaction(F f) const -> transaction {
+		return [f = std::move(f), self = const_cast<objbase*>(this)->shared_from_this()]() mutable
 		-> error {
 			return f(std::move(self));
 		};
@@ -185,7 +181,3 @@ using sp_objnode = std::shared_ptr<objnode>;
 using sp_cobjnode = std::shared_ptr<const objnode>;
 
 NAMESPACE_END(blue_sky)
-
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::objbase::modificator_f)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::objbase::closed_modificator_f)
-

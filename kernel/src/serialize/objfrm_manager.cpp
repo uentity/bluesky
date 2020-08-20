@@ -28,7 +28,7 @@ objfrm_manager::objfrm_manager(caf::actor_config& cfg, bool is_saving) :
 {}
 
 static auto make_frm_job(sp_obj obj, object_formatter* F, std::string fname, bool is_saving) {
-	return is_saving ? objbase::closed_modificator_f{
+	return is_saving ? transaction{
 		[obj = std::move(obj), F, fname = std::move(fname)] {
 			return F->save(*obj, fname);
 		}

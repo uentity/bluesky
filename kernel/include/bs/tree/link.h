@@ -154,9 +154,17 @@ public:
 	/// methods below are efficient checks that won't call `data_node()` if possible
 	/// check if pointee is a node
 	auto is_node() const -> bool;
+
 	/// if pointee is a node, return node's actor group ID
 	auto data_node_hid() const -> result_or_err<std::string>;
 	auto data_node_hid(unsafe_t) const -> std::string;
+
+	/// applies functor to link atomically (invoke in link's queue)
+	auto apply(transaction tr) const -> error;
+	auto apply(link_transaction tr) const -> error;
+
+	auto apply(launch_async_t, transaction tr) const -> void;
+	auto apply(launch_async_t, link_transaction tr) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Pointee data API
@@ -179,8 +187,8 @@ public:
 	auto data_node(unsafe_t) const -> node;
 
 	/// make pointee data modification atomically
-	auto data_apply(data_modificator_f m, bool silent = false) const -> error;
-	auto data_apply(launch_async_t, data_modificator_f m, bool silent = false) const -> void;
+	auto data_apply(obj_transaction m, bool silent = false) const -> error;
+	auto data_apply(launch_async_t, obj_transaction m, bool silent = false) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Async API

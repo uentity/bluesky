@@ -245,10 +245,10 @@ auto link::is_node() const -> bool {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  apply impl
+//  apply
 //
 template<bool AsyncApply = false>
-static auto make_apply_impl(const link& L, data_modificator_f m, bool silent) {
+static auto make_apply_impl(const link& L, obj_transaction m, bool silent) {
 return [=, wL = link::weak_ptr(L), m = std::move(m)](obj_or_errbox obj) mutable {
 	auto finally = [=](error&& er) {
 		// set status after modificator invoked
@@ -280,8 +280,24 @@ return [=, wL = link::weak_ptr(L), m = std::move(m)](obj_or_errbox obj) mutable 
 };
 }
 
-auto link::data_apply(data_modificator_f m, bool silent) const -> error {
+auto link::data_apply(obj_transaction m, bool silent) const -> error {
 	return make_apply_impl(*this, std::move(m), silent)( data_ex(true) );
+}
+
+auto link::apply(transaction tr) const -> error {
+	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
+}
+
+auto link::apply(link_transaction tr) const -> error {
+	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
+}
+
+auto link::apply(launch_async_t, transaction tr) const -> void {
+	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
+}
+
+auto link::apply(launch_async_t, link_transaction tr) const -> void {
+	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -309,7 +325,7 @@ auto link::data_node(process_dnode_cb f, bool high_priority) const -> void {
 	);
 }
 
-auto link::data_apply(launch_async_t, data_modificator_f m, bool silent) const -> void {
+auto link::data_apply(launch_async_t, obj_transaction m, bool silent) const -> void {
 	anon_request<caf::detached>(
 		actor(), kernel::radio::timeout(true), false,
 		make_apply_impl<true>(*this, std::move(m), silent),
