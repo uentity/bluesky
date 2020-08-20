@@ -11,6 +11,9 @@
 #include <type_traits>
 
 namespace blue_sky::meta {
+/// useful to postpone `static_assert`
+template<typename T>
+inline constexpr bool static_false = false;
 
 /// same as `std::forward`, but forward value AS if it has type `AsT`
 /// with all type type props copied from `T`
