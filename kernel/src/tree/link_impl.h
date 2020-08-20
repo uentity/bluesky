@@ -131,6 +131,9 @@ public:
 		on_rs_changed_fn on_rs_changed = noop
 	) -> ReqStatus;
 
+	// rename and send notification to home group
+	auto rename(std::string new_name) -> void;
+
 	/// create or set or create inode for given target object
 	/// [NOTE] if `new_info` is non-null, returned inode may be NOT EQUAL to `new_info`
 	static auto make_inode(const sp_obj& target, inodeptr new_info = nullptr) -> inodeptr;

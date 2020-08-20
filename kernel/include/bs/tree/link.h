@@ -50,8 +50,8 @@ public:
 
 		// get link name
 		caf::replies_to<a_lnk_name>::with<std::string>,
-		// rename link
-		caf::reacts_to<a_lnk_rename, std::string, bool>,
+		// rename link, returns 1 on successfull rename
+		caf::replies_to<a_lnk_rename, std::string>::with<std::size_t>,
 
 		// get request status
 		caf::replies_to<a_lnk_status, Req>::with<ReqStatus>,
@@ -109,8 +109,11 @@ public:
 	auto is_nil() const -> bool;
 	operator bool() const { return !is_nil(); }
 
+	/// get link's container
+	auto owner() const -> node;
+
 	///////////////////////////////////////////////////////////////////////////////
-	//  Fast API
+	//  Fast link info requests
 	//
 	/// access link's unique ID
 	auto id() const -> lid_type;
@@ -121,15 +124,13 @@ public:
 	/// can cause data race
 	auto name(unsafe_t) const -> std::string;
 
-	/// get link's container
-	auto owner() const -> node;
-
 	auto flags() const -> Flags;
 	auto flags(unsafe_t) const -> Flags;
 	auto set_flags(Flags new_flags) const -> void;
 
 	/// rename link & notify owner node
-	auto rename(std::string new_name) const -> void;
+	auto rename(std::string new_name) const -> bool;
+	auto rename(launch_async_t, std::string new_name) const -> void;
 
 	/// inspect object's inode
 	auto info() const -> result_or_err<inode>;
@@ -223,11 +224,6 @@ protected:
 	/// maually start internal actor (if not started already)
 	auto start_engine() -> bool;
 
-	/// silent replace old name with new
-	auto rename_silent(std::string new_name) const -> void;
-
-	static auto make_root_(engine donor) -> link;
-
 private:
 	friend atomizer;
 	friend weak_ptr;
@@ -236,6 +232,8 @@ private:
 	friend node_impl;
 
 	link(engine&&);
+
+	static auto make_root_(engine donor) -> link;
 };
 
 /// handy aliases

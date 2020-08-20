@@ -71,7 +71,6 @@ return {
 	// handle my leaf rename
 	[=](a_ack, const lid_type& lid, a_lnk_rename, std::string new_, std::string old_) {
 		adbg(this) << "{a_lnk_rename ack}" << std::endl;
-		impl.refresh(lid);
 		ack_up(lid, a_lnk_rename(), std::move(new_), std::move(old_));
 		// notify handle about data change
 		forward_up(a_lnk_status(), Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);

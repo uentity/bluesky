@@ -95,17 +95,6 @@ auto link_actor::name() const -> const char* {
 	return "link_actor";
 }
 
-auto link_actor::rename(std::string new_name, bool silent) -> void {
-	adbg(this) << "<- a_lnk_rename " << (silent ? "[silent]: " : ": ") << impl.name_ <<
-		" -> " << new_name << std::endl;
-
-	auto old_name = impl.name_;
-	impl.name_ = std::move(new_name);
-	// send rename ack message
-	if(!silent)
-		impl.send_home<high_prio>(this, a_ack(), a_lnk_rename(), impl.name_, std::move(old_name));
-}
-
 auto link_actor::rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs, bool silent)
 -> ReqStatus {
 	return impl.rs_reset(
@@ -188,8 +177,19 @@ return {
 	},
 
 	// rename
-	[=](a_lnk_rename, std::string new_name, bool silent) -> void {
-		rename(std::move(new_name), silent);
+	[=](a_lnk_rename, std::string new_name) -> caf::result<std::size_t> {
+		adbg(this) << "<- a_lnk_rename " << impl.name_ << " -> " << new_name << std::endl;
+
+		// if link belongs to some node, use node::rename (to update index)
+		if(auto master = impl.owner()) {
+			adbg(this) << "-> delegated to master" << std::endl;
+			return delegate(master.actor(), a_lnk_rename(), impl.id_, std::move(new_name));
+		}
+		// otherwise rename directly
+		else {
+			impl.rename(std::move(new_name));
+			return std::size_t{1};
+		}
 	},
 
 	// get status

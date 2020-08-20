@@ -99,6 +99,16 @@ auto link_impl::rs_reset(
 	return self;
 }
 
+auto link_impl::rename(std::string new_name)-> void {
+	if(new_name == name_) return;
+	auto old_name = std::move(name_);
+	name_ = std::move(new_name);
+	// notify home group
+	checked_send<home_actor_type, high_prio>(
+		home, a_ack(), a_lnk_rename(), name_, std::move(old_name)
+	);
+}
+
 auto link_impl::data(unsafe_t) -> sp_obj {
 	return data().value_or(nullptr);
 }

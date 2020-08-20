@@ -271,29 +271,8 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  rename
 	//
-	template<Key K = Key::ID>
-	auto rename(
-		const Key_type<K>& key, const std::string& new_name
-	) -> size_t {
-		// [NOTE] does rename via link, index update relies on retranslating rename ack message
-		auto res = 0;
-		if constexpr(K == Key::ID || K == Key::AnyOrder) {
-			if(auto p = find<K, K>(key); p != end<K>()) {
-				p->rename(new_name);
-				res = 1;
-			}
-		}
-		else {
-			for(auto& p : equal_range<K>(key)) {
-				p.rename(new_name);
-				++res;
-			}
-		}
-		return res;
-	}
-
-	// update node indexes to match current link content
-	auto refresh(const lid_type& lid) -> void;
+	// [NOTE] don't check iterator validity, uses unsafe link API
+	auto rename(iterator<Key::Name> pos, std::string new_name) -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  rearrange

@@ -101,6 +101,41 @@ auto node_actor::name() const -> const char* {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  leafs rename
+//
+auto node_actor::rename(std::vector<iterator<Key::Name>> namesakes, const std::string& new_name)
+-> caf::result<std::size_t> {
+	// renamer as recursive lambda
+	auto do_rename = [=](auto work) mutable {
+		auto res = make_response_promise<std::size_t>();
+		auto do_rename_impl = [=](auto&& self, auto work, size_t cur_res) mutable {
+			if(work.empty()) {
+				res.deliver(cur_res);
+				return;
+			}
+
+			auto pos = work.back();
+			work.pop_back();
+			// [NOTE] use `await` to ensure node is not modified while link is renaming
+			request(
+				link_impl::actor(*pos), kernel::radio::timeout(), a_apply(),
+				transaction{[=]() {
+					impl.rename(pos, new_name);
+					return perfect;
+				}}
+			).await([=, work = std::move(work)](error::box r) mutable {
+				self(self, std::move(work), error{r}.ok() ? cur_res + 1 : cur_res);
+			});
+		};
+
+		do_rename_impl(do_rename_impl, std::move(work), 0);
+		return res;
+	};
+	// launch rename work
+	return do_rename(std::move(namesakes));
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //  leafs insert & erase
 //
 auto node_actor::insert(
@@ -409,16 +444,19 @@ return {
 	},
 
 	// rename
-	[=](a_lnk_rename, const lid_type& lid, const std::string& new_name) -> std::size_t {
-		return impl.rename<Key::ID>(lid, new_name);
+	[=](a_lnk_rename, const lid_type& lid, const std::string& new_name) -> caf::result<std::size_t> {
+		adbg(this) << "{a_lnk_rename} " << to_string(lid) << " " << new_name << std::endl;
+		return rename<Key::ID>(lid, new_name);
 	},
 
-	[=](a_lnk_rename, std::size_t idx, const std::string& new_name) -> std::size_t {
-		return impl.rename<Key::AnyOrder>(idx, new_name);
+	[=](a_lnk_rename, std::size_t idx, const std::string& new_name) -> caf::result<std::size_t> {
+		adbg(this) << "{a_lnk_rename} " << new_name << std::endl;
+		return rename<Key::AnyOrder>(idx, new_name);
 	},
 
-	[=](a_lnk_rename, const std::string& old_name, const std::string& new_name) -> std::size_t {
-		return impl.rename<Key::Name>(old_name, new_name);
+	[=](a_lnk_rename, const std::string& old_name, const std::string& new_name) -> caf::result<std::size_t> {
+		adbg(this) << "{a_lnk_rename} " << new_name << std::endl;
+		return rename<Key::Name>(old_name, new_name);
 	},
 
 	// apply custom order

@@ -41,7 +41,7 @@ struct nil_link::self_actor : caf::event_based_actor {
 
 		// deny rename
 		[=](a_lnk_name) -> std::string { return defaults::tree::nil_link_name; },
-		[=](a_lnk_rename, const std::string&, bool) -> void {},
+		[=](a_lnk_rename, const std::string&) -> std::size_t { return 0; },
 
 		// status alwaye Void
 		[=](a_lnk_status, Req) -> ReqStatus { return ReqStatus::Void; },

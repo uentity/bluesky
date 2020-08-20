@@ -95,12 +95,14 @@ auto link::id() const -> lid_type {
 	return pimpl()->id_;
 }
 
-auto link::rename(std::string new_name) const -> void {
-	caf::anon_send(actor(), a_lnk_rename(), std::move(new_name), false);
+auto link::rename(std::string new_name) const -> bool {
+	return pimpl()->actorf<std::size_t>(
+		*this, a_lnk_rename(), std::move(new_name)
+	).value_or(0);
 }
 
-auto link::rename_silent(std::string new_name) const -> void {
-	caf::anon_send(actor(), a_lnk_rename(), std::move(new_name), true);
+auto link::rename(launch_async_t, std::string new_name) const -> void {
+	caf::anon_send(actor(), a_lnk_rename(), std::move(new_name));
 }
 
 auto link::owner() const -> node {

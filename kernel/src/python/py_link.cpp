@@ -134,9 +134,9 @@ void py_bind_link(py::module& m) {
 		.def("oid", py::overload_cast<unsafe_t>(&link::oid, py::const_))
 
 		.def("obj_type_id", py::overload_cast<>(&link::obj_type_id, py::const_), nogil)
-		.def("obj_type_id", py::overload_cast<unsafe_t>(&link::obj_type_id, py::const_), nogil)
+		.def("obj_type_id", py::overload_cast<unsafe_t>(&link::obj_type_id, py::const_))
 
-		.def("rename", &link::rename, nogil)
+		.def("rename", py::overload_cast<std::string>(&link::rename, py::const_))
 		.def("req_status", &link::req_status, "Query for given operation status", nogil)
 		.def("rs_reset", &link::rs_reset,
 			"request"_a, "new_status"_a = ReqStatus::Void,

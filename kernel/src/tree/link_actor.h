@@ -53,8 +53,6 @@ public:
 	auto rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs, bool silent = false)
 	-> ReqStatus;
 
-	auto rename(std::string new_name, bool silent = false) -> void;
-
 	// pass message to upper (owner) level of tree structure
 	template<typename... Args>
 	auto forward_up(Args&&... args) -> void {

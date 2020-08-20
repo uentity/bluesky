@@ -14,7 +14,6 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 
 #include <algorithm>
@@ -34,9 +33,10 @@ using id_key = mi::const_mem_fun<
 	link, lid_type, &link::id
 >;
 // and non-unique name
-using name_key = mi::const_mem_fun<
-	link, std::string, &link::name
->;
+struct name_key {
+	using result_type = std::string;
+	auto operator()(const link& L) const { return L.name(unsafe); };
+};
 // and non-unique object ID
 using oid_key = mi::const_mem_fun<
 	link, std::string, &link::oid
@@ -81,9 +81,9 @@ NAMESPACE_END(detail)
 using links_container = mi::multi_index_container<
 	link,
 	mi::indexed_by<
-		mi::sequenced< mi::tag< detail::any_order > >,
-		mi::hashed_unique< mi::tag< detail::id_key >, detail::id_key >,
-		mi::ordered_non_unique< mi::tag< detail::name_key >, detail::name_key >
+		mi::sequenced< mi::tag<detail::any_order> >,
+		mi::hashed_unique< mi::tag<detail::id_key>, detail::id_key >,
+		mi::ordered_non_unique< mi::tag<detail::name_key>, detail::name_key >
 	>
 >;
 

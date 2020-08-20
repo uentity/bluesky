@@ -150,6 +150,14 @@ auto node_impl::equal_range(const std::string& key, Key key_meaning) const -> li
 	}
 }
 
+auto node_impl::rename(iterator<Key::Name> pos, std::string new_name) -> void {
+	// rename & update index
+	// must be called atomically for both node & link at given pos
+	links_.get<Key_tag<Key::Name>>().modify(
+		std::move(pos), [&](link& L) { L.pimpl()->rename(std::move(new_name)); }
+	);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //  leafs insert & erase
 //
@@ -265,16 +273,6 @@ auto node_impl::erase(const lids_v& r, leaf_postproc_fn ppf) -> std::size_t {
 		[&](const auto& lid) { res += erase(lid, ppf); }
 	);
 	return res;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//  misc
-//
-auto node_impl::refresh(const lid_type& lid) -> void {
-	// find target link by it's ID
-	auto& I = links_.get<Key_tag<Key::ID>>();
-	if(auto pos = I.find(lid); pos != I.end())
-		links_.get<Key_tag<Key::Name>>().modify_key( project<Key::ID, Key::Name>(pos), noop );
 }
 
 NAMESPACE_END(blue_sky::tree)

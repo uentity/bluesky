@@ -71,6 +71,19 @@ public:
 	// combines primary + ack
 	auto make_behavior() -> behavior_type override;
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  leafs operations that require actor
+	//
+	auto rename(std::vector<iterator<Key::Name>> namesakes, const std::string& new_name)
+	-> caf::result<std::size_t>;
+
+	template<Key K = Key::ID>
+	auto rename(const Key_type<K>& key, const std::string& new_name) -> caf::result<std::size_t> {
+		return rename(impl.equal_range<K>(key).template extract_it<iterator<Key::Name>>([&](auto& p) {
+			return impl.project<K, Key::Name>(p);
+		}), new_name);
+	}
+
 	auto insert(
 		link L, const InsertPolicy pol, bool silent = false
 	) -> insert_status<Key::ID>;
