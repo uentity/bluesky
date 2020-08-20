@@ -143,11 +143,12 @@ auto fusion_link_actor::make_typed_behavior() -> typed_behavior {
 		[=](a_flnk_bridge, sp_fusion new_bridge) { fimpl().reset_bridge(std::move(new_bridge)); },
 
 		// easier obj ID & object type id retrival
-		[=](a_lnk_otid) {
-			return impl.data_ ? impl.data_->type_id() : nil_otid;
+		[&self_impl = fimpl()](a_lnk_otid) {
+			return self_impl.data_ ? self_impl.data_->type_id() : nil_otid;
 		},
-		[=](a_lnk_oid) {
-			return impl.data_ ? impl.data_->id() : nil_oid;
+
+		[&self_impl = fimpl()](a_lnk_oid) {
+			return self_impl.data_ ? self_impl.data_->id() : nil_oid;
 		}
 	}, super::make_typed_behavior());
 }

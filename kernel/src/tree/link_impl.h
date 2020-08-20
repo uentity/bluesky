@@ -145,8 +145,6 @@ public:
 	std::string name_;
 	Flags flags_;
 
-	sp_obj data_;
-
 	/// status of operations
 	struct status_handle {
 		ReqStatus value = ReqStatus::Void;
