@@ -19,6 +19,8 @@
 #include <fmt/ostream.h>
 #include <caf/deep_to_string.hpp>
 
+#include "test_objects.h"
+
 template<typename T, typename U>
 constexpr auto equal_il(const T& rhs, std::initializer_list<U> il) {
 	return std::equal(std::cbegin(rhs), std::cend(rhs), std::cbegin(il), std::cend(il));
@@ -47,6 +49,30 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	auto getV = get<list_of<integer>>(p);
 	bsout() << "p value index = {}" << p.index() << bs_end;
 	BOOST_TEST(equal_il(getV, intV));
+
+	// test inplace lists init
+	auto lp1 = property{1, 2, 3};
+	BOOST_TEST(equal_il(getV, intV));
+	lp1 = {1, 2, 3};
+	BOOST_TEST((get_if<list_of<integer>>(&lp1)));
+	lp1 = {1., 2., 3.};
+	BOOST_TEST((get_if<list_of<real>>(&lp1)));
+	lp1 = {"one", "two", "three"};
+	BOOST_TEST((get_if<list_of<string>>(&lp1)));
+	lp1 = {true, false, true};
+	BOOST_TEST((get_if<list_of<bool>>(&lp1)));
+	lp1 = {make_timestamp(), make_timestamp()};
+	BOOST_TEST((get_if<list_of<timestamp>>(&lp1)));
+	lp1 = {timespan{make_timestamp()-timestamp{}}, timespan{make_timestamp()-timestamp{}}};
+	BOOST_TEST((get_if<list_of<timespan>>(&lp1)));
+	lp1 = {sp_person{}, sp_person{}};
+	BOOST_TEST((get_if<list_of<object>>(&lp1)));
+
+	struct Foo {};
+	using sp_foo = std::shared_ptr<Foo>;
+	// should not compile
+	//lp1 = {Foo(), Foo()};
+	//lp1 = {sp_foo(), sp_foo()};
 
 	// test real scalars list
 	auto realV = {42., 24., 27.};

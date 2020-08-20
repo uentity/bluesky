@@ -10,13 +10,13 @@
 
 #include "timetypes.h"
 #include "meta.h"
+#include "meta/is_shared_ptr.h"
 
 #include <caf/detail/type_list.hpp>
 
 #include <cstdint>
 #include <iosfwd>
 #include <variant>
-#include <type_traits>
 
 NAMESPACE_BEGIN(blue_sky::prop)
 // aliases for scalar types that property can handle
@@ -47,37 +47,44 @@ using carry_ts = caf::detail::tl_concat<scalar_ts, list_ts>::type;
 using variant_prop_t = caf::detail::tl_apply_t<carry_ts, std::variant>;
 
 /// helper compile-time checkers
-template<typename U>
+template<typename T> inline constexpr auto is_prop_v = std::is_same_v<meta::remove_cvref_t<T>, property>;
+
+template<typename T>
 constexpr auto is_prop() {
-	constexpr auto is_property = std::is_same_v<meta::remove_cvref_t<U>, property>;
+	constexpr auto is_property = is_prop_v<T>;
 	static_assert(is_property, "Argument isn't a blue-sky property instance");
 	return is_property;
 }
-template<typename U> inline constexpr auto is_prop_v = is_prop<U>();
+
+template<typename T> inline constexpr auto can_carry_scalar_v =
+	caf::detail::tl_contains<detail::scalar_ts, T>::value;
 
 template<typename T>
 constexpr auto can_carry_scalar() {
-	constexpr auto res = caf::detail::tl_contains<detail::scalar_ts, T>::value;
-	static_assert(res, "Property can't carry requested scalar type");
+	constexpr auto res = can_carry_scalar_v<T>;
+	static_assert(res, "Property can't carry given scalar type");
 	return res;
 }
-template<typename U> inline constexpr auto can_carry_scalar_v = can_carry_scalar<U>();
+
+template<typename T> inline constexpr auto can_carry_list_v =
+	caf::detail::tl_contains<detail::list_ts, T>::value;
 
 template<typename T>
 constexpr auto can_carry_list() {
-	constexpr auto res = caf::detail::tl_contains<detail::list_ts, T>::value;
-	static_assert(res, "Property can't carry requested list type");
+	constexpr auto res = can_carry_list_v<T>;
+	static_assert(res, "Property can't carry given list type");
 	return res;
 }
-template<typename U> inline constexpr auto can_carry_list_v = can_carry_list<U>();
+
+template<typename T> inline constexpr auto can_carry_type_v =
+	caf::detail::tl_contains<detail::carry_ts, T>::value;
 
 template<typename T>
 constexpr auto can_carry_type() {
-	constexpr auto res = caf::detail::tl_contains<detail::carry_ts, T>::value;
-	static_assert(res, "Property can't carry requested type");
+	constexpr auto res = can_carry_type_v<T>;
+	static_assert(res, "Property can't carry given type");
 	return res;
 }
-template<typename U> inline constexpr auto can_carry_type_v = can_carry_type<U>();
 
 NAMESPACE_END(detail)
 
@@ -105,6 +112,38 @@ public:
 		*this = static_cast<integer>(value);
 		return *this;
 	}
+
+	// improove init from initializer_list
+	template<typename T>
+	constexpr property(std::initializer_list<T> vlist) : underlying_type([&] {
+		if constexpr(detail::can_carry_scalar_v<T>)
+			return list_of<T>{ vlist };
+		else if constexpr(std::is_convertible_v<T, std::string>)
+			return list_of<std::string>(vlist.begin(), vlist.end());
+		else if constexpr(std::is_integral_v<T>)
+			return list_of<integer>(vlist.begin(), vlist.end());
+		else if constexpr(std::is_arithmetic_v<T>)
+			return list_of<real>(vlist.begin(), vlist.end());
+		else if constexpr(meta::is_shared_ptr_v<T>) {
+			using pointee = typename meta::is_shared_ptr<T>::pointee;
+			if constexpr(std::is_convertible_v<pointee, objbase>)
+				return list_of<sp_obj>(vlist.begin(), vlist.end());
+			else {
+				static_assert(
+					meta::static_false<T>, "Property can't carry list of shared_ptrs to given type"
+				);
+				return underlying_type{};
+			}
+		}
+		else {
+			static_assert(meta::static_false<T>, "Property can't carry list of given values");
+			return underlying_type{};
+		}
+	}()) {}
+
+private:
+	// to postpone static assert
+	
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -112,23 +151,23 @@ public:
 //
 template<typename T, typename U>
 constexpr decltype(auto) get(U&& p) {
-	if constexpr(detail::is_prop_v<U>) {
+	if constexpr(detail::is_prop<U>()) {
 		if constexpr(std::is_enum_v<T>)
 			return static_cast<T>(std::get<integer>(std::forward<U>(p)));
-		else if constexpr(detail::can_carry_type_v<T>)
+		else if constexpr(detail::can_carry_type<T>())
 			return std::get<T>(std::forward<U>(p));
 	}
 }
 
 template<std::size_t I, typename U>
 constexpr decltype(auto) get(U&& p) {
-	if constexpr(detail::is_prop_v<U>)
+	if constexpr(detail::is_prop<U>())
 		return std::get<I>(std::forward<U>(p));
 }
 
 template<typename T, typename U>
 constexpr auto get_if(U* p) noexcept {
-	if constexpr(detail::is_prop_v<U> && detail::can_carry_type_v<T>)
+	if constexpr(detail::is_prop<U>() && detail::can_carry_type<T>())
 		return std::get_if<T>(p);
 }
 
@@ -139,7 +178,7 @@ constexpr decltype(auto) get_or(const property* p, const T& def_value) noexcept 
 		auto pv = std::get_if<integer>(p);
 		return pv ? static_cast<T>(*pv) : def_value;
 	}
-	else if constexpr(detail::can_carry_type_v<T>) {
+	else if constexpr(detail::can_carry_type<T>()) {
 		auto pv = std::get_if<T>(p);
 		return pv ? *pv : def_value;
 	}
@@ -153,7 +192,7 @@ constexpr decltype(auto) get_or(const property* p, const T& def_value) noexcept 
 template<typename From = void, typename To = void>
 constexpr bool extract(const property& source, To& target) noexcept {
 	using carryT = std::conditional_t< std::is_same_v<From, void>, To, From >;
-	if constexpr(detail::can_carry_type_v<carryT>) {
+	if constexpr(detail::can_carry_type<carryT>()) {
 		if(std::holds_alternative<carryT>(source)) {
 			target = std::get<carryT>(source);
 			return true;
