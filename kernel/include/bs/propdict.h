@@ -14,6 +14,7 @@
 #include <map>
 #include <iterator>
 #include <algorithm>
+#include <stdexcept>
 
 NAMESPACE_BEGIN(blue_sky::prop)
 
