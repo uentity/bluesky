@@ -97,17 +97,27 @@ template<typename T> inline constexpr in_place_list_t<T> in_place_list{};
  *  BS property definition
  *-----------------------------------------------------------------------------*/
 class property : public detail::variant_prop_t {
+	// detect all integer types that doesn't exactly match `prop::integer` & enums
+	template<typename T>
+	using if_integer = std::enable_if_t<
+#ifdef _MSC_VER
+		std::is_enum_v<T> || (std::is_integral_v<T> && !std::is_same_v<T, integer> && !std::is_same_v<T, bool>)
+#else
+		meta::is_enum_class_v<T>
+#endif
+	>;
+
 public:
 	using underlying_type = detail::variant_prop_t;
 
 	using underlying_type::underlying_type;
 	using underlying_type::operator=;
 
-	// support for class enums
-	template<typename E, typename = std::enable_if_t<meta::is_enum_class_v<E>>>
+	// better support enums and different integer types
+	template<typename E, typename = if_integer<E>>
 	constexpr property(E value) noexcept : underlying_type{static_cast<integer>(value)} {}
 
-	template<typename E, typename = std::enable_if_t<meta::is_enum_class_v<E>>>
+	template<typename E, typename = if_integer<E>>
 	constexpr auto operator=(E value) noexcept -> property& {
 		*this = static_cast<integer>(value);
 		return *this;
@@ -140,10 +150,6 @@ public:
 			return underlying_type{};
 		}
 	}()) {}
-
-private:
-	// to postpone static assert
-	
 };
 
 ///////////////////////////////////////////////////////////////////////////////

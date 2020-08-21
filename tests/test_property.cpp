@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	p = "Test";
 	BOOST_TEST(get<std::string>(p) == "Test");
 	// test integer scalars list
-	auto intV = {42L, 24L, 27L};
+	auto intV = {integer(42), integer(24), integer(27)};
 	p.emplace<list_of<integer>>(intV);
 	auto getV = get<list_of<integer>>(p);
 	bsout() << "p value index = {}" << p.index() << bs_end;
@@ -87,7 +87,9 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	property p1{in_place_list<integer>, intV};
 	BOOST_TEST(equal_il(get<list_of<integer>>(p1), intV));
 
+	p = 42;
 	p = 42L;
+	p = 42LL;
 	bsout() << "p value index = {}, value = {}" << p.index() << get<integer>(p) << bs_end;
 	double pp = 0.;
 	extract<integer>(p, pp);
@@ -101,7 +103,7 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	//  propdict
 	//
 	bsout() << "*** testing propdict..." << bs_end;
-	propdict P = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", std::vector{2L, 3L, 4L}}};
+	propdict P = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", {2L, 3L, 4L}}};
 	bsout() << "P = {}" << P << bs_end;
 
 	static std::map<const char*, std::string> fixt = {{"A", "test1"}, {"B", "test2"}};
