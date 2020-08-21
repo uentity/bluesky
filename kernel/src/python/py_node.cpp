@@ -151,7 +151,8 @@ void py_bind_node(py::module& m) {
 			return make_container_iterator(std::move(res));
 		})
 
-		.def("leafs", &node::leafs, "Key"_a = Key::AnyOrder, "Return snapshot of node content", nogil)
+		.def("leafs", py::overload_cast<Key>(&node::leafs, py::const_),
+			"Key"_a = Key::AnyOrder, "Return snapshot of node content", nogil)
 
 		// check by link ID
 		.def("__contains__", &contains_link, "link"_a)

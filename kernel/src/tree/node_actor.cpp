@@ -27,8 +27,8 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace allow_enumops;
-using namespace kernel::radio;
 using namespace std::chrono_literals;
+using namespace std::string_literals;
 
 [[maybe_unused]] auto adbg_impl(node_actor* A) -> caf::actor_ostream {
 	auto res = caf::aout(A);
@@ -106,89 +106,92 @@ auto node_actor::name() const -> const char* {
 auto node_actor::rename(std::vector<iterator<Key::Name>> namesakes, const std::string& new_name)
 -> caf::result<std::size_t> {
 	// renamer as recursive lambda
-	auto do_rename = [=](auto work) mutable {
-		auto res = make_response_promise<std::size_t>();
-		auto do_rename_impl = [=](auto&& self, auto work, size_t cur_res) mutable {
-			if(work.empty()) {
-				res.deliver(cur_res);
-				return;
-			}
+	auto res = make_response_promise<std::size_t>();
+	auto do_rename = [=](auto&& self, auto work, size_t cur_res) mutable {
+		if(work.empty()) {
+			res.deliver(cur_res);
+			return;
+		}
 
-			auto pos = work.back();
-			work.pop_back();
-			// [NOTE] use `await` to ensure node is not modified while link is renaming
-			request(
-				link_impl::actor(*pos), kernel::radio::timeout(), a_apply(),
-				transaction{[=]() {
-					impl.rename(pos, new_name);
-					return perfect;
-				}}
-			).await([=, work = std::move(work)](error::box r) mutable {
-				self(self, std::move(work), error{r}.ok() ? cur_res + 1 : cur_res);
-			});
-		};
+		auto pos = work.back();
+		work.pop_back();
+		// [NOTE] use `await` to ensure node is not modified while link is renaming
+		request(
+			link_impl::actor(*pos), kernel::radio::timeout(), a_apply(),
+			transaction{[=]() -> error {
+				adbg(this) << "-> a_lnk_rename [" << to_string(pos->id()) <<
+					"][" << pos->name(unsafe) << "] -> [" << new_name << "]" << std::endl;
 
-		do_rename_impl(do_rename_impl, std::move(work), 0);
-		return res;
+				impl.rename(pos, new_name);
+				return perfect;
+			}}
+		).await(
+			// on success rename next element
+			[=, work = std::move(work)](error::box r) mutable {
+				self(self, std::move(work), error(std::move(r)).ok() ? cur_res + 1 : cur_res);
+			},
+			// on error deliver number of already renamed leafs
+			[=](const caf::error&) mutable { res.deliver(cur_res); }
+		);
 	};
+
 	// launch rename work
-	return do_rename(std::move(namesakes));
+	do_rename(do_rename, std::move(namesakes), 0);
+	return res;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  leafs insert & erase
 //
-auto node_actor::insert(
-	link L, const InsertPolicy pol, bool silent
-) -> insert_status<Key::ID> {
-	adbg(this) << "{a_lnk_insert}" << (silent ? " silent: " : ": ") <<
-		to_string(L.id()) << std::endl;
+NAMESPACE_BEGIN()
 
-	// insert
-	auto res = impl.insert(std::move(L), pol);
-	// inform world
-	auto& [pchild, is_inserted] = res;
-	if(!silent && is_inserted) {
-		impl.send_home<high_prio>(
-			this, a_ack(), this, a_node_insert(),
-			pchild->id(), *impl.index<Key::ID>(pchild), pol
-		);
-	}
+const auto noop_await_insert = [](const error::box&) {};
+
+template<typename Postproc, typename OnAwait = decltype(noop_await_insert)>
+auto do_insert(
+	node_actor* self, link L, InsertPolicy pol, Postproc pp, OnAwait aw = noop_await_insert
+) -> caf::response_promise {
+	// insert atomically for both node & link
+	auto res = self->make_response_promise();
+	self->request(
+		link_impl::actor(L), kernel::radio::timeout(), a_apply(),
+		transaction([=, pp = std::move(pp)]() mutable -> error {
+			adbg(self) << "-> a_node_insert [L][" << to_string(L.id()) <<
+				"][" << L.name(unsafe) << "]" << std::endl;
+			// make insertion
+			auto ir = self->impl.insert(L, pol);
+			// invoke postprocessing & deliver result
+			res.deliver(pp(ir));
+			// report success if insertion happened
+			if(ir.second)
+				return perfect;
+			else
+				return quiet_fail;
+		})
+	).await(
+		aw,
+		// on error forward caf error to await handler
+		[=, Lid = L.id()](const caf::error& er) mutable {
+			aw(forward_caf_error(
+				er, "in node["s + self->impl.home_id() + "] insert link[" + to_string(Lid) + ']'
+			));
+		}
+	);
 	return res;
 }
 
-auto node_actor::insert(
-	link L, std::size_t to_idx, const InsertPolicy pol, bool silent
-) -> node::insert_status {
-	// 1. insert an element using ID index
-	// [NOTE] silent insert - send ack message later
-	auto [pchild, is_inserted] = insert(std::move(L), pol, true);
-	auto res_idx = impl.index<Key::ID>(pchild);
-	if(!res_idx) return { res_idx, is_inserted };
-
-	// 2. reposition an element in AnyOrder index
-	to_idx = std::min(to_idx, impl.size());
-	auto from = impl.project<Key::ID>(pchild);
-	auto to = std::next(impl.begin(), to_idx);
-	// noop if to == from
-	pimpl_->links_.get<Key_tag<Key::AnyOrder>>().relocate(to, from);
-
-	// detect move and send proper message
-	if(!silent) {
-		if(is_inserted) // normal insert
-			impl.send_home<high_prio>(
-				this, a_ack(), this, a_node_insert(), pchild->id(), to_idx, pol
+auto notify_after_insert(node_actor* self, InsertPolicy pol) {
+	return [=](insert_status<Key::ID> res) -> node::insert_status {
+		auto& [pchild, is_inserted] = res;
+		if(is_inserted) {
+			self->impl.send_home<high_prio>(
+				self, a_ack(), self, a_node_insert(),
+				pchild->id(), *self->impl.index<Key::ID>(pchild), pol
 			);
-		else if(to != from) // move
-			impl.send_home<high_prio>(
-				this, a_ack(), this, a_node_insert(), pchild->id(), to_idx, *res_idx
-			);
-	}
-	return { to_idx, is_inserted };
+		}
+		return { self->impl.index<Key::ID>(std::move(res.first)), res.second };
+	};
 }
-
-
-NAMESPACE_BEGIN()
 
 auto on_erase(const link& L, node_actor& self) {
 	// collect link IDs of all deleted subtree elements
@@ -208,6 +211,70 @@ auto on_erase(const link& L, node_actor& self) {
 }
 
 NAMESPACE_END()
+
+auto node_actor::insert(link L, InsertPolicy pol) -> caf::response_promise {
+	return do_insert(this, L, pol, notify_after_insert(this, pol));
+}
+
+auto node_actor::insert(link L, std::size_t to_idx, InsertPolicy pol) -> caf::response_promise {
+	return do_insert(this, L, pol, [=](insert_status<Key::ID> res) mutable -> node::insert_status {
+		// 1. insert an element using ID index
+		auto [pchild, is_inserted] = res;
+		auto res_idx = impl.index<Key::ID>(pchild);
+		if(!res_idx) return { res_idx, is_inserted };
+
+		// 2. reposition an element in AnyOrder index
+		to_idx = std::min(to_idx, impl.size());
+		auto from = impl.project<Key::ID>(pchild);
+		auto to = std::next(impl.begin(), to_idx);
+		// noop if to == from
+		impl.links_.get<Key_tag<Key::AnyOrder>>().relocate(to, from);
+
+		// detect move and send proper message
+		if(is_inserted) // normal insert
+			impl.send_home<high_prio>(
+				this, a_ack(), this, a_node_insert(), pchild->id(), to_idx, pol
+			);
+		else if(to != from) // move
+			impl.send_home<high_prio>(
+				this, a_ack(), this, a_node_insert(), pchild->id(), to_idx, *res_idx
+			);
+		return { to_idx, is_inserted };
+	});
+}
+
+auto node_actor::insert(links_v Ls, InsertPolicy pol) -> caf::result<std::size_t> {
+	auto res = make_response_promise<std::size_t>();
+	auto insert_many = [=](auto&& self, auto work, size_t cur_res) mutable {
+		if(work.empty()) {
+			res.deliver(cur_res);
+			return;
+		}
+
+		auto L = work.back();
+		work.pop_back();
+		do_insert(
+			this, L, pol, notify_after_insert(this, pol),
+			[=, work = std::move(work)](error::box erb) mutable {
+				if(auto er = error(std::move(erb))) {
+					// if CAF error happens, stop insertion & deliver result
+					// otherwise just not increment inserted leafs counter
+					if(er.code.category().name() == "CAF"s) {
+						res.deliver(cur_res);
+						return;
+					}
+				}
+				else
+					cur_res += 1;
+				// recurse to next element
+				self(self, std::move(work), cur_res);
+			}
+		);
+	};
+
+	insert_many(insert_many, std::move(Ls), 0);
+	return res;
+}
 
 auto node_actor::erase(const lid_type& victim, EraseOpts opts) -> size_t {
 	const auto ppf = [=](const link& L) { on_erase(L, *this); };
@@ -307,18 +374,18 @@ return {
 
 	// find
 	[=](a_node_find, const lid_type& lid) -> link {
-		adbg(this) << "{a_node_find LID} " << to_string(lid) << std::endl;
+		adbg(this) << "-> a_node_find lid " << to_string(lid) << std::endl;
 		auto res = impl.search<Key::ID>(lid);
 		return res;
 	},
 
 	[=](a_node_find, std::size_t idx) -> link {
-		adbg(this) << "{a_node_find idx} " << idx << std::endl;
+		adbg(this) << "-> a_node_find idx " << idx << std::endl;
 		return impl.search<Key::AnyOrder>(idx);
 	},
 
 	[=](a_node_find, std::string key, Key key_meaning) -> caf::result<link> {
-		adbg(this) << "{a_node_find key} " << key << std::endl;
+		adbg(this) << "-> a_node_find key " << key << std::endl;
 		if(has_builtin_index(key_meaning)) {
 			auto res = link{};
 			error::eval_safe([&]{ res = impl.search(key, key_meaning); });
@@ -333,7 +400,7 @@ return {
 
 	// deep search
 	[=](a_node_deep_search, lid_type lid) -> caf::result<link> {
-		adbg(this) << "{a_node_deep_search}" << std::endl;
+		adbg(this) << "-> a_node_deep_search lid " << to_string(lid) << std::endl;
 		return delegate(
 			system().spawn(extraidx_deep_search_actor, handle()),
 			a_node_deep_search(), std::move(lid)
@@ -342,7 +409,7 @@ return {
 
 	[=](a_node_deep_search, std::string key, Key key_meaning, bool search_all)
 	-> caf::result<links_v> {
-		adbg(this) << "{a_node_deep_search}" << std::endl;
+		adbg(this) << "-> a_node_deep_search key " << key << std::endl;
 		return delegate(
 			system().spawn(extraidx_deep_search_actor, handle()),
 			a_node_deep_search(), std::move(key), key_meaning, search_all
@@ -382,25 +449,18 @@ return {
 	},
 
 	// insert new link
-	[=](a_node_insert, link L, InsertPolicy pol) -> node::insert_status {
-		adbg(this) << "{a_node_insert}" << std::endl;
-		auto res = insert(std::move(L), pol);
-		return { impl.index<Key::ID>(std::move(res.first)), res.second };
+	[=](a_node_insert, link L, InsertPolicy pol) -> caf::result<node::insert_status> {
+		return insert(std::move(L), pol);
 	},
 
 	// insert into specified position
-	[=](a_node_insert, link L, std::size_t idx, InsertPolicy pol) -> node::insert_status {
-		adbg(this) << "{a_node_insert}" << std::endl;
+	[=](a_node_insert, link L, std::size_t idx, InsertPolicy pol) -> caf::result<node::insert_status> {
 		return insert(std::move(L), idx, pol);
 	},
 
 	// insert bunch of links
 	[=](a_node_insert, links_v Ls, InsertPolicy pol) {
-		size_t cnt = 0;
-		for(auto& L : Ls) {
-			if(insert(std::move(L), pol).second) ++cnt;
-		}
-		return cnt;
+		return insert(std::move(Ls), pol);
 	},
 
 	// normal link erase
@@ -445,17 +505,14 @@ return {
 
 	// rename
 	[=](a_lnk_rename, const lid_type& lid, const std::string& new_name) -> caf::result<std::size_t> {
-		adbg(this) << "{a_lnk_rename} " << to_string(lid) << " " << new_name << std::endl;
 		return rename<Key::ID>(lid, new_name);
 	},
 
 	[=](a_lnk_rename, std::size_t idx, const std::string& new_name) -> caf::result<std::size_t> {
-		adbg(this) << "{a_lnk_rename} " << new_name << std::endl;
 		return rename<Key::AnyOrder>(idx, new_name);
 	},
 
 	[=](a_lnk_rename, const std::string& old_name, const std::string& new_name) -> caf::result<std::size_t> {
-		adbg(this) << "{a_lnk_rename} " << new_name << std::endl;
 		return rename<Key::Name>(old_name, new_name);
 	},
 

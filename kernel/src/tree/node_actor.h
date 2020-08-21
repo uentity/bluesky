@@ -84,13 +84,11 @@ public:
 		}), new_name);
 	}
 
-	auto insert(
-		link L, const InsertPolicy pol, bool silent = false
-	) -> insert_status<Key::ID>;
+	auto insert(link L, InsertPolicy pol) -> caf::response_promise;
 
-	auto insert(
-		link L, std::size_t idx, const InsertPolicy pol, bool silent = false
-	) -> node::insert_status;
+	auto insert(link L, std::size_t idx, InsertPolicy pol) -> caf::response_promise;
+
+	auto insert(links_v Ls, InsertPolicy pol) -> caf::result<std::size_t>;
 
 	auto erase(const lid_type& key, EraseOpts opts = EraseOpts::Normal) -> size_t;
 };

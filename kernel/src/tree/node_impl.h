@@ -248,7 +248,9 @@ public:
 	//
 	using leaf_postproc_fn = function_view< void(const link&) >;
 
-	auto insert(link L, const InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status<Key::ID>;
+	// insert to back of AnyOrder
+	auto insert(link L, InsertPolicy pol = InsertPolicy::AllowDupNames)
+	-> insert_status<Key::ID>;
 
 	template<Key K = Key::ID>
 	auto erase(

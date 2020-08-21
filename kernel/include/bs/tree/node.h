@@ -141,6 +141,7 @@ public:
 
 	/// get snapshot of node's content
 	auto leafs(Key order = Key::AnyOrder) const -> links_v;
+	auto leafs(unsafe_t, Key order = Key::AnyOrder) const -> links_v;
 
 	/// obtain vector of link ID keys
 	auto keys(Key ordering = Key::AnyOrder) const -> lids_v;

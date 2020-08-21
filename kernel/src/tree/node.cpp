@@ -66,11 +66,6 @@ auto node::pimpl() const -> node_impl* {
 	return static_cast<node_impl*>(pimpl_.get());
 }
 
-//auto node::propagate_owner(bool deep) -> void {
-//	// properly setup owner in node's leafs
-//	pimpl()->propagate_owner(*this, true);
-//}
-
 auto node::handle() const -> link {
 	return pimpl()->handle();
 }
@@ -94,6 +89,10 @@ auto node::leafs(Key order) const -> links_v {
 	return pimpl()->actorf<links_v>(
 		*this, a_node_leafs(), order
 	).value_or(links_v{});
+}
+
+auto node::leafs(unsafe_t, Key order) const -> links_v {
+	return pimpl()->leafs(order);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

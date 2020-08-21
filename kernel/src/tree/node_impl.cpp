@@ -164,12 +164,17 @@ auto node_impl::rename(iterator<Key::Name> pos, std::string new_name) -> void {
 // hardcode number of rename trials on insertion
 inline constexpr auto rename_trials = 10000;
 
-auto node_impl::insert(link L, const InsertPolicy pol) -> insert_status<Key::ID> {
+auto node_impl::insert(link L, InsertPolicy pol) -> insert_status<Key::ID> {
 	using namespace allow_enumops;
 
+	// [NOTE] assume insertion happens atomically for `L`
+	if(!L) return { {}, false };
+	const auto Lflags = L.flags(unsafe);
+	auto& Limpl = *L.pimpl();
+	const auto prev_owner = L.owner();
+
 	// can't move persistent node from it's owner
-	const auto Lflags = L.flags();
-	if(!L || (Lflags & Flags::Persistent && L.owner()))
+	if(Lflags & Flags::Persistent && prev_owner)
 		return { {}, false };
 
 	// 1. check if we have duplicated name and have to rename link after insertion
@@ -177,9 +182,9 @@ auto node_impl::insert(link L, const InsertPolicy pol) -> insert_status<Key::ID>
 	// then new link name will go here
 	auto Lname = std::optional<std::string>{};
 	if(enumval(pol & 3) > 0) {
-		const auto old_name = L.name();
+		const auto old_name = Limpl.name_;
 		auto dup = find<Key::Name, Key::ID>(old_name);
-		if(dup != end<Key::ID>() && dup->id() != L.id()) {
+		if(dup != end<Key::ID>() && dup->id() != Limpl.id_) {
 			// first check if dup names are prohibited
 			if(enumval(pol & InsertPolicy::DenyDupNames) || Lflags & Flags::Persistent)
 				return { std::move(dup), false };
@@ -200,41 +205,37 @@ auto node_impl::insert(link L, const InsertPolicy pol) -> insert_status<Key::ID>
 	}
 
 	// 2. make insertion
-	// [NOTE] reset link's owner to insert safely (block symlink side effects, etc)
-	const auto prev_owner = L.owner();
-	L.pimpl()->reset_owner(node::nil());
 	auto res = links_.get<Key_tag<Key::ID>>().insert(L);
 
 	// 3. postprocess
-	auto& res_L = *res.first;
-	auto& res_L_impl = *res_L.pimpl();
 	if(res.second) {
 		// remove from prev parent and propagate handle while link's owner still NULL (important!)
 		const auto self = super_engine();
-		if(prev_owner && prev_owner != self)
-			// erase won't touch owner (we set it manually)
-			caf::anon_send(
-				node_impl::actor(prev_owner), a_node_erase(), res_L.id(), EraseOpts::DontResetOwner
-			);
-		// set owner to this node
-		res_L_impl.reset_owner(self);
-		// correct handle of stored nodes
-		res_L_impl.propagate_handle();
+		if(prev_owner != self) {
+			if(prev_owner)
+				// erase won't touch owner (we set it manually)
+				caf::anon_send<high_prio>(
+					node_impl::actor(prev_owner), a_node_erase(), Limpl.id_, EraseOpts::DontResetOwner
+				);
+			// set owner to this node
+			Limpl.reset_owner(self);
+			// correct handle of stored nodes
+			Limpl.propagate_handle();
+		}
 
 		// rename link if needed
-		if(Lname) res_L.rename(std::move(*Lname));
+		if(Lname) Limpl.rename(std::move(*Lname));
 	}
 	else {
-		// restore link's original owner
-		L.pimpl()->reset_owner(prev_owner);
 		// check if we need to deep merge given links
 		// go one step down the hierarchy
 		if(enumval(pol & InsertPolicy::Merge) && res.first != end<Key::ID>()) {
+			auto& res_L = *res.first;
 			auto src_node = L.data_node();
 			auto dst_node = res_L.data_node();
 			if(src_node && dst_node) {
 				// insert all links from source node into destination
-				dst_node.insert(src_node.leafs(), pol);
+				caf::anon_send(dst_node.actor(), a_node_insert(), src_node.leafs(), pol);
 			}
 		}
 	}

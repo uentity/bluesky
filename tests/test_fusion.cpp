@@ -78,7 +78,7 @@ auto fetch_tree(tree::node_or_err N, tree::link lnk) {
 	bsout() << "-> cb [{}, {}] {}: {}" <<
 		int(lnk.req_status(Req::Data)) << int(lnk.req_status(Req::DataNode)) <<
 		lnk.name(unsafe) << bool(N) << std::endl;
-	if(!N) {
+	if(!N && N.error().code == tree::Error::NotANode) {
 		++fetched_count();
 		return;
 	}
