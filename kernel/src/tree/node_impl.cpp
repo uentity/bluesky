@@ -27,7 +27,7 @@ node_impl::node_impl(const links_v& leafs) :
 	links_(leafs.begin(), leafs.end())
 {
 	// [NOTE] links are in invalid state (no owner set) now
-	// correct this by manually calling `node::propagate_owner()` after copy is constructed
+	// correct this by manually calling `propagate_owner()` after copy is constructed
 }
 
 auto node_impl::clone(bool deep) const -> sp_nimpl {
@@ -59,35 +59,33 @@ auto node_impl::set_handle(const link& new_handle) -> void {
 		handle_.reset();
 }
 
-// postprocessing of just inserted link
-// if link points to node, return it
-auto node_impl::adjust_inserted_link(const link& lnk, const node& target) -> node {
-	// sanity
-	if(!lnk) return node::nil();
-
-	// change link's owner
-	if(auto prev_owner = lnk.owner(); prev_owner != target) {
-		lnk.pimpl()->reset_owner(target);
-		// [NOTE] instruct prev node to not reset link's owner - we set above
-		if(prev_owner)
-			caf::anon_send(
-				node_impl::actor(prev_owner), a_node_erase(), lnk.id(), EraseOpts::DontResetOwner
-			);
-	}
-
-	// if we're inserting a node, relink it to ensure a single hard link exists
-	return lnk.pimpl()->propagate_handle().value_or(node::nil());
-}
-
 auto node_impl::propagate_owner(const node& super, bool deep) -> void {
 	// setup super
 	if(super == nil_node::nil_engine()) return;
 	reset_super_engine(super);
-	// properly setup owner in node's leafs
+
+	// correct owner of single link & return a node it points to
+	const auto adjust_link = [&](const link& lnk) {
+		// change link's owner
+		if(auto prev_owner = lnk.owner(); prev_owner != super) {
+			lnk.pimpl()->reset_owner(super);
+			if(prev_owner)
+				caf::anon_send(
+					node_impl::actor(prev_owner), a_node_erase(), lnk.id(), EraseOpts::Normal
+				);
+		}
+
+		// relink node to ensure it' handle is correct
+		return lnk.pimpl()->propagate_handle();
+	};
+
+	// iterate over children & correct their owners
 	for(auto& L : links_) {
-		auto child_node = node_impl::adjust_inserted_link(L, super);
-		if(deep && child_node)
-			child_node.pimpl()->propagate_owner(child_node, true);
+		auto child_node = adjust_link(L);
+		if(deep)
+			child_node.map([](auto& child_node) {
+				child_node.pimpl()->propagate_owner(child_node, true);
+			});
 	}
 }
 
@@ -174,7 +172,7 @@ auto node_impl::insert(link L, InsertPolicy pol) -> insert_status<Key::ID> {
 	const auto prev_owner = L.owner();
 
 	// can't move persistent node from it's owner
-	if(Lflags & Flags::Persistent && prev_owner)
+	if((Lflags & Flags::Persistent) && prev_owner)
 		return { {}, false };
 
 	// 1. check if we have duplicated name and have to rename link after insertion
@@ -210,16 +208,15 @@ auto node_impl::insert(link L, InsertPolicy pol) -> insert_status<Key::ID> {
 	// 3. postprocess
 	if(res.second) {
 		// remove from prev parent and propagate handle while link's owner still NULL (important!)
-		const auto self = super_engine();
-		if(prev_owner != self) {
+		if(super_ != prev_owner) {
 			if(prev_owner)
 				// erase won't touch owner (we set it manually)
 				caf::anon_send<high_prio>(
-					node_impl::actor(prev_owner), a_node_erase(), Limpl.id_, EraseOpts::DontResetOwner
+					node_impl::actor(prev_owner), a_node_erase(), Limpl.id_, EraseOpts::Normal
 				);
 			// set owner to this node
-			Limpl.reset_owner(self);
-			// correct handle of stored nodes
+			Limpl.reset_owner(super_engine());
+			// ensure stored nodes (if any) has single handle `L`
 			Limpl.propagate_handle();
 		}
 
@@ -242,15 +239,15 @@ auto node_impl::insert(link L, InsertPolicy pol) -> insert_status<Key::ID> {
 	return res;
 }
 
-auto node_impl::erase_impl(
-	iterator<Key::ID> victim, leaf_postproc_fn ppf, bool dont_reset_owner
-) -> std::size_t {
+auto node_impl::erase_impl(iterator<Key::ID> victim, leaf_postproc_fn ppf) -> std::size_t {
 	// preprocess before erasing
 	auto L = *victim;
 	ppf(L);
 
+	// reset link's owner inly if it's owner matches self
+	if(auto Limpl = L.pimpl(); Limpl->owner_ == super_)
+		Limpl->reset_owner(node::nil());
 	// erase
-	if(!dont_reset_owner) L.pimpl()->reset_owner(node::nil());
 	auto res = index<Key::ID>(victim);
 	links_.get<Key_tag<Key::ID>>().erase(victim);
 	return res.value_or(0);

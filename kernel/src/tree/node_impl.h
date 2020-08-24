@@ -25,7 +25,7 @@ namespace bs_detail = blue_sky::detail;
 using existing_index = typename node::existing_index;
 
 /// link erase options
-enum class EraseOpts { Normal = 0, Silent = 1, DontResetOwner = 2 };
+enum class EraseOpts { Normal = 0, Silent = 1 };
 
 /*-----------------------------------------------------------------------------
  *  node_impl
@@ -105,10 +105,6 @@ public:
 	auto clone(bool deep = false) const -> sp_nimpl;
 
 	static auto spawn_actor(sp_nimpl nimpl) -> caf::actor;
-
-	// postprocessing of just inserted link
-	// if link points to node, return it
-	static auto adjust_inserted_link(const link& lnk, const node& target) -> node;
 
 	ENGINE_TYPE_DECL
 
@@ -253,17 +249,14 @@ public:
 	-> insert_status<Key::ID>;
 
 	template<Key K = Key::ID>
-	auto erase(
-		const Key_type<K>& key, leaf_postproc_fn ppf = noop,
-		bool dont_reset_owner = false
-	) -> size_t {
+	auto erase(const Key_type<K>& key, leaf_postproc_fn ppf = noop) -> size_t {
 		if constexpr(K == Key::ID || K == Key::AnyOrder) {
 			if(auto victim = find<K, Key::ID>(key); victim != end<Key::ID>())
-				return erase_impl(std::move(victim), std::move(ppf), dont_reset_owner);
+				return erase_impl(std::move(victim), std::move(ppf));
 			return 0;
 		}
 		else
-			return erase<K>(equal_range<K>(key), std::move(ppf), dont_reset_owner);
+			return erase<K>(equal_range<K>(key), std::move(ppf));
 	}
 
 	auto erase(const std::string& key, Key key_meaning, leaf_postproc_fn ppf = noop) -> size_t;
@@ -303,20 +296,14 @@ private:
 
 	// returns index of removed element
 	// [NOTE] don't do range checking
-	auto erase_impl(
-		iterator<Key::ID> key, leaf_postproc_fn ppf = noop,
-		bool dont_reset_owner = false
-	) -> std::size_t;
+	auto erase_impl(iterator<Key::ID> key, leaf_postproc_fn ppf = noop) -> std::size_t;
 
 	// erase multiple elements given in valid (!) range
 	template<Key K = Key::ID>
-	auto erase(
-		const range<K>& r, leaf_postproc_fn ppf = noop,
-		bool dont_reset_owner = false
-	) -> size_t {
+	auto erase(const range<K>& r, leaf_postproc_fn ppf = noop) -> size_t {
 		size_t res = 0;
 		for(auto x = r.begin(); x != r.end();)
-			res += erase_impl(project<K, Key::ID>(x++), ppf, dont_reset_owner);
+			res += erase_impl(project<K, Key::ID>(x++), ppf);
 		return res;
 	}
 };

@@ -158,9 +158,11 @@ public:
 	auto req_status_handle(Req request) -> status_handle&;
 
 private:
-	status_handle status_[2];
+	friend node_impl;
 
-	/// owner node
+	// requests status
+	status_handle status_[2];
+	// owner node
 	node::weak_ptr owner_;
 };
 using sp_limpl = link_impl::sp_limpl;

@@ -283,8 +283,7 @@ auto node_actor::erase(const lid_type& victim, EraseOpts opts) -> size_t {
 	std::size_t res = 0;
 	error::eval_safe([&] { res = impl.erase<Key::ID>(
 		victim,
-		enumval(opts & EraseOpts::Silent) ? noop : function_view{ ppf },
-		enumval(opts & EraseOpts::DontResetOwner)
+		enumval(opts & EraseOpts::Silent) ? noop : function_view{ ppf }
 	); });
 	return res;
 }
