@@ -62,6 +62,8 @@ node_actor::node_actor(caf::actor_config& cfg, caf::group nhome, sp_nimpl Nimpl)
 	set_error_handler([this](caf::error er) {
 		switch(static_cast<caf::sec>(er.code())) {
 		case caf::sec::unexpected_message :
+		case caf::sec::request_timeout :
+		case caf::sec::request_receiver_down :
 			break;
 		default:
 			default_error_handler(this, er);
