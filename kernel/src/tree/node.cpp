@@ -78,10 +78,18 @@ auto node::clone(bool deep) const -> node {
 //  leafs container
 //
 auto node::size() const -> std::size_t {
+	return pimpl()->actorf<std::size_t>(*this, a_node_size()).value_or(0);
+}
+
+auto node::size(unsafe_t) const -> std::size_t {
 	return pimpl()->size();
 }
 
 auto node::empty() const -> bool {
+	return size() == 0;
+}
+
+auto node::empty(unsafe_t) const -> bool {
 	return pimpl()->links_.empty();
 }
 
@@ -230,7 +238,11 @@ auto node::erase(std::string key, Key key_meaning) const -> size_t {
 	).value_or(0);
 }
 
-auto node::clear() const -> void {
+auto node::clear() const -> std::size_t {
+	return pimpl()->actorf<std::size_t>(*this, a_node_clear()).value_or(0);
+}
+
+auto node::clear(launch_async_t) const -> void {
 	caf::anon_send(actor(), a_node_clear());
 }
 

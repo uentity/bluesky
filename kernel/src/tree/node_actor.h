@@ -39,9 +39,9 @@ public:
 	node_actor(caf::actor_config& cfg, caf::group nhome, sp_nimpl Nimpl);
 	~node_actor();
 
-	// return typed actor handle to this
-	auto handle() const -> actor_type {
-		return caf::actor_cast<actor_type>(address());
+	// get typed node actor handle
+	inline auto actor() -> node_impl::actor_type {
+		return caf::actor_cast<node_impl::actor_type>(this);
 	}
 
 	// pass message to upper (owner) level of tree structure

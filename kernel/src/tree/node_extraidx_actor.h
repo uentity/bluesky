@@ -12,6 +12,8 @@
 #include <bs/actor_common.h>
 #include "node_impl.h"
 
+#include <caf/typed_event_based_actor.hpp>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 
 // search API - fully stateless, operates on incoming leafs vector

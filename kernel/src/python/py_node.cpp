@@ -34,6 +34,20 @@ bool contains_obj(const node& N, const sp_obj& obj) {
 	return N.index(obj->id(), Key::OID).has_value();
 }
 
+bool contains_key(const node& N, std::string key, Key meaning) {
+	switch(meaning) {
+	default:
+	case Key::ID:
+		return contains<Key::ID>(N, std::move(key));
+	case Key::OID:
+		return contains<Key::OID>(N, std::move(key));
+	case Key::Name:
+		return contains<Key::Name>(N, std::move(key));
+	case Key::Type:
+		return contains<Key::Type>(N, std::move(key));
+	}
+}
+
 // ------- find
 template<bool Throw = true>
 auto find(const node& N, std::string key, Key meaning) -> link {
@@ -140,19 +154,27 @@ void py_bind_node(py::module& m) {
 		.def(py::init<>())
 
 		.def("__bool__", [](const node& self) { return (bool)self; }, py::is_operator())
-		.def("__len__", &node::size, nogil)
-		.def_property_readonly("is_nil", &node::is_nil, nogil)
-		.def_property_readonly_static("nil", &node::nil)
-
-		// [FIXME] segfaults if `gil_scoped_release` is applied as call guard
+		.def("__len__", py::overload_cast<>(&node::size, py::const_), nogil)
 		.def("__iter__", [](const node& N) {
 			py::gil_scoped_release();
 			auto res = N.leafs();
 			return make_container_iterator(std::move(res));
 		})
 
+		.def_property_readonly("size_unsafe", [](const node& self) { return self.size(unsafe); })
+		.def_property_readonly("empty_unsafe", [](const node& self) { return self.empty(unsafe); })
+		.def_property_readonly("handle", &node::handle, "Returns a single link that owns this node")
+		.def_property_readonly("is_nil", &node::is_nil)
+		.def_property_readonly_static("nil", &node::nil)
+
 		.def("leafs", py::overload_cast<Key>(&node::leafs, py::const_),
 			"Key"_a = Key::AnyOrder, "Return snapshot of node content", nogil)
+		.def("leafs", py::overload_cast<unsafe_t, Key>(&node::leafs, py::const_),
+			"Return snapshot of node content", nogil)
+
+		.def("keys", &node::skeys, "key_type"_a = Key::ID, "ordering"_a = Key::AnyOrder, nogil)
+		.def("ikeys", &node::ikeys, "ordering"_a = Key::AnyOrder, nogil)
+		.def("skeys", &node::skeys, "key_meaing"_a, "ordering"_a = Key::AnyOrder, nogil)
 
 		// check by link ID
 		.def("__contains__", &contains_link, "link"_a)
@@ -162,15 +184,8 @@ void py_bind_node(py::module& m) {
 		// ... by object
 		.def("__contains__", &contains_obj, "obj"_a)
 		.def("contains",     &contains_obj, "obj"_a, "Check if node contains link to given object")
-		// check by link name
-		.def("contains_name", &contains<Key::Name>,
-			"link_name"_a, "Check if node contains link with given name")
-		// check by object ID
-		.def("contains_oid",  &contains<Key::OID>,
-			"oid"_a, "Check if node contains link to object with given ID")
-		// check by object type
-		.def("contains_type", &contains<Key::Type>,
-			"obj_type_id"_a, "Check if node contain links to objects of given type")
+		// ... generic version
+		.def("contains", &contains_key, "key"_a, "key_meaning"_a, "Check if node contains link with given key")
 
 		// get item by int index
 		.def("__getitem__", &find_by_idx, "link_idx"_a, nogil)
@@ -220,8 +235,13 @@ void py_bind_node(py::module& m) {
 		// insert hard link to given object
 		.def("insert", [](node& N, std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) {
 			return N.insert(std::move(name), std::move(obj), pol).second;
-		}, "name"_a, "obj"_a, "pol"_a = InsertPolicy::AllowDupNames,
-		"Insert hard link to given object", nogil)
+		}, "name"_a, "obj"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert hard link to given object", nogil)
+		// insert hard link to given node
+		.def("insert", [](node& N, std::string name, node n, InsertPolicy pol = InsertPolicy::AllowDupNames) {
+			return N.insert(std::move(name), std::move(n), pol).second;
+		}, "name"_a, "folder"_a, "pol"_a = InsertPolicy::AllowDupNames,
+		"Insert hard link to given node (objnode is created internally)", nogil)
+		// insert bunch of links
 		.def("insert", [](node& N, links_v ls, InsertPolicy pol) {
 			return N.insert(std::move(ls), pol);
 		}, "ls"_a, "pol"_a = InsertPolicy::AllowDupNames, "insert bunch of links at once", nogil)
@@ -243,12 +263,9 @@ void py_bind_node(py::module& m) {
 			"key"_a, "key_meaning"_a = Key::Name, "Erase all leafs with given key", nogil)
 
 		// misc container-related functions
-		.def_property_readonly("size", &node::size, nogil)
-		.def_property_readonly("empty", &node::empty, nogil)
-		.def("clear", &node::clear, "Clears all node contents", nogil)
-
-		.def("keys", &node::skeys, "key_type"_a = Key::ID, "ordering"_a = Key::AnyOrder, nogil)
-		.def("ikeys", &node::ikeys, "ordering"_a = Key::AnyOrder, nogil)
+		.def("clear", py::overload_cast<>(&node::clear, py::const_), "Clears all node contents", nogil)
+		.def("clear", py::overload_cast<launch_async_t>(&node::clear, py::const_),
+			"Async clear all node contents")
 
 		// link rename
 		.def("rename", py::overload_cast<std::string, std::string>(&node::rename, py::const_),
@@ -265,14 +282,6 @@ void py_bind_node(py::module& m) {
 		.def("rearrange", py::overload_cast<std::vector<std::size_t>>(&node::rearrange, py::const_),
 			"new_order"_a, "Apply custom order to node")
 
-		// misc API
-		.def_property_readonly("handle", &node::handle,
-			"Returns a single link that owns this node in overall tree"
-		)
-		//.def("propagate_owner", &node::propagate_owner, "deep"_a = false,
-		//	"Set owner of all contained links to this node (if deep, fix owner in entire subtree)"
-		//)
-
 		// events subscrition
 		.def("subscribe", &node::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
 		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
@@ -280,10 +289,6 @@ void py_bind_node(py::module& m) {
 
 	// node::weak_ptr
 	bind_weak_ptr(node_pyface);
-
-	// [TODO] remove it later (added for compatibility)
-	node_pyface.attr("Key") = m.attr("Key");
-	node_pyface.attr("InsertPolicy") = m.attr("InsertPolicy");
 }
 
 NAMESPACE_END(blue_sky::python)

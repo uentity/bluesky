@@ -9,8 +9,10 @@
 #include "test_objects.h"
 #include "test_serialization.h"
 
+#include <bs/actor_common.h>
 #include <bs/log.h>
 #include <bs/propdict.h>
+#include <bs/kernel/radio.h>
 #include <bs/kernel/types_factory.h>
 #include <bs/kernel/tools.h>
 
@@ -32,7 +34,7 @@ using Req = tree::Req;
 using ReqStatus = tree::ReqStatus;
 
 inline constexpr auto level_width = 10;
-inline constexpr auto obj_level = 2;
+inline constexpr auto obj_level = 3;
 
 // simple fusion bridge
 struct test_bridge : tree::fusion_iface {
@@ -75,6 +77,8 @@ auto fetched_count() -> std::atomic<int>& {
 }
 
 auto fetch_tree(tree::node_or_err N, tree::link lnk) {
+	using namespace blue_sky;
+
 	bsout() << "-> cb [{}, {}] {}: {}" <<
 		int(lnk.req_status(Req::Data)) << int(lnk.req_status(Req::DataNode)) <<
 		lnk.name(unsafe) << bool(N) << std::endl;
@@ -83,9 +87,12 @@ auto fetch_tree(tree::node_or_err N, tree::link lnk) {
 		return;
 	}
 
-	for(auto& child_lnk : N->leafs()) {
-		child_lnk.data_node(fetch_tree);
-	}
+	anon_request(
+		N->actor(), kernel::radio::timeout(), false, [](const tree::links_v& leafs) {
+			for(auto& child_lnk : leafs)
+				child_lnk.data_node(fetch_tree);
+		}, a_node_leafs(), tree::Key::AnyOrder
+	);
 }
 
 BOOST_AUTO_TEST_CASE(test_fusion) {
@@ -96,9 +103,9 @@ BOOST_AUTO_TEST_CASE(test_fusion) {
 	r.data_node(fetch_tree);
 
 	while(true) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		int cnt = fetched_count();
-		//bsout() << "... fetched {} persons" << cnt << bs_end;
-		if(cnt == 1000) break;
+		bsout() << "... fetched {} persons" << cnt << bs_end;
+		if(cnt == 10000) break;
 	}
 }

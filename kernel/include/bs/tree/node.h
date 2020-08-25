@@ -82,7 +82,7 @@ public:
 		// erase bunch of links
 		caf::replies_to<a_node_erase, lids_v>::with<std::size_t>,
 		// clears node content
-		caf::reacts_to<a_node_clear>,
+		caf::replies_to<a_node_clear>::with<std::size_t>,
 
 		// erase link by ID with specified options
 		caf::replies_to<a_lnk_rename, lid_type, std::string>::with<std::size_t>,
@@ -132,18 +132,22 @@ public:
 	//
 	/// number of elements in this node
 	auto size() const -> std::size_t;
+	auto size(unsafe_t) const -> std::size_t;
 
 	/// check if node is empty
 	auto empty() const -> bool;
+	auto empty(unsafe_t) const -> bool;
 
 	/// clears node
-	auto clear() const -> void;
+	// return number of cleared elements
+	auto clear() const -> std::size_t;
+	auto clear(launch_async_t) const -> void;
 
-	/// get snapshot of node's content
+	/// get snapshot of node's content sorted with given order
 	auto leafs(Key order = Key::AnyOrder) const -> links_v;
 	auto leafs(unsafe_t, Key order = Key::AnyOrder) const -> links_v;
 
-	/// obtain vector of link ID keys
+	/// obtain vector of link ID keys, sorted with given order
 	auto keys(Key ordering = Key::AnyOrder) const -> lids_v;
 	/// obtain vector of link indexes (offsets from beginning)
 	auto ikeys(Key ordering = Key::AnyOrder) const -> std::vector<std::size_t>;
@@ -154,7 +158,7 @@ public:
 	auto find(std::size_t idx) const -> link;
 	auto find(lid_type id) const -> link;
 	/// find link by given key with specified treatment
-	auto find(std::string key, Key key_meaning = Key::ID) const -> link;
+	auto find(std::string key, Key key_meaning) const -> link;
 
 	/// search among all subtree elements
 	auto deep_search(lid_type id) const -> link;

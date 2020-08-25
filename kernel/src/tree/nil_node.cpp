@@ -64,7 +64,7 @@ struct nil_node::self_actor : caf::event_based_actor {
 		[=](a_node_erase, std::size_t) -> std::size_t { return 0; },
 		[=](a_node_erase, std::string, Key) -> std::size_t { return 0; },
 		[=](a_node_erase, lids_v) -> std::size_t { return 0; },
-		[=](a_node_clear) -> void { },
+		[=](a_node_clear) -> std::size_t { return 0; },
 
 		[=](a_lnk_rename, lid_type,    std::string) -> std::size_t { return 0; },
 		[=](a_lnk_rename, std::size_t, std::string) -> std::size_t { return 0; },

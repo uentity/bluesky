@@ -44,9 +44,9 @@ public:
 
 	auto name() const -> const char* override;
 
-	// get handle of this actor
-	inline auto handle() -> caf::actor {
-		return caf::actor_cast<caf::actor>(address());
+	// get typed link actor handle
+	inline auto actor() -> link_impl::actor_type {
+		return caf::actor_cast<link_impl::actor_type>(this);
 	}
 
 	// forward call to impl + send notification to self group

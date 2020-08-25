@@ -387,11 +387,8 @@ return {
 
 	[=](a_node_find, std::string key, Key key_meaning) -> caf::result<link> {
 		adbg(this) << "-> a_node_find key " << key << std::endl;
-		if(has_builtin_index(key_meaning)) {
-			auto res = link{};
-			error::eval_safe([&]{ res = impl.search(key, key_meaning); });
-			return res;
-		}
+		if(has_builtin_index(key_meaning))
+			return impl.search(key, key_meaning);
 		else
 			return delegate(
 				system().spawn(extraidx_search_actor),
@@ -403,7 +400,7 @@ return {
 	[=](a_node_deep_search, lid_type lid) -> caf::result<link> {
 		adbg(this) << "-> a_node_deep_search lid " << to_string(lid) << std::endl;
 		return delegate(
-			system().spawn(extraidx_deep_search_actor, handle()),
+			system().spawn(extraidx_deep_search_actor, actor()),
 			a_node_deep_search(), std::move(lid)
 		);
 	},
@@ -412,7 +409,7 @@ return {
 	-> caf::result<links_v> {
 		adbg(this) << "-> a_node_deep_search key " << key << std::endl;
 		return delegate(
-			system().spawn(extraidx_deep_search_actor, handle()),
+			system().spawn(extraidx_deep_search_actor, actor()),
 			a_node_deep_search(), std::move(key), key_meaning, search_all
 		);
 	},
@@ -423,11 +420,8 @@ return {
 	},
 
 	[=](a_node_index, std::string key, Key key_meaning) -> caf::result<existing_index> {
-		if(has_builtin_index(key_meaning)) {
-			auto res = existing_index{};
-			error::eval_safe([&] { res = impl.index(key, key_meaning); });
-			return res;
-		}
+		if(has_builtin_index(key_meaning))
+			return impl.index(key, key_meaning);
 		else
 			return delegate(
 				system().spawn(extraidx_search_actor),
@@ -437,11 +431,8 @@ return {
 
 	// equal_range
 	[=](a_node_equal_range, std::string key, Key key_meaning) -> caf::result<links_v> {
-		if(has_builtin_index(key_meaning)) {
-			auto res = links_v{};
-			error::eval_safe([&] { res = impl.equal_range(key, key_meaning); });
-			return res;
-		}
+		if(has_builtin_index(key_meaning))
+			return impl.equal_range(key, key_meaning);
 		else
 			return delegate(
 				system().spawn(extraidx_search_actor),
@@ -488,7 +479,7 @@ return {
 		}
 		else
 			return delegate(
-				system().spawn(extraidx_erase_actor, handle()),
+				system().spawn(extraidx_erase_actor, actor()),
 				a_node_erase(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
 			);
 	},
@@ -500,8 +491,10 @@ return {
 		);
 	},
 
-	[=](a_node_clear) {
+	[=](a_node_clear) -> std::size_t {
+		auto res = impl.links_.size();
 		impl.links_.clear();
+		return res;
 	},
 
 	// rename
@@ -519,11 +512,11 @@ return {
 
 	// apply custom order
 	[=](a_node_rearrange, const std::vector<std::size_t>& new_order) -> error::box {
-		return impl.rearrange<Key::AnyOrder>(new_order);
+		return error::eval_safe([&] { impl.rearrange<Key::AnyOrder>(new_order); });
 	},
 
 	[=](a_node_rearrange, const lids_v& new_order) -> error::box {
-		return impl.rearrange<Key::ID>(new_order);
+		return error::eval_safe([&] { impl.rearrange<Key::ID>(new_order); });
 	},
 
 	/// Non-public extensions
