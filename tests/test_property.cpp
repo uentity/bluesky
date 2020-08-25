@@ -43,6 +43,13 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	get<std::string>(p) = "Test";
 	p = "Test";
 	BOOST_TEST(get<std::string>(p) == "Test");
+	p = true;
+	BOOST_TEST(p.index() == 0);
+	p = prop::none();
+	BOOST_TEST(p.index() == 6);
+	p = sp_obj{};
+	BOOST_TEST(p.index() == 6);
+
 	// test integer scalars list
 	auto intV = {integer(42), integer(24), integer(27)};
 	p.emplace<list_of<integer>>(intV);
@@ -103,7 +110,7 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	//  propdict
 	//
 	bsout() << "*** testing propdict..." << bs_end;
-	propdict P = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", {2L, 3L, 4L}}};
+	propdict P = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", {2L, 3L, 4L}}, {"E", true}, {"F", prop::none()}};
 	bsout() << "P = {}" << P << bs_end;
 
 	static std::map<const char*, std::string> fixt = {{"A", "test1"}, {"B", "test2"}};

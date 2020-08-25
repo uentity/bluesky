@@ -33,7 +33,8 @@ class property;
 NAMESPACE_BEGIN(detail)
 /// enumerate scalars carried by BS property
 using scalar_ts = caf::detail::type_list<
-	integer, boolean, real, timespan, timestamp, string, object
+	// [NOTE] it's essential to place `bool` before `int` because otherwise Python will cast all bools to int
+	boolean, integer, real, timespan, timestamp, string, object
 >;
 inline constexpr auto scalar_ts_num = caf::detail::tl_size<scalar_ts>::value;
 
@@ -212,7 +213,7 @@ constexpr bool is_none(const property& P) noexcept {
 	return std::holds_alternative<object>(P) && !get<object>(P);
 }
 
-inline auto none() noexcept { return property{ sp_obj() }; }
+inline auto none() noexcept { return property(sp_obj()); }
 
 /// custom analog of `std::visit` to fix compile issues with VS
 template<

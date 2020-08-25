@@ -20,6 +20,8 @@ auto printv(std::ostream& os, const T& v) {
 	// specific processing of time types
 	if constexpr(std::is_same_v<T, timespan> || std::is_same_v<T, timestamp>)
 		os << blue_sky::to_string(v);
+	else if constexpr(std::is_same_v<T, bool>)
+		os << (v ? std::string_view("true") : std::string_view("false"));
 	else os << v;
 	if constexpr(std::is_same_v<T, string>) os << '"';
 }
