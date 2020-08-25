@@ -108,6 +108,9 @@ class property : public detail::variant_prop_t {
 #endif
 	>;
 
+	template<typename T>
+	using if_string = std::enable_if_t<std::is_convertible_v<meta::remove_cvref_t<T>, string>>;
+
 public:
 	using underlying_type = detail::variant_prop_t;
 
@@ -124,12 +127,24 @@ public:
 		return *this;
 	}
 
+	// explicit support for strings (required by MSVC)
+	template<typename T, typename = if_string<T>>
+	constexpr property(T&& value) :
+		underlying_type(std::in_place_type_t<string>{}, std::forward<T>(value))
+	{}
+
+	template<typename T, typename = if_string<T>>
+	constexpr auto operator=(T&& value) -> property& {
+		emplace<string>(std::forward<T>(value));
+		return *this;
+	}
+
 	// improove init from initializer_list
 	template<typename T>
 	constexpr property(std::initializer_list<T> vlist) : underlying_type([&] {
 		if constexpr(detail::can_carry_scalar_v<T>)
 			return list_of<T>{ vlist };
-		else if constexpr(std::is_convertible_v<T, std::string>)
+		else if constexpr(std::is_convertible_v<T, string>)
 			return list_of<std::string>(vlist.begin(), vlist.end());
 		else if constexpr(std::is_integral_v<T>)
 			return list_of<integer>(vlist.begin(), vlist.end());
