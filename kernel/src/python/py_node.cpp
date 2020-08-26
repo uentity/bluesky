@@ -165,7 +165,7 @@ void py_bind_node(py::module& m) {
 		.def_property_readonly("empty_unsafe", [](const node& self) { return self.empty(unsafe); })
 		.def_property_readonly("handle", &node::handle, "Returns a single link that owns this node")
 		.def_property_readonly("is_nil", &node::is_nil)
-		.def_property_readonly_static("nil", &node::nil)
+		.def_property_readonly_static("nil", [](const py::object&) { return node::nil(); })
 
 		.def("leafs", py::overload_cast<Key>(&node::leafs, py::const_),
 			"Key"_a = Key::AnyOrder, "Return snapshot of node content", nogil)
