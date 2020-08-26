@@ -89,14 +89,43 @@ public:
 	link_impl& impl;
 };
 
+// helper for generating `link_impl::spawn_actor()` implementations
+template<typename Actor, caf::spawn_options Os = caf::no_spawn_options, class... Ts>
+inline auto spawn_lactor(sp_limpl limpl, Ts&&... args) {
+	// spawn actor
+	auto& AS = kernel::radio::system();
+	auto lgrp = AS.groups().get_local(to_string(limpl->id_));
+	return AS.spawn_in_group<Actor, Os>(
+		lgrp, lgrp, std::move(limpl), std::forward<Ts>(args)...
+	);
+}
+
+/*-----------------------------------------------------------------------------
+ *  customized actors for different links
+ *-----------------------------------------------------------------------------*/
 /// assumes that link contains cache for object's data
 /// and if status is OK, it directly returns cached value
 struct BS_HIDDEN_API cached_link_actor : public link_actor {
 	using super = link_actor;
+	using super::typed_behavior;
 	using super::super;
+
+	// part of behavior overloaded by this actor
+	// OID & obj type ID getters always applied to data cache
+	using typed_behavior_overload = caf::typed_behavior<
+		// get pointee OID
+		caf::replies_to<a_lnk_oid>::with<std::string>,
+		// get pointee type ID
+		caf::replies_to<a_lnk_otid>::with<std::string>,
+		// delayed object load
+		caf::replies_to<a_delay_load>::with<bool>
+	>;
 
 	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
 	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override;
+
+	auto make_typed_behavior() -> typed_behavior;
+	auto make_behavior() -> behavior_type override;
 };
 
 /// 1) contains direct ptr to object (data)
@@ -113,9 +142,7 @@ struct BS_HIDDEN_API fast_link_actor : public link_actor {
 		// get data
 		caf::replies_to<a_data, bool>::with<result_or_errbox<sp_obj>>,
 		// get data node
-		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
-		// delayed object load
-		caf::replies_to<a_delay_load>::with<bool>
+		caf::replies_to<a_data_node, bool>::with<node_or_errbox>
 	>;
 
 	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
@@ -124,16 +151,5 @@ struct BS_HIDDEN_API fast_link_actor : public link_actor {
 	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;
 };
-
-// helper for generating `link_impl::spawn_actor()` implementations
-template<typename Actor, caf::spawn_options Os = caf::no_spawn_options, class... Ts>
-inline auto spawn_lactor(sp_limpl limpl, Ts&&... args) {
-	// spawn actor
-	auto& AS = kernel::radio::system();
-	auto lgrp = AS.groups().get_local(to_string(limpl->id_));
-	return AS.spawn_in_group<Actor, Os>(
-		lgrp, lgrp, std::move(limpl), std::forward<Ts>(args)...
-	);
-}
 
 NAMESPACE_END(blue_sky::tree)

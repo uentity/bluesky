@@ -259,51 +259,24 @@ auto link_actor::make_behavior() -> behavior_type {
 }
 
 /*-----------------------------------------------------------------------------
- *  fast_link_actor
+ *  cached_link_actor
  *-----------------------------------------------------------------------------*/
-// for fast link we can assume that requests are invoked directly
-// => override slow API to exclude extra delivery messages
-auto fast_link_actor::make_typed_behavior() -> typed_behavior {
+auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 	return first_then_second( typed_behavior_overload{
-		[=](a_data, bool) -> obj_or_errbox {
-			adbg(this) << "<- a_data fast, status = " <<
-				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
-
-			return pimpl_->data().and_then([](auto&& obj) {
-				return obj ?
-					obj_or_errbox(std::move(obj)) :
-					unexpected_err_quiet(Error::EmptyData);
-			});
-
-			//auto res = obj_or_errbox{};
-			//data_ex(
-			//	[&](obj_or_errbox obj) { res = std::move(obj); },
-			//	ReqOpts::WaitIfBusy
-			//);
-			//return res;
+		// OID & object type id are retrieved from cached value
+		[=](a_lnk_otid) -> std::string {
+			if(auto obj = impl.data(unsafe))
+				return obj->type_id();
+			return nil_otid;
 		},
 
-		[=](a_data_node, bool) -> node_or_errbox {
-			adbg(this) << "<- a_data_node fast, status = " <<
-				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
-
-			return pimpl_->data().and_then([](const auto& obj) -> node_or_errbox {
-				if(obj) {
-					if(auto n = obj->data_node())
-						return n;
-					return unexpected_err_quiet(Error::NotANode);
-				}
-				return unexpected_err_quiet(Error::EmptyData);
-			});
-
-			//auto res = node_or_errbox();
-			//data_node_ex(
-			//	[&](node_or_errbox N) { res = std::move(N); },
-			//	ReqOpts::WaitIfBusy
-			//);
-			//return res;
+		[=](a_lnk_oid) -> std::string {
+			if(auto obj = impl.data(unsafe))
+				return obj->id();
+			return nil_otid;
 		},
 
+		// modifies beahvior s.t. next Data request will send `a_delay_load` to stored object first
 		[=](a_delay_load) {
 			auto orig_me = current_behavior();
 
@@ -333,12 +306,51 @@ auto fast_link_actor::make_typed_behavior() -> typed_behavior {
 				};
 			};
 
-			// setup new behavior for Data & DataNode requests 
+			// setup new behavior for Data & DataNode requests
 			become(caf::message_handler{
 				load_then_answer(a_data()), load_then_answer(a_data_node())
 			}.or_else(orig_me));
 			return true;
 		}
+	}, super::make_typed_behavior() );
+}
+
+auto cached_link_actor::make_behavior() -> behavior_type {
+	return make_typed_behavior().unbox();
+}
+
+/*-----------------------------------------------------------------------------
+ *  fast_link_actor
+ *-----------------------------------------------------------------------------*/
+// in fast link we can assume that Data & DataNode requests costs are very small (~0)
+// => override slow API to exclude extra possible delays
+auto fast_link_actor::make_typed_behavior() -> typed_behavior {
+	return first_then_second( typed_behavior_overload{
+		[=](a_data, bool) -> obj_or_errbox {
+			adbg(this) << "<- a_data fast, status = " <<
+				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
+
+			return pimpl_->data().and_then([](auto&& obj) {
+				return obj ?
+					obj_or_errbox(std::move(obj)) :
+					unexpected_err_quiet(Error::EmptyData);
+			});
+		},
+
+		[=](a_data_node, bool) -> node_or_errbox {
+			adbg(this) << "<- a_data_node fast, status = " <<
+				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
+
+			return pimpl_->data().and_then([](const auto& obj) -> node_or_errbox {
+				if(obj) {
+					if(auto n = obj->data_node())
+						return n;
+					return unexpected_err_quiet(Error::NotANode);
+				}
+				return unexpected_err_quiet(Error::EmptyData);
+			});
+		},
+
 	}, super::make_typed_behavior() );
 }
 

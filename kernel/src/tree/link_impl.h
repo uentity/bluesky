@@ -106,7 +106,8 @@ public:
 
 	/// download pointee data
 	virtual auto data() -> obj_or_err = 0;
-	/// return cached pointee data (if any) - default impl calls `data()`
+	/// return cached pointee data (if any), default impl returns nullptr
+	// [NOTE] overriden impl MUST NEVER start any resource-consuming task inside!
 	virtual auto data(unsafe_t) -> sp_obj;
 
 	/// obtain inode pointer

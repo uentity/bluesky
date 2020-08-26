@@ -34,6 +34,8 @@ auto link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<link_actor>(std::move(limpl));
 }
 
+auto link_impl::data(unsafe_t) -> sp_obj { return nullptr; }
+
 auto link_impl::propagate_handle() -> node_or_err {
 	if(auto obj = data(unsafe)) {
 		if(auto N = obj->data_node()) {
@@ -107,10 +109,6 @@ auto link_impl::rename(std::string new_name)-> void {
 	checked_send<home_actor_type, high_prio>(
 		home, a_ack(), a_lnk_rename(), name_, std::move(old_name)
 	);
-}
-
-auto link_impl::data(unsafe_t) -> sp_obj {
-	return data().value_or(nullptr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

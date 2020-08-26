@@ -68,16 +68,12 @@ struct BS_HIDDEN_API fusion_link_actor : public cached_link_actor {
 
 	using actor_type = fusion_link_impl::actor_type;
 	using typed_behavior = actor_type::behavior_type;
+
 	// part of behavior overloaded/added from super actor type
 	using typed_behavior_overload = caf::typed_behavior<
 		caf::replies_to<a_flnk_populate, std::string, bool>::with<node_or_errbox>,
 		caf::replies_to<a_flnk_bridge>::with<sp_fusion>,
-		caf::reacts_to<a_flnk_bridge, sp_fusion>,
-
-		// get pointee OID
-		caf::replies_to<a_lnk_oid>::with<std::string>,
-		// get pointee type ID
-		caf::replies_to<a_lnk_otid>::with<std::string>
+		caf::reacts_to<a_flnk_bridge, sp_fusion>
 	>;
 
 	auto fimpl() -> fusion_link_impl& { return static_cast<fusion_link_impl&>(impl); }
