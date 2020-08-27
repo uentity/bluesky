@@ -45,7 +45,7 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 	auto data() -> obj_or_err override;
 
 	// unsafe version returns cached value
-	auto data(unsafe_t) -> sp_obj override;
+	auto data(unsafe_t) const -> sp_obj override;
 
 	// populate with specified child type
 	auto populate(const std::string& child_type_id = "") -> node_or_err;

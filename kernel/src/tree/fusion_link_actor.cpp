@@ -72,7 +72,7 @@ auto fusion_link_impl::data() -> obj_or_err {
 }
 
 // unsafe version returns cached value
-auto fusion_link_impl::data(unsafe_t) -> sp_obj {
+auto fusion_link_impl::data(unsafe_t) const -> sp_obj {
 	return data_;
 }
 

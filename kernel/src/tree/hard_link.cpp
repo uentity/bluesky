@@ -36,7 +36,7 @@ hard_link_impl::hard_link_impl()
 
 auto hard_link_impl::data() -> obj_or_err { return data_; }
 
-auto hard_link_impl::data(unsafe_t) -> sp_obj { return data_; }
+auto hard_link_impl::data(unsafe_t) const -> sp_obj { return data_; }
 
 auto hard_link_impl::set_data(sp_obj obj) -> void {
 	if(data_ = std::move(obj); data_) {
@@ -105,7 +105,7 @@ auto weak_link_impl::data() -> obj_or_err {
 	return unexpected_err_quiet(Error::EmptyData);
 }
 
-auto weak_link_impl::data(unsafe_t) -> sp_obj { return data_.lock(); }
+auto weak_link_impl::data(unsafe_t) const -> sp_obj { return data_.lock(); }
 
 auto weak_link_impl::set_data(const sp_obj& obj) -> void {
 	if(data_ = obj; obj) {

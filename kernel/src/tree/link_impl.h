@@ -94,6 +94,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  methods
 	//
+	//[NOTE] empty ctor required for serialization support (even in derived links)
 	link_impl();
 	link_impl(std::string name, Flags f);
 	virtual ~link_impl();
@@ -108,7 +109,7 @@ public:
 	virtual auto data() -> obj_or_err = 0;
 	/// return cached pointee data (if any), default impl returns nullptr
 	// [NOTE] overriden impl MUST NEVER start any resource-consuming task inside!
-	virtual auto data(unsafe_t) -> sp_obj;
+	virtual auto data(unsafe_t) const -> sp_obj;
 
 	/// obtain inode pointer
 	/// default impl do it via `data_ex()` call
@@ -196,7 +197,7 @@ struct BS_HIDDEN_API hard_link_impl : ilink_impl {
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
 	auto data() -> obj_or_err override;
-	auto data(unsafe_t) -> sp_obj override;
+	auto data(unsafe_t) const -> sp_obj override;
 	auto set_data(sp_obj obj) -> void;
 
 	ENGINE_TYPE_DECL
@@ -215,7 +216,7 @@ struct BS_HIDDEN_API weak_link_impl : ilink_impl {
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
 	auto data() -> obj_or_err override;
-	auto data(unsafe_t) -> sp_obj override;
+	auto data(unsafe_t) const -> sp_obj override;
 	auto set_data(const sp_obj& obj) -> void;
 
 	auto propagate_handle() -> node_or_err override;

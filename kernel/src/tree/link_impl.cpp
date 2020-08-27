@@ -34,7 +34,7 @@ auto link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<link_actor>(std::move(limpl));
 }
 
-auto link_impl::data(unsafe_t) -> sp_obj { return nullptr; }
+auto link_impl::data(unsafe_t) const -> sp_obj { return nullptr; }
 
 auto link_impl::propagate_handle() -> node_or_err {
 	if(auto obj = data(unsafe)) {
