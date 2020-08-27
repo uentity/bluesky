@@ -31,7 +31,7 @@ auto to_uuid(std::string_view s) noexcept -> result_or_err<uuid> {
 	return er.ok() ? res : tl::make_unexpected(std::move(er));
 }
 
-auto to_uuid_raw(std::string_view s) -> uuid {
+auto to_uuid(unsafe_t, std::string_view s) -> uuid {
 	return boost::uuids::string_generator{}(s.begin(), s.end());
 }
 

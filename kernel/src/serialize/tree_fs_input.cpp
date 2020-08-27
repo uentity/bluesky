@@ -160,7 +160,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			auto wanted_order = lids_v(leafs_order.size());
 			std::transform(
 				leafs_order.cbegin(), leafs_order.cend(), wanted_order.begin(),
-				[](const auto& s_uid) { return to_uuid_raw(s_uid); }
+				[](const auto& s_uid) { return to_uuid(unsafe, s_uid); }
 			);
 
 			// extract current order of link IDs
