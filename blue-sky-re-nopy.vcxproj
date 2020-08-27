@@ -46,7 +46,6 @@
     <ClInclude Include="kernel\include\bs\defaults.h" />
     <ClInclude Include="kernel\include\bs\detail\apply.h" />
     <ClInclude Include="kernel\include\bs\detail\args.h" />
-    <ClInclude Include="kernel\include\bs\detail\async_api_mixin.h" />
     <ClInclude Include="kernel\include\bs\detail\enumops.h" />
     <ClInclude Include="kernel\include\bs\detail\function_view.h" />
     <ClInclude Include="kernel\include\bs\detail\is_container.h" />
@@ -214,7 +213,6 @@
     <ClCompile Include="kernel\src\tree\node_impl.cpp" />
     <ClCompile Include="kernel\src\tree\sym_link.cpp" />
     <ClCompile Include="kernel\src\tree\tree.cpp" />
-    <ClCompile Include="kernel\src\tree\tree_async.cpp" />
     <ClCompile Include="kernel\src\type_info.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

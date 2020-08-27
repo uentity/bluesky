@@ -19,16 +19,8 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-enum class TreeWalkOpts : unsigned {
-	Nil = 0,
-	WalkUp = 1,
-	FollowSymLinks = 2,
-	FollowLazyLinks = 4,
-	HighPriority = 256
-};
-
-inline constexpr auto def_deref_opts = TreeWalkOpts::FollowLazyLinks;
-inline constexpr auto def_walk_opts = TreeWalkOpts::FollowSymLinks;
+inline constexpr auto def_deref_opts = TreeOpts::FollowLazyLinks;
+inline constexpr auto def_walk_opts = TreeOpts::FollowSymLinks;
 
 /*-----------------------------------------------------------------------------
  *  Sync API
@@ -50,7 +42,7 @@ BS_API auto find_root_handle(node N) -> link;
 BS_API auto convert_path(
 	std::string src_path, link start,
 	Key src_path_unit = Key::ID, Key dst_path_unit = Key::Name,
-	bool follow_lazy_links = false
+	TreeOpts opts = TreeOpts::Normal
 ) -> std::string;
 
 /// quick link search by given absolute or relative path
@@ -58,26 +50,24 @@ BS_API auto convert_path(
 /// also can lookup starting from any tree node given absolute path
 BS_API link deref_path(
 	const std::string& path, link start, Key path_unit = Key::ID,
-	bool follow_lazy_links = true
+	TreeOpts opts = def_deref_opts
 );
 /// sometimes it may be more convinient
 BS_API link deref_path(
 	const std::string& path, node start, Key path_unit = Key::ID,
-	bool follow_lazy_links = true
+	TreeOpts opts = def_deref_opts
 );
 
 /// walk the tree just like the Python's `os.walk` is implemented
 using walk_links_fv = function_view<void (link, std::list<link>&, std::vector<link>&)>;
 BS_API void walk(
-	link root, walk_links_fv step_f,
-	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
+	link root, walk_links_fv step_f, TreeOpts opts = def_walk_opts
 );
 
 /// alt walk implementation
 using walk_nodes_fv = function_view<void (node, std::list<node>&, std::vector<link>&)>;
 BS_API void walk(
-	node root, walk_nodes_fv step_f,
-	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
+	node root, walk_nodes_fv step_f, TreeOpts opts = def_walk_opts
 );
 
 /*-----------------------------------------------------------------------------
@@ -88,8 +78,7 @@ using deref_process_f = std::function<void(link)>;
 
 BS_API auto deref_path(
 	deref_process_f f,
-	std::string path, link start, Key path_unit = Key::ID,
-	bool follow_lazy_links = true, bool high_priority = false
+	std::string path, link start, Key path_unit = Key::ID, TreeOpts opts = def_deref_opts
 ) -> void;
 
 /*-----------------------------------------------------------------------------

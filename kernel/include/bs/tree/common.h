@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 05.12.2019
 /// @brief Common definitions for BS tree
@@ -64,6 +63,17 @@ enum class InsertPolicy {
 	DenyDupNames = 1,
 	RenameDup = 2,
 	Merge = 4
+};
+
+/// options for algorithms working with tree
+enum class TreeOpts : unsigned {
+	Normal = 0,
+	WalkUp = 2,
+	Deep = 4,
+	Lazy = 8,
+	FollowSymLinks = 16,
+	FollowLazyLinks = 32,
+	HighPriority = 256
 };
 
 /// link's unique ID type

@@ -11,21 +11,25 @@
 #include <bs/objbase.h>
 #include <bs/uuid.h>
 #include <bs/kernel/types_factory.h>
+#include <bs/kernel/radio.h>
+#include <bs/detail/enumops.h>
 
 #include "tree_impl.h"
 
-#include <set>
 #include <boost/algorithm/string.hpp>
+#include <caf/event_based_actor.hpp>
+
+#include <set>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  impl details
  *-----------------------------------------------------------------------------*/
 NAMESPACE_BEGIN()
+using namespace allow_enumops;
 
 void walk_impl(
-	const std::list<link>& nodes, walk_links_fv step_f,
-	bool topdown, bool follow_symlinks, bool follow_lazy_links,
+	const std::list<link>& nodes, walk_links_fv step_f, TreeOpts opts,
 	std::set<lid_type> active_symlinks = {}
 ) {
 	using detail::can_call_dnode;
@@ -37,11 +41,11 @@ void walk_impl(
 		if(!N) continue;
 		// remember symlink
 		const auto is_symlink = N.type_id() == sym_link::type_id_();
-		if(is_symlink && (!follow_symlinks || !active_symlinks.insert(N.id()).second))
+		if(is_symlink && (!enumval(opts & TreeOpts::FollowSymLinks) || !active_symlinks.insert(N.id()).second))
 			continue;
 
 		// obtain node from link honoring LazyLoad flag
-		cur_node = (follow_lazy_links || can_call_dnode(N)) ? N.data_node() : node::nil();
+		cur_node = can_call_dnode(N, opts) ? N.data_node() : node::nil();
 
 		next_nodes.clear();
 		next_leafs.clear();
@@ -50,22 +54,21 @@ void walk_impl(
 			// for each link in node
 			for(const auto& l : cur_node.leafs()) {
 				// collect nodes
-				if((follow_lazy_links || can_call_dnode(l)) && l.is_node()) {
+				if(can_call_dnode(l, opts) && l.is_node())
 					next_nodes.push_back(l);
-				}
 				else
 					next_leafs.push_back(l);
 			}
 		}
 
-		// if `topdown` == true, process this node BEFORE leafs
-		if(topdown)
+		// if walking down the tree, process this node BEFORE leafs
+		if(!enumval(opts & TreeOpts::WalkUp))
 			step_f(N, next_nodes, next_leafs);
 		// process list of next nodes
 		if(!next_nodes.empty())
-			walk_impl(next_nodes, step_f, topdown, follow_symlinks, follow_lazy_links, active_symlinks);
-		// if walking from most deep subdir, process current node after all subtree
-		if(!topdown)
+			walk_impl(next_nodes, step_f, opts, active_symlinks);
+		// if walking up, process current node after all subtree
+		if(enumval(opts & TreeOpts::WalkUp))
 			step_f(N, next_nodes, next_leafs);
 
 		// forget symlink
@@ -75,8 +78,7 @@ void walk_impl(
 }
 
 void walk_impl(
-	const std::list<node>& nodes, walk_nodes_fv step_f,
-	bool topdown, bool follow_symlinks, bool follow_lazy_links,
+	const std::list<node>& nodes, walk_nodes_fv step_f, TreeOpts opts,
 	std::set<lid_type> active_symlinks = {}
 ) {
 	using detail::can_call_dnode;
@@ -96,14 +98,15 @@ void walk_impl(
 		// for each link in node
 		for(const auto& l : cur_node.leafs()) {
 			// remember symlinks
-			if(follow_symlinks && l.type_id() == sym_link::type_id_()) {
+			if(enumval(opts & TreeOpts::FollowSymLinks) && l.type_id() == sym_link::type_id_()) {
 				if(active_symlinks.insert(l.id()).second)
 					cur_symlinks.push_back(l.id());
 				else continue;
 			}
 
 			// collect nodes
-			auto sub_node = follow_lazy_links || can_call_dnode(l) ? l.data_node() : node::nil();
+			auto sub_node = enumval(opts & TreeOpts::FollowSymLinks) || can_call_dnode(l, opts) ?
+				l.data_node() : node::nil();
 			if(sub_node)
 				next_nodes.push_back(sub_node);
 			else
@@ -111,13 +114,13 @@ void walk_impl(
 		}
 
 		// if `topdown` == true, process this node BEFORE leafs processing
-		if(topdown)
+		if(!enumval(opts & TreeOpts::WalkUp))
 			step_f(cur_node, next_nodes, next_leafs);
 		// process list of next nodes
 		if(!next_nodes.empty())
-			walk_impl(next_nodes, step_f, topdown, follow_symlinks, follow_lazy_links, active_symlinks);
+			walk_impl(next_nodes, step_f, opts, active_symlinks);
 		// if walking from most deep subdir, process current node after all subtree
-		if(!topdown)
+		if(!!enumval(opts & TreeOpts::WalkUp))
 			step_f(cur_node, next_nodes, next_leafs);
 
 		// forget symlinks
@@ -229,8 +232,7 @@ auto find_root_handle(node N) -> link {
 //
 std::string convert_path(
 	std::string src_path, link start,
-	Key src_path_unit, Key dst_path_unit,
-	bool follow_lazy_links
+	Key src_path_unit, Key dst_path_unit, TreeOpts opts
 ) {
 	std::vector<std::string> res_path;
 	const auto converter = [&res_path, src_path_unit, dst_path_unit](
@@ -248,7 +250,7 @@ std::string convert_path(
 
 	// do conversion
 	boost::trim(src_path);
-	if(detail::deref_path_impl<true>(src_path, std::move(start), node::nil(), follow_lazy_links, converter)) {
+	if(detail::deref_path_impl<true>(src_path, std::move(start), node::nil(), opts, converter)) {
 		return boost::join(res_path, "/");
 	}
 	return "";
@@ -257,46 +259,49 @@ std::string convert_path(
 ///////////////////////////////////////////////////////////////////////////////
 //  deref_path
 //
-link deref_path(
-	const std::string& path, link start, Key path_unit, bool follow_lazy_links
-) {
+auto deref_path(
+	const std::string& path, link start, Key path_unit, TreeOpts opts
+) -> link {
 	return detail::deref_path_impl(
-		path, std::move(start), node::nil(), follow_lazy_links, detail::gen_walk_down_tree(path_unit)
+		path, std::move(start), node::nil(), opts, detail::gen_walk_down_tree(path_unit)
 	);
 }
-link deref_path(
-	const std::string& path, node start, Key path_unit, bool follow_lazy_links
-) {
+
+auto deref_path(
+	const std::string& path, node start, Key path_unit, TreeOpts opts
+) -> link {
 	return detail::deref_path_impl(
-		path, {}, std::move(start), follow_lazy_links, detail::gen_walk_down_tree(path_unit)
+		path, {}, std::move(start), opts, detail::gen_walk_down_tree(path_unit)
 	);
+}
+
+auto deref_path(
+	deref_process_f f, std::string path, link start, Key path_unit, TreeOpts opts
+) -> void {
+
+	auto work = [=, f = std::move(f), path = std::move(path)]() {
+		f(detail::deref_path_impl(path, start, node::nil(), opts, detail::gen_walk_down_tree(path_unit)));
+	};
+
+	kernel::radio::system().spawn(std::move(work));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  walk
 //
-auto walk(
-	link root, walk_links_fv step_f,
-	bool topdown, bool follow_symlinks, bool follow_lazy_links
-) -> void {
-	walk_impl({root}, step_f, topdown, follow_symlinks, follow_lazy_links);
+auto walk(link root, walk_links_fv step_f, TreeOpts opts) -> void {
+	walk_impl({root}, step_f, opts);
 }
 
-auto walk(
-	const node& root, walk_links_fv step_f,
-	bool topdown, bool follow_symlinks, bool follow_lazy_links
-) -> void {
+auto walk(const node& root, walk_links_fv step_f, TreeOpts opts) -> void {
 	if(!root) return;
 	auto hr = root.handle();
 	if(!hr) hr = hard_link("/", std::make_shared<objnode>(root));
-	walk_impl({std::move(hr)}, step_f, topdown, follow_symlinks, follow_lazy_links);
+	walk_impl({std::move(hr)}, step_f, opts);
 }
 
-auto walk(
-	node root, walk_nodes_fv step_f,
-	bool topdown, bool follow_symlinks, bool follow_lazy_links
-) -> void {
-	walk_impl({std::move(root)}, step_f, topdown, follow_symlinks, follow_lazy_links);
+auto walk(node root, walk_nodes_fv step_f, TreeOpts opts) -> void {
+	walk_impl({std::move(root)}, step_f, opts);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

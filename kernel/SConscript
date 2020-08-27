@@ -89,7 +89,6 @@ kernel_cpp_list = [
 	"src/tree/node_events.cpp",
 	"src/tree/node_impl.cpp",
 	"src/tree/tree.cpp",
-	"src/tree/tree_async.cpp",
 	"src/tree/errors.cpp",
 	"src/tree/context.cpp"
 ];

@@ -9,6 +9,8 @@
 #pragma once
 
 #include <bs/tree/tree.h>
+#include <bs/detail/enumops.h>
+
 #include <boost/algorithm/string.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree::detail)
@@ -28,8 +30,11 @@ auto gen_walk_down_tree(Key path_unit = Key::ID) {
 NAMESPACE_END()
 
 // find out if we can call `data_node()` honoring LazyLoad flag
-inline auto can_call_dnode(const link& L) -> bool {
-	return L.req_status(Req::DataNode) == ReqStatus::OK || !(L.flags() & LazyLoad);
+inline auto can_call_dnode(const link& L, TreeOpts opts) -> bool {
+	using namespace allow_enumops;
+	return enumval(opts & TreeOpts::FollowLazyLinks)
+		|| L.req_status(Req::DataNode) == ReqStatus::OK
+		|| !(L.flags() & LazyLoad);
 }
 
 // If `DerefControlElements` == true, processing function will be invoked for all path parts
@@ -39,9 +44,11 @@ template<
 	typename level_deref_f = decltype(gen_walk_down_tree())
 >
 auto deref_path_impl(
-	const std::string& path, link L, node root = node::nil(), bool follow_lazy_links = true,
+	const std::string& path, link L, node root = node::nil(), TreeOpts opts = TreeOpts::Normal,
 	level_deref_f deref_f = gen_walk_down_tree()
 ) -> link {
+	using namespace allow_enumops;
+
 	// split path into elements
 	if(path.empty()) return {};
 	std::vector<std::string> path_parts;
@@ -64,8 +71,7 @@ auto deref_path_impl(
 			is_control_elem = true;
 		}
 		else if(!root)
-			root = L && (follow_lazy_links || can_call_dnode(L)) ?
-				L.data_node() : node::nil();
+			root = L && can_call_dnode(L, opts) ? L.data_node() : node::nil();
 
 		if constexpr(DerefControlElements) {
 			// intentional ignore of deref return value

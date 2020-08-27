@@ -309,9 +309,6 @@
     <ClInclude Include="kernel\include\bs\kernel\types_factory.h">
       <Filter>Заголовочные файлы\bs\kernel</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\include\bs\detail\async_api_mixin.h">
-      <Filter>Заголовочные файлы\bs\detail</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\include\bs\detail\is_container.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
@@ -609,9 +606,6 @@
       <Filter>Файлы исходного кода\python</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\inode.cpp">
-      <Filter>Файлы исходного кода\tree</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\tree\tree_async.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\serialize\python.cpp">

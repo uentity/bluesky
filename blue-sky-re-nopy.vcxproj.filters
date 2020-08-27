@@ -264,9 +264,6 @@
     <ClInclude Include="kernel\include\bs\detail\args.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\include\bs\detail\async_api_mixin.h">
-      <Filter>Заголовочные файлы\bs\detail</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\include\bs\detail\enumops.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
@@ -516,9 +513,6 @@
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\fusion_link_actor.cpp">
-      <Filter>Файлы исходного кода\tree</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\tree\tree_async.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\kernel\config.cpp">

@@ -38,14 +38,12 @@ NAMESPACE_BEGIN()
 // accepts pointers to containers instead of references
 template<typename R, typename FR, typename Node>
 auto py_walk(
-	R root, std::function<void (FR, std::list<Node>*, links_v*)> pyf,
-	bool topdown = true, bool follow_symlinks = true, bool follow_lazy_links = false
+	R root, std::function<void (FR, std::list<Node>*, links_v*)> pyf, TreeOpts opts
 ) {
 	walk(std::move(root), [pyf = std::move(pyf)] (FR cur_root, std::list<Node>& nodes, links_v& leafs) {
 			// convert references to pointers
 			pyf(std::move(cur_root), &nodes, &leafs);
-		},
-		topdown, follow_symlinks, follow_lazy_links
+		}, opts
 	);
 }
 
@@ -109,6 +107,17 @@ void py_bind_tree(py::module& m) {
 		.value("Merge", InsertPolicy::Merge)
 	;
 
+	// tree algo options
+	py::enum_<TreeOpts>(m, "TreeOpts", py::arithmetic())
+		.value("Normal"         , TreeOpts::Normal)
+		.value("WalkUp"         , TreeOpts::WalkUp)
+		.value("Deep"           , TreeOpts::Deep)
+		.value("Lazy"           , TreeOpts::Lazy)
+		.value("FollowSymLinks" , TreeOpts::FollowSymLinks)
+		.value("FollowLazyLinks", TreeOpts::FollowLazyLinks)
+		.value("HighPriority"   , TreeOpts::HighPriority)
+	;
+
 	// bind lists of links & nodes as opaque types
 	bind_rich_vector<links_v>(m, "links_vector", py::module_local(false));
 	bind_list<nodes_l>(m, "nodes_list", py::module_local(false));
@@ -146,19 +155,18 @@ void py_bind_tree(py::module& m) {
 		"follow_lazy_links"_a = false,
 		"Convert path string from one representation to another (for ex. link IDs -> link names)", nogil
 	);
-	m.def("deref_path",py::overload_cast<const std::string&, link, Key, bool>(&deref_path),
-		"path"_a, "start"_a, "path_unit"_a = Key::ID, "follow_lazy_links"_a = true,
+	m.def("deref_path",py::overload_cast<const std::string&, link, Key, TreeOpts>(&deref_path),
+		"path"_a, "start"_a, "path_unit"_a = Key::ID, "opts"_a = def_deref_opts,
 		"Quick link search by given path relative to `start`", nogil
 	);
-	m.def("deref_path",py::overload_cast<const std::string&, node, Key, bool>(&deref_path),
-		"path"_a, "start"_a, "path_unit"_a = Key::ID, "follow_lazy_links"_a = true,
+	m.def("deref_path",py::overload_cast<const std::string&, node, Key, TreeOpts>(&deref_path),
+		"path"_a, "start"_a, "path_unit"_a = Key::ID, "opts"_a = def_deref_opts,
 		"Quick link search by given path relative to `start`", nogil
 	);
 	// async deref_path
 	m.def("deref_path",
-		py::overload_cast<deref_process_f, std::string, link, Key, bool, bool>(&deref_path),
-		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = Key::ID,
-		"follow_lazy_links"_a = true, "high_priority"_a = false,
+		py::overload_cast<deref_process_f, std::string, link, Key, TreeOpts>(&deref_path),
+		"deref_cb"_a, "path"_a, "start"_a, "path_unit"_a = Key::ID, "opts"_a = def_deref_opts,
 		"Async quick link search by given path relative to `start`", nogil
 	);
 
@@ -169,22 +177,20 @@ void py_bind_tree(py::module& m) {
 
 	m.def("walk",
 		[](
-			link root, py_walk_links_cb cb,
-			bool topdown, bool follow_symlinks, bool follow_lazy_links
+			link root, py_walk_links_cb cb, TreeOpts opts
 		) {
-			py_walk(root, std::move(cb), topdown, follow_symlinks, follow_lazy_links);
+			py_walk(root, std::move(cb), opts);
 		},
-		"root"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true, "follow_lazy_links"_a = false,
+		"root"_a, "step_f"_a, "opts"_a = def_walk_opts,
 		"Walk the tree similar to Python `os.walk()`", nogil
 	);
 	m.def("walk",
 		[](
-			node root, py_walk_nodes_cb cb,
-			bool topdown, bool follow_symlinks, bool follow_lazy_links
+			node root, py_walk_nodes_cb cb, TreeOpts opts
 		) {
-			py_walk(std::move(root), std::move(cb), topdown, follow_symlinks, follow_lazy_links);
+			py_walk(std::move(root), std::move(cb), opts);
 		},
-		"root_node"_a, "step_f"_a, "topdown"_a = true, "follow_symlinks"_a = true, "follow_lazy_links"_a = false,
+		"root_node"_a, "step_f"_a, "opts"_a = def_walk_opts,
 		"Walk the tree similar to Python `os.walk()` (alternative)", nogil
 	);
 
