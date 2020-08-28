@@ -18,12 +18,12 @@
 #include <bs/error.h>
 #include <bs/objbase.h>
 #include <bs/kernel/misc.h>
-#include <bs/python/kernel.h>
 
-#include <bs/python/expected.h>
-#include <bs/python/object_ptr.h>
-
+#include "expected.h"
+#include "object_ptr.h"
 #include "timetypes.h"
+#include "uuid.h"
+#include "kernel.h"
 
 typedef void (*bs_init_py_fn)(void*);
 

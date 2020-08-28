@@ -130,6 +130,11 @@ auto bind_rich_vector(py::handle scope, std::string const &name, Args&&... args)
 
 	cl.def("__len__", &Vector::size);
 
+	// add implicit conversion from Python list
+	py::implicitly_convertible<py::list, Vector>();
+	// ... and tuple
+	py::implicitly_convertible<py::tuple, Vector>();
+
 	return cl;
 }
 
