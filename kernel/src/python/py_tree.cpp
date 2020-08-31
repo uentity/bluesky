@@ -255,7 +255,7 @@ void py_bind_tree(py::module& m) {
 	;
 
 	py::class_<item_tag>(py_qth, "item_tag")
-		.def_readonly("path", &item_tag::first)
+		.def_property_readonly("path", [](const item_tag& t) { return to_string(t.first); })
 		.def_property_readonly("link", [](const item_tag& t) { return t.second.lock(); })
 	;
 }
