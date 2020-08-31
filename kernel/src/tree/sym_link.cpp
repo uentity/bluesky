@@ -110,6 +110,12 @@ auto sym_link_impl::data() -> obj_or_err {
 	return res;
 }
 
+auto sym_link_impl::data(unsafe_t) const -> sp_obj {
+	return target().map([](const link& src_link) {
+		return src_link.data(unsafe);
+	}).value_or(nullptr);
+}
+
 auto sym_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<sym_link_actor>(std::move(limpl));
 }

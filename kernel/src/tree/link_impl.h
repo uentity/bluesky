@@ -237,6 +237,7 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
 	auto data() -> obj_or_err override;
+	auto data(unsafe_t) const -> sp_obj override;
 
 	auto target() const -> link_or_err;
 
