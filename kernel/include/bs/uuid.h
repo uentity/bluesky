@@ -10,6 +10,7 @@
 #include "error.h"
 
 #include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_hash.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
 NAMESPACE_BEGIN(blue_sky)

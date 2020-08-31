@@ -47,9 +47,9 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			res = res.or_else(
 				[=](a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v) {
 					handler_impl(self, weak_root, Event::LinkStatusChanged, {
-						{"request", prop::integer(new_v)},
-						{"new_status", prop::integer(new_v)},
-						{"prev_status", prop::integer(prev_v)}
+						{"request", new_v},
+						{"new_status", new_v},
+						{"prev_status", prev_v}
 					});
 				}
 			);

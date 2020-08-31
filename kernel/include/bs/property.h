@@ -9,6 +9,7 @@
 #pragma once
 
 #include "timetypes.h"
+#include "uuid.h"
 #include "meta.h"
 #include "meta/is_shared_ptr.h"
 
@@ -33,8 +34,9 @@ class property;
 NAMESPACE_BEGIN(detail)
 /// enumerate scalars carried by BS property
 using scalar_ts = caf::detail::type_list<
-	// [NOTE] it's essential to place `bool` before `int` because otherwise Python will cast all bools to int
-	boolean, integer, real, timespan, timestamp, string, object
+	// [NOTE] it's essential to place `bool` (and uuid) before `int`
+	// because otherwise Python will cast all bools to int
+	boolean, uuid, integer, real, timespan, timestamp, string, object
 >;
 inline constexpr auto scalar_ts_num = caf::detail::tl_size<scalar_ts>::value;
 

@@ -20,7 +20,7 @@ auto printv(std::ostream& os, const T& v) {
 	// specific processing of time types
 	if constexpr(std::is_same_v<T, timespan> || std::is_same_v<T, timestamp>)
 		os << blue_sky::to_string(v);
-	else if constexpr(std::is_same_v<T, bool>)
+	else if constexpr(std::is_same_v<T, boolean>)
 		os << (v ? std::string_view("true") : std::string_view("false"));
 	else os << v;
 	if constexpr(std::is_same_v<T, string>) os << '"';
@@ -38,7 +38,7 @@ auto& operator <<(std::ostream& os, const std::vector<T>& x) {
 	return os << ']', os;
 }
 
-std::ostream& operator <<(std::ostream& os, const property& x) {
+auto operator <<(std::ostream& os, const property& x) -> std::ostream& {
 	return visit([&os](auto&& v){
 		if(!is_none(v))
 			printv(os, v);
@@ -47,7 +47,7 @@ std::ostream& operator <<(std::ostream& os, const property& x) {
 	}, x), os;
 }
 
-std::string to_string(const property& p) {
+auto to_string(const property& p) -> std::string {
 	return fmt::format("{}", p);
 }
 
