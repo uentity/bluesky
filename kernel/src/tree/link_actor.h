@@ -130,8 +130,8 @@ struct BS_HIDDEN_API cached_link_actor : public link_actor {
 
 /// 1) contains direct ptr to object (data)
 /// 2) access to object's data & node is always fast, s.t. we don't need to manage req status
-struct BS_HIDDEN_API fast_link_actor : public link_actor {
-	using super = link_actor;
+struct BS_HIDDEN_API fast_link_actor : public cached_link_actor {
+	using super = cached_link_actor;
 	using super::super;
 
 	using actor_type = super::actor_type;
