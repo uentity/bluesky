@@ -166,5 +166,21 @@ BOOST_AUTO_TEST_CASE(test_common) {
 	BOOST_TEST(er.code == er1.code);
 	BOOST_TEST(er.domain() == er1.domain());
 	BOOST_TEST(er.what() == er1.what());
+
+	struct like_bool {
+		operator bool() const { return true; }
+	};
+
+	struct like_var : std::variant<double, error> {
+		using variant::variant;
+	};
+
+	static const auto ff = []() { return like_bool{}; };
+	auto er2 = error(static_cast<bool>(like_bool{}));
+	auto er3 = error(like_var(perfect));
+	auto er31 = error(std::variant<error::box, int>{success().pack()});
+	auto er4 = error(result_or_err<int>{unexpected_err_quiet(perfect)});
+	auto er41 = error(result_or_errbox<int>{unexpected_err_quiet(perfect)});
+	error::eval(ff);
 }
 

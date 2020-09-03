@@ -9,6 +9,8 @@
 #pragma once
 
 #include "common.h"
+#include "meta.h"
+#include "meta/variant.h"
 #include <tl/expected.hpp>
 
 #include <optional>
@@ -52,10 +54,33 @@ NAMESPACE_BEGIN(blue_sky)
  *-----------------------------------------------------------------------------*/
 class BS_API error {
 public:
-	// indicates that no error happened
-	struct success_tag {};
-	// indicates that operation failed for some reason
-	struct quiet_fail_tag {};
+	/// allows to make quiet error from boolean state: true means success, false - fail
+	struct quiet_flag {
+		const bool value;
+
+		// can only be initialized from exactly bool value
+		template<typename T, typename = std::enable_if_t<std::is_same_v<T, bool>>>
+		constexpr quiet_flag(T v) : value(v) {}
+	};
+
+	/// allows to make error from int code
+	struct raw_code {
+		const int value;
+
+		// can only be initialized from integral non-bool value
+		template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>>>
+		constexpr raw_code(T v) : value(v) {}
+	};
+
+	/// serializable type that can carry error information and later reconstruct packed error
+	struct BS_API box {
+		int ec;
+		std::string domain, message;
+
+		box() = default;
+		box(const error& er);
+		box(int ec, std::string domain, std::string message) noexcept;
+	};
 
 	/// registers inherited error category automatically
 	template<typename Category>
@@ -77,58 +102,52 @@ public:
 	/// [NOTE] expects that `cat` is singleton instance
 	static auto register_category(std::error_category const* cat) -> void;
 
-	/// serializable type that can carry error information and later reconstruct packed error
-	struct BS_API box {
-		int ec;
-		std::string domain, message;
-
-		box() = default;
-		box(const error& er);
-		box(int ec, std::string domain, std::string message) noexcept;
-	};
-
 private:
 	// should we log error in constructor?
 	enum class IsQuiet { Yes, No };
 
-	// helper to narrow gready nature of perfect forwarding ctor
-	template<typename A1 = int, typename... As>
-	struct allow_forward {
-		using T1 = std::remove_cv_t<std::remove_reference_t<A1>>;
-		static constexpr bool value = !std::is_same_v<T1, IsQuiet> && !std::is_base_of_v<error, T1> &&
-			!std::is_same_v<T1, success_tag> && !std::is_same_v<T1, quiet_fail_tag> &&
-			!std::is_same_v<T1, bool>;
+	// trigger that enables forwarding constructor
+	template<typename... As>
+	struct allow_pf_ctor {
+		using T1 = meta::a1_t<As...>;
+		static constexpr bool value = !(std::is_base_of_v<error, T1> || std::is_same_v<T1, IsQuiet>);
 	};
+
+	template<typename... As> static constexpr bool allow_pf_ctor_v = allow_pf_ctor<As...>::value;
+
+	// test if error can be constructed with given args
+	// std::is_constructible isn't applicable as we check private ctors
+	template<typename... Ts>
+	static constexpr auto is_constructible(int)
+	-> decltype(error(std::declval<IsQuiet>(), std::declval<Ts>()...), bool{}) { return true; }
+
+	template<typename... Ts>
+	static constexpr bool is_constructible(...) { return false; }
+
+	template<typename... Ts> static constexpr auto is_constructible_v = is_constructible<Ts...>(0);
 
 public:
 	/// code of error is stored here
 	const std::error_code code;
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  constructors
+	//
 	/// perfect forwarding ctor - construct 'non-quiet' error with Error::Happened code by default
-	template<
-		typename... Ts,
-		typename = std::enable_if_t< allow_forward<Ts...>::value >
-	>
+	template<typename... Ts, typename = std::enable_if_t< allow_pf_ctor_v<Ts...> >>
 	error(Ts&&... args) noexcept : error(IsQuiet::No, std::forward<Ts>(args)...) {}
-	/// construct quiet error with OK status
-	error(success_tag) noexcept;
-	/// construct quiet error with Happened status
-	error(quiet_fail_tag) noexcept;
-	/// true -> success, false -> quiet fail
-	error(bool) noexcept;
-
-	/// copy & move ctors
-	error(const error& rhs) = default;
-	error(error&& rhs) = default;
 
 	/// construct quiet error that don't get logged in constructor
 	/// quiet error can be treated like operation result
 	/// will construct error_code with Error::OK status by default
 	template<typename... Ts>
-	static auto quiet(Ts&&... args) noexcept -> error {
+	static auto quiet(Ts&&... args) noexcept -> std::enable_if_t<is_constructible_v<Ts...>, error> {
 		return error(IsQuiet::Yes, std::forward<Ts>(args)...);
 	}
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  public API
+	//
 	/// returns error message
 	auto what() const -> std::string;
 
@@ -153,50 +172,32 @@ public:
 	static auto unpack(box b) noexcept -> error;
 
 	/// eval errors of functions sequence
-	static inline auto eval() noexcept -> error {
-		return success_tag{};
-	}
-
 	template<typename F, typename... Fs>
 	static auto eval(F&& f, Fs&&... fs) -> error {
-		// detect if f return void, result_or_err or simply error
-		// otherwise raise static assertion
-		using f_result = std::invoke_result_t<F>;
-		const auto eval_f = [](auto&& ff) -> error {
-			if constexpr(
-				!allow_forward<f_result>::value ||
-				(std::is_class_v<f_result> && std::is_convertible_v<f_result, bool>) ||
-				std::is_error_code_enum_v<f_result>
-			)
-				return std::invoke(std::forward<F>(ff));
-			else if constexpr(std::is_same_v<f_result, void>) {
+		using f_result = meta::remove_cvref_t<std::invoke_result_t<F>>;
+		static const auto eval_f = [](auto&& ff) -> error {
+			if constexpr(std::is_same_v<f_result, void>) {
 				std::invoke(std::forward<F>(ff));
-				return success_tag{};
+				return quiet_flag{true};
 			}
+			else if constexpr(is_constructible_v<f_result>)
+				return std::invoke(std::forward<F>(ff));
+			// allow implicit conversion chain f_result -> bool -> error (prohibited by constructors)
 			else if constexpr(std::is_convertible_v<f_result, bool>) {
-				// convert `false` to quiet error
-				return std::invoke(std::forward<F>(ff)) ?
-					success_tag{} : quiet(Error::Happened);
-			}
-			else if constexpr(tl::detail::is_expected<f_result>::value) {
-				static_assert(
-					std::is_same_v<typename f_result::error_type, error>,
-					"Returned expected must contain error as second type"
-				);
-				// [NOTE] x.value is ignored!
-				auto x = std::invoke(std::forward<F>(ff));
-				return x ? success_tag{} : x.error();
+				return static_cast<bool>( std::invoke(std::forward<F>(ff)) );
 			}
 			else
 				static_assert(
-					std::is_same_v<f_result, error>,
-					"Cannot derive error from functor return type"
+					meta::static_false<f_result>, "Cannot derive error from functor return type"
 				);
 		};
 
 		auto er = eval_f(std::forward<F>(f));
 		return er ? er : eval(std::forward<Fs>(fs)...);
 	}
+
+	// close eval recursion chain
+	static inline auto eval() noexcept -> error { return true; }
 
 	// same as `eval()` but also convert exceptions to errors
 	template<typename F, typename... Fs>
@@ -220,18 +221,62 @@ private:
 	/// optional runtime error that carries message
 	std::optional<std::runtime_error> info;
 
-	/// construct from message and error code
-	explicit error(IsQuiet, std::string_view message, std::error_code = Error::Undefined) noexcept;
 	/// construct from error code solely
-	explicit error(IsQuiet, std::error_code = Error::Undefined) noexcept;
+	error(IsQuiet, std::error_code = Error::Undefined) noexcept;
+	/// construct from message and error code
+	error(IsQuiet, std::string_view message, std::error_code = Error::Undefined) noexcept;
 	/// construct from message, int code and possible registered category name
-	explicit error(IsQuiet, std::string_view message, int err_code, std::string_view cat_name = "") noexcept;
+	error(IsQuiet, std::string_view message, int err_code, std::string_view cat_name = {}) noexcept;
+	/// construct from system_error that already carries error code
+	error(IsQuiet, const std::system_error& er) noexcept;
 	/// construct from int error code and possible registered category name
-	explicit error(IsQuiet, int err_code, std::string_view cat_name = "") noexcept;
-	// construct from system_error that already carries error code
-	explicit error(IsQuiet, const std::system_error& er) noexcept;
+	error(IsQuiet, raw_code err_code, std::string_view cat_name = {}) noexcept;
+	/// construct quiet error depending on flag: true -> Error::OK, false -> Error::Happened
+	error(IsQuiet, quiet_flag state) noexcept;
 	/// unpacking error from box is always quiet
-	explicit error(IsQuiet, box b) noexcept;
+	error(IsQuiet, box b) noexcept;
+
+	/// construct from variant type that can carry error/box or result_or_err/result_or_errbox
+	template<
+		typename V,
+		typename = std::enable_if_t<meta::is_variant_v<V> || tl::detail::is_expected<V>::value>
+	>
+	error(IsQuiet, V&& v) noexcept : error([&]() -> error {
+		if constexpr(meta::is_variant_v<V>) {
+			constexpr auto ei = meta::alternative_index<V, error>();
+			if constexpr(ei >= 0) {
+				if(v.index() == std::size_t{ei})
+					return std::get<std::size_t{ei}>(std::forward<V>(v));
+				else
+					return {IsQuiet::Yes, true};
+			}
+			else {
+				constexpr auto eib = meta::alternative_index<V, box>();
+				if constexpr(eib >= 0) {
+					if(v.index() == std::size_t{eib})
+						return std::get<std::size_t{eib}>(std::forward<V>(v));
+					else
+						return {IsQuiet::Yes, true};
+				}
+				else {
+					static_assert(eib >= 0, "Passed variant is missing `error` or `error::box` alternative");
+					return {};
+				}
+			}
+		}
+		else {
+			using E = typename meta::remove_cvref_t<V>::error_type;
+			static_assert(
+				std::is_same_v<E, error> || std::is_same_v<E, error::box>,
+				"Passed expected must contain `error` or `error::box` as second type"
+			);
+			// if v is in expected state, replace it with unexpected quiet OK & return error
+			if(v)
+				return {IsQuiet::Yes, true};
+			else
+				return std::forward<V>(v).error();
+		}
+	}()) {}
 
 	template<typename F, typename... Fs>
 	static auto eval_safe_impl(IsQuiet q, F&& f, Fs&&... fs) noexcept -> error {
@@ -239,9 +284,9 @@ private:
 			return eval(std::forward<F>(f), std::forward<Fs>(fs)...);
 		}
 		catch(error& e) { return std::move(e); }
-		catch(const std::system_error& e) { return error{q, e}; }
-		catch(const std::exception& e) { return error{q, e.what()}; }
-		catch(...) { return error{q, Error::Happened}; }
+		catch(const std::system_error& e) { return error(e); }
+		catch(const std::exception& e) { return error(q, e.what()); }
+		catch(...) { return error(q, Error::Happened); }
 	}
 };
 
@@ -252,9 +297,9 @@ inline auto success(Args&&... args) noexcept -> error {
 }
 
 /// correct (no error) result indicator
-inline constexpr auto perfect = error::success_tag{};
-/// correct (no error) result indicator
-inline constexpr auto quiet_fail = error::quiet_fail_tag{};
+inline constexpr auto perfect = error::quiet_flag{true};
+/// failed result indicator
+inline constexpr auto quiet_fail = error::quiet_flag{false};
 
 /// carries result (of type T) OR error
 template<class T> using result_or_err = tl::expected<T, error>;

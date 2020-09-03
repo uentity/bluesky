@@ -141,22 +141,16 @@ error::error(IsQuiet quiet, std::string_view message, int ec, std::string_view c
 	: error(quiet, message, ECR.make_error_code(ec, cat_name))
 {}
 
-error::error(IsQuiet quiet, int ec, std::string_view cat_name) noexcept
-	: error(quiet, ECR.make_error_code(ec, cat_name))
+error::error(IsQuiet quiet, raw_code ec, std::string_view cat_name) noexcept
+	: error(quiet, std::string_view{}, ECR.make_error_code(ec.value, cat_name))
 {}
 
-// [NOTE] unpacking is always quiet
-error::error(IsQuiet quiet, box b) noexcept
+// [NOTE] unpacking is quiet
+error::error(IsQuiet, box b) noexcept
 	: error(IsQuiet::Yes, b.message, ECR.make_error_code(b.ec, b.domain))
 {}
 
-error::error(success_tag) noexcept : code(ok_err_code())
-{}
-
-error::error(quiet_fail_tag) noexcept : code(fail_err_code())
-{}
-
-error::error(bool v) noexcept : code(v ? ok_err_code() : fail_err_code())
+error::error(IsQuiet, quiet_flag f) noexcept : code(f.value ? ok_err_code() : fail_err_code())
 {}
 
 // put passed error_category into registry
