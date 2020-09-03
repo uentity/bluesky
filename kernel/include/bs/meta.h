@@ -12,8 +12,11 @@
 
 namespace blue_sky::meta {
 /// useful to postpone `static_assert`
-template<typename T>
+template<typename... Ts>
 inline constexpr bool static_false = false;
+
+/// tag to denote empty variadic pack
+struct empty_t {};
 
 /// same as `std::forward`, but forward value AS if it has type `AsT`
 /// with all type type props copied from `T`
@@ -42,13 +45,19 @@ inline constexpr bool is_same_uq = std::is_same_v<remove_cvref_t<T>, remove_cvre
 template<typename T, typename U>
 inline constexpr bool is_base_of_uq = std::is_base_of_v<T, remove_cvref_t<U>>;
 
+/// extract pure first type from variadic pack (`empty_t` if pack is empty)
+template<typename A1 = empty_t, typename... Args>
+struct a1 { using type = remove_cvref_t<A1>; };
+
+template<typename... Args> using a1_t = typename a1<Args...>::type;
+
 /// check that first arg (cvref removed) from variadic pack is T (exact match or inherited from)
 template<typename T, typename A1 = std::add_pointer_t<T>, typename... Args>
 inline constexpr bool a1_is_t = [] {
-	if constexpr(std::is_fundamental_v<T>)
-		return std::is_same_v<T, remove_cvref_t<A1>>;
-	else
+	if constexpr(std::is_class_v<T>)
 		return is_base_of_uq<T, A1>;
+	else
+		return std::is_same_v<T, remove_cvref_t<A1>>;
 }();
 
 /// same as above, but check if A1 is convertible to T
