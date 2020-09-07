@@ -52,7 +52,7 @@ public:
 	//
 	using primary_actor_type = link::actor_type::extend<
 		// run transaction in link's queue
-		caf::replies_to<a_apply, transaction>::with<error::box>,
+		caf::replies_to<a_apply, simple_transaction>::with<error::box>,
 		caf::replies_to<a_apply, link_transaction>::with<error::box>,
 		// ask link's actor to send status changed ack AFTER it has been already changed by handle
 		caf::reacts_to<a_lnk_status, Req, ReqStatus, ReqStatus>,

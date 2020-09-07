@@ -68,10 +68,11 @@ return {
 		++nstarted_;
 		request(
 			obj->actor(), caf::infinite, a_apply(), make_frm_job(obj, F, fname, is_saving_)
-		).then([=](error::box er) {
+		).then([=](tr_result::box rbox) {
 			// save result of finished job & inc finished counter
 			++nfinished_;
-			if(er.ec) er_stack_.push_back(std::move(er));
+			if(error er = std::move(rbox))
+				er_stack_.push_back(er);
 			session_ack();
 		}, [=](const caf::error& er) {
 			// in case smth went wrong with job posting

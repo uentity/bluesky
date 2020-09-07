@@ -127,13 +127,13 @@ return {
 		return pimpl_;
 	},
 
-	[=](a_apply, transaction tr) -> error::box {
-		return tr();
+	[=](a_apply, simple_transaction tr) -> error::box {
+		return tr_eval(std::move(tr));
 	},
 
 	[=](a_apply, link_transaction tr) -> error::box {
 		if(auto self = impl.super_engine())
-			return tr(std::move(self));
+			return tr_eval(std::move(tr), std::move(self));
 		return error{Error::EmptyData};
 	},
 

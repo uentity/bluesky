@@ -10,23 +10,13 @@
 #include "../common.h"
 #include "../error.h"
 #include "../uuid.h"
+#include "../transaction.h"
 #include "../detail/enumops.h"
 #include "../detail/function_view.h"
 #include "errors.h"
 #include "inode.h"
 
-#include <caf/allowed_unsafe_message_type.hpp>
-
-NAMESPACE_BEGIN(blue_sky)
-
-/// transaction is a function that is executed atomically in actor handler of corresponding object
-template<typename T> using transaction_t = std::function< error(T) >;
-using transaction = std::function< error() >;
-using obj_transaction =  transaction_t<sp_obj>;
-using link_transaction = transaction_t<tree::link>;
-using node_transaction = transaction_t<tree::node>;
-
-NAMESPACE_BEGIN(tree)
+NAMESPACE_BEGIN(blue_sky::tree)
 // denote possible tree events
 enum class Event : std::uint32_t {
 	LinkRenamed = 1,
@@ -103,11 +93,4 @@ using link_or_errbox = result_or_errbox<link>;
 using node_or_err = result_or_err<node>;
 using node_or_errbox = result_or_errbox<node>;
 
-NAMESPACE_END(tree)
-NAMESPACE_END(blue_sky)
-
-// mark transaction as non-serializable
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::transaction)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::obj_transaction)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::link_transaction)
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::node_transaction)
+NAMESPACE_END(blue_sky::tree)

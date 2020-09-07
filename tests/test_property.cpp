@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(test_property) {
 	//  propdict
 	//
 	bsout() << "*** testing propdict..." << bs_end;
-	propdict P = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", {2L, 3L, 4L}}, {"E", true}, {"F", prop::none()}, {"G", gen_uuid()}};
+	propdict P = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", {2L, 3L, 4L}}, {"E", true}, {"F", prop::none()}, {"G", gen_uuid()}, {"I", 43}};
 	bsout() << "P = {}" << P << bs_end;
 
 	static std::map<const char*, std::string> fixt = {{"A", "test1"}, {"B", "test2"}};

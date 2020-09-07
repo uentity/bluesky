@@ -33,7 +33,7 @@ public:
 		// get home group
 		caf::replies_to<a_home>::with<caf::group>,
 		// runs transaction in message queue of this object
-		caf::replies_to<a_apply, transaction>::with<error::box>
+		caf::replies_to<a_apply, transaction>::with<tr_result::box>
 	>;
 
 	/// default ctor that accepts custom ID string
@@ -87,8 +87,8 @@ public:
 	auto home_id() const -> std::string;
 
 	/// runs modificator in message queue of this object
-	auto apply(transaction tr) const -> error;
-	auto apply(obj_transaction tr) const -> error;
+	auto apply(transaction tr) const -> tr_result;
+	auto apply(obj_transaction tr) const -> tr_result;
 
 	auto apply(launch_async_t, transaction tr) const -> void;
 	auto apply(launch_async_t, obj_transaction tr) const -> void;
@@ -96,7 +96,7 @@ public:
 	template<typename F>
 	auto make_transaction(F f) const -> transaction {
 		return [f = std::move(f), self = const_cast<objbase*>(this)->shared_from_this()]() mutable
-		-> error {
+		-> tr_result {
 			return f(std::move(self));
 		};
 	}

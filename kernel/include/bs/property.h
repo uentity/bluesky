@@ -12,6 +12,7 @@
 #include "uuid.h"
 #include "meta.h"
 #include "meta/is_shared_ptr.h"
+#include "meta/variant.h"
 
 #include <caf/detail/type_list.hpp>
 
@@ -249,20 +250,4 @@ BS_API std::ostream& operator <<(std::ostream& os, const property& x);
 
 NAMESPACE_END(blue_sky::prop)
 
-/// ease writing visitors
-template<class... Ts> struct overload : Ts... { using Ts::operator()...; };
-template<class... Ts> overload(Ts...) -> overload<Ts...>;
-
-NAMESPACE_BEGIN(std)
-
-template<> struct variant_size<blue_sky::prop::property> :
-	variant_size<typename blue_sky::prop::property::underlying_type> {};
-
-template<size_t Np>
-struct variant_alternative<Np, blue_sky::prop::property> :
-	variant_alternative<Np, typename blue_sky::prop::property::underlying_type> {};
-
-template<> struct hash<blue_sky::prop::property> :
-	hash<typename blue_sky::prop::property::underlying_type> {};
-
-NAMESPACE_END(std)
+BS_ALLOW_VISIT(blue_sky::prop::property)

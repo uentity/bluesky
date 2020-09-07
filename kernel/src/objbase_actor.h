@@ -11,8 +11,6 @@
 
 #include "kernel/radio_subsyst.h"
 
-#include <unordered_map>
-
 NAMESPACE_BEGIN(blue_sky)
 
 class BS_HIDDEN_API objbase_actor : public caf::event_based_actor {
@@ -24,7 +22,7 @@ public:
 		// reset home group
 		caf::reacts_to<a_home, std::string>,
 		// modification ack
-		caf::reacts_to<a_ack, a_lnk_status, tree::ReqStatus>
+		caf::reacts_to<a_ack, a_data, tr_result::box>
 	>;
 
 	using actor_type = objbase::actor_type::extend<

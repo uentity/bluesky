@@ -252,16 +252,16 @@ auto link::is_node() const -> bool {
 template<bool AsyncApply = false>
 static auto make_apply_impl(const link& L, obj_transaction m, bool silent) {
 return [=, wL = link::weak_ptr(L), m = std::move(m)](obj_or_errbox obj) mutable {
-	auto finally = [=](error&& er) {
+	auto finally = [=](tr_result&& r) {
 		// set status after modificator invoked
 		if(!silent)
-			L.rs_reset(Req::Data, er.ok() ? ReqStatus::OK : ReqStatus::Error);
-		return std::move(er);
+			L.rs_reset(Req::Data, r ? ReqStatus::OK : ReqStatus::Error);
+		return std::move(r);
 	};
 
 	// deliver error if couldn't obtain link's data
 	if(!obj) {
-		auto er = finally( error::unpack(obj.error()) );
+		auto er = finally(obj.error());
 		if constexpr(!AsyncApply) return er;
 	}
 
@@ -269,11 +269,8 @@ return [=, wL = link::weak_ptr(L), m = std::move(m)](obj_or_errbox obj) mutable 
 	if constexpr(AsyncApply) {
 		(*obj)->apply(
 			launch_async,
-			[m = std::move(m), finally = std::move(finally)](sp_obj obj) -> error {
-				finally(error::eval_safe(
-					[&]{ return m(std::move(obj)); }
-				));
-				return perfect;
+			[m = std::move(m), finally = std::move(finally)](sp_obj obj) -> tr_result {
+				return finally(tr_eval(std::move(m), std::move(obj)));
 			}
 		);
 	}
@@ -282,11 +279,11 @@ return [=, wL = link::weak_ptr(L), m = std::move(m)](obj_or_errbox obj) mutable 
 };
 }
 
-auto link::data_apply(obj_transaction m, bool silent) const -> error {
+auto link::data_apply(obj_transaction m, bool silent) const -> tr_result {
 	return make_apply_impl(*this, std::move(m), silent)( data_ex(true) );
 }
 
-auto link::apply(transaction tr) const -> error {
+auto link::apply(simple_transaction tr) const -> error {
 	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
 }
 
@@ -294,7 +291,7 @@ auto link::apply(link_transaction tr) const -> error {
 	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
 }
 
-auto link::apply(launch_async_t, transaction tr) const -> void {
+auto link::apply(launch_async_t, simple_transaction tr) const -> void {
 	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
 }
 

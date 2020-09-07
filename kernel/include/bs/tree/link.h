@@ -161,10 +161,10 @@ public:
 	auto data_node_hid(unsafe_t) const -> std::string;
 
 	/// applies functor to link atomically (invoke in link's queue)
-	auto apply(transaction tr) const -> error;
+	auto apply(simple_transaction tr) const -> error;
 	auto apply(link_transaction tr) const -> error;
 
-	auto apply(launch_async_t, transaction tr) const -> void;
+	auto apply(launch_async_t, simple_transaction tr) const -> void;
 	auto apply(launch_async_t, link_transaction tr) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -188,8 +188,8 @@ public:
 	auto data_node(unsafe_t) const -> node;
 
 	/// make pointee data modification atomically
-	auto data_apply(obj_transaction m, bool silent = false) const -> error;
-	auto data_apply(launch_async_t, obj_transaction m, bool silent = false) const -> void;
+	auto data_apply(obj_transaction tr, bool silent = false) const -> tr_result;
+	auto data_apply(launch_async_t, obj_transaction tr, bool silent = false) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Async API

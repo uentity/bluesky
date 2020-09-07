@@ -14,9 +14,11 @@
 #include <bs/tree/common.h>
 #include <bs/kernel/config.h>
 #include <bs/kernel/radio.h>
+#include <bs/detail/scope_guard.h>
+
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/object_formatter.h>
-#include <bs/detail/scope_guard.h>
+#include <bs/serialize/propdict.h>
 
 #include "objbase_actor.h"
 
@@ -49,17 +51,15 @@ return typed_behavior {
 		join(system().groups().get_local(new_hid));
 	},
 
-	// execute modificator
-	[=](a_apply, const transaction& m) -> error::box {
-		// invoke modificator
-		auto er = error::eval_safe(m);
-		auto s = er.ok() ? tree::ReqStatus::OK : tree::ReqStatus::Error;
-		send(home_, a_ack(), a_lnk_status(), s);
-		return er;
+	// execute transaction
+	[=](a_apply, const transaction& m) -> tr_result::box {
+		auto tres = pack(tr_eval(m));
+		send(home_, a_ack(), a_data(), tres);
+		return tres;
 	},
 
 	// skip acks - sent by myself
-	[=](a_ack, a_lnk_status, tree::ReqStatus) {},
+	[=](a_ack, a_data, const tr_result::box&) {},
 
 	[=](a_delay_load, std::string fmt_name, std::string fname) {
 		auto cur_me = current_behavior();
@@ -134,14 +134,14 @@ auto objbase::reset_home(std::string new_hid, bool silent) -> void {
 		caf::anon_send<high_prio>(objbase_actor::actor(*this), a_home(), std::move(new_hid));
 }
 
-auto objbase::apply(transaction m) const -> error {
-	return actorf<error>(
+auto objbase::apply(transaction m) const -> tr_result {
+	return actorf<tr_result>(
 		actor(), kernel::radio::timeout(true), a_apply(), std::move(m)
 	);
 }
 
-auto objbase::apply(obj_transaction tr) const -> error {
-	return actorf<error>(
+auto objbase::apply(obj_transaction tr) const -> tr_result {
+	return actorf<tr_result>(
 		actor(), kernel::radio::timeout(true), a_apply(), make_transaction(std::move(tr))
 	);
 }

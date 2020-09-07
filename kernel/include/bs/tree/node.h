@@ -222,10 +222,10 @@ public:
 	auto rearrange(std::vector<std::size_t> new_order) const -> error;
 
 	/// applies functor to node atomically (invoke in node's queue)
-	auto apply(transaction tr) const -> error;
+	auto apply(simple_transaction tr) const -> error;
 	auto apply(node_transaction tr) const -> error;
 
-	auto apply(launch_async_t, transaction tr) const -> void;
+	auto apply(launch_async_t, simple_transaction tr) const -> void;
 	auto apply(launch_async_t, node_transaction tr) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////

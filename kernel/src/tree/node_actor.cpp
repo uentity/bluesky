@@ -120,7 +120,7 @@ auto node_actor::rename(std::vector<iterator<Key::Name>> namesakes, const std::s
 		// [NOTE] use `await` to ensure node is not modified while link is renaming
 		request(
 			link_impl::actor(*pos), kernel::radio::timeout(), a_apply(),
-			transaction{[=]() -> error {
+			simple_transaction{[=]() -> error {
 				adbg(this) << "-> a_lnk_rename [" << to_string(pos->id()) <<
 					"][" << pos->name(unsafe) << "] -> [" << new_name << "]" << std::endl;
 
@@ -157,7 +157,7 @@ auto do_insert(
 	auto res = self->make_response_promise();
 	self->request(
 		link_impl::actor(L), kernel::radio::timeout(), a_apply(),
-		transaction([=, pp = std::move(pp)]() mutable -> error {
+		simple_transaction([=, pp = std::move(pp)]() mutable -> error {
 			adbg(self) << "-> a_node_insert [L][" << to_string(L.id()) <<
 				"][" << L.name(unsafe) << "]" << std::endl;
 			// make insertion
@@ -295,13 +295,13 @@ auto node_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
 	[=](a_impl) -> sp_nimpl { return pimpl_; },
 
-	[=](a_apply, transaction tr) -> error::box {
-		return tr();
+	[=](a_apply, simple_transaction tr) -> error::box {
+		return tr_eval(std::move(tr));
 	},
 
 	[=](a_apply, node_transaction tr) -> error::box {
 		if(auto self = impl.super_engine())
-			return tr(std::move(self));
+			return tr_eval(std::move(tr), std::move(self));
 		return error{Error::EmptyData};
 	},
 

@@ -8,13 +8,15 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <bs/common.h>
-#include <bs/atoms.h>
-#include <bs/timetypes.h>
-#include <bs/error.h>
-#include <bs/kernel/radio.h>
-#include <bs/detail/function_view.h>
-#include <bs/detail/tuple_utils.h>
+#include "common.h"
+#include "atoms.h"
+#include "error.h"
+#include "timetypes.h"
+#include "transaction.h"
+#include "meta/variant.h"
+#include "kernel/radio.h"
+#include "detail/function_view.h"
+#include "detail/tuple_utils.h"
 
 #include <caf/fwd.hpp>
 #include <caf/function_view.hpp>
@@ -47,6 +49,48 @@ struct anon_sender {
 	};
 };
 
+template<typename T>
+struct afres_keeper {
+	// calc value type returned from request
+	// `error` & `tr_result` are always transferred packed inside a box
+	template<typename U> struct box_of : identity<typename U::box> {};
+	static constexpr bool is_res_packed = std::is_same_v<T, error> || std::is_same_v<T, tr_result>;
+	using R = typename std::conditional_t<is_res_packed, box_of<T>, identity<T>>::type;
+
+	// setup placeholder for value returned from request (must have error attached)
+	using P = std::conditional_t<
+		is_res_packed || tl::detail::is_expected<T>::value,
+		std::optional<T>, std::optional<result_or_err<T>>
+	>;
+	P value;
+
+	constexpr operator bool() const { return static_cast<bool>(value); }
+
+	// forward -> value.emplace()
+	template<typename U>
+	constexpr decltype(auto) emplace(U&& x) {
+		// if `value` carries expected & `x` is error, mark it as unexpected value
+		if constexpr(
+			std::is_same_v<meta::remove_cvref_t<U>, error> &&
+			tl::detail::is_expected<typename P::value_type>::value
+		)
+			return value.emplace(tl::unexpect, std::forward<U>(x));
+		else
+			return value.emplace(std::forward<U>(x));
+	}
+
+	// extract result from placeholder
+	decltype(auto) get() {
+		// if value is empty, then paste error
+		if(!value) emplace( error{ "actorf: wrong result type R specified" } );
+		// if R is an error, then simply return `error` instead of `result_or_err<error>`
+		//if constexpr(std::is_same_v<T, error>)
+		//	return *value ? error{std::move(**value)} : std::move(*value).error();
+		//else
+		return std::move(*value);
+	}
+};
+
 NAMESPACE_END(detail)
 
 /// tag value for high priority messages
@@ -54,19 +98,13 @@ inline constexpr auto high_prio = caf::message_priority::high;
 
 BS_API auto forward_caf_error(const caf::error& er, std::string_view msg = {}) -> error;
 
-/// @brief blocking invoke actor & return response like a function
-/// @return always return `result_or_errbox<R>`
+/// blocking invoke actor & return response like a function
 template<typename R, typename Actor, typename... Args>
 auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
-	// error is always transferred inside a box
-	using R_ = std::conditional_t<std::is_same_v<R, error>, error::box, R>;
-	// prepare result placeholder
-	auto res = [] {
-		if constexpr(tl::detail::is_expected<R_>::value)
-			return std::optional<R_>{};
-		else
-			return std::optional<result_or_err<R_>>{};
-	}();
+	// setup placeholder for request result
+	using res_keeper = detail::afres_keeper<R>;
+	using R_ = typename res_keeper::R;
+	auto res = res_keeper{};
 
 	// make request & extract response
 	if(auto x = factor(std::forward<Args>(args)...)) {
@@ -77,43 +115,29 @@ auto actorf(caf::function_view<Actor>& factor, Args&&... args) {
 			} });
 		else
 			res.emplace(std::move(*x));
-		if(!res) res.emplace( tl::make_unexpected(error{ "actorf: wrong result type R specified" }) );
 	}
 	else // caf err passtrough
-		res.emplace(tl::make_unexpected( forward_caf_error(x.error()) ));
+		res.emplace(forward_caf_error(x.error()));
 
-	// if R is an error, then simply return `error` instead of `result_or_err<error>`
-	if constexpr(std::is_same_v<R_, error::box>)
-		return *res ? error{std::move(**res)} : std::move(*res).error();
-	else
-		return std::move(*res);
+	return res.get();
 }
 
 /// operates on passed `scoped_actor` instead of function view
 template<typename R, typename Actor, typename T, typename... Args>
 auto actorf(const caf::scoped_actor& caller, const Actor& tgt, T timeout, Args&&... args) {
-	// error is always transferred inside a box
-	using R_ = std::conditional_t<std::is_same_v<R, error>, error::box, R>;
-	// prepare result placeholder
-	auto res = [] {
-		if constexpr(tl::detail::is_expected<R_>::value)
-			return std::optional<R_>{};
-		else
-			return std::optional<result_or_err<R_>>{};
-	}();
+	// setup placeholder for request result
+	using res_keeper = detail::afres_keeper<R>;
+	using R_ = typename res_keeper::R;
+	auto res = res_keeper{};
 
 	// make request & extract response
 	caller->request(tgt, detail::cast_timeout(timeout), std::forward<Args>(args)...)
 	.receive(
 		[&](R_& value) { res.emplace(std::move(value)); },
-		[&](const caf::error& er) { res.emplace(tl::make_unexpected(forward_caf_error(er))); }
+		[&](const caf::error& er) { res.emplace(forward_caf_error(er)); }
 	);
 
-	// if R is an error, then simply return `error` instead of `result_or_err<error>`
-	if constexpr(std::is_same_v<R_, error::box>)
-		return *res ? error{std::move(**res)} : std::move(*res).error();
-	else
-		return std::move(*res);
+	return res.get();
 }
 
 /// constructs scoped actor inside from passed handle & timeout
@@ -214,7 +238,7 @@ template<
 >
 auto checked_send(ActorClass& src, const caf::group& dest, Ts&&... xs) -> void {
 	// check if GroupSigs match with Ts
-    static_assert(sizeof...(Ts) > 0, "no message to send");
+	static_assert(sizeof...(Ts) > 0, "no message to send");
 	using args_token_t = caf::detail::type_list<caf::detail::strip_and_convert_t<Ts>...>;
 	static_assert(
 		caf::response_type_unbox<caf::signatures_of_t<GroupActorType>, args_token_t>::valid,

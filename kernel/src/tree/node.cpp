@@ -285,7 +285,7 @@ auto node::rearrange(std::vector<std::size_t> new_order) const -> error {
 ///////////////////////////////////////////////////////////////////////////////
 //  apply
 //
-auto node::apply(transaction tr) const -> error {
+auto node::apply(simple_transaction tr) const -> error {
 	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
 }
 
@@ -293,7 +293,7 @@ auto node::apply(node_transaction tr) const -> error {
 	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
 }
 
-auto node::apply(launch_async_t, transaction tr) const -> void {
+auto node::apply(launch_async_t, simple_transaction tr) const -> void {
 	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
 }
 
