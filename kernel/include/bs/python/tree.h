@@ -15,7 +15,6 @@
 
 // make it possible to bind opaque std::list & std::vector (w/o content copying)
 PYBIND11_MAKE_OPAQUE(blue_sky::tree::links_v);
-PYBIND11_MAKE_OPAQUE(blue_sky::tree::lids_v);
 PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::link>);
 PYBIND11_MAKE_OPAQUE(std::list<blue_sky::tree::node>);
 
