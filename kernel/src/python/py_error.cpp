@@ -124,6 +124,7 @@ void py_bind_error(py::module& m) {
 
 	// add 'perfect' constant
 	m.attr("perfect") = error{ perfect };
+	m.attr("quiet_fail") = error{ quiet_fail };
 
 	// register exception translator for `error`
 	static py::exception<error> py_error(m, "BSError");

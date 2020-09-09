@@ -172,7 +172,7 @@ void py_bind_node(py::module& m) {
 
 		.def("keys", &node::keys, "ordering"_a = Key::AnyOrder, nogil)
 		.def("ikeys", &node::ikeys, "ordering"_a = Key::AnyOrder, nogil)
-		.def("skeys", &node::skeys, "key_meaing"_a, "ordering"_a = Key::AnyOrder, nogil)
+		.def("skeys", &node::skeys, "key_meaning"_a, "ordering"_a = Key::AnyOrder, nogil)
 
 		// check by link ID
 		// [NOTE] it's essential to register UUID overload first, because Python native UUID has a

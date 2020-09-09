@@ -36,8 +36,8 @@ struct type_caster<blue_sky::prop::property> {
 			return true;
 		}
 		auto caster = make_caster<UType>();
-		if (caster.load(src, convert)) {
-			value = cast_op<UType>(caster);
+		if(caster.load(src, convert)) {
+			value = cast_op<UType>(std::move(caster));
 			return true;
 		}
 		return false;

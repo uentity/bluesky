@@ -43,7 +43,7 @@ struct any_caster {
 		else {
 			auto caster = make_caster<U>();
 			if(caster.load(src, convert)) {
-				value = cast_op<U>(caster);
+				value = cast_op<U>(std::move(caster));
 				return true;
 			}
 		}

@@ -11,7 +11,7 @@
 #include <pybind11/pybind11.h>
 #include <tl/expected.hpp>
 
-NAMESPACE_BEGIN(pybind11) NAMESPACE_BEGIN(detail)
+NAMESPACE_BEGIN(pybind11::detail)
 /*-----------------------------------------------------------------------------
  *  cast tl::expected <-> Python
  *-----------------------------------------------------------------------------*/
@@ -22,14 +22,14 @@ struct type_caster< tl::expected<T, E> > {
 		// first try to extract T
 		auto caster = make_caster<T>();
 		if(caster.load(src, convert)) {
-			value = cast_op<T>(caster);
+			value = cast_op<T>(std::move(caster));
 			return true;
 		}
 		// then E
 		else {
 			auto caster = make_caster<E>();
 			if(caster.load(src, convert)) {
-				value = tl::make_unexpected(cast_op<E>(caster));
+				value = tl::make_unexpected(cast_op<E>(std::move(caster)));
 				return true;
 			}
 		}
@@ -67,5 +67,4 @@ template<> struct type_caster<tl::monostate> {
 	}
 };
 
-NAMESPACE_END(detail) NAMESPACE_END(pybind11)
-
+NAMESPACE_END(pybind11::detail)
