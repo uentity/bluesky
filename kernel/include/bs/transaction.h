@@ -61,7 +61,7 @@ struct tr_result : std::variant<prop::propdict, error> {
 	}
 
 	// check if return value carry props
-	inline auto has_info() const -> bool { return index() == 1; }
+	inline auto has_info() const -> bool { return index() == 0; }
 
 	// extract props unchecked
 	decltype(auto) info() const { return std::get<0>(*this); }
