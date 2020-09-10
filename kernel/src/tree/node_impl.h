@@ -72,7 +72,9 @@ public:
 		// track leaf rename
 		caf::reacts_to<a_ack, lid_type, a_lnk_rename, std::string, std::string>,
 		// track leaf status
-		caf::reacts_to<a_ack, lid_type, a_lnk_status, Req, ReqStatus, ReqStatus>
+		caf::reacts_to<a_ack, lid_type, a_lnk_status, Req, ReqStatus, ReqStatus>,
+		// data altered ack
+		caf::reacts_to<a_ack, lid_type, a_data, tr_result::box>
 	>;
 
 	// all acks are pumped via node's home group

@@ -14,6 +14,7 @@
 
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
+#include <bs/serialize/propdict.h>
 
 #include "link_actor.h"
 #include "../objbase_actor.h"
@@ -30,6 +31,31 @@ using namespace std::chrono_literals;
 [[maybe_unused]] auto adbg_impl(link_actor* A) -> caf::actor_ostream {
 	return caf::aout(A) << "[L] [" << to_string(A->impl.id_) <<
 		"] [" << A->impl.name_ << "]: ";
+}
+
+// helper to apply data transactions
+template<typename... Ts>
+static auto do_data_apply(link_actor* LA, transaction_t<tr_result, Ts...> tr) {
+	auto res = LA->make_response_promise<tr_result::box>();
+	LA->request(LA->actor(), caf::infinite, a_data(), true)
+	.then([=, tr = std::move(tr)](obj_or_errbox maybe_obj) mutable {
+		if(maybe_obj) {
+			// always send closed transaction
+			transaction tr_ = [&] {
+				if constexpr(sizeof...(Ts) > 0)
+					return (*maybe_obj)->make_transaction(std::move(tr));
+				else
+					return std::move(tr);
+			}();
+			LA->request(maybe_obj.value()->actor(), caf::infinite, a_apply(), std::move(tr_))
+			.then([=](tr_result::box tres) mutable {
+				res.deliver(std::move(tres));
+			});
+		}
+		else
+			res.deliver(pack(tr_result{std::move(maybe_obj).error()}));
+	});
+	return res;
 }
 
 /*-----------------------------------------------------------------------------
@@ -135,6 +161,14 @@ return {
 		if(auto self = impl.super_engine())
 			return tr_eval(std::move(tr), std::move(self));
 		return error{Error::EmptyData};
+	},
+
+	// apply data transactions
+	[=](a_apply, a_data, transaction tr) -> caf::result<tr_result::box> {
+		return do_data_apply(this, std::move(tr));
+	},
+	[=](a_apply, a_data, obj_transaction tr) -> caf::result<tr_result::box> {
+		return do_data_apply(this, std::move(tr));
 	},
 
 	// get id

@@ -88,6 +88,7 @@ void py_bind_tree(py::module& m) {
 		.value("LinkInserted", Event::LinkInserted)
 		.value("LinkErased", Event::LinkErased)
 		.value("LinkDeleted", Event::LinkDeleted)
+		.value("DataModified", Event::DataModified)
 		.value("All", Event::All)
 	;
 

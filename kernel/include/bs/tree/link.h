@@ -68,7 +68,11 @@ public:
 		// get data
 		caf::replies_to<a_data, bool>::with<obj_or_errbox>,
 		// get data node
-		caf::replies_to<a_data_node, bool>::with<node_or_errbox>
+		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
+
+		// run transaction in message queue of data object
+		caf::replies_to<a_apply, a_data, transaction>::with<tr_result::box>,
+		caf::replies_to<a_apply, a_data, obj_transaction>::with<tr_result::box>
 	>;
 
 	/// empty ctor will construct nil link
@@ -164,9 +168,6 @@ public:
 	auto apply(simple_transaction tr) const -> error;
 	auto apply(link_transaction tr) const -> error;
 
-	auto apply(launch_async_t, simple_transaction tr) const -> void;
-	auto apply(launch_async_t, link_transaction tr) const -> void;
-
 	///////////////////////////////////////////////////////////////////////////////
 	//  Pointee data API
 	//
@@ -188,8 +189,8 @@ public:
 	auto data_node(unsafe_t) const -> node;
 
 	/// make pointee data modification atomically
-	auto data_apply(obj_transaction tr, bool silent = false) const -> tr_result;
-	auto data_apply(launch_async_t, obj_transaction tr, bool silent = false) const -> void;
+	auto data_apply(transaction tr) const -> tr_result;
+	auto data_apply(obj_transaction tr) const -> tr_result;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Async API
@@ -200,6 +201,12 @@ public:
 	/// ... and data node
 	using process_dnode_cb = std::function<void(node_or_err, link)>;
 	auto data_node(process_dnode_cb f, bool high_priority = false) const -> void;
+
+	auto apply(launch_async_t, simple_transaction tr) const -> void;
+	auto apply(launch_async_t, link_transaction tr) const -> void;
+
+	auto data_apply(launch_async_t, transaction tr) const -> void;
+	auto data_apply(launch_async_t, obj_transaction tr) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Subscribe to link events

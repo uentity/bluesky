@@ -67,7 +67,9 @@ public:
 		// ack rename
 		caf::reacts_to<a_ack, a_lnk_rename, std::string, std::string>,
 		// request status change ack
-		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>
+		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>,
+		// data altered ack from object
+		caf::reacts_to<a_ack, a_data, tr_result::box>
 	>;
 
 	// home group receives only myself acks
@@ -78,6 +80,7 @@ public:
 		// leafs changes on deeper levels
 		caf::reacts_to<a_ack, caf::actor, lid_type, a_lnk_rename, std::string, std::string>,
 		caf::reacts_to<a_ack, caf::actor, lid_type, a_lnk_status, Req, ReqStatus, ReqStatus>,
+		caf::reacts_to<a_ack, caf::actor, lid_type, a_data, tr_result::box>,
 
 		// node acks from deeper levels
 		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, InsertPolicy>,

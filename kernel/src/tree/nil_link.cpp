@@ -14,6 +14,7 @@
 #include <bs/defaults.h>
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
+#include <bs/serialize/propdict.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
@@ -61,6 +62,13 @@ struct nil_link::self_actor : caf::event_based_actor {
 		},
 		[=](a_data_node, bool) -> node_or_errbox {
 			return unexpected_err(Error::EmptyData);
+		},
+
+		[=](a_apply, a_data, const transaction&) -> tr_result::box {
+			return pack(tr_result{Error::EmptyData});
+		},
+		[=](a_apply, a_data, const obj_transaction&) -> tr_result::box {
+			return pack(tr_result{Error::EmptyData});
 		}
 
 	}.unbox(); }

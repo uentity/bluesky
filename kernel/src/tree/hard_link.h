@@ -58,7 +58,8 @@ struct BS_HIDDEN_API weak_link_impl : ilink_impl {
  * 2) access to object's data & node is always fast, s.t. we don't need to manage req status
  * 3) joins object's home group & react on transactions
  *-----------------------------------------------------------------------------*/
-struct BS_HIDDEN_API hard_link_actor : public cached_link_actor {
+class hard_link_actor : public cached_link_actor {
+public:
 	using super = cached_link_actor;
 	using super::super;
 

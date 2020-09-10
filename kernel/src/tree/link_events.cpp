@@ -54,6 +54,18 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 				}
 			);
 
+		if(enumval(listen_to & Event::DataModified))
+			res = res.or_else(
+				[=](a_ack, a_data, tr_result::box tres_box) {
+					auto params = prop::propdict{};
+					if(auto tres = tr_result{std::move(tres_box)})
+						params = extract_info(std::move(tres));
+					else
+						params["error"] = to_string(extract_err(std::move(tres)));
+					handler_impl(self, weak_root, Event::DataModified, std::move(params));
+				}
+			);
+
 		if(enumval(listen_to & Event::LinkDeleted))
 			res = res.or_else(
 				[=](a_bye) {

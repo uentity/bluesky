@@ -249,40 +249,6 @@ auto link::is_node() const -> bool {
 ///////////////////////////////////////////////////////////////////////////////
 //  apply
 //
-template<bool AsyncApply = false>
-static auto make_apply_impl(const link& L, obj_transaction m, bool silent) {
-return [=, wL = link::weak_ptr(L), m = std::move(m)](obj_or_errbox obj) mutable {
-	auto finally = [=](tr_result&& r) {
-		// set status after modificator invoked
-		if(!silent)
-			L.rs_reset(Req::Data, r ? ReqStatus::OK : ReqStatus::Error);
-		return std::move(r);
-	};
-
-	// deliver error if couldn't obtain link's data
-	if(!obj) {
-		auto er = finally(obj.error());
-		if constexpr(!AsyncApply) return er;
-	}
-
-	// put modificator into object's queue
-	if constexpr(AsyncApply) {
-		(*obj)->apply(
-			launch_async,
-			[m = std::move(m), finally = std::move(finally)](sp_obj obj) -> tr_result {
-				return finally(tr_eval(std::move(m), std::move(obj)));
-			}
-		);
-	}
-	else
-		return finally( (*obj)->apply(std::move(m)) );
-};
-}
-
-auto link::data_apply(obj_transaction m, bool silent) const -> tr_result {
-	return make_apply_impl(*this, std::move(m), silent)( data_ex(true) );
-}
-
 auto link::apply(simple_transaction tr) const -> error {
 	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
 }
@@ -291,12 +257,12 @@ auto link::apply(link_transaction tr) const -> error {
 	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
 }
 
-auto link::apply(launch_async_t, simple_transaction tr) const -> void {
-	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
+auto link::data_apply(transaction tr) const -> tr_result {
+	return pimpl()->actorf<tr_result>(*this, a_apply(), a_data(), std::move(tr));
 }
 
-auto link::apply(launch_async_t, link_transaction tr) const -> void {
-	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
+auto link::data_apply(obj_transaction tr) const -> tr_result {
+	return pimpl()->actorf<tr_result>(*this, a_apply(), a_data(), std::move(tr));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -324,12 +290,20 @@ auto link::data_node(process_dnode_cb f, bool high_priority) const -> void {
 	);
 }
 
-auto link::data_apply(launch_async_t, obj_transaction m, bool silent) const -> void {
-	anon_request(
-		actor(), kernel::radio::timeout(true), false,
-		make_apply_impl<true>(*this, std::move(m), silent),
-		a_data(), true
-	);
+auto link::apply(launch_async_t, simple_transaction tr) const -> void {
+	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
+}
+
+auto link::apply(launch_async_t, link_transaction tr) const -> void {
+	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
+}
+
+auto link::data_apply(launch_async_t, transaction tr) const -> void {
+	caf::anon_send(pimpl()->actor(*this), a_apply(), a_data(), std::move(tr));
+}
+
+auto link::data_apply(launch_async_t, obj_transaction tr) const -> void {
+	caf::anon_send(pimpl()->actor(*this), a_apply(), a_data(), std::move(tr));
 }
 
 NAMESPACE_END(blue_sky::tree)

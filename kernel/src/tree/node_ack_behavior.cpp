@@ -13,6 +13,7 @@
 #include <bs/tree/tree.h>
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
+#include <bs/serialize/propdict.h>
 
 #include <cereal/types/optional.hpp>
 #include <cereal/types/vector.hpp>
@@ -75,13 +76,16 @@ return {
 		// notify handle about data change
 		forward_up(a_lnk_status(), Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::OK);
 	},
-
 	// track my leaf status
 	[=](a_ack, const lid_type& lid, a_lnk_status, Req req, ReqStatus new_, ReqStatus old_) {
 		ack_up(lid, a_lnk_status(), req, new_, old_);
 	},
+	// my leafs data change
+	[=](a_ack, const lid_type& lid, a_data, tr_result::box tres) {
+		ack_up(lid, a_data(), std::move(tres));
+	},
 
-	// retranslate deep links rename & status
+	// retranslate deep links acks
 	[=](
 		a_ack, caf::actor N, const lid_type& lid,
 		a_lnk_rename, std::string new_name, std::string old_name
@@ -95,6 +99,10 @@ return {
 	) {
 		forward_up(a_ack(), std::move(N), lid, a_lnk_status(), req, new_rs, old_rs);
 	},
+
+	[=](a_ack, caf::actor N, const lid_type& lid, a_data, tr_result::box tres) {
+		forward_up(a_ack(), std::move(N), lid, a_data(), std::move(tres));
+	}
 }; }
 
 NAMESPACE_END(blue_sky::tree)

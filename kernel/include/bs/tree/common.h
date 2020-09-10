@@ -24,6 +24,7 @@ enum class Event : std::uint32_t {
 	LinkInserted = 4,
 	LinkErased = 8,
 	LinkDeleted = 16,
+	DataModified = 32,
 	All = std::uint32_t(-1)
 };
 

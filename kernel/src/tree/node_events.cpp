@@ -108,6 +108,34 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			bsout() << "*-* node: subscribed to LinkStatusChanged event" << bs_end;
 		}
 
+		if(enumval(listen_to & Event::DataModified)) {
+			const auto datamod_impl = [=](
+				const caf::actor& subn_actor, auto& lid, tr_result::box&& tres_box
+			) {
+				bsout() << "*-* node: fired DataModified event" << bs_end;
+				auto params = prop::propdict{{ "link_id", to_string(lid) }};
+				if(auto tres = tr_result{std::move(tres_box)})
+					params = extract_info(std::move(tres));
+				else
+					params["error"] = to_string(extract_err(std::move(tres)));
+				handler_impl(self, weak_root, subn_actor, Event::DataModified, std::move(params));
+			};
+
+			// this node leaf data changed
+			res = res.or_else(
+				[=](a_ack, const lid_type& lid, a_data, tr_result::box trbox) {
+					datamod_impl({}, lid, std::move(trbox));
+				}
+			);
+			// deeper subtree leaf status changed
+			res = res.or_else(
+				[=](a_ack, const caf::actor& src, const lid_type& lid, a_data, tr_result::box trbox) {
+					datamod_impl(src, lid, std::move(trbox));
+				}
+			);
+			bsout() << "*-* node: subscribed to DataModified event" << bs_end;
+		}
+
 		if(enumval(listen_to & Event::LinkInserted)) {
 			res = res.or_else(
 				// insert

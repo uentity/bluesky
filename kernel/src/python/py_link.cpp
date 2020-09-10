@@ -9,6 +9,7 @@
 
 #include <bs/python/tree.h>
 #include <bs/python/result_converter.h>
+#include <bs/python/tr_result.h>
 #include "../kernel/python_subsyst_impl.h"
 
 #include <pybind11/functional.h>
@@ -80,7 +81,9 @@ void py_bind_link(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  Base link
 	//
-	using py_modificator_f = std::function< py::object(sp_obj) >;
+	using py_transaction = std::function< py::object() >;
+	using py_obj_transaction = std::function< py::object(sp_obj) >;
+	using py_link_transaction = std::function< py::object(link) >;
 
 	// link base class
 	auto link_pyface = py::class_<link, engine>(m, "link")
@@ -119,12 +122,31 @@ void py_bind_link(py::module& m) {
 
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
-		.def("data_apply",
-			[](const link& L, py_modificator_f m, bool silent) {
-				L.data_apply(launch_async, make_result_converter<error>(std::move(m), perfect), silent);
+		// [TODO] figure out how to enable overloads based on transaction arguments
+		//.def("apply",
+		//	[](const link& L, py_transaction tr) {
+		//		L.apply(launch_async, make_result_converter<tr_result>(std::move(tr), perfect));
+		//	},
+		//	"tr"_a, "Send transaction `tr` to link's queue, return immediately"
+		//)
+		.def("apply",
+			[](const link& L, py_link_transaction tr) {
+				L.apply(launch_async, make_result_converter<tr_result>(std::move(tr), perfect));
 			},
-			"m"_a, "silent"_a = false,
-			"Place given modificator `m` to object's queue and return immediately", nogil
+			"tr"_a, "Send transaction `tr` to link's queue, return immediately"
+		)
+
+		//.def("data_apply",
+		//	[](const link& L, py_transaction tr) {
+		//		L.data_apply(launch_async, make_result_converter<tr_result>(std::move(tr), perfect));
+		//	},
+		//	"tr"_a, "Send transaction `tr` to object's queue, return immediately"
+		//)
+		.def("data_apply",
+			[](const link& L, py_obj_transaction tr) {
+				L.data_apply(launch_async, make_result_converter<tr_result>(std::move(tr), perfect));
+			},
+			"tr"_a, "Send transaction `tr` to object's queue, return immediately"
 		)
 
 		.def("oid", py::overload_cast<>(&link::oid, py::const_), nogil)
