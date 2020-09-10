@@ -192,6 +192,9 @@ public:
 	auto data_apply(transaction tr) const -> tr_result;
 	auto data_apply(obj_transaction tr) const -> tr_result;
 
+	/// sends empty transaction object to trigger `data modified` signal
+	auto data_touch(tr_result tres = {}) const -> void;
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  Async API
 	//

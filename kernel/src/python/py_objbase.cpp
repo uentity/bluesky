@@ -11,6 +11,7 @@
 #include <bs/tree/inode.h>
 #include <bs/python/common.h>
 #include <bs/python/expected.h>
+#include <bs/python/tr_result.h>
 #include <bs/python/result_converter.h>
 #include <bs/serialize/object_formatter.h>
 
@@ -36,10 +37,15 @@ void py_bind_objbase(py::module& m) {
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
 		.def("apply",
-			[](objbase& obj, py_modificator_f m) {
-				obj.apply(launch_async, make_result_converter<error>(std::move(m), perfect));
+			[](objbase& obj, py_modificator_f tr) {
+				obj.apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
 			},
-			"m"_a, "Place given modificator `m` to object's queue and return immediately", nogil
+			"tr"_a, "Place given transaction into object's queue, return immediately", nogil
+		)
+
+		.def("touch",
+			&objbase::touch, "tres"_a = prop::propdict{},
+			"Send empty transaction to trigger `data modified` signal"
 		)
 	;
 

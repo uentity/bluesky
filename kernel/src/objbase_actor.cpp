@@ -154,4 +154,10 @@ auto objbase::apply(launch_async_t, obj_transaction tr) const -> void {
 	caf::anon_send(actor(), a_apply(), make_transaction(std::move(tr)));
 }
 
+auto objbase::touch(tr_result tres) const -> void {
+	caf::anon_send(actor(), a_apply(), transaction{
+		[tres = std::move(tres)]() mutable { return std::move(tres); }
+	});
+}
+
 NAMESPACE_END(blue_sky)

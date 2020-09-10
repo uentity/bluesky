@@ -93,6 +93,9 @@ public:
 	auto apply(launch_async_t, transaction tr) const -> void;
 	auto apply(launch_async_t, obj_transaction tr) const -> void;
 
+	/// sends empty transaction to trigger `data modified` signal
+	auto touch(tr_result tres = {}) const -> void;
+
 	template<typename F>
 	auto make_transaction(F f) const -> transaction {
 		return [f = std::move(f), self = const_cast<objbase*>(this)->shared_from_this()]() mutable

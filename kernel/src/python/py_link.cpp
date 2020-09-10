@@ -8,8 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/python/tree.h>
-#include <bs/python/result_converter.h>
 #include <bs/python/tr_result.h>
+#include <bs/python/result_converter.h>
 #include "../kernel/python_subsyst_impl.h"
 
 #include <pybind11/functional.h>
@@ -125,28 +125,33 @@ void py_bind_link(py::module& m) {
 		// [TODO] figure out how to enable overloads based on transaction arguments
 		//.def("apply",
 		//	[](const link& L, py_transaction tr) {
-		//		L.apply(launch_async, make_result_converter<tr_result>(std::move(tr), perfect));
+		//		L.apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
 		//	},
 		//	"tr"_a, "Send transaction `tr` to link's queue, return immediately"
 		//)
 		.def("apply",
 			[](const link& L, py_link_transaction tr) {
-				L.apply(launch_async, make_result_converter<tr_result>(std::move(tr), perfect));
+				L.apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
 			},
 			"tr"_a, "Send transaction `tr` to link's queue, return immediately"
 		)
 
 		//.def("data_apply",
 		//	[](const link& L, py_transaction tr) {
-		//		L.data_apply(launch_async, make_result_converter<tr_result>(std::move(tr), perfect));
+		//		L.data_apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
 		//	},
 		//	"tr"_a, "Send transaction `tr` to object's queue, return immediately"
 		//)
 		.def("data_apply",
 			[](const link& L, py_obj_transaction tr) {
-				L.data_apply(launch_async, make_result_converter<tr_result>(std::move(tr), perfect));
+				L.data_apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
 			},
 			"tr"_a, "Send transaction `tr` to object's queue, return immediately"
+		)
+
+		.def("data_touch",
+			&link::data_touch, "tres"_a = prop::propdict{},
+			"Send empty transaction object to trigger `data modified` signal"
 		)
 
 		.def("oid", py::overload_cast<>(&link::oid, py::const_), nogil)
