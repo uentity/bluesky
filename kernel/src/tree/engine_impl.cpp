@@ -36,8 +36,8 @@ auto engine::impl::release_factors() -> void {
 	rpool_.clear();
 }
 
-auto engine::impl::home_id() const -> std::string {
-	return home ? home.get()->identifier() : "";
+auto engine::impl::home_id() const -> std::string_view {
+	return home ? home.get()->identifier() : std::string_view{};
 }
 
 auto engine::impl::swap(impl& rhs) -> void {

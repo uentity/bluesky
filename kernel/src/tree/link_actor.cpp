@@ -147,7 +147,7 @@ return {
 
 	[=](a_home) { return impl.home; },
 
-	[=](a_home_id) { return impl.home_id(); },
+	[=](a_home_id) { return std::string(impl.home_id()); },
 
 	[=](a_impl) -> sp_limpl {
 		return pimpl_;

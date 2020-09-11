@@ -214,7 +214,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		RETURN_EVAL_ERR
 
 		// 5. read object data from file
-		auto obj_path = objects_path_ / (obj.home_id() + '.' + obj_frm);
+		auto obj_path = objects_path_ / (std::string(obj.home_id()) + '.' + obj_frm);
 		auto abs_obj_path = fs::path{};
 		SCOPE_EVAL_SAFE
 			abs_obj_path = fs::absolute(obj_path);

@@ -93,7 +93,7 @@ public:
 	auto make_behavior() -> behavior_type override;
 
 private:
-	std::string obj_hid_;
+	std::string_view obj_hid_;
 };
 
 NAMESPACE_END(blue_sky::tree)

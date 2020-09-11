@@ -71,7 +71,7 @@ public:
 	caf::group home;
 
 	/// get engine's home group ID (empty for invalid / not started home)
-	auto home_id() const -> std::string;
+	auto home_id() const -> std::string_view;
 
 	auto swap(impl& rhs) -> void;
 

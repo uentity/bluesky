@@ -175,7 +175,7 @@ auto do_insert(
 		// on error forward caf error to await handler
 		[=, Lid = L.id()](const caf::error& er) mutable {
 			aw(forward_caf_error(
-				er, "in node["s + self->impl.home_id() + "] insert link[" + to_string(Lid) + ']'
+				er, "in node["s + std::string(self->impl.home_id()) + "] insert link[" + to_string(Lid) + ']'
 			));
 		}
 	);
@@ -312,7 +312,7 @@ return {
 
 	[=](a_home) { return impl.home; },
 
-	[=](a_home_id) -> std::string { return impl.home_id(); },
+	[=](a_home_id) { return std::string(impl.home_id()); },
 
 	[=](a_node_handle) { return impl.handle(); },
 

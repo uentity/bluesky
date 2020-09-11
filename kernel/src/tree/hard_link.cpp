@@ -80,9 +80,9 @@ auto hard_link_actor::make_typed_behavior() -> typed_behavior {
 		[=](a_home, std::string new_hid) {
 			// object's home ID changed
 			if(!obj_hid_.empty())
-				leave(system().groups().get_local(obj_hid_));
+				leave(system().groups().get_local(std::string(obj_hid_)));
 
-			join(system().groups().get_local(obj_hid_));
+			join(system().groups().get_local(std::string(obj_hid_)));
 			obj_hid_ = std::move(new_hid);
 		}
 	}, super::make_typed_behavior());

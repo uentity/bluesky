@@ -233,7 +233,7 @@ auto link::data_node(unsafe_t) const -> node {
 auto link::data_node_hid() const -> result_or_err<std::string> {
 	// [TODO] enable this more efficient path later
 	//return pimpl()->actorf<result_or_errbox<std::string>>(*this, a_node_gid());
-	return data_node_ex().map([](const node& N) { return N.home_id(); });
+	return data_node_ex().map([](const node& N) { return std::string(N.home_id()); });
 }
 
 auto link::data_node_hid(unsafe_t) const -> std::string {

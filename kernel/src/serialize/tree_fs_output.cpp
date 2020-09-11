@@ -114,7 +114,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		RETURN_EVAL_ERR
 
 		// 5. save object data to file
-		auto obj_path = objects_path_ / (obj.home_id() + '.' + obj_fmt);
+		auto obj_path = objects_path_ / (std::string(obj.home_id()) + '.' + obj_fmt);
 		auto abs_obj_path = fs::path{};
 		SCOPE_EVAL_SAFE
 			abs_obj_path = fs::absolute(obj_path);

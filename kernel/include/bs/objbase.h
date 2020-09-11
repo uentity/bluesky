@@ -84,7 +84,7 @@ public:
 	auto home() const -> const caf::group&;
 
 	/// get objects's home group ID (empty for invalid / not started home)
-	auto home_id() const -> std::string;
+	auto home_id() const -> std::string_view;
 
 	/// runs modificator in message queue of this object
 	auto apply(transaction tr) const -> tr_result;

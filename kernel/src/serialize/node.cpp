@@ -64,7 +64,7 @@ NAMESPACE_END(blue_sky)
 BSS_FCN_BEGIN(serialize, tree::node_impl)
 	// node's home ID is persistent
 	if constexpr(Archive::is_saving::value)
-		ar(make_nvp("home_id", t.home_id()));
+		ar(make_nvp("home_id", std::string(t.home_id())));
 	else {
 		std::string home_id;
 		ar(make_nvp("home_id", home_id));

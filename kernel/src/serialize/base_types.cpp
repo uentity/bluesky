@@ -23,7 +23,7 @@ BSS_FCN_BEGIN(serialize, blue_sky::objbase)
 	ar(make_nvp("id", t.id_));
 	if constexpr(Archive::is_saving::value) {
 		// emit empty home ID if it matches ID (saved on prev step)
-		auto hid = t.home_id();
+		auto hid = std::string(t.home_id());
 		ar(make_nvp("home_id", hid != t.id_ ? hid : ""));
 	}
 	else {

@@ -127,7 +127,7 @@ public:
 	auto home() const -> const caf::group&;
 
 	/// get engine's home group ID (empty for invalid / not started home)
-	auto home_id() const -> std::string;
+	auto home_id() const -> std::string_view;
 
 	/// get managed requester that can be used to talk with engine actor
 	/// [NOTE] shared_ptr is used because `scoped_actor` cannot be copied or moved

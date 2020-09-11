@@ -123,8 +123,8 @@ objbase::~objbase() {
 
 auto objbase::home() const -> const caf::group& { return home_; }
 
-auto objbase::home_id() const -> std::string {
-	return home_ ? home_.get()->identifier() : "";
+auto objbase::home_id() const -> std::string_view {
+	return home_ ? home_.get()->identifier() : std::string_view{};
 }
 
 auto objbase::reset_home(std::string new_hid, bool silent) -> void {

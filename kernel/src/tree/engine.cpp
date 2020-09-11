@@ -152,7 +152,7 @@ auto engine::home() const -> const caf::group& {
 	return pimpl_->home;
 }
 
-auto engine::home_id() const -> std::string {
+auto engine::home_id() const -> std::string_view {
 	return pimpl_->home_id();
 }
 
