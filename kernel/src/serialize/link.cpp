@@ -13,6 +13,7 @@
 
 #include "tree_impl.h"
 #include "../tree/link_actor.h"
+#include "../tree/hard_link.h"
 #include "../tree/fusion_link_actor.h"
 
 #include <cereal/types/chrono.hpp>

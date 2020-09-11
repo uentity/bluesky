@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "request_impl.h"
+#include "hard_link.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
@@ -37,7 +38,7 @@ auto cached_link_actor::data_node_ex(node_processor_f cb, ReqOpts opts) -> void 
 	data_node_request(*this, opts | ReqOpts::HasDataCache, std::move(cb));
 }
 
-auto fast_link_actor::data_ex(obj_processor_f cb, ReqOpts opts) -> void {
+auto hard_link_actor::data_ex(obj_processor_f cb, ReqOpts opts) -> void {
 	// directly invoke `impl.data()` regardless of any options
 	request_impl<false>(
 		*this, Req::Data, opts | ReqOpts::DirectInvoke,
@@ -46,7 +47,7 @@ auto fast_link_actor::data_ex(obj_processor_f cb, ReqOpts opts) -> void {
 	);
 }
 
-auto fast_link_actor::data_node_ex(node_processor_f cb, ReqOpts opts) -> void {
+auto hard_link_actor::data_node_ex(node_processor_f cb, ReqOpts opts) -> void {
 	data_node_request<false>(*this, opts | ReqOpts::DirectInvoke, std::move(cb));
 }
 

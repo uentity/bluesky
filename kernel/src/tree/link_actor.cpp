@@ -319,43 +319,4 @@ auto cached_link_actor::make_behavior() -> behavior_type {
 	return make_typed_behavior().unbox();
 }
 
-/*-----------------------------------------------------------------------------
- *  fast_link_actor
- *-----------------------------------------------------------------------------*/
-// in fast link we can assume that Data & DataNode requests costs are very small (~0)
-// => override slow API to exclude extra possible delays
-auto fast_link_actor::make_typed_behavior() -> typed_behavior {
-	return first_then_second( typed_behavior_overload{
-		[=](a_data, bool) -> obj_or_errbox {
-			adbg(this) << "<- a_data fast, status = " <<
-				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
-
-			return pimpl_->data().and_then([](auto&& obj) {
-				return obj ?
-					obj_or_errbox(std::move(obj)) :
-					unexpected_err_quiet(Error::EmptyData);
-			});
-		},
-
-		[=](a_data_node, bool) -> node_or_errbox {
-			adbg(this) << "<- a_data_node fast, status = " <<
-				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
-
-			return pimpl_->data().and_then([](const auto& obj) -> node_or_errbox {
-				if(obj) {
-					if(auto n = obj->data_node())
-						return n;
-					return unexpected_err_quiet(Error::NotANode);
-				}
-				return unexpected_err_quiet(Error::EmptyData);
-			});
-		},
-
-	}, super::make_typed_behavior() );
-}
-
-auto fast_link_actor::make_behavior() -> behavior_type {
-	return make_typed_behavior().unbox();
-}
-
 NAMESPACE_END(blue_sky::tree)

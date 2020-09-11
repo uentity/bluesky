@@ -45,8 +45,8 @@ public:
 	auto name() const -> const char* override;
 
 	// get typed link actor handle
-	inline auto actor() -> link_impl::actor_type {
-		return caf::actor_cast<link_impl::actor_type>(this);
+	inline auto actor() -> actor_type {
+		return caf::actor_cast<actor_type>(this);
 	}
 
 	// forward call to impl + send notification to self group
@@ -119,30 +119,6 @@ struct BS_HIDDEN_API cached_link_actor : public link_actor {
 		caf::replies_to<a_lnk_otid>::with<std::string>,
 		// delayed object load
 		caf::replies_to<a_delay_load>::with<bool>
-	>;
-
-	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
-	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override;
-
-	auto make_typed_behavior() -> typed_behavior;
-	auto make_behavior() -> behavior_type override;
-};
-
-/// 1) contains direct ptr to object (data)
-/// 2) access to object's data & node is always fast, s.t. we don't need to manage req status
-struct BS_HIDDEN_API fast_link_actor : public cached_link_actor {
-	using super = cached_link_actor;
-	using super::super;
-
-	using actor_type = super::actor_type;
-	using typed_behavior = actor_type::behavior_type;
-
-	// part of behavior overloaded by this actor
-	using typed_behavior_overload = caf::typed_behavior<
-		// get data
-		caf::replies_to<a_data, bool>::with<result_or_errbox<sp_obj>>,
-		// get data node
-		caf::replies_to<a_data_node, bool>::with<node_or_errbox>
 	>;
 
 	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;

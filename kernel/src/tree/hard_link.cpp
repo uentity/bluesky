@@ -15,9 +15,83 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
-#include "link_actor.h"
+#include "hard_link.h"
+
+#define DEBUG_ACTOR 0
+#include "actor_debug.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using namespace kernel::radio;
+
+/*-----------------------------------------------------------------------------
+ *  hard_link_actor
+ *-----------------------------------------------------------------------------*/
+hard_link_actor::hard_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl) :
+	super(cfg, std::move(self_grp), std::move(Limpl))
+{
+	// if object is already initialized, auto-join it's group
+	if(auto obj = impl.data(unsafe)) {
+		join(obj->home());
+		obj_hid_ = obj->home_id();
+	}
+}
+
+auto hard_link_actor::make_typed_behavior() -> typed_behavior {
+	return first_then_second(typed_behavior_overload{
+		// in hard link we can assume that Data & DataNode requests costs are very small (~0)
+		// => override slow API to exclude extra possible delays
+		[=](a_data, bool) -> obj_or_errbox {
+			adbg(this) << "<- a_data fast, status = " <<
+				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
+
+			return pimpl_->data().and_then([](auto&& obj) {
+				return obj ?
+					obj_or_errbox(std::move(obj)) :
+					unexpected_err_quiet(Error::EmptyData);
+			});
+		},
+
+		[=](a_data_node, bool) -> node_or_errbox {
+			adbg(this) << "<- a_data_node fast, status = " <<
+				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
+
+			return pimpl_->data().and_then([](const auto& obj) -> node_or_errbox {
+				if(obj) {
+					if(auto n = obj->data_node())
+						return n;
+					return unexpected_err_quiet(Error::NotANode);
+				}
+				return unexpected_err_quiet(Error::EmptyData);
+			});
+		},
+
+		[=](a_ack, a_lnk_status, Req req, ReqStatus new_rs, ReqStatus prev_rs) {
+			// join object's home group
+			if(req == Req::Data && new_rs == ReqStatus::OK && obj_hid_.empty()) {
+				if(auto obj = impl.data(unsafe)) {
+					join(obj->home());
+					obj_hid_ = obj->home_id();
+				}
+			}
+			// retranslate ack to upper level
+			ack_up(a_lnk_status(), req, new_rs, prev_rs);
+		},
+
+		[=](a_home, std::string new_hid) {
+			// object's home ID changed
+			if(!obj_hid_.empty())
+				leave(system().groups().get_local(obj_hid_));
+
+			join(system().groups().get_local(obj_hid_));
+			obj_hid_ = std::move(new_hid);
+		}
+	}, super::make_typed_behavior());
+}
+
+auto hard_link_actor::make_behavior() -> behavior_type {
+	return make_typed_behavior().unbox();
+}
+
 /*-----------------------------------------------------------------------------
  *  hard_link
  *-----------------------------------------------------------------------------*/
@@ -43,8 +117,6 @@ auto hard_link_impl::set_data(sp_obj obj) -> void {
 		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK);
 		if(data_->data_node())
 			rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::OK);
-		//std::cout << "hard link " << to_string(id_) << ", name " << name_ << ": impl created " <<
-		//	(int)status_[0].value << (int)status_[1].value << std::endl;
 	}
 	inode_ = make_inode(data_, inode_);
 }
@@ -56,7 +128,7 @@ auto hard_link_impl::clone(bool deep) const -> sp_limpl {
 }
 
 auto hard_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
-	return spawn_lactor<fast_link_actor>(std::move(limpl));
+	return spawn_lactor<hard_link_actor>(std::move(limpl));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -118,7 +190,7 @@ auto weak_link_impl::set_data(const sp_obj& obj) -> void {
 }
 
 auto weak_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
-	return spawn_lactor<fast_link_actor>(std::move(limpl));
+	return spawn_lactor<hard_link_actor>(std::move(limpl));
 }
 
 auto weak_link_impl::clone(bool deep) const -> sp_limpl {

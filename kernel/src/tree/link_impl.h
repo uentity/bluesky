@@ -184,46 +184,6 @@ struct BS_HIDDEN_API ilink_impl : link_impl {
 	auto get_inode() -> result_or_err<inodeptr> override final;
 };
 
-struct BS_HIDDEN_API hard_link_impl : ilink_impl {
-	sp_obj data_;
-
-	using super = ilink_impl;
-
-	hard_link_impl();
-	hard_link_impl(std::string name, sp_obj data, Flags f);
-
-	auto clone(bool deep = false) const -> sp_limpl override;
-
-	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
-
-	auto data() -> obj_or_err override;
-	auto data(unsafe_t) const -> sp_obj override;
-	auto set_data(sp_obj obj) -> void;
-
-	ENGINE_TYPE_DECL
-};
-
-struct BS_HIDDEN_API weak_link_impl : ilink_impl {
-	std::weak_ptr<objbase> data_;
-
-	using super = ilink_impl;
-
-	weak_link_impl();
-	weak_link_impl(std::string name, const sp_obj& data, Flags f);
-
-	auto clone(bool deep = false) const -> sp_limpl override;
-
-	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
-
-	auto data() -> obj_or_err override;
-	auto data(unsafe_t) const -> sp_obj override;
-	auto set_data(const sp_obj& obj) -> void;
-
-	auto propagate_handle() -> node_or_err override;
-
-	ENGINE_TYPE_DECL
-};
-
 struct BS_HIDDEN_API sym_link_impl : link_impl {
 	std::string path_;
 
