@@ -176,6 +176,7 @@ public:
 
 	/// leafs insertion
 	auto insert(link l, InsertPolicy pol = InsertPolicy::AllowDupNames) const -> insert_status;
+	auto insert(unsafe_t, link l, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
 	/// insert link at given index
 	auto insert(link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames) const
 	-> insert_status;

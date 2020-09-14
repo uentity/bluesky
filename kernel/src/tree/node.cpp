@@ -196,6 +196,11 @@ auto node::insert(link l, InsertPolicy pol) const -> insert_status {
 	).value_or(insert_status{ {}, false });
 }
 
+auto node::insert(unsafe_t, link l, InsertPolicy pol) -> insert_status {
+	auto [pos, is_inserted] = pimpl()->insert(std::move(l), pol);
+	return { pimpl()->index<Key::ID>(pos), is_inserted };
+}
+
 auto node::insert(link l, std::size_t idx, InsertPolicy pol) const -> insert_status {
 	return pimpl()->actorf<insert_status>(
 		*this, a_node_insert(), std::move(l), idx, pol

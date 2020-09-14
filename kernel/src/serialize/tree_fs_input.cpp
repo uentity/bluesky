@@ -78,6 +78,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 	auto load_node(
 		tree_fs_input& ar, tree::node& N, std::vector<std::string> leafs_order
 	) -> error {
+		using namespace tree;
 		using Options = fs::directory_options;
 
 		// skip empty dirs in normal mode
@@ -92,20 +93,26 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			united_err_msg += er.what();
 		};
 
+		// links to be inserted are collected here first
+		auto babies = links_v{};
+		babies.reserve(leafs_order.size());
+
 		// fill leafs by scanning directory and loading link files
-		const auto normal_load = [&] { std::for_each(
-			leafs_order.begin(), leafs_order.end(),
-			[&](auto& f) {
-				push_error(error::eval_safe(
-					[&] { add_head(cur_path_ / std::move(f)); },
-					[&] { // head is removed later by epilogue()
-						tree::link L;
-						ar(L);
-						N.insert(std::move(L));
-					}
-				));
-			}
-		); };
+		const auto normal_load = [&] {
+			std::for_each(
+				leafs_order.begin(), leafs_order.end(),
+				[&](auto& f) {
+					push_error(error::eval_safe(
+						[&] { add_head(cur_path_ / std::move(f)); },
+						[&] { // head is removed later by epilogue()
+							tree::link L;
+							ar(L);
+							babies.push_back(std::move(L));
+						}
+					));
+				}
+			);
+		};
 
 		const auto recover_load = [&] {
 			// setup node iterator
@@ -128,7 +135,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 					[&] { // head is removed later by epilogue()
 						tree::link L;
 						ar(L);
-						N.insert(std::move(L));
+						babies.push_back(std::move(L));
 					}
 				));
 			}
@@ -146,33 +153,32 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			//			[&] {
 			//				tree::link L;
 			//				ar(L);
-			//				N.insert(std::move(L));
+			//				babies.push_back(std::move(L));
 			//			}
 			//		));
 			//	}
 			//);
 
+			// sanity
+			if(babies.size() < 2) return;
+
 			// restore links order
-			using namespace tree;
-			if(N.size() < 2 || leafs_order.size() < 2) return;
-
-			// convert string uids to UUIDs
-			auto wanted_order = lids_v(leafs_order.size());
-			std::transform(
-				leafs_order.cbegin(), leafs_order.cend(), wanted_order.begin(),
-				[](const auto& s_uid) { return to_uuid(unsafe, s_uid); }
-			);
-
-			// extract current order of link IDs
-			auto res_order = N.keys(Key::AnyOrder);
-
-			// sort according to passed `leafs_order`
-			const auto lo_begin = wanted_order.begin(), lo_end = wanted_order.end();
-			std::sort(res_order.begin(), res_order.end(), [&](auto i1, auto i2) {
-				return std::find(lo_begin, lo_end, i1) < std::find(lo_begin, lo_end, i2);
-			});
-			// apply custom order
-			N.rearrange(std::move(res_order));
+			// idea is to step over leafs order and over babies simultaneousely
+			// if baby with current leaf ID is found, swap with baby in cur pos and take next baby
+			using std::swap;
+			auto cur_baby = babies.begin();
+			const auto babies_end = babies.end();
+			for(auto leaf = leafs_order.cbegin(), lo_end = leafs_order.cend(); leaf != lo_end; ++leaf) {
+				if(
+					auto pos = std::find_if(cur_baby, babies_end, [&](const auto& baby) {
+						return to_string(baby.id()) == *leaf;
+					});
+					pos != babies_end
+				) {
+					if(pos != cur_baby) swap(*cur_baby, *pos);
+					if(++cur_baby == babies_end) break;
+				}
+			}
 		};
 
 		// invoke laod
@@ -180,6 +186,14 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			normal_load();
 		else
 			recover_load();
+
+		// insert loaded leafs in one transaction
+		push_error(N.apply([&] {
+			std::for_each(babies.begin(), babies.end(), [&](auto& baby) {
+				N.insert(unsafe, std::move(baby));
+			});
+			return perfect;
+		}));
 
 		if(united_err_msg.empty()) return perfect;
 		else return united_err_msg;
