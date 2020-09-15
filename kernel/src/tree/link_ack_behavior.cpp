@@ -69,9 +69,9 @@ return {
 		forward_up(a_ack(), std::move(N), lid, a_data(), std::move(tres));
 	},
 
-	[=](a_ack, caf::actor N, a_node_insert, const lid_type& lid, size_t pos, InsertPolicy pol) {
+	[=](a_ack, caf::actor N, a_node_insert, const lid_type& lid, size_t pos) {
 		adbg(this) << "<- [ack] [deep] a_node_insert" << std::endl;
-		forward_up(a_ack(), std::move(N), a_node_insert(), lid, pos, pol);
+		forward_up(a_ack(), std::move(N), a_node_insert(), lid, pos);
 	},
 
 	[=](a_ack, caf::actor N, a_node_insert, const lid_type& lid, size_t pos1, size_t pos2) {

@@ -182,13 +182,13 @@ auto do_insert(
 	return res;
 }
 
-auto notify_after_insert(node_actor* self, InsertPolicy pol) {
+auto notify_after_insert(node_actor* self) {
 	return [=](insert_status<Key::ID> res) -> node::insert_status {
 		auto& [pchild, is_inserted] = res;
 		if(is_inserted) {
 			self->impl.send_home<high_prio>(
 				self, a_ack(), self, a_node_insert(),
-				pchild->id(), *self->impl.index<Key::ID>(pchild), pol
+				pchild->id(), *self->impl.index<Key::ID>(pchild)
 			);
 		}
 		return { self->impl.index<Key::ID>(std::move(res.first)), res.second };
@@ -215,7 +215,7 @@ auto on_erase(const link& L, node_actor& self) {
 NAMESPACE_END()
 
 auto node_actor::insert(link L, InsertPolicy pol) -> caf::response_promise {
-	return do_insert(this, L, pol, notify_after_insert(this, pol));
+	return do_insert(this, L, pol, notify_after_insert(this));
 }
 
 auto node_actor::insert(link L, std::size_t to_idx, InsertPolicy pol) -> caf::response_promise {
@@ -235,7 +235,7 @@ auto node_actor::insert(link L, std::size_t to_idx, InsertPolicy pol) -> caf::re
 		// detect move and send proper message
 		if(is_inserted) // normal insert
 			impl.send_home<high_prio>(
-				this, a_ack(), this, a_node_insert(), pchild->id(), to_idx, pol
+				this, a_ack(), this, a_node_insert(), pchild->id(), to_idx
 			);
 		else if(to != from) // move
 			impl.send_home<high_prio>(
@@ -256,7 +256,7 @@ auto node_actor::insert(links_v Ls, InsertPolicy pol) -> caf::result<std::size_t
 		auto L = work.back();
 		work.pop_back();
 		do_insert(
-			this, L, pol, notify_after_insert(this, pol),
+			this, L, pol, notify_after_insert(this),
 			[=, work = std::move(work)](error::box erb) mutable {
 				if(auto er = error(std::move(erb))) {
 					// if CAF error happens, stop insertion & deliver result

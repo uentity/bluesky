@@ -83,7 +83,7 @@ public:
 		caf::reacts_to<a_ack, caf::actor, lid_type, a_data, tr_result::box>,
 
 		// node acks from deeper levels
-		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, InsertPolicy>,
+		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t>,
 		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, size_t>,
 		caf::reacts_to<a_ack, caf::actor, a_node_erase, lids_v>
 	>;

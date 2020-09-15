@@ -59,7 +59,7 @@ public:
 	// ack signals that this node send to home group
 	using self_ack_actor_type = caf::typed_actor<
 		// ack on insert - reflect insert from sibling node actor
-		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, InsertPolicy>,
+		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t>,
 		// ack on link move
 		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, size_t>,
 		// ack on link erase from sibling node
