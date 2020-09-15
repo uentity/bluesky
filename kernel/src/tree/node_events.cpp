@@ -48,7 +48,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			) {
 				bsout() << "*-* node: fired LinkRenamed event" << bs_end;
 				handler_impl(self, weak_root, subn_actor, Event::LinkRenamed, {
-					{"link_id", to_string(lid)},
+					{"link_id", lid},
 					{"new_name", std::move(new_name)},
 					{"prev_name", std::move(old_name)}
 				});
@@ -80,7 +80,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			) {
 				bsout() << "*-* node: fired LinkStatusChanged event" << bs_end;
 				handler_impl(self, weak_root, subn_actor, Event::LinkStatusChanged, {
-					{"link_id", to_string(lid)},
+					{"link_id", lid},
 					{"request", prop::integer(req)},
 					{"new_status", prop::integer(new_s)},
 					{"prev_status", prop::integer(prev_s)}
@@ -113,7 +113,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 				const caf::actor& subn_actor, auto& lid, tr_result::box&& tres_box
 			) {
 				bsout() << "*-* node: fired DataModified event" << bs_end;
-				auto params = prop::propdict{{ "link_id", to_string(lid) }};
+				auto params = prop::propdict{{ "link_id", lid }};
 				if(auto tres = tr_result{std::move(tres_box)})
 					params = extract_info(std::move(tres));
 				else
@@ -145,7 +145,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 				) {
 					bsout() << "*-* node: fired LinkInserted event" << bs_end;
 					handler_impl(self, weak_root, src, Event::LinkInserted, {
-						{"link_id", to_string(lid)},
+						{"link_id", lid},
 						{"pos", (prop::integer)pos}
 					});
 				},
@@ -156,7 +156,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 				) {
 					bsout() << "*-* node: fired LinkInserted event (move)" << bs_end;
 					handler_impl(self, weak_root, src, Event::LinkInserted, {
-						{"link_id", to_string(lid)},
+						{"link_id", lid},
 						{"to_idx", (prop::integer)to_idx},
 						{"from_idx", (prop::integer)from_idx}
 					});
@@ -168,19 +168,12 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 		if(enumval(listen_to & Event::LinkErased)) {
 			res = res.or_else(
 				[=](
-					a_ack, const caf::actor& src, a_node_erase, const lids_v& lids
+					a_ack, const caf::actor& src, a_node_erase, lids_v lids
 				) {
 					bsout() << "*-* node: fired LinkErased event" << bs_end;
 
-					// convert link IDs to strings
-					std::vector<std::string> slids(lids.size());
-					std::transform(
-						lids.begin(), lids.end(), slids.begin(),
-						[](const auto& lid) { return to_string(lid); }
-					);
-
 					handler_impl(self, weak_root, src, Event::LinkErased, {
-						{"lids", std::move(slids)}
+						{"lids", std::move(lids)}
 					});
 				}
 			);

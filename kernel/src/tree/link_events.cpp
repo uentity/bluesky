@@ -73,7 +73,7 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					// [NOTE] terminate self behavior, but current handler will execute till end
 					self->quit();
 					// do callback job
-					handler_impl(self, weak_root, Event::LinkDeleted, {{ "lid", to_string(src_id) }} );
+					handler_impl(self, weak_root, Event::LinkDeleted, {{ "link_id", src_id }} );
 				}
 			);
 
