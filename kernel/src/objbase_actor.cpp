@@ -45,10 +45,14 @@ return typed_behavior {
 	// get home group
 	[=](a_home) { return home_; },
 
+	// rebind to new home
 	[=](a_home, const std::string& new_hid) {
+		// leave old home
 		leave(home_);
 		send(home_, a_bye());
-		join(system().groups().get_local(new_hid));
+		// enter new one
+		home_ = system().groups().get_local(new_hid);
+		join(home_);
 	},
 
 	// execute transaction
@@ -129,9 +133,10 @@ auto objbase::home_id() const -> std::string_view {
 
 auto objbase::reset_home(std::string new_hid, bool silent) -> void {
 	if(new_hid.empty()) new_hid = to_string(gen_uuid());
-	home_ = system().groups().get_local(new_hid);
+	// send home rebind message to old home (not directly to actor to also inform hard_links)
 	if(!silent)
-		caf::anon_send<high_prio>(objbase_actor::actor(*this), a_home(), std::move(new_hid));
+		checked_send<objbase_actor::home_actor_type, high_prio>(home_, a_home(), new_hid);
+	home_ = system().groups().get_local(new_hid);
 }
 
 auto objbase::apply(transaction m) const -> tr_result {

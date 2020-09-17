@@ -77,13 +77,15 @@ auto hard_link_actor::make_typed_behavior() -> typed_behavior {
 			ack_up(a_lnk_status(), req, new_rs, prev_rs);
 		},
 
-		[=](a_home, std::string new_hid) {
-			// object's home ID changed
+		[=](a_home, const std::string& new_hid) {
+			// object's home changed - leave old home
 			if(!obj_hid_.empty())
 				leave(system().groups().get_local(std::string(obj_hid_)));
-
-			join(system().groups().get_local(std::string(obj_hid_)));
-			obj_hid_ = std::move(new_hid);
+			// enter new one
+			if(auto new_home = system().groups().get_local(new_hid)) {
+				join(new_home);
+				obj_hid_ = new_home.get()->identifier();
+			}
 		}
 	}, super::make_typed_behavior());
 }
