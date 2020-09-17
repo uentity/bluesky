@@ -71,22 +71,24 @@ struct BS_HIDDEN_API fusion_link_actor : public cached_link_actor {
 
 	// part of behavior overloaded/added from super actor type
 	using typed_behavior_overload = caf::typed_behavior<
+		// get data
+		caf::replies_to<a_data, bool>::with<result_or_errbox<sp_obj>>,
+		// get data node
+		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
+		// populate (can download selected types)
 		caf::replies_to<a_flnk_populate, std::string, bool>::with<node_or_errbox>,
+		// bridge get/set
 		caf::replies_to<a_flnk_bridge>::with<sp_fusion>,
 		caf::reacts_to<a_flnk_bridge, sp_fusion>
 	>;
 
 	auto fimpl() -> fusion_link_impl& { return static_cast<fusion_link_impl&>(impl); }
 
-	// both Data & DataNode executes with `HasDataCache` flag set
-	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
-
-	// `data_node` just calls `populate`
-	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override;
-
 	auto make_typed_behavior() -> typed_behavior;
-
 	auto make_behavior() -> behavior_type override;
+
+private:
+	auto make_ropts(Req r) -> ReqOpts;
 };
 
 NAMESPACE_END(blue_sky::tree)

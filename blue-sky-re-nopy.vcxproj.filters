@@ -605,9 +605,6 @@
     <ClCompile Include="kernel\src\tree\context.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
-    <ClCompile Include="kernel\src\tree\link_actor_data.cpp">
-      <Filter>Файлы исходного кода\tree</Filter>
-    </ClCompile>
     <ClCompile Include="kernel\src\tree\link_impl.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>

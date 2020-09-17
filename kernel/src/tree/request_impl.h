@@ -116,9 +116,27 @@ auto request_impl(
 }
 
 template<bool ManageStatus = true, typename C>
-auto data_node_request(link_actor& LA, ReqOpts opts, C res_processor) {
+auto request_data(link_actor& LA, ReqOpts opts, C res_processor) {
+	request_impl<ManageStatus>(
+		LA, Req::Data, opts,
+		[Limpl = LA.pimpl_] { return Limpl->data(); },
+		std::move(res_processor)
+	);
+}
+
+template<bool ManageStatus = true, typename C>
+auto request_data(unsafe_t, link_actor& LA, ReqOpts opts, C res_processor) {
+	request_impl<ManageStatus>(
+		LA, Req::Data, opts,
+		[Limpl = LA.pimpl_]() -> obj_or_errbox { return Limpl->data(unsafe); },
+		std::move(res_processor)
+	);
+}
+
+template<bool ManageStatus = true, typename C>
+auto request_data_node(link_actor& LA, ReqOpts opts, C res_processor) {
 	using namespace allow_enumops;
-	// make monlith request, as node is extracted from downloaded object
+	// make uniform request, as node is extracted from downloaded object
 	request_impl<ManageStatus>(
 		LA, Req::DataNode, opts | ReqOpts::Uniform,
 		[Limpl = LA.pimpl_]() { return Limpl->data(); },

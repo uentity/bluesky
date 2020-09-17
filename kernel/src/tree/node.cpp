@@ -231,7 +231,6 @@ auto node::erase(std::size_t idx) const -> size_t {
 }
 
 auto node::erase(lid_type lid) const -> size_t {
-	return 0;
 	return pimpl()->actorf<size_t>(
 		*this, a_node_erase(), std::move(lid), EraseOpts::Normal
 	).value_or(0);

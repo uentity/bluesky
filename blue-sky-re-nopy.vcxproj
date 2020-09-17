@@ -199,7 +199,6 @@
     <ClCompile Include="kernel\src\tree\inode.cpp" />
     <ClCompile Include="kernel\src\tree\link.cpp" />
     <ClCompile Include="kernel\src\tree\link_actor.cpp" />
-    <ClCompile Include="kernel\src\tree\link_actor_data.cpp" />
     <ClCompile Include="kernel\src\tree\link_ack_behavior.cpp" />
     <ClCompile Include="kernel\src\tree\link_events.cpp" />
     <ClCompile Include="kernel\src\tree\link_impl.cpp" />

@@ -73,7 +73,6 @@ kernel_cpp_list = [
 	"src/tree/link.cpp",
 	"src/tree/link_actor.cpp",
 	"src/tree/link_ack_behavior.cpp",
-	"src/tree/link_actor_data.cpp",
 	"src/tree/link_events.cpp",
 	"src/tree/link_impl.cpp",
 	"src/tree/nil_link.cpp",

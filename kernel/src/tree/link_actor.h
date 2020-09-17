@@ -69,14 +69,6 @@ public:
 		forward_up(a_ack(), impl.id_, std::forward<Args>(args)...);
 	}
 
-	// get link pointee, never returns invalid (NULL) sp_obj
-	using obj_processor_f = std::function<  void(result_or_errbox<sp_obj>) >;
-	virtual auto data_ex(obj_processor_f cb, ReqOpts opts) -> void;
-
-	// return tree::node if contained object is a node, never returns nil node
-	using node_processor_f = std::function< void(node_or_errbox) >;
-	virtual auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void;
-
 	// parts of behavior
 	auto make_primary_behavior() -> primary_actor_type::behavior_type;
 	auto make_ack_behavior() -> ack_actor_type::behavior_type;
@@ -87,6 +79,13 @@ public:
 	// holds reference to link impl
 	sp_limpl pimpl_;
 	link_impl& impl;
+
+protected:
+	// default options for making Data & DataNode queries
+	struct req_opts {
+		ReqOpts data, data_node;
+	};
+	req_opts ropts_;
 };
 
 // helper for generating `link_impl::spawn_actor()` implementations
@@ -108,7 +107,8 @@ inline auto spawn_lactor(sp_limpl limpl, Ts&&... args) {
 struct BS_HIDDEN_API cached_link_actor : public link_actor {
 	using super = link_actor;
 	using super::typed_behavior;
-	using super::super;
+
+	cached_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl);
 
 	// part of behavior overloaded by this actor
 	// OID & obj type ID getters always applied to data cache
@@ -120,9 +120,6 @@ struct BS_HIDDEN_API cached_link_actor : public link_actor {
 		// delayed object load
 		caf::replies_to<a_delay_load>::with<bool>
 	>;
-
-	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
-	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override;
 
 	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;

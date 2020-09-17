@@ -93,43 +93,23 @@ auto fusion_link_impl::populate(const std::string& child_type_id) -> node_or_err
 /*-----------------------------------------------------------------------------
  *  fusion_link actor
  *-----------------------------------------------------------------------------*/
-// both Data & DataNode execute with `HasDataCache` flag set
-auto fusion_link_actor::data_ex(obj_processor_f cb, ReqOpts opts) -> void {
-	// tune req opt
-	opts |= ReqOpts::HasDataCache | ReqOpts::Detached;
+auto fusion_link_actor::make_ropts(Req r) -> ReqOpts {
+	// both Data & DataNode execute with `HasDataCache` flag set
+	auto opts = (r == Req::Data ? ropts_.data : ropts_.data_node) |
+		ReqOpts::HasDataCache | ReqOpts::Detached;
 	if(auto B = fimpl().bridge())
 		if(B->is_uniform(fimpl().data_)) opts |= ReqOpts::Uniform;
-	// make request
-	request_impl(
-		*this, Req::Data, opts,
-		[Limpl = pimpl_] { return static_cast<fusion_link_impl&>(*Limpl).data(); },
-		std::move(cb)
-	);
-}
-
-// `data_node` just calls `populate`
-auto fusion_link_actor::data_node_ex(node_processor_f cb, ReqOpts opts) -> void {
-	// tune req opt
-	opts |= ReqOpts::HasDataCache | ReqOpts::Detached;
-	if(auto B = fimpl().bridge())
-		if(B->is_uniform(fimpl().data_)) opts |= ReqOpts::Uniform;
-	// make request
-	request_impl(
-		*this, Req::DataNode, opts,
-		[Limpl = pimpl_] { return static_cast<fusion_link_impl&>(*Limpl).populate(); },
-		std::move(cb)
-	);
+	return opts;
 }
 
 auto fusion_link_actor::make_typed_behavior() -> typed_behavior {
 	return first_then_second(typed_behavior_overload{
-		// add handler to invoke populate with specified child type
+		// invoke populate with specified child type
 		[=](a_flnk_populate, std::string child_type_id, bool wait_if_busy) -> caf::result<node_or_errbox> {
 			auto res = make_response_promise<node_or_errbox>();
 			request_impl(
 				*this, Req::DataNode,
-				ReqOpts::Detached | ReqOpts::HasDataCache |
-					(wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
+				make_ropts(Req::DataNode) | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
 				[Limpl = pimpl_, ctid = std::move(child_type_id)] {
 					return static_cast<fusion_link_impl&>(*Limpl).populate(ctid);
 				},
@@ -138,9 +118,28 @@ auto fusion_link_actor::make_typed_behavior() -> typed_behavior {
 			return res;
 		},
 
-		[=](a_flnk_bridge) -> sp_fusion { return fimpl().bridge(); },
+		// DataNode request = populate with empty child_type_id
+		[=](a_data_node, bool wait_if_busy) -> caf::result<node_or_errbox> {
+			return delegate(
+				caf::actor_cast<fusion_link::actor_type>(this),
+				a_flnk_populate(), std::string{}, wait_if_busy
+			);
+		},
 
+		// Data
+		[=](a_data, bool wait_if_busy) -> caf::result<obj_or_errbox> {
+			auto res = make_response_promise<obj_or_errbox>();
+			request_data(
+				*this, make_ropts(Req::Data) | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
+				[=](obj_or_errbox obj) mutable { res.deliver(std::move(obj)); }
+			);
+			return res;
+		},
+
+		// bridge manip
+		[=](a_flnk_bridge) -> sp_fusion { return fimpl().bridge(); },
 		[=](a_flnk_bridge, sp_fusion new_bridge) { fimpl().reset_bridge(std::move(new_bridge)); }
+
 	}, super::make_typed_behavior());
 }
 

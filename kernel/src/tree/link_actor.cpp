@@ -17,6 +17,7 @@
 #include <bs/serialize/propdict.h>
 
 #include "link_actor.h"
+#include "request_impl.h"
 #include "../objbase_actor.h"
 #include "../serialize/tree_impl.h"
 
@@ -61,11 +62,11 @@ static auto do_data_apply(link_actor* LA, transaction_t<tr_result, Ts...> tr) {
 /*-----------------------------------------------------------------------------
  *  link
  *-----------------------------------------------------------------------------*/
-link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl)
-	: super(cfg), pimpl_(std::move(Limpl)), impl([this]() -> link_impl& {
+link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl) :
+	super(cfg), pimpl_(std::move(Limpl)), impl([this]() -> link_impl& {
 		if(!pimpl_) throw error{"link actor: bad (null) link impl passed"};
 		return *pimpl_;
-	}())
+	}()), ropts_{ReqOpts::WaitIfBusy, ReqOpts::WaitIfBusy}
 {
 	// remember link's local group
 	impl.home = std::move(lgrp);
@@ -179,29 +180,28 @@ return {
 
 	// get oid
 	[=](a_lnk_oid) -> std::string {
-		// [NOTE] assume that if status is OK then getting data is fast (data is cached)
+		// [NOTE] assume that getting data if status == OK is fast
 		auto res = std::string{};
-		data_ex(
+		request_data(
+			*this, ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke,
 			[&](obj_or_errbox obj) mutable {
 				res = obj ? obj.value()->id() : nil_oid;
 				adbg(this) << "<- a_lnk_oid: " << res << std::endl;
-			},
-			ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke
+			}
 		);
 		return res;
 	},
 
 	// get object type_id
 	[=](a_lnk_otid) -> std::string {
-		// [NOTE] assume that if status is OK then getting data is fast (data is cached)
+		// [NOTE] assume that getting data if status == OK is fast
 		auto res = std::string{};
-		//auto tstart = make_timestamp();
-		data_ex(
+		request_data(
+			*this, ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke,
 			[&](obj_or_errbox obj) mutable {
 				res = obj ? obj.value()->type_id() : nil_otid;
 				adbg(this) << "<- a_lnk_otid: " << res << std::endl;
-			},
-			ReqOpts::ErrorIfNOK | ReqOpts::DirectInvoke
+			}
 		);
 		return res;
 	},
@@ -260,9 +260,9 @@ return {
 			to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
 		auto res = make_response_promise< obj_or_errbox >();
-		data_ex(
-			[=](obj_or_errbox obj) mutable { res.deliver(std::move(obj)); },
-			(wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy) //| ReqOpts::Detached
+		request_data(
+			*this, ropts_.data | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
+			[=](obj_or_errbox obj) mutable { res.deliver(std::move(obj)); }
 		);
 		return res;
 	},
@@ -273,9 +273,9 @@ return {
 			to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
 		auto res = make_response_promise< node_or_errbox >();
-		data_node_ex(
-			[=](node_or_errbox N) mutable { res.deliver(std::move(N)); },
-			(wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy) //| ReqOpts::Detached
+		request_data_node(
+			*this, ropts_.data_node | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
+			[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
 		);
 		return res;
 	},
@@ -295,6 +295,12 @@ auto link_actor::make_behavior() -> behavior_type {
 /*-----------------------------------------------------------------------------
  *  cached_link_actor
  *-----------------------------------------------------------------------------*/
+cached_link_actor::cached_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl) :
+	link_actor(cfg, std::move(self_grp), std::move(Limpl))
+{
+	ropts_ = {ReqOpts::HasDataCache, ReqOpts::HasDataCache};
+}
+
 auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 	return first_then_second( typed_behavior_overload{
 		// OID & object type id are retrieved from cached value

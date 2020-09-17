@@ -86,9 +86,6 @@ public:
 	// if object is already initialized, auto-join it's group
 	hard_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl);
 
-	auto data_ex(obj_processor_f cb, ReqOpts opts) -> void override;
-	auto data_node_ex(node_processor_f cb, ReqOpts opts) -> void override;
-
 	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;
 

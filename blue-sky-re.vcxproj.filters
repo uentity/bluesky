@@ -695,9 +695,6 @@
     <ClCompile Include="kernel\src\kernel\radio_subsyst.cpp">
       <Filter>Файлы исходного кода\kernel</Filter>
     </ClCompile>
-    <ClCompile Include="kernel\src\tree\link_actor_data.cpp">
-      <Filter>Файлы исходного кода\tree</Filter>
-    </ClCompile>
     <ClCompile Include="kernel\src\tree\link_impl.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
