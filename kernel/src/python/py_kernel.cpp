@@ -13,6 +13,8 @@
 #include <bs/python/any_array.h>
 #include <bs/python/map.h>
 
+#include "../kernel/radio_subsyst.h"
+
 #include <pybind11/chrono.h>
 #include <fmt/format.h>
 
@@ -135,6 +137,7 @@ auto bind_radio(py::module& m) -> void {
 	m.def("publish_link", &kr::publish_link, nogil);
 	m.def("unpublish_link", &kr::unpublish_link, nogil);
 	m.def("bye_actor", &kr::bye_actor, "actor_id"_a, "Send `a_bye` message to registered actor with given ID");
+	m.def("kick_citizens", [] { KRADIO.kick_citizens(); });
 }
 
 auto bind_kernel_api(py::module& m) -> void {
