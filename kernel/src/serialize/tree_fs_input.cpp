@@ -237,12 +237,12 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		// instead of posting save job to manager, setup delayed read job
 		if(auto r = actorf<bool>(
 			objbase_actor::actor(obj), kernel::radio::timeout(),
-			a_delay_load(), obj_frm, abs_obj_path.u8string()
+			a_delay_load(), obj_frm, abs_obj_path.string()
 		); !r)
 			return r.error();
 
 		//caf::anon_send(
-		//	manager_, obj.shared_from_this(), obj_frm, abs_obj_path.u8string()
+		//	manager_, obj.shared_from_this(), obj_frm, abs_obj_path.string()
 		//);
 		//// defer wait until save completes
 		//if(!has_wait_deferred_) {

@@ -12,6 +12,7 @@
 #include <bs/kernel/radio.h>
 #include <bs/tree/errors.h>
 #include <bs/tree/link.h>
+#include <bs/detail/str_utils.h>
 #include <bs/serialize/serialize_decl.h>
 
 #include "../tree/link_impl.h"
@@ -96,11 +97,13 @@ struct file_heads_manager {
 	static constexpr auto neck_mode = trait_t::neck_mode;
 
 	// ctor
-	file_heads_manager(std::string root_fname, std::string objects_dirname = {})
-		: root_fname_(std::move(root_fname)), objects_dname_(std::move(objects_dirname))
+	// [NOTE] assume that paths come in UTF-8
+	file_heads_manager(const std::string& root_fname, const std::string& objects_dirname = {})
+		: root_fname_(ustr2str(root_fname)), objects_dname_(ustr2str(objects_dirname))
 	{
-		// for Windows add '\\?\' prefix for long names support
+		// [NOTE] `root_fname_`, `root_dname_` & `objects_dname_` will be converted to native encoding
 #ifdef _WIN32
+		// for Windows add '\\?\' prefix for long names support
 		static constexpr auto magic_prefix = std::string_view{ "\\\\?\\" };
 		if(magic_prefix.compare(0, magic_prefix.size(), root_fname_.data()) != 0)
 			root_fname_.insert(0, magic_prefix);
@@ -111,17 +114,18 @@ struct file_heads_manager {
 		auto er = error::eval_safe([&]{ abs_root = fs::absolute(root_path); });
 		if(!er) {
 			// extract root dir from absolute filename
-			root_dname_ = abs_root.parent_path().u8string();
-			root_fname_ = abs_root.filename().u8string();
+			root_dname_ = abs_root.parent_path().string();
+			root_fname_ = abs_root.filename().string();
 		}
 		else if(root_path.has_parent_path()) {
 			// could not make abs path
-			root_dname_ = root_path.parent_path().u8string();
-			root_fname_ = root_path.filename().u8string();
+			root_dname_ = root_path.parent_path().string();
+			root_fname_ = root_path.filename().string();
 		}
 		else {
 			// best we can do
-			error::eval_safe([&]{ root_dname_ = fs::current_path().u8string(); });
+			// [TODO] throw error here
+			error::eval_safe([&]{ root_dname_ = fs::current_path().string(); });
 		}
 	}
 
@@ -198,8 +202,15 @@ struct file_heads_manager {
 			if(auto er = error::eval_safe(
 				[&] { return enter_root(); },
 				[&] { return add_head(fs::path(root_path_) / root_fname_); },
-				[&] { // read/write objects directory
-					heads_.back()( cereal::make_nvp("objects_dir", objects_dname_) );
+				[&] { // read/write objects directory encoded in UTF-8
+					if constexpr(Saving)
+						heads_.back()( cereal::make_nvp("objects_dir", str2ustr(objects_dname_)) );
+					else {
+						// read in UTF-8 & converto to native
+						auto objects_dname = std::string{};
+						heads_.back()( cereal::make_nvp("objects_dir", objects_dname) );
+						objects_dname_ = ustr2str(objects_dname);
+					}
 				}
 			)) return tl::make_unexpected(std::move(er));
 			// start new formatters manager

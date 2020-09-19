@@ -121,7 +121,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		RETURN_SCOPE_ERR
 
 		caf::anon_send(
-			manager_, const_cast<objbase&>(obj).shared_from_this(), obj_fmt, abs_obj_path.u8string()
+			manager_, const_cast<objbase&>(obj).shared_from_this(), obj_fmt, abs_obj_path.string()
 		);
 		// defer wait until save completes
 		if(!has_wait_deferred_) {
