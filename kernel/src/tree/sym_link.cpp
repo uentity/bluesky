@@ -20,10 +20,8 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
-//  actor + impl
+//  sym_link actor
 //
-
-// actor
 struct sym_link_actor : public link_actor {
 	using super = link_actor;
 
@@ -75,7 +73,9 @@ struct sym_link_actor : public link_actor {
 	}
 };
 
-// impl
+///////////////////////////////////////////////////////////////////////////////
+//  sym_link impl
+//
 sym_link_impl::sym_link_impl(std::string name, std::string path, Flags f)
 	: super(std::move(name), f), path_(std::move(path))
 {}
@@ -126,10 +126,8 @@ auto sym_link_impl::clone(bool deep) const -> sp_limpl {
 }
 
 auto sym_link_impl::propagate_handle() -> node_or_err {
-	// sym link cannot be a node's handle
-	return target().and_then([](const link& src_link) {
-		return src_link.data_node_ex();
-	});
+	// sym link cannot be a node's handle and also must make tree query here, so just return error
+	return unexpected_err_quiet(Error::EmptyData);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
