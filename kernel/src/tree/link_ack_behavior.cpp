@@ -36,17 +36,6 @@ return {
 		ack_up(a_lnk_status(), req, new_s, prev_s);
 	},
 
-	// object altered ack
-	[=](a_ack, a_data, tr_result::box tres) {
-		if(current_sender() != this) {
-			adbg(this) << "<- [ack] a_data: " << to_string(tres) << std::endl;
-			// notify actors in home group
-			impl.send_home(this, a_ack(), a_data(), tres);
-			// retranslate to upper level
-			ack_up(a_data(), std::move(tres));
-		}
-	},
-
 	// retranslate pointee node acks to owner's home group
 	[=](
 		a_ack, caf::actor N, const lid_type& lid,

@@ -25,12 +25,12 @@ NAMESPACE_BEGIN(blue_sky::tree)
 
 auto node_actor::make_ack_behavior() -> ack_actor_type::behavior_type {
 return {
-	// ack on insert - reflect insert from sibling node actor
+	// ack on insert
 	[=](a_ack, caf::actor origin, a_node_insert, const lid_type& lid, size_t pos) {
 		adbg(this) << "{a_node_insert ack}: " << pos << std::endl;
-		// notify handle about data change
+		// notify handle's home about data change (to just trigger event handlers)
 		if(origin == this)
-			forward_up(a_ack(), a_data(), tr_result::box{});
+			forward_up_home(a_ack(), a_data(), tr_result::box{});
 		forward_up(a_ack(), std::move(origin), a_node_insert(), lid, pos);
 
 		//if(origin != this) {
@@ -44,9 +44,9 @@ return {
 	// ack on move
 	[=](a_ack, caf::actor origin, a_node_insert, const lid_type& lid, size_t to, size_t from) {
 		adbg(this) << "{a_node_insert ack} [move]: " << from << " -> " << to << std::endl;
-		// notify handle about data change
+		// notify handle's home about data change (to just trigger event handlers)
 		if(origin == this)
-			forward_up(a_ack(), a_data(), tr_result::box{});
+			forward_up_home(a_ack(), a_data(), tr_result::box{});
 		forward_up(a_ack(), std::move(origin), a_node_insert(), lid, to, from);
 
 		//if(origin != this) {
@@ -56,12 +56,12 @@ return {
 		//}
 	},
 
-	// ack on erase - reflect erase from sibling node actor
+	// ack on erase
 	[=](a_ack, caf::actor origin, a_node_erase, lids_v lids) {
 		adbg(this) << "{a_node_erase ack}" << std::endl;
 		// notify handle about data change
 		if(origin == this)
-			forward_up(a_ack(), a_data(), tr_result::box{});
+			forward_up_home(a_ack(), a_data(), tr_result::box{});
 		forward_up(a_ack(), std::move(origin), a_node_erase(), std::move(lids));
 
 		//if(auto S = current_sender(); S != this && !lids.empty()) {
@@ -74,7 +74,7 @@ return {
 		adbg(this) << "{a_lnk_rename ack}" << std::endl;
 		ack_up(lid, a_lnk_rename(), std::move(new_), std::move(old_));
 		// notify handle about data change
-		forward_up(a_ack(), a_data(), tr_result::box{});
+		forward_up_home(a_ack(), a_data(), tr_result::box{});
 	},
 	// track my leaf status
 	[=](a_ack, const lid_type& lid, a_lnk_status, Req req, ReqStatus new_, ReqStatus old_) {

@@ -67,13 +67,14 @@ public:
 		// ack rename
 		caf::reacts_to<a_ack, a_lnk_rename, std::string, std::string>,
 		// request status change ack
-		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>,
+		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>
+	>;
+
+	// home group receives only myself acks + (for hard link types) ack after object transaction
+	using home_actor_type = self_ack_actor_type::extend<
 		// data altered ack from object
 		caf::reacts_to<a_ack, a_data, tr_result::box>
 	>;
-
-	// home group receives only myself acks
-	using home_actor_type = self_ack_actor_type;
 
 	// foreign acks coming to link's home group from deeper levels
 	using subtree_ack_actor_type = caf::typed_actor<

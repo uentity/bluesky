@@ -52,6 +52,14 @@ public:
 			send(link_impl::actor(h), std::forward<Args>(args)...);
 	}
 
+	// pass message exactly to home group of owning handle link
+	template<typename... Args>
+	auto forward_up_home(Args&&... args) -> void {
+		// node forward messages to handle's actor
+		if(auto h = impl.handle())
+			checked_send<link_impl::home_actor_type>(*this, h.home(), std::forward<Args>(args)...);
+	}
+
 	// forward 'ack' message to upper level, auto prepend it with this node actor handle
 	template<typename... Args>
 	auto ack_up(Args&&... args) -> void {

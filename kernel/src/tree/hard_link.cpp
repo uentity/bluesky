@@ -14,6 +14,7 @@
 
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
+#include <bs/serialize/propdict.h>
 
 #include "hard_link.h"
 
@@ -29,8 +30,13 @@ using namespace kernel::radio;
 hard_link_actor::hard_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl) :
 	super(cfg, std::move(self_grp), std::move(Limpl))
 {
-	// if object is already initialized, auto-join it's group
+	// if object is already initialized, monitor it
+	monitor_object();
+}
+
+auto hard_link_actor::monitor_object() -> void {
 	if(auto obj = impl.data(unsafe)) {
+		obj_actor_addr_ = obj->actor().address();
 		join(obj->home());
 		obj_hid_ = obj->home_id();
 	}
@@ -67,12 +73,8 @@ auto hard_link_actor::make_typed_behavior() -> typed_behavior {
 
 		[=](a_ack, a_lnk_status, Req req, ReqStatus new_rs, ReqStatus prev_rs) {
 			// join object's home group
-			if(req == Req::Data && new_rs == ReqStatus::OK && obj_hid_.empty()) {
-				if(auto obj = impl.data(unsafe)) {
-					join(obj->home());
-					obj_hid_ = obj->home_id();
-				}
-			}
+			if(req == Req::Data && new_rs == ReqStatus::OK && obj_hid_.empty())
+				monitor_object();
 			// retranslate ack to upper level
 			ack_up(a_lnk_status(), req, new_rs, prev_rs);
 		},
@@ -86,6 +88,16 @@ auto hard_link_actor::make_typed_behavior() -> typed_behavior {
 				join(new_home);
 				obj_hid_ = new_home.get()->identifier();
 			}
+		},
+
+		// object altered ack
+		[=](a_ack, a_data, tr_result::box tres) {
+			if(current_sender() != obj_actor_addr_) return;
+			adbg(this) << "<- [ack] a_data: " << to_string(tres) << std::endl;
+			// notify actors in home group
+			impl.send_home(this, a_ack(), a_data(), tres);
+			// retranslate to upper level
+			ack_up(a_data(), std::move(tres));
 		}
 	}, super::make_typed_behavior());
 }
