@@ -167,8 +167,8 @@ auto node_impl::insert(link L, InsertPolicy pol) -> insert_status<Key::ID> {
 
 	// [NOTE] assume insertion happens atomically for `L`
 	if(!L) return { {}, false };
-	const auto Lflags = L.flags(unsafe);
 	auto& Limpl = *L.pimpl();
+	const auto Lflags = Limpl.flags_;
 	const auto prev_owner = L.owner();
 
 	// can't move persistent node from it's owner

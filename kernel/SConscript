@@ -71,6 +71,7 @@ kernel_cpp_list = [
 	"src/tree/engine_impl.cpp",
 	"src/tree/inode.cpp",
 	"src/tree/link.cpp",
+	"src/tree/bare_link.cpp",
 	"src/tree/link_actor.cpp",
 	"src/tree/link_ack_behavior.cpp",
 	"src/tree/link_events.cpp",

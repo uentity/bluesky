@@ -124,6 +124,7 @@
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
     <ClInclude Include="kernel\include\bs\timetypes.h" />
+    <ClInclude Include="kernel\include\bs\tree\bare_link.h" />
     <ClInclude Include="kernel\include\bs\tree\common.h" />
     <ClInclude Include="kernel\include\bs\tree\context.h" />
     <ClInclude Include="kernel\include\bs\tree\engine.h" />
@@ -219,6 +220,7 @@
     <ClCompile Include="kernel\src\serialize\tree_fs_output.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
     <ClCompile Include="kernel\src\timetypes.cpp" />
+    <ClCompile Include="kernel\src\tree\bare_link.cpp" />
     <ClCompile Include="kernel\src\tree\context.cpp" />
     <ClCompile Include="kernel\src\tree\engine.cpp" />
     <ClCompile Include="kernel\src\tree\engine_impl.cpp" />

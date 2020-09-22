@@ -79,23 +79,59 @@ void py_bind_link(py::module& m) {
 	;
 
 	///////////////////////////////////////////////////////////////////////////////
+	//  Bare link
+	//
+	// minimal link API present in both bare & normal link
+	const auto add_bare_api = [](auto& pyl) {
+		using py_link_type = std::remove_reference_t<decltype(pyl)>;
+		using link_type = typename py_link_type::type;
+
+		return pyl
+		.def(hash(py::self))
+		.def("__bool__", [](const link_type& self) { return (bool)self; }, py::is_operator())
+
+		.def_property_readonly("is_nil", [](const link_type& self) { return self.is_nil(); })
+		.def_property_readonly("id", &link_type::id)
+		.def_property_readonly("owner", &link_type::owner)
+
+		.def("req_status", &link_type::req_status, "Query given operation status")
+		;
+	};
+
+	auto bare_link_pyface = py::class_<bare_link>(m, "bare_link")
+		.def(py::init<const link&>())
+
+		.def_property_readonly("type_id", &bare_link::type_id)
+		.def("armed", &bare_link::armed, "Convert from bare to normal link")
+
+		.def("flags", &bare_link::flags)
+		.def("name", &bare_link::name)
+		.def("oid", &bare_link::oid)
+		.def("obj_type_id", &bare_link::obj_type_id)
+		.def("info", &bare_link::info)
+
+		.def("data", [](const bare_link& L){ return adapt(L.data(), L.armed()); }, "Get pointee Data")
+		.def("data_node", &bare_link::data_node, "Get pointee DataNode")
+		.def("data_node_hid", &bare_link::data_node_hid)
+	;
+
+	add_bare_api(bare_link_pyface);
+
+	///////////////////////////////////////////////////////////////////////////////
 	//  Base link
 	//
 	using py_transaction = std::function< py::object() >;
 	using py_obj_transaction = std::function< py::object(sp_obj) >;
-	using py_link_transaction = std::function< py::object(link) >;
+	using py_link_transaction = std::function< py::object(bare_link) >;
 
 	// link base class
 	auto link_pyface = py::class_<link, engine>(m, "link")
-		.def(py::init())
+		.def(py::init(), "Construct nil link")
+		.def(py::init<const bare_link&>())
 		.def(py::init<std::string, sp_obj, Flags>(), "name"_a, "data"_a, "f"_a = Plain)
 		.def(py::init<std::string, node, Flags>(), "name"_a, "folder"_a, "f"_a = Plain)
 
-		.def("__bool__", [](const link& self) { return (bool)self; }, py::is_operator())
-
-		.def_property_readonly("is_nil", [](const link& self) { return self.is_nil(); })
-		.def_property_readonly("id", &link::id)
-		.def_property_readonly("owner", &link::owner)
+		.def("bare", &link::bare, "Convert to bare (unsafe) link")
 
 		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link", nogil)
 
@@ -155,13 +191,11 @@ void py_bind_link(py::module& m) {
 		)
 
 		.def("oid", py::overload_cast<>(&link::oid, py::const_), nogil)
-		.def("oid", py::overload_cast<unsafe_t>(&link::oid, py::const_))
 
 		.def("obj_type_id", py::overload_cast<>(&link::obj_type_id, py::const_), nogil)
-		.def("obj_type_id", py::overload_cast<unsafe_t>(&link::obj_type_id, py::const_))
 
 		.def("rename", py::overload_cast<std::string>(&link::rename, py::const_))
-		.def("req_status", &link::req_status, "Query for given operation status", nogil)
+
 		.def("rs_reset", &link::rs_reset,
 			"request"_a, "new_status"_a = ReqStatus::Void,
 			"Unconditionally set status of given request", nogil
@@ -179,24 +213,22 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
 
 		.def("flags", py::overload_cast<>(&link::flags, py::const_), nogil)
-		.def_property_readonly("flags_unsafe", [](const link& L) { return L.flags(unsafe); })
 		.def("set_flags", &link::set_flags)
 
 		.def("info", py::overload_cast<>(&link::info, py::const_), nogil)
-		.def_property_readonly("info_unsafe", [](const link& L) { return L.info(unsafe); })
 
 		.def("is_node", &link::is_node, "Check if pointee is a node", nogil)
 		.def("data_node_hid", py::overload_cast<>(&link::data_node_hid, py::const_),
 			"If pointee is a node, return node's actor group ID", nogil)
-		.def("data_node_hid", py::overload_cast<unsafe_t>(&link::data_node_hid, py::const_))
 
 		// events subscrition
 		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
 		.def_static("unsubscribe", &link::unsubscribe, "event_cb_id"_a)
 	;
 
-	// link::weak_ptr
+	// add mixins
 	bind_weak_ptr(link_pyface);
+	add_bare_api(link_pyface);
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Derived links

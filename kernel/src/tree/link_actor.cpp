@@ -160,7 +160,7 @@ return {
 
 	[=](a_apply, link_transaction tr) -> error::box {
 		if(auto self = impl.super_engine())
-			return tr_eval(std::move(tr), std::move(self));
+			return tr_eval(std::move(tr), self.bare());
 		return error{Error::EmptyData};
 	},
 

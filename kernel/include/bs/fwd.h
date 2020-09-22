@@ -63,9 +63,11 @@ namespace tree {
 
 struct inode;
 class link;
+class bare_link;
 class link_actor;
 class link_impl;
 class node;
+class bare_node;
 class node_actor;
 class node_impl;
 

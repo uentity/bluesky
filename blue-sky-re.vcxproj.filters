@@ -231,6 +231,9 @@
     <ClInclude Include="kernel\include\bs\tree\tree.h">
       <Filter>Заголовочные файлы\bs\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\include\bs\tree\bare_link.h">
+      <Filter>Заголовочные файлы\bs\tree</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\src\tree\node_impl.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
@@ -573,6 +576,9 @@
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\bare_link.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\link_events.cpp">

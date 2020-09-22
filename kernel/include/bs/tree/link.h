@@ -9,22 +9,16 @@
 #pragma once
 
 #include "common.h"
+#include "bare_link.h"
 #include "engine.h"
 #include "../atoms.h"
 #include "../error.h"
 #include "../propdict.h"
 
-#include <cereal/access.hpp>
-
 #include <caf/actor.hpp>
 #include <caf/typed_actor.hpp>
 #include <caf/scoped_actor.hpp>
 #include <caf/group.hpp>
-
-#define STD_HASH_BS_LINK(link_class)                                                     \
-namespace std { template<> struct hash<::blue_sky::tree::link_class> {                   \
-	auto operator()(const ::blue_sky::tree::link& L) const noexcept { return L.hash(); } \
-}; }
 
 NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
@@ -77,6 +71,8 @@ public:
 
 	/// empty ctor will construct nil link
 	link();
+	/// convert from bare link
+	explicit link(const bare_link& rhs);
 
 	/// makes hard link
 	link(std::string name, sp_obj data, Flags f = Plain);
@@ -88,6 +84,11 @@ public:
 	/// so, there's just no worth in it
 	link(const link&) = default;
 	auto operator=(const link&) -> link& = default;
+	auto operator=(const bare_link&) -> link&;
+
+	/// obtain bare link that provides direct access to link internals (passing over actor)
+	/// [WANRING] main use case is for transactions and edge cases where yo now what you're doing
+	auto bare() const -> bare_link;
 
 	/// makes link nil
 	auto reset() -> void;
@@ -125,11 +126,10 @@ public:
 	/// obtain link's symbolic name
 	auto name() const -> std::string;
 	/// same as above, but returns name directly from stored member
-	/// can cause data race
+	/// required by node
 	auto name(unsafe_t) const -> std::string;
 
 	auto flags() const -> Flags;
-	auto flags(unsafe_t) const -> Flags;
 	auto set_flags(Flags new_flags) const -> void;
 
 	/// rename link & notify owner node
@@ -138,31 +138,12 @@ public:
 
 	/// inspect object's inode
 	auto info() const -> result_or_err<inode>;
-	auto info(unsafe_t) const -> result_or_err<inode>;
 
-	/// get link's object ID -- fast, can return empty string
+	/// get link's object ID -- can return empty string
 	auto oid() const -> std::string;
-	auto oid(unsafe_t) const -> std::string;
 
-	/// get link's object type ID -- fast, can return nil type ID
+	/// get link's object type ID -- can return nil type ID
 	auto obj_type_id() const -> std::string;
-	auto obj_type_id(unsafe_t) const -> std::string;
-
-	/// get request status
-	auto req_status(Req request) const -> ReqStatus;
-	/// unconditional reset request status
-	auto rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) const -> ReqStatus;
-	/// conditional reset request status
-	auto rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
-	auto rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
-
-	/// methods below are efficient checks that won't call `data_node()` if possible
-	/// check if pointee is a node
-	auto is_node() const -> bool;
-
-	/// if pointee is a node, return node's actor group ID
-	auto data_node_hid() const -> result_or_err<std::string>;
-	auto data_node_hid(unsafe_t) const -> std::string;
 
 	/// applies functor to link atomically (invoke in link's queue)
 	auto apply(simple_transaction tr) const -> error;
@@ -187,6 +168,21 @@ public:
 	auto data_node() const -> node;
 	/// directly return cached value (if any)
 	auto data_node(unsafe_t) const -> node;
+
+	/// get request status
+	auto req_status(Req request) const -> ReqStatus;
+	/// unconditional reset request status
+	auto rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) const -> ReqStatus;
+	/// conditional reset request status
+	auto rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
+	auto rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
+
+	/// methods below are efficient checks that won't call `data_node()` if possible
+	/// check if pointee is a node
+	auto is_node() const -> bool;
+
+	/// if pointee is a node, return node's actor group ID
+	auto data_node_hid() const -> result_or_err<std::string>;
 
 	/// make pointee data modification atomically
 	auto data_apply(transaction tr) const -> tr_result;

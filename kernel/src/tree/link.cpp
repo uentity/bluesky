@@ -58,6 +58,16 @@ link::link(std::string name, node folder, Flags f) :
 	link(hard_link(std::move(name), std::move(folder), f))
 {}
 
+link::link(const bare_link& rhs) : link(rhs.armed()) {}
+
+auto link::operator=(const bare_link& rhs) -> link& {
+	return (*this = rhs.armed());
+}
+
+auto link::bare() const -> bare_link {
+	return bare_link(std::static_pointer_cast<link_impl>(pimpl_));
+}
+
 auto link::make_root_(engine donor) -> link {
 	auto res = link(std::move(donor));
 	if(res) res.pimpl()->propagate_handle();
@@ -118,21 +128,8 @@ auto link::info() const -> result_or_err<inode> {
 	});
 }
 
-auto link::info(unsafe_t) const -> result_or_err<inode> {
-	return pimpl()->get_inode()
-	.and_then([](const inodeptr& i) {
-		return i ?
-			result_or_err<inode>(*i) :
-			tl::make_unexpected(error::quiet(Error::EmptyInode));
-	});
-}
-
 auto link::flags() const -> Flags {
 	return pimpl()->actorf<Flags>(*this, a_lnk_flags()).value_or(Flags::Plain);
-}
-
-auto link::flags(unsafe_t) const -> Flags {
-	return pimpl()->flags_;
 }
 
 auto link::set_flags(Flags new_flags) const -> void {
@@ -187,21 +184,9 @@ auto link::oid() const -> std::string {
 		.value_or(nil_oid);
 }
 
-auto link::oid(unsafe_t) const -> std::string {
-	if(auto obj = pimpl()->data(unsafe))
-		return obj->id();
-	return nil_oid;
-}
-
 auto link::obj_type_id() const -> std::string {
 	return pimpl()->actorf<std::string>(*this, a_lnk_otid())
 		.value_or( nil_otid );
-}
-
-auto link::obj_type_id(unsafe_t) const -> std::string {
-	if(auto obj = pimpl()->data(unsafe))
-		return obj->type_id();
-	return nil_otid;
 }
 
 auto link::data_ex(bool wait_if_busy) const -> obj_or_err {
@@ -234,12 +219,6 @@ auto link::data_node_hid() const -> result_or_err<std::string> {
 	// [TODO] enable this more efficient path later
 	//return pimpl()->actorf<result_or_errbox<std::string>>(*this, a_node_gid());
 	return data_node_ex().map([](const node& N) { return std::string(N.home_id()); });
-}
-
-auto link::data_node_hid(unsafe_t) const -> std::string {
-	if(auto me = data_node(unsafe))
-		return me.home().get()->identifier();
-	return {};
 }
 
 auto link::is_node() const -> bool {
