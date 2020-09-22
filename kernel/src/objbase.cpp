@@ -28,12 +28,12 @@ objbase::objbase(std::string custom_oid, bool start_actor) {
 	if(start_actor) start_engine();
 }
 
-objbase::objbase(std::string custom_oid)
-	: objbase(std::move(custom_oid), true)
+objbase::objbase(std::string custom_oid) :
+	objbase(std::move(custom_oid), true)
 {}
 
-objbase::objbase(const objbase& obj)
-	: enable_shared_from_this(obj), id_(to_string(gen_uuid()))
+objbase::objbase(const objbase& obj) :
+	enable_shared_from_this(obj), id_(obj.id_)
 {
 	start_engine();
 }
@@ -100,13 +100,22 @@ auto objbase::data_node() const -> tree::node {
 /*-----------------------------------------------------------------------------
  *  objnode
  *-----------------------------------------------------------------------------*/
-objnode::objnode(std::string custom_oid)
-	: objbase(std::move(custom_oid))
+objnode::objnode(std::string custom_oid) :
+	objbase(std::move(custom_oid))
 {}
 
-objnode::objnode(tree::node N, std::string custom_oid)
-	: objbase(std::move(custom_oid)), node_(std::move(N))
+objnode::objnode(tree::node N, std::string custom_oid) :
+	objbase(std::move(custom_oid)), node_(std::move(N))
 {}
+
+objnode::objnode(const objnode& rhs) :
+	objbase(rhs.id_), node_(rhs.node_.clone(true))
+{}
+
+auto objnode::operator=(const objnode& rhs) -> objnode& {
+	objnode(rhs).swap(*this);
+	return *this;
+}
 
 auto objnode::swap(objnode& rhs) -> void {
 	using std::swap;

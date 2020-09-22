@@ -168,6 +168,13 @@ public:
 	/// install external node into this objects
 	objnode(tree::node N, std::string custom_oid = {});
 
+	/// copy ctor makes deep clone of contained node
+	objnode(const objnode& rhs);
+	auto operator=(const objnode& rhs) -> objnode&;
+
+	objnode(objnode&& rhs) = default;
+	auto operator=(objnode&& rhs) -> objnode& = default;
+
 	auto swap(objnode&) -> void;
 
 	/// returns internal node
