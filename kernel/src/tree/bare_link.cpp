@@ -23,11 +23,6 @@ auto bare_link::hash() const noexcept -> std::size_t {
 	return std::hash<sp_limpl>{}(pimpl_);
 }
 
-auto bare_link::swap(bare_link& rhs) noexcept -> void {
-	using std::swap;
-	swap(pimpl_, rhs.pimpl_);
-}
-
 auto bare_link::type_id() const -> std::string_view {
 	return pimpl_->type_id();
 }
@@ -81,17 +76,17 @@ auto bare_link::obj_type_id() const -> std::string {
 	return nil_otid;
 }
 
-auto bare_link::data() const -> sp_obj {
+auto bare_link::data() -> sp_obj {
 	return pimpl_->data(unsafe);
 }
 
-auto bare_link::data_node() const -> node {
+auto bare_link::data_node() -> node {
 	if(auto obj = pimpl_->data(unsafe))
 		return obj->data_node();
 	return node::nil();
 }
 
-auto bare_link::data_node_hid() const -> std::string {
+auto bare_link::data_node_hid() -> std::string {
 	if(auto N = data_node())
 		return std::string{N.home_id()};
 	else return {};

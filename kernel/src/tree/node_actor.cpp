@@ -165,10 +165,7 @@ auto do_insert(
 			// invoke postprocessing & deliver result
 			res.deliver(pp(ir));
 			// report success if insertion happened
-			if(ir.second)
-				return perfect;
-			else
-				return quiet_fail;
+			return ir.second ? perfect : quiet_fail;
 		})
 	).await(
 		aw,
@@ -300,9 +297,7 @@ return {
 	},
 
 	[=](a_apply, node_transaction tr) -> error::box {
-		if(auto self = impl.super_engine())
-			return tr_eval(std::move(tr), std::move(self));
-		return error{Error::EmptyData};
+		return tr_eval(std::move(tr), bare_node(pimpl_));
 	},
 
 	// unconditionally join home group - used after deserialization
@@ -322,21 +317,16 @@ return {
 		adbg(this) << "{a_node_leafs} " << static_cast<int>(order) << std::endl;
 		if(has_builtin_index(order))
 			return impl.leafs(order);
-		else
-			return delegate(
-				system().spawn(extraidx_search_actor),
-				a_node_leafs(), order, impl.leafs(Key::AnyOrder)
-			);
+		return delegate(
+			system().spawn(extraidx_search_actor),
+			a_node_leafs(), order, impl.leafs(Key::AnyOrder)
+		);
 	},
 
 	[=](a_node_keys, Key order) -> caf::result<lids_v> {
 		// builtin indexes can be processed directly
-		switch(order) {
-		case Key::ID : return impl.keys<Key::ID>();
-		case Key::AnyOrder : return impl.keys<Key::ID, Key::AnyOrder>();
-		case Key::Name : return impl.keys<Key::ID, Key::Name>();
-		default: break;
-		}
+		if(has_builtin_index(order))
+			return impl.keys(order);
 		// others via extra index actor
 		return delegate(
 			system().spawn(extraidx_search_actor),
@@ -346,12 +336,8 @@ return {
 
 	[=](a_node_ikeys, Key order) -> caf::result<std::vector<std::size_t>> {
 		// builtin indexes can be processed directly
-		switch(order) {
-		case Key::ID : return impl.keys<Key::AnyOrder, Key::ID>();
-		case Key::AnyOrder : return impl.keys<Key::AnyOrder>();
-		case Key::Name : return impl.keys<Key::AnyOrder, Key::Name>();
-		default: break;
-		}
+		if(has_builtin_index(order))
+			return impl.ikeys(order);
 
 		// others via extra sorted leafs
 		auto rp = make_response_promise();

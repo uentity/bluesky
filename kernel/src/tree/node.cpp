@@ -35,8 +35,22 @@ node::node(sp_engine_impl impl) :
 }
 
 node::node(links_v leafs) :
-	node(std::make_shared<node_impl>(std::move(leafs)))
-{}
+	node(std::make_shared<node_impl>())
+{
+	// insert each link with proper locking
+	insert(std::move(leafs));
+}
+
+node::node(const bare_node& rhs) : node(rhs.armed()) {}
+
+
+auto node::bare() const -> bare_node {
+	return bare_node(std::static_pointer_cast<node_impl>(pimpl_));
+}
+
+auto node::operator=(const bare_node& rhs) -> node& {
+	return (*this = rhs.armed());
+}
 
 auto node::nil() -> node {
 	return engine(nil_node::nil_engine());
@@ -81,26 +95,14 @@ auto node::size() const -> std::size_t {
 	return pimpl()->actorf<std::size_t>(*this, a_node_size()).value_or(0);
 }
 
-auto node::size(unsafe_t) const -> std::size_t {
-	return pimpl()->size();
-}
-
 auto node::empty() const -> bool {
 	return size() == 0;
-}
-
-auto node::empty(unsafe_t) const -> bool {
-	return pimpl()->links_.empty();
 }
 
 auto node::leafs(Key order) const -> links_v {
 	return pimpl()->actorf<links_v>(
 		*this, a_node_leafs(), order
 	).value_or(links_v{});
-}
-
-auto node::leafs(unsafe_t, Key order) const -> links_v {
-	return pimpl()->leafs(order);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -194,11 +196,6 @@ auto node::insert(link l, InsertPolicy pol) const -> insert_status {
 	return pimpl()->actorf<insert_status>(
 		*this, a_node_insert(), std::move(l), pol
 	).value_or(insert_status{ {}, false });
-}
-
-auto node::insert(unsafe_t, link l, InsertPolicy pol) -> insert_status {
-	auto [pos, is_inserted] = pimpl()->insert(std::move(l), pol);
-	return { pimpl()->index<Key::ID>(pos), is_inserted };
 }
 
 auto node::insert(link l, std::size_t idx, InsertPolicy pol) const -> insert_status {

@@ -90,11 +90,8 @@ public:
 	links_container links_;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  methods
+	//  API
 	//
-	// ctors
-	node_impl(const links_v& leafs = {});
-
 	// manipulate with node's handle (protected by mutex)
 	auto handle() const -> link;
 	auto set_handle(const link& handle) -> void;
@@ -229,6 +226,9 @@ public:
 		else
 			return keys<K>(begin<Order>(), end<Order>());
 	}
+
+	auto keys(Key order) const -> lids_v;
+	auto ikeys(Key order) const -> std::vector<std::size_t>;
 
 	template<Key K>
 	auto values() const -> links_v {

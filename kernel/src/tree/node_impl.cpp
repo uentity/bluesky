@@ -23,14 +23,8 @@ using bs_detail::shared;
 	
 ENGINE_TYPE_DEF(node_impl, "node")
 
-node_impl::node_impl(const links_v& leafs) :
-	links_(leafs.begin(), leafs.end())
-{
-	// [NOTE] links are in invalid state (no owner set) now
-	// correct this by manually calling `propagate_owner()` after copy is constructed
-}
-
 auto node_impl::clone(bool deep) const -> sp_nimpl {
+	// [NOTE] can do this without transactions for each link, because cloned link is not shared
 	auto res = std::make_unique<node_impl>();
 	auto& res_leafs = res->links_.get<Key_tag<Key::AnyOrder>>();
 	for(const auto& leaf : links_.get<Key_tag<Key::AnyOrder>>())
@@ -100,16 +94,30 @@ auto node_impl::size() const -> std::size_t {
 	return links_.size();
 }
 
+auto node_impl::keys(Key order) const -> lids_v {
+	switch(order) {
+	case Key::ID: return keys<Key::ID>();
+	case Key::AnyOrder: return keys<Key::ID, Key::AnyOrder>();
+	case Key::Name: return keys<Key::ID, Key::Name>();
+	default: return {};
+	}
+}
+
+auto node_impl::ikeys(Key order) const -> std::vector<std::size_t> {
+	switch(order) {
+	case Key::ID: return keys<Key::AnyOrder, Key::ID>();
+	case Key::AnyOrder: return keys<Key::AnyOrder>();
+	case Key::Name: return keys<Key::AnyOrder, Key::Name>();
+	default: return {};
+	}
+}
+
 auto node_impl::leafs(Key order) const -> links_v {
 	switch(order) {
-	case Key::AnyOrder:
-		return values<Key::AnyOrder>();
-	case Key::ID:
-		return values<Key::ID>();
-	case Key::Name:
-		return values<Key::Name>();
-	default:
-		return {};
+	case Key::AnyOrder: return values<Key::AnyOrder>();
+	case Key::ID: return values<Key::ID>();
+	case Key::Name: return values<Key::Name>();
+	default: return {};
 	}
 }
 

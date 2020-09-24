@@ -188,7 +188,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 			recover_load();
 
 		// insert loaded leafs in one transaction
-		push_error(N.apply([&] {
+		push_error(N.apply([&](bare_node N) {
 			std::for_each(babies.begin(), babies.end(), [&](auto& baby) {
 				N.insert(unsafe, std::move(baby));
 			});

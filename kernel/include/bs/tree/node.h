@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include "bare_node.h"
 #include "link.h"
 #include "errors.h"
 #include "../detail/is_container.h"
@@ -20,8 +21,8 @@ NAMESPACE_BEGIN(blue_sky::tree)
 class BS_API node : public engine {
 public:
 	// some useful type aliases
-	using existing_index = std::optional<std::size_t>;
-	using insert_status = std::pair<existing_index, bool>;
+	using existing_index = bare_node::existing_index;
+	using insert_status = bare_node::insert_status;
 	using engine_impl = node_impl;
 	using weak_ptr = engine::weak_ptr<node>;
 
@@ -101,10 +102,20 @@ public:
 	//
 	/// create empty node and optionally add leafs
 	node(links_v = {});
+	explicit node(const bare_node& rhs);
 
 	/// copy ctor & assignment
 	node(const node& src) = default;
 	auto operator=(const node& rhs) -> node& = default;
+	auto operator=(const bare_node& rhs) -> node&;
+
+	/// convert to bare link with direct access to internals (bypassing actor)
+	auto bare() const -> bare_node;
+
+	/// swap support
+	friend auto swap(node& lhs, node& rhs) noexcept -> void {
+		static_cast<engine&>(lhs).swap(rhs);
+	}
 
 	/// obtain/make node nil
 	static auto nil() -> node;
@@ -132,11 +143,9 @@ public:
 	//
 	/// number of elements in this node
 	auto size() const -> std::size_t;
-	auto size(unsafe_t) const -> std::size_t;
 
 	/// check if node is empty
 	auto empty() const -> bool;
-	auto empty(unsafe_t) const -> bool;
 
 	/// clears node
 	// return number of cleared elements
@@ -145,7 +154,6 @@ public:
 
 	/// get snapshot of node's content sorted with given order
 	auto leafs(Key order = Key::AnyOrder) const -> links_v;
-	auto leafs(unsafe_t, Key order = Key::AnyOrder) const -> links_v;
 
 	/// obtain vector of link ID keys, sorted with given order
 	auto keys(Key ordering = Key::AnyOrder) const -> lids_v;
@@ -176,7 +184,6 @@ public:
 
 	/// leafs insertion
 	auto insert(link l, InsertPolicy pol = InsertPolicy::AllowDupNames) const -> insert_status;
-	auto insert(unsafe_t, link l, InsertPolicy pol = InsertPolicy::AllowDupNames) -> insert_status;
 	/// insert link at given index
 	auto insert(link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames) const
 	-> insert_status;
@@ -257,3 +264,12 @@ private:
 };
 
 NAMESPACE_END(blue_sky::tree)
+
+NAMESPACE_BEGIN(std)
+
+/// support for engines in hashed containers
+template<> struct hash<::blue_sky::tree::node> {
+	auto operator()(const ::blue_sky::tree::node& N) const noexcept { return N.hash(); }
+};
+
+NAMESPACE_END(std)

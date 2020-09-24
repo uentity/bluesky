@@ -83,6 +83,7 @@ kernel_cpp_list = [
 	"src/tree/fusion_link.cpp",
 	"src/tree/fusion_link_actor.cpp",
 	"src/tree/node.cpp",
+	"src/tree/bare_node.cpp",
 	"src/tree/node_actor.cpp",
 	"src/tree/node_ack_behavior.cpp",
 	"src/tree/node_extraidx_actor.cpp",

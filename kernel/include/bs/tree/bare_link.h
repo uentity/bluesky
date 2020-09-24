@@ -40,7 +40,10 @@ public:
 	/// hash for appropriate containers
 	auto hash() const noexcept -> std::size_t;
 
-	auto swap(bare_link& rhs) noexcept -> void;
+	/// swap spport
+	friend auto swap(bare_link& lhs, bare_link& rhs) noexcept -> void {
+		std::swap(lhs.pimpl_, rhs.pimpl_);
+	}
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Main API with direct access to link internals
@@ -69,16 +72,17 @@ public:
 	auto req_status(Req request) const -> ReqStatus;
 
 	/// directly return cached value (if any)
-	auto data() const -> sp_obj;
+	auto data() -> sp_obj;
 
 	/// return node extracted from data(unsafe)
-	auto data_node() const -> node;
+	auto data_node() -> node;
 
 	/// if pointee is a node, return node's actor group ID
-	auto data_node_hid() const -> std::string;
+	auto data_node_hid() -> std::string;
 
 private:
 	friend link;
+	friend link_actor;
 
 	std::shared_ptr<link_impl> pimpl_;
 

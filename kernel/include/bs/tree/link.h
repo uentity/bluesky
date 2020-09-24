@@ -90,8 +90,10 @@ public:
 	/// [WANRING] main use case is for transactions and edge cases where yo now what you're doing
 	auto bare() const -> bare_link;
 
-	/// makes link nil
-	auto reset() -> void;
+	/// swap support
+	friend auto swap(link& lhs, link& rhs) noexcept -> void {
+		static_cast<engine&>(lhs).swap(rhs);
+	}
 
 	/// get typed actor of base link
 	using engine::actor;
@@ -113,6 +115,8 @@ public:
 	/// test if link is nil
 	auto is_nil() const -> bool;
 	operator bool() const { return !is_nil(); }
+	/// makes link nil
+	auto reset() -> void;
 
 	/// get link's container
 	auto owner() const -> node;

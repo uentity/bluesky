@@ -46,7 +46,7 @@ inline auto adapt(adapted_data_cb&& f) {
 		if(L)
 			f(adapt(std::move(obj), L), L);
 		else
-			f(tl::make_unexpected(error{ "Bad (null) link" }), L);
+			f(tl::make_unexpected(error{ "Nil link" }), L);
 	};
 }
 
@@ -79,10 +79,9 @@ void py_bind_link(py::module& m) {
 	;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  Bare link
-	//
 	// minimal link API present in both bare & normal link
-	const auto add_bare_api = [](auto& pyl) {
+	//
+	static const auto add_common_api = [](auto& pyl, const auto&... gil) {
 		using py_link_type = std::remove_reference_t<decltype(pyl)>;
 		using link_type = typename py_link_type::type;
 
@@ -94,28 +93,32 @@ void py_bind_link(py::module& m) {
 		.def_property_readonly("id", &link_type::id)
 		.def_property_readonly("owner", &link_type::owner)
 
+		.def("flags", &link_type::flags, gil...)
+		.def("oid", &link_type::oid, gil...)
+		.def("obj_type_id", &link_type::obj_type_id, gil...)
+		.def("info", &link_type::info, gil...)
+
 		.def("req_status", &link_type::req_status, "Query given operation status")
+		.def("data_node_hid", &link_type::data_node_hid, "Get pointee home grop ID")
 		;
 	};
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  Bare link
+	//
 	auto bare_link_pyface = py::class_<bare_link>(m, "bare_link")
 		.def(py::init<const link&>())
 
 		.def_property_readonly("type_id", &bare_link::type_id)
-		.def("armed", &bare_link::armed, "Convert from bare to normal link")
+		.def("armed", &bare_link::armed, "Convert to safe link")
 
-		.def("flags", &bare_link::flags)
 		.def("name", &bare_link::name)
-		.def("oid", &bare_link::oid)
-		.def("obj_type_id", &bare_link::obj_type_id)
-		.def("info", &bare_link::info)
 
-		.def("data", [](const bare_link& L){ return adapt(L.data(), L.armed()); }, "Get pointee Data")
+		.def("data", [](bare_link& L){ return adapt(L.data(), L.armed()); }, "Get pointee Data")
 		.def("data_node", &bare_link::data_node, "Get pointee DataNode")
-		.def("data_node_hid", &bare_link::data_node_hid)
 	;
 
-	add_bare_api(bare_link_pyface);
+	add_common_api(bare_link_pyface);
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Base link
@@ -134,6 +137,13 @@ void py_bind_link(py::module& m) {
 		.def("bare", &link::bare, "Convert to bare (unsafe) link")
 
 		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link", nogil)
+
+		.def("name", py::overload_cast<>(&link::name, py::const_), nogil)
+		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
+
+		.def("rename", py::overload_cast<std::string>(&link::rename, py::const_))
+
+		.def("set_flags", &link::set_flags)
 
 		// [NOTE] return adapted objects (and pass 'em to callbacks)
 		.def("data_ex",
@@ -190,12 +200,6 @@ void py_bind_link(py::module& m) {
 			"Send empty transaction object to trigger `data modified` signal"
 		)
 
-		.def("oid", py::overload_cast<>(&link::oid, py::const_), nogil)
-
-		.def("obj_type_id", py::overload_cast<>(&link::obj_type_id, py::const_), nogil)
-
-		.def("rename", py::overload_cast<std::string>(&link::rename, py::const_))
-
 		.def("rs_reset", &link::rs_reset,
 			"request"_a, "new_status"_a = ReqStatus::Void,
 			"Unconditionally set status of given request", nogil
@@ -209,14 +213,6 @@ void py_bind_link(py::module& m) {
 			"Set status of given request if it is NOT equal to given value, returns prev status", nogil
 		)
 
-		.def("name", py::overload_cast<>(&link::name, py::const_), nogil)
-		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
-
-		.def("flags", py::overload_cast<>(&link::flags, py::const_), nogil)
-		.def("set_flags", &link::set_flags)
-
-		.def("info", py::overload_cast<>(&link::info, py::const_), nogil)
-
 		.def("is_node", &link::is_node, "Check if pointee is a node", nogil)
 		.def("data_node_hid", py::overload_cast<>(&link::data_node_hid, py::const_),
 			"If pointee is a node, return node's actor group ID", nogil)
@@ -227,8 +223,8 @@ void py_bind_link(py::module& m) {
 	;
 
 	// add mixins
+	add_common_api(link_pyface, nogil);
 	bind_weak_ptr(link_pyface);
-	add_bare_api(link_pyface);
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Derived links

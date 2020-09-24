@@ -133,7 +133,7 @@ using obj_transaction =  transaction_t<tr_result, sp_obj>;
 /// simple transaction returns error instead of extended transaction result
 using simple_transaction = transaction_t<error>;
 using link_transaction = transaction_t<error, tree::bare_link>;
-using node_transaction = transaction_t<error, tree::node>;
+using node_transaction = transaction_t<error, tree::bare_node>;
 
 /// check if type is transaction
 template<typename T>
