@@ -16,6 +16,8 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
+#include <fstream>
+
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::on_serialized_f)
 
 NAMESPACE_BEGIN(blue_sky::tree)
@@ -74,9 +76,9 @@ return error::eval_safe([&]() -> error {
 	// open file for writing
 	std::ofstream fs(
 		filename,
-		std::ios::out | std::ios::trunc | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode())
+		std::ios::out | std::ios::trunc |
+			(ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode(0))
 	);
-	fs.exceptions(fs.failbit | fs.badbit);
 
 	// dump link to JSON archive
 	if(ar == TreeArchive::Binary) {
@@ -93,11 +95,12 @@ return error::eval_safe([&]() -> error {
 auto load_generic(link& root, const std::string& filename, TreeArchive ar) -> error {
 return error::eval_safe([&]() -> error {
 	// open file for reading
+	auto mode = std::ios::in;
+	if(ar == TreeArchive::Binary) mode |= std::ios::binary;
 	std::ifstream fs(
 		filename,
-		std::ios::in | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode())
+		std::ios::in | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode(0))
 	);
-	fs.exceptions(fs.failbit | fs.badbit);
 
 	// load link from JSON archive
 	if(ar == TreeArchive::Binary) {
@@ -156,8 +159,8 @@ NAMESPACE_END()
  *  tree save impl
  *-----------------------------------------------------------------------------*/
 auto save_tree(link root, std::string filename, TreeArchive ar, timespan wait_for) -> error {
-	bsout() << "*** save_tree with {} timeout" <<
-		(wait_for == infinite ? "infinite" : to_string(wait_for)) << bs_end;
+	//bsout() << "*** save_tree with {} timeout" <<
+	//	(wait_for == infinite ? "infinite" : to_string(wait_for)) << bs_end;
 	// launch worker in detached actor
 	auto Af = caf::make_function_view(
 		system().spawn<caf::spawn_options::detach_flag>(
@@ -184,23 +187,23 @@ BS_API auto save_tree(
  *  tree load impl
  *-----------------------------------------------------------------------------*/
 auto load_tree(std::string filename, TreeArchive ar) -> link_or_err {
-	link r;
-	auto er = ar == TreeArchive::FS ? load_fs(r, filename) : load_generic(r, filename, ar);
-	if(er.ok())
-		return r;
-	else
-		return tl::make_unexpected(std::move(er));
+	//link r;
+	//auto er = ar == TreeArchive::FS ? load_fs(r, filename) : load_generic(r, filename, ar);
+	//if(er.ok())
+	//	return r;
+	//else
+	//	return tl::make_unexpected(std::move(er));
 
-	//// launch worker in detached actor
-	//auto Af = caf::make_function_view(
-	//	system().spawn<caf::spawn_options::detach_flag>(
-	//		load_actor, std::move(filename), ar, on_serialized_f{}
-	//	),
-	//	caf::infinite
-	//);
+	// launch worker in detached actor
+	auto Af = caf::make_function_view(
+		system().spawn<caf::spawn_options::detach_flag>(
+			load_actor, std::move(filename), ar, on_serialized_f{}
+		),
+		caf::infinite
+	);
 
-	//// wait for result
-	//return actorf<link_or_errbox>(Af, a_apply());
+	// wait for result
+	return actorf<link_or_errbox>(Af, a_apply());
 }
 
 auto load_tree(
