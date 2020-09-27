@@ -250,7 +250,8 @@ public:
 		);
 		// store type-erased constructor
 		using Fnorm = normalized_ctor_t<Fsign>;
-		creators_.insert_or_assign( typeid(Fnorm), reinterpret_cast<erased_ctor&&>(Fnorm{f}) );
+		auto creator = Fnorm{f};
+		creators_.insert_or_assign( typeid(Fnorm), std::move(reinterpret_cast<erased_ctor&>(creator)) );
 	}
 
 	template<typename T, typename... Args>
