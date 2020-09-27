@@ -101,48 +101,61 @@ template<typename T> inline constexpr in_place_list_t<T> in_place_list{};
  *  BS property definition
  *-----------------------------------------------------------------------------*/
 class property : public detail::variant_prop_t {
-	// detect all integer types that doesn't exactly match `prop::integer` & enums
+public:
+	using underlying_type = detail::variant_prop_t;
+
+private:
+	// detect enums & all integer types that doesn't exactly match `prop::integer`
 	template<typename T>
-	using if_integer = std::enable_if_t<
+	static constexpr bool is_integer_ =
 #ifdef _MSC_VER
 		std::is_enum_v<T> || (std::is_integral_v<T> && !std::is_same_v<T, integer> && !std::is_same_v<T, bool>)
 #else
 		meta::is_enum_class_v<T>
 #endif
-	>;
+	;
+	template<typename T>
+	static constexpr bool is_integer_v = is_integer_<meta::remove_cvref_t<T>>;
 
 	template<typename T>
-	using if_string = std::enable_if_t<std::is_convertible_v<meta::remove_cvref_t<T>, string>>;
+	static constexpr bool is_string_v = !is_integer_v<T> &&
+		std::is_convertible_v<meta::remove_cvref_t<T>, string>;
+
+	template<typename T>
+	static constexpr bool allow_custom_casts = !std::is_constructible_v<underlying_type, T> &&
+		(is_integer_v<T> || is_string_v<T>);
 
 public:
-	using underlying_type = detail::variant_prop_t;
-
 	using underlying_type::underlying_type;
 	using underlying_type::operator=;
 
-	// better support enums and different integer types
-	template<typename E, typename = if_integer<E>>
-	constexpr property(E value) noexcept : underlying_type{static_cast<integer>(value)} {}
-
-	template<typename E, typename = if_integer<E>>
-	constexpr auto operator=(E value) noexcept -> property& {
-		*this = static_cast<integer>(value);
-		return *this;
-	}
-
-	// explicit support for strings (required by MSVC)
-	template<typename T, typename = if_string<T>>
-	constexpr property(T&& value) :
-		underlying_type(std::in_place_type_t<string>{}, std::forward<T>(value))
+	// explicit support for enums
+	// + integral types & strings (required my MSVC)
+	template<typename T, typename = std::enable_if_t<allow_custom_casts<T>>>
+	constexpr property(T value) :
+		underlying_type{[&] {
+			if constexpr(is_integer_v<T>)
+				return std::in_place_type_t<integer>{};
+			else
+				return std::in_place_type_t<string>{};
+		}(), [&]() -> decltype(auto) {
+			if constexpr(is_integer_v<T>)
+				return static_cast<integer>(value);
+			else
+				return std::move(value);
+		}()}
 	{}
 
-	template<typename T, typename = if_string<T>>
-	constexpr auto operator=(T&& value) -> property& {
-		emplace<string>(std::forward<T>(value));
+	template<typename T>
+	constexpr auto operator=(T value) -> std::enable_if_t<allow_custom_casts<T>, property&> {
+		if constexpr(is_integer_v<T>)
+			emplace<integer>(static_cast<integer>(value));
+		else
+			emplace<string>(std::move(value));
 		return *this;
 	}
 
-	// improove init from initializer_list
+	// improve init from initializer_list
 	template<typename T>
 	constexpr property(std::initializer_list<T> vlist) : underlying_type([&] {
 		if constexpr(detail::can_carry_scalar_v<T>)
@@ -231,7 +244,7 @@ constexpr bool is_none(const property& P) noexcept {
 	return std::holds_alternative<object>(P) && !get<object>(P);
 }
 
-inline auto none() noexcept { return property(sp_obj()); }
+inline auto none() noexcept { return property{sp_obj()}; }
 
 /// custom analog of `std::visit` to fix compile issues with VS
 template<

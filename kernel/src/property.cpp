@@ -12,6 +12,8 @@
 #include <fmt/ostream.h>
 
 NAMESPACE_BEGIN(blue_sky::prop)
+template<typename T>
+auto& operator <<(std::ostream& os, const std::vector<T>& x);
 
 template<typename T>
 auto printv(std::ostream& os, const T& v) {
@@ -39,12 +41,10 @@ auto& operator <<(std::ostream& os, const std::vector<T>& x) {
 }
 
 auto operator <<(std::ostream& os, const property& x) -> std::ostream& {
-	return visit([&os](auto&& v){
-		if(!is_none(v))
-			printv(os, v);
-		else
-			os << "None";
-	}, x), os;
+	if(is_none(x))
+		return os << "None";
+	else
+		return visit([&os](auto&& v){ printv(os, v);}, x), os;
 }
 
 auto to_string(const property& p) -> std::string {
