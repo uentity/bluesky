@@ -72,7 +72,7 @@ auto load_fs(link& root, const std::string& filename) -> error {
 //  generic archives
 //
 auto save_generic(const link& root, const std::string& filename, TreeArchive ar) -> error {
-return error::eval_safe([&]() -> error {
+return error::eval_safe([&] {
 	// open file for writing
 	std::ofstream fs(
 		filename,
@@ -89,14 +89,11 @@ return error::eval_safe([&]() -> error {
 		cereal::JSONOutputArchive ja(fs);
 		ja(root);
 	}
-	return perfect;
 }); }
 
 auto load_generic(link& root, const std::string& filename, TreeArchive ar) -> error {
-return error::eval_safe([&]() -> error {
+return error::eval_safe([&] {
 	// open file for reading
-	auto mode = std::ios::in;
-	if(ar == TreeArchive::Binary) mode |= std::ios::binary;
 	std::ifstream fs(
 		filename,
 		std::ios::in | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode(0))
@@ -111,11 +108,10 @@ return error::eval_safe([&]() -> error {
 		cereal::JSONInputArchive ja(fs);
 		ja(root);
 	}
-	return perfect;
 }); }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  serial ator impl
+//  actor to launch jobe above and result processing callback
 //
 auto save_actor(
 	caf::event_based_actor* self, link root, std::string filename, TreeArchive ar,
@@ -162,22 +158,19 @@ auto save_tree(link root, std::string filename, TreeArchive ar, timespan wait_fo
 	//bsout() << "*** save_tree with {} timeout" <<
 	//	(wait_for == infinite ? "infinite" : to_string(wait_for)) << bs_end;
 	// launch worker in detached actor
-	auto Af = caf::make_function_view(
-		system().spawn<caf::spawn_options::detach_flag>(
+	return actorf<error>(
+		system().spawn<caf::detached>(
 			save_actor, std::move(root), std::move(filename), ar, on_serialized_f{}
 		),
-		wait_for == infinite ? caf::infinite : caf::duration{wait_for}
+		wait_for, a_apply()
 	);
-
-	// wait for result
-	return actorf<error>(Af, a_apply());
 }
 
 BS_API auto save_tree(
 	on_serialized_f cb, link root, std::string filename, TreeArchive ar
 ) -> void {
 	// [NOTE] spawn save in detached actor to prevent starvation
-	auto A = system().spawn<caf::spawn_options::detach_flag>(
+	auto A = system().spawn<caf::detached>(
 		save_actor, std::move(root), std::move(filename), ar, std::move(cb)
 	);
 	caf::anon_send(A, a_apply());
@@ -195,22 +188,19 @@ auto load_tree(std::string filename, TreeArchive ar) -> link_or_err {
 	//	return tl::make_unexpected(std::move(er));
 
 	// launch worker in detached actor
-	auto Af = caf::make_function_view(
+	return actorf<link_or_errbox>(
 		system().spawn<caf::spawn_options::detach_flag>(
 			load_actor, std::move(filename), ar, on_serialized_f{}
 		),
-		caf::infinite
+		infinite, a_apply()
 	);
-
-	// wait for result
-	return actorf<link_or_errbox>(Af, a_apply());
 }
 
 auto load_tree(
 	on_serialized_f cb, std::string filename, TreeArchive ar
 ) -> void {
 	// [NOTE] spawn save in detached actor to prevent starvation
-	auto A = system().spawn<caf::spawn_options::detach_flag>(
+	auto A = system().spawn<caf::detached>(
 		load_actor, std::move(filename), ar, std::move(cb)
 	);
 	caf::anon_send(A, a_apply());
