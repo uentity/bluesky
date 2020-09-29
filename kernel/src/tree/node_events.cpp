@@ -141,7 +141,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 				// insert
 				[=](
 					a_ack, const caf::actor& src, a_node_insert,
-					const lid_type& lid, std::size_t pos, InsertPolicy pol
+					const lid_type& lid, std::size_t pos
 				) {
 					bsout() << "*-* node: fired LinkInserted event" << bs_end;
 					handler_impl(self, weak_root, src, Event::LinkInserted, {
