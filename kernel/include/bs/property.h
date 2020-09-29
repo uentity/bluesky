@@ -132,7 +132,7 @@ public:
 	// explicit support for enums
 	// + integral types & strings (required my MSVC)
 	template<typename T, typename = std::enable_if_t<allow_custom_casts<T>>>
-	constexpr property(T value) :
+	constexpr property(T&& value) :
 		underlying_type{[&] {
 			if constexpr(is_integer_v<T>)
 				return std::in_place_type_t<integer>{};
@@ -142,16 +142,16 @@ public:
 			if constexpr(is_integer_v<T>)
 				return static_cast<integer>(value);
 			else
-				return std::move(value);
+				return std::forward<T>(value);
 		}()}
 	{}
 
 	template<typename T>
-	constexpr auto operator=(T value) -> std::enable_if_t<allow_custom_casts<T>, property&> {
+	constexpr auto operator=(const T& value) -> std::enable_if_t<allow_custom_casts<T>, property&> {
 		if constexpr(is_integer_v<T>)
 			emplace<integer>(static_cast<integer>(value));
 		else
-			emplace<string>(std::move(value));
+			emplace<string>(value);
 		return *this;
 	}
 
