@@ -105,53 +105,77 @@ public:
 	using underlying_type = detail::variant_prop_t;
 
 private:
-	// detect enums & all integer types that doesn't exactly match `prop::integer`
+	// detect enums & all integer types
 	template<typename T>
 	static constexpr bool is_integer_ =
-#ifdef _MSC_VER
-		std::is_enum_v<T> || (std::is_integral_v<T> && !std::is_same_v<T, integer> && !std::is_same_v<T, bool>)
-#else
-		meta::is_enum_class_v<T>
-#endif
-	;
+		std::is_enum_v<T> || (std::is_integral_v<T> && !std::is_same_v<T, bool>);
+
 	template<typename T>
 	static constexpr bool is_integer_v = is_integer_<meta::remove_cvref_t<T>>;
 
+	// detect strings
 	template<typename T>
 	static constexpr bool is_string_v = !is_integer_v<T> &&
 		std::is_convertible_v<meta::remove_cvref_t<T>, string>;
 
+	// private ctors for cases when argument is {enum/integer, string, other}
+	// public forwarding ctor performs dispatching to these
+	// 1. encoding to allow dispatching: 0 - normal ctor, forward as is, 1 - enum/int, 2 - string
+	template<int C> using ctor_arg_category = std::integral_constant<int, C>;
+	// tag ctor argument with corresponding category
+	template<typename T> using ctor_arg_tag = ctor_arg_category<is_integer_v<T> + 2*is_string_v<T>>;
+
+	// 2. private ctors for each code
+	// normal
 	template<typename T>
-	static constexpr bool allow_custom_casts = !std::is_constructible_v<underlying_type, T> &&
-		(is_integer_v<T> || is_string_v<T>);
-
-public:
-	using underlying_type::underlying_type;
-	using underlying_type::operator=;
-
-	// explicit support for enums
-	// + integral types & strings (required my MSVC)
-	template<typename T, typename = std::enable_if_t<allow_custom_casts<T>>>
-	constexpr property(T&& value) :
-		underlying_type{[&] {
-			if constexpr(is_integer_v<T>)
-				return std::in_place_type_t<integer>{};
-			else
-				return std::in_place_type_t<string>{};
-		}(), [&]() -> decltype(auto) {
-			if constexpr(is_integer_v<T>)
-				return static_cast<integer>(value);
-			else
-				return std::forward<T>(value);
-		}()}
+	constexpr property(ctor_arg_category<0>, T&& value)
+	noexcept(noexcept( underlying_type(std::declval<T>()) )) :
+		underlying_type(std::forward<T>(value))
+	{}
+	// enum/int
+	template<typename T>
+	constexpr property(ctor_arg_category<1>, T value) noexcept :
+		underlying_type(static_cast<integer>(value))
+	{}
+	// string
+	template<typename T>
+	constexpr property(ctor_arg_category<2>, T&& value)
+	noexcept(noexcept( underlying_type(std::declval<std::in_place_type_t<string>>(), std::declval<T>()) )) :
+		underlying_type(std::in_place_type_t<string>{}, std::forward<T>(value))
 	{}
 
 	template<typename T>
-	constexpr auto operator=(const T& value) -> std::enable_if_t<allow_custom_casts<T>, property&> {
-		if constexpr(is_integer_v<T>)
-			emplace<integer>(static_cast<integer>(value));
-		else
-			emplace<string>(value);
+	using if_dispatch_allowed = std::enable_if_t<
+		meta::enable_pf_ctor_v<property, T> &&
+		(is_integer_v<T> || is_string_v<T> || std::is_constructible_v<underlying_type, T>)
+	>;
+
+public:
+	using underlying_type::underlying_type;
+
+	// explicit support for enums
+	// + integral types & strings (required my MSVC)
+	template<typename T, typename = if_dispatch_allowed<T>>
+	constexpr property(T&& value)
+	noexcept(noexcept( property(std::declval<ctor_arg_tag<T>>(), std::declval<T>()) )) :
+		property(ctor_arg_tag<T>{}, std::forward<T>(value))
+	{}
+
+	property(const property&) = default;
+	property(property&&) = default;
+	auto operator =(const property&) -> property& = default;
+	auto operator =(property&&) -> property& = default;
+
+	template<typename T>
+	constexpr auto operator=(T value) noexcept -> std::enable_if_t<is_integer_v<T>, property&> {
+		emplace<integer>(static_cast<integer>(value));
+		return *this;
+	}
+
+	template<typename T>
+	constexpr auto operator=(T&& value) noexcept(noexcept( emplace<string>(std::declval<T>()) ))
+	-> std::enable_if_t<is_string_v<T>, property&> {
+		emplace<string>(std::forward<T>(value));
 		return *this;
 	}
 
@@ -244,7 +268,7 @@ constexpr bool is_none(const property& P) noexcept {
 	return std::holds_alternative<object>(P) && !get<object>(P);
 }
 
-inline auto none() noexcept { return property{sp_obj()}; }
+inline auto none() noexcept { return property(sp_obj()); }
 
 /// custom analog of `std::visit` to fix compile issues with VS
 template<
