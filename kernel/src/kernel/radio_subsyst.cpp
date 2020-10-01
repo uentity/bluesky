@@ -90,14 +90,14 @@ auto radio_subsyst::shutdown() -> void {
 	if(actor_sys_) {
 		std::cout << "~~~ radio shutdown start" << std::endl;
 
+		// force all pending requests to exit very quickly
+		reset_timeouts(100us, 100us);
+
 		kick_citizens();
 
 		// explicitly kill nill link
 		tree::nil_node::stop();
 		tree::nil_link::stop();
-
-		// force all pending requests to exit immediately
-		reset_timeouts(0s, 0s);
 
 		// explicit wait until all actors done if asked for
 		// because during termination some actor may need to access live actor_system
@@ -130,20 +130,21 @@ auto radio_subsyst::release_citizen(const caf::actor_addr& citizen) -> void {
 
 auto radio_subsyst::kick_citizens() -> void {
 	const auto kick_out = [&] {
-		auto solo = std::unique_lock{guard_};
-		if(citizens_.empty()) return false;
-
 		auto waiter = caf::scoped_actor{system(), false};
 		std::vector<caf::actor> alive;
-		alive.reserve(citizens_.size());
-		for(const auto& caddr : citizens_) {
-			if(auto A = caf::actor_cast<caf::actor>(caddr)) {
-				waiter->send_exit(A, caf::exit_reason::user_shutdown);
-				alive.push_back(std::move(A));
+		{
+			auto solo = std::lock_guard{guard_};
+			if(citizens_.empty()) return false;
+
+			alive.reserve(citizens_.size());
+			for(const auto& caddr : citizens_) {
+				if(auto A = caf::actor_cast<caf::actor>(caddr)) {
+					waiter->send_exit(A, caf::exit_reason::user_shutdown);
+					alive.push_back(std::move(A));
+				}
 			}
+			citizens_.clear();
 		}
-		citizens_.clear();
-		solo.unlock();
 		// wait until citizen gone
 		std::cout << "~~~ kick out " << alive.size() << " actors" << std::endl;
 		waiter->wait_for(std::move(alive));
