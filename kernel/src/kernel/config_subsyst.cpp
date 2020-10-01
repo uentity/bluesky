@@ -23,6 +23,7 @@
 
 #include <fmt/ostream.h>
 
+#include <atomic>
 #include <sstream>
 #include <fstream>
 #include <stdlib.h>
@@ -94,10 +95,16 @@ auto extract_config_file_path(caf::config_option_set& opts, caf::settings& S, st
 
 // separetely store configured timeouts for faster access
 // returns { normal timeout, long op timeout }
-using timeouts_pair = std::pair<duration, duration>;
+using timeouts_pair = std::pair<std::atomic<timespan>, std::atomic<timespan>>;
 inline auto timeouts() -> timeouts_pair& {
 	static auto ts_ = timeouts_pair{};
 	return ts_;
+}
+
+auto reset_timeouts(timespan typical, timespan slow) -> void {
+	auto& [normal_to, long_to] = timeouts();
+	normal_to.store(typical, std::memory_order_relaxed);
+	long_to.store(slow, std::memory_order_relaxed);
 }
 
 NAMESPACE_END() // eof hidden ns
@@ -243,10 +250,10 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 	}
 
 	// update timeout values
-	timeouts() = timeouts_pair{
+	reset_timeouts(
 		get_or( confdata_, "radio.timeout", defaults::radio::timeout ),
 		get_or( confdata_, "radio.long-timeout", defaults::radio::long_timeout )
-	};
+	);
 
 	// [NOTE] load networking module after kernel & CAF are configured (do it only once!)
 	if(!kernel_configured)
@@ -267,7 +274,7 @@ auto config_subsyst::is_configured() -> bool {
 bool config_subsyst::kernel_configured = false;
 
 auto radio_subsyst::reset_timeouts(timespan typical, timespan slow) -> void {
-	timeouts() = timeouts_pair{ typical, slow };
+	kernel::detail::reset_timeouts(typical, slow);
 }
 
 NAMESPACE_END(blue_sky::kernel::detail)
@@ -276,7 +283,9 @@ NAMESPACE_BEGIN(blue_sky::kernel::radio)
 
 auto timeout(bool for_long_task) -> caf::duration {
 	auto& [normal_to, long_to] = kernel::detail::timeouts();
-	return for_long_task ? long_to : normal_to;
-}	
+	return caf::duration{
+		for_long_task ? long_to.load(std::memory_order_relaxed) : normal_to.load(std::memory_order_relaxed)
+	};
+}
 
 NAMESPACE_END(blue_sky::kernel::radio)
