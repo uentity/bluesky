@@ -18,6 +18,7 @@
 #include <bs/kernel/radio.h>
 
 #include <fmt/format.h>
+#include <fmt/compile.h>
 
 #include <ostream>
 #include <string_view>
@@ -82,12 +83,12 @@ struct cat_registry {
 	}
 };
 
-auto ok_err_code() {
+const auto& ok_err_code() {
 	static const auto v = make_error_code(Error::OK);
 	return v;
 };
 
-auto fail_err_code() {
+const auto& fail_err_code() {
    static const auto v = make_error_code(Error::Happened);
    return v;
 }
@@ -117,32 +118,40 @@ std::error_code make_error_code(Error e) {
 /*-----------------------------------------------------------------------------
  *  error implementation
  *-----------------------------------------------------------------------------*/
-error::error(IsQuiet quiet, std::string_view message, std::error_code ec) noexcept :
+error::error(IsQuiet quiet, const char* message, std::error_code ec) noexcept :
 	code(ec == Error::Undefined ?
-		make_error_code(quiet == IsQuiet::Yes ? Error::OK : Error::Happened) :
+		(quiet == IsQuiet::Yes ? ok_err_code() : fail_err_code()) :
 		std::move(ec)
 	)
 {
+	if(message) if(auto msg_v = std::string_view{message}; !msg_v.empty())
+		info.emplace(message);
 	try {
-		if(!message.empty()) info.emplace(std::string{ message.begin(), message.end() });
 		if(quiet == IsQuiet::No) dump();
 	} catch(...) {}
 }
+error::error(IsQuiet quiet, const std::string& message, std::error_code ec) noexcept :
+	error(quiet, message.c_str(), ec)
+{}
+
+error::error(IsQuiet quiet, const char* message, int ec, std::string_view cat_name) noexcept
+	: error(quiet, message, ECR.make_error_code(ec, cat_name))
+{}
+
+error::error(IsQuiet quiet, const std::string& message, int ec, std::string_view cat_name) noexcept
+	: error(quiet, message.c_str(), ECR.make_error_code(ec, cat_name))
+{}
 
 error::error(IsQuiet quiet, std::error_code ec) noexcept
-	: error(quiet, std::string_view{}, std::move(ec))
+	: error(quiet, nullptr, std::move(ec))
 {}
 
 error::error(IsQuiet quiet, const std::system_error& er) noexcept
 	: error(quiet, er.what(), er.code())
 {}
 
-error::error(IsQuiet quiet, std::string_view message, int ec, std::string_view cat_name) noexcept
-	: error(quiet, message, ECR.make_error_code(ec, cat_name))
-{}
-
 error::error(IsQuiet quiet, raw_code ec, std::string_view cat_name) noexcept
-	: error(quiet, std::string_view{}, ECR.make_error_code(ec.value, cat_name))
+	: error(quiet, nullptr, ECR.make_error_code(ec.value, cat_name))
 {}
 
 // [NOTE] unpacking is quiet
@@ -180,7 +189,7 @@ bool error::ok() const noexcept {
 }
 
 BS_API std::string to_string(const error& er) {
-	std::string s = fmt::format("[{}] [{}] {}", er.domain(), er.code.value(), er.what());
+	std::string s = fmt::format(FMT_COMPILE("[{}] [{}] {}"), er.domain(), er.code.value(), er.what());
 #if defined(_DEBUG) && !defined(_MSC_VER)
 	if(!er.ok()) s += kernel::tools::get_backtrace(16, 4);
 #endif

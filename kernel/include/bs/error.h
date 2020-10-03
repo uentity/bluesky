@@ -178,7 +178,7 @@ public:
 		static const auto eval_f = [](auto&& ff) -> error {
 			if constexpr(std::is_same_v<f_result, void>) {
 				std::invoke(std::forward<F>(ff));
-				return quiet_flag{true};
+				return true;
 			}
 			else if constexpr(is_constructible_v<f_result>)
 				return std::invoke(std::forward<F>(ff));
@@ -224,9 +224,11 @@ private:
 	/// construct from error code solely
 	error(IsQuiet, std::error_code = Error::Undefined) noexcept;
 	/// construct from message and error code
-	error(IsQuiet, std::string_view message, std::error_code = Error::Undefined) noexcept;
+	error(IsQuiet, const char* message, std::error_code = Error::Undefined) noexcept;
+	error(IsQuiet, const std::string& message, std::error_code = Error::Undefined) noexcept;
 	/// construct from message, int code and possible registered category name
-	error(IsQuiet, std::string_view message, int err_code, std::string_view cat_name = {}) noexcept;
+	error(IsQuiet, const char* message, int err_code, std::string_view cat_name = {}) noexcept;
+	error(IsQuiet, const std::string& message, int err_code, std::string_view cat_name = {}) noexcept;
 	/// construct from system_error that already carries error code
 	error(IsQuiet, const std::system_error& er) noexcept;
 	/// construct from int error code and possible registered category name
