@@ -9,7 +9,7 @@
 #pragma once
 
 #include "property.h"
-#include "detail/is_container.h"
+#include "meta/is_container.h"
 
 #include <map>
 #include <iterator>

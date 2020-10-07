@@ -11,7 +11,7 @@
 #include "bare_node.h"
 #include "link.h"
 #include "errors.h"
-#include "../detail/is_container.h"
+#include "../meta/is_container.h"
 #include "../detail/enumops.h"
 
 #include <optional>

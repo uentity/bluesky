@@ -12,8 +12,8 @@
 #include <bs/defaults.h>
 #include <bs/log.h>
 #include <bs/detail/scope_guard.h>
-#include <bs/detail/is_container.h>
 #include <bs/detail/function_view.h>
+#include <bs/meta/is_container.h>
 
 #include "plugins_subsyst.h"
 #include "python_subsyst.h"
