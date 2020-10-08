@@ -115,7 +115,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 				bsout() << "*-* node: fired DataModified event" << bs_end;
 				auto params = prop::propdict{{ "link_id", lid }};
 				if(auto tres = tr_result{std::move(tres_box)})
-					params = extract_info(std::move(tres));
+					params.merge_props(extract_info(std::move(tres)));
 				else
 					params["error"] = to_string(extract_err(std::move(tres)));
 				handler_impl(self, weak_root, subn_actor, Event::DataModified, std::move(params));
