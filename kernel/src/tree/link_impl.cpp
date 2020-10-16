@@ -36,12 +36,15 @@ auto link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 
 auto link_impl::data(unsafe_t) const -> sp_obj { return nullptr; }
 
+auto link_impl::propagate_handle(node& N) const -> node& {
+	if(N) N.pimpl()->set_handle(super_engine());
+	return N;
+}
+
 auto link_impl::propagate_handle() -> node_or_err {
 	if(auto obj = data(unsafe)) {
-		if(auto N = obj->data_node()) {
-			N.pimpl()->set_handle(super_engine());
-			return N;
-		}
+		if(auto N = obj->data_node())
+			return propagate_handle(N);
 		return unexpected_err_quiet(Error::NotANode);
 	}
 	return unexpected_err_quiet(Error::EmptyData);

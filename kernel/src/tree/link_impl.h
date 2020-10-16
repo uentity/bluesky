@@ -124,6 +124,9 @@ public:
 	// [NOTE] unsafe -- operates directly on data
 	virtual auto propagate_handle() -> node_or_err;
 
+	// can be used by derived links to reset handle of given node
+	auto propagate_handle(node& N) const -> node&;
+
 	/// manipulate with owner (protected by mutex)
 	auto owner() const -> node;
 	auto reset_owner(const node& new_owner) -> void;
