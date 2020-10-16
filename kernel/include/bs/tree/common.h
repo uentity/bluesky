@@ -19,21 +19,21 @@
 NAMESPACE_BEGIN(blue_sky::tree)
 // denote possible tree events
 enum class Event : std::uint32_t {
+	None = 0,
 	LinkRenamed = 1,
 	LinkStatusChanged = 2,
 	LinkInserted = 4,
 	LinkErased = 8,
 	LinkDeleted = 16,
 	DataModified = 32,
+	DataNodeModified = 4 + 8,
 	All = std::uint32_t(-1)
 };
 
 /// link object data requests
 enum class Req { Data = 0, DataNode = 1 };
 /// request status reset conditions
-enum class ReqReset {
-	Always = 0, IfEq = 1, IfNeq = 2
-};
+enum class ReqReset { Always = 0, IfEq = 1, IfNeq = 2 };
 /// states of reuqest
 enum class ReqStatus { Void, Busy, OK, Error };
 

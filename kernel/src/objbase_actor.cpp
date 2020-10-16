@@ -83,10 +83,12 @@ return typed_behavior {
 						return F->load(*obj, fname);
 					}
 				});
+
 				auto res = error::box(quiet_fail);
-				cur_me(job)->extract(
-					[&](error::box er) { res = std::move(er); }
-				);
+				if(auto job_res = cur_me(job))
+					job_res->extract(
+						[&](error::box er) { res = std::move(er); }
+					);
 				return res;
 			}
 		}.or_else(cur_me));

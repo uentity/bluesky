@@ -336,9 +336,10 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 					.then([=, orig_me = std::move(orig_me)](error::box er) mutable {
 						// invoke original behavior inplace
 						auto m = caf::make_message(req_t(), true);
-						orig_me(m)->extract(
-							[&](R r) { res.deliver(std::move(r)); }
-						);
+						if(auto req_res = orig_me(m))
+							req_res->extract(
+								[&](R r) { res.deliver(std::move(r)); }
+							);
 					});
 					return res;
 				};
