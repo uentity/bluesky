@@ -59,7 +59,7 @@ struct afres_keeper {
 
 	// setup placeholder for value returned from request (must have error attached)
 	using P = std::conditional_t<
-		is_res_packed || tl::detail::is_expected<T>::value,
+		is_res_packed || tl::detail::is_expected<T>::value || std::is_same_v<T, error::box>,
 		std::optional<T>, std::optional<result_or_err<T>>
 	>;
 	P value;
@@ -79,14 +79,10 @@ struct afres_keeper {
 			return value.emplace(std::forward<U>(x));
 	}
 
-	// extract result from placeholder
+	// move result out of placeholder
 	decltype(auto) get() {
 		// if value is empty, then paste error
 		if(!value) emplace( error{ "actorf: wrong result type R specified" } );
-		// if R is an error, then simply return `error` instead of `result_or_err<error>`
-		//if constexpr(std::is_same_v<T, error>)
-		//	return *value ? error{std::move(**value)} : std::move(*value).error();
-		//else
 		return std::move(*value);
 	}
 };
@@ -149,6 +145,39 @@ auto actorf(const Actor& tgt, T timeout, Args&&... args) {
 	return actorf<R>(
 		caf::scoped_actor{kernel::radio::system()}, tgt, timeout, std::forward<Args>(args)...
 	);
+}
+
+/// inplace match of given behavior and message, returns result of `sending` message to behavior
+/// accepts void return type
+template<typename R = void, typename... Args>
+auto actorf(caf::behavior& bhv, Args&&... args) {
+	// setup placeholder for request result
+	auto res = [&] {
+		if constexpr(std::is_same_v<R, void>)
+			return std::optional<error>{};
+		else
+			return detail::afres_keeper<R>{};
+	}();
+
+	// setup value extracter from resulting message
+	auto extracter = caf::message_handler{
+		[&](const caf::error& er) { res.emplace(forward_caf_error(er)); }
+	};
+	if constexpr(!std::is_same_v<R, void>) {
+		using R_ = typename decltype(res)::R;
+		extracter = extracter.or_else(
+			[&](R_& r) { res.emplace(std::move(r)); }
+		);
+	}
+
+	// inplace match message against behavior
+	auto m = caf::make_message(std::forward<Args>(args)...);
+	if(auto req_res = bhv(m))
+		req_res->extract(std::move(extracter));
+	else // if no answer returned => no match was found
+		res.emplace(forward_caf_error(caf::sec::unexpected_message));
+
+	return res.get();
 }
 
 /// @brief spawn temp actor that makes specified request to `A` and pass result to callback `f`
