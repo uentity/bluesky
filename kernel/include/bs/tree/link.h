@@ -26,6 +26,7 @@ NAMESPACE_BEGIN(blue_sky::tree)
  *-----------------------------------------------------------------------------*/
 class BS_API link : public engine {
 public:
+	using bare_type = bare_link;
 	using engine_impl = link_impl;
 	using weak_ptr = engine::weak_ptr<link>;
 

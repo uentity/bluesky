@@ -20,11 +20,11 @@ NAMESPACE_BEGIN(blue_sky::tree)
 
 class BS_API node : public engine {
 public:
-	// some useful type aliases
-	using existing_index = bare_node::existing_index;
-	using insert_status = bare_node::insert_status;
+	using bare_type = bare_node;
 	using engine_impl = node_impl;
 	using weak_ptr = engine::weak_ptr<node>;
+	using existing_index = bare_node::existing_index;
+	using insert_status = bare_node::insert_status;
 
 	/// Interface of node actor, you can only send messages matching it
 	using actor_type = caf::typed_actor<

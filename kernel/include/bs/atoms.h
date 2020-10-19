@@ -49,6 +49,8 @@ using a_data = caf::atom_constant<caf::atom("bs data")>;
 using a_data_node = caf::atom_constant<caf::atom("bs dnode")>;
 // delay object load from storage
 using a_delay_load = caf::atom_constant<caf::atom("bs dlyload")>;
+// subscription manage
+using a_subscribe = caf::atom_constant<caf::atom("bs subscrb")>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  link API

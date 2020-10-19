@@ -154,6 +154,13 @@ return {
 		return pimpl_;
 	},
 
+	// subscribe events listener
+	[=](a_subscribe, const caf::actor& baby) {
+		// remember baby & ensure it's alive
+		return delegate(caf::actor_cast<ev_listener_actor_type>(baby), a_hi(), impl.home);
+	},
+
+	// apply link transaction
 	[=](a_apply, simple_transaction tr) -> error::box {
 		return tr_eval(std::move(tr));
 	},

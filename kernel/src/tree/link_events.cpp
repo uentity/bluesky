@@ -9,6 +9,7 @@
 
 #include "link_actor.h"
 #include "ev_listener_actor.h"
+
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
 #include <bs/serialize/cafbind.h>
@@ -69,11 +70,11 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 		if(enumval(listen_to & Event::LinkDeleted))
 			res = res.or_else(
 				[=](a_bye) {
-					// when overriding `a_bye` we must quit explicitly
-					// [NOTE] terminate self behavior, but current handler will execute till end
 					self->quit();
-					// do callback job
-					handler_impl(self, weak_root, Event::LinkDeleted, {{ "link_id", src_id }} );
+					// distinguish link's bye signal from kernel kill all
+					if(self->current_sender() == self->origin)
+						// [NOTE] week_root can possibly be already expired but callback needs to be called
+						self->f(weak_root.lock(), Event::LinkDeleted, {{"link_id", src_id}});
 				}
 			);
 
@@ -81,11 +82,14 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	};
 
 	// make baby event handler actor
-	auto baby = system().spawn_in_group<baby_t>(
-		pimpl()->home, pimpl()->home, std::move(f), std::move(make_ev_character)
-	);
-	// return baby ID
-	return baby.id();
+	auto baby = system().spawn<baby_t>(raw_actor().address(), std::move(f), std::move(make_ev_character));
+	// ensure it has started & properly initialized
+	if(auto res = actorf<std::uint64_t>(
+		*factor(), pimpl()->actor(*this), infinite, a_subscribe(), std::move(baby)
+	))
+		return *res;
+	else
+		throw res.error();
 }
 
 auto link::unsubscribe(std::uint64_t event_cb_id) -> void {

@@ -9,18 +9,15 @@
 #pragma once
 
 #include <bs/actor_common.h>
-#include <bs/defaults.h>
 #include <bs/objbase.h>
 #include <bs/kernel/radio.h>
-#include <bs/detail/enumops.h>
 #include <bs/detail/function_view.h>
 #include <bs/detail/sharded_mutex.h>
 #include <bs/tree/node.h>
 
+#include "private_common.h"
 #include "engine_impl.h"
 #include "../kernel/radio_subsyst.h"
-
-#include <caf/detail/shared_spinlock.hpp>
 
 #define LINK_TYPE_DEF(lnk_class, limpl_class, typename)                            \
 ENGINE_TYPE_DEF(limpl_class, typename)                                             \
@@ -30,12 +27,6 @@ auto lnk_class::type_id_() -> std::string_view { return limpl_class::type_id_();
 lnk_class::lnk_class(const link& rhs) : link(rhs, type_id_()) {}
 
 NAMESPACE_BEGIN(blue_sky::tree)
-namespace bs_detail = blue_sky::detail;
-
-using defaults::tree::nil_uid;
-using defaults::tree::nil_oid;
-inline const auto nil_otid = blue_sky::defaults::nil_type_name;
-
 /*-----------------------------------------------------------------------------
  *  base link impl
  *-----------------------------------------------------------------------------*/
@@ -50,14 +41,11 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  private link messaging interface
 	//
-	using primary_actor_type = link::actor_type::extend<
-		// run transaction in link's queue
-		caf::replies_to<a_apply, simple_transaction>::with<error::box>,
-		caf::replies_to<a_apply, link_transaction>::with<error::box>,
+	using primary_actor_type = link::actor_type
+	::extend_with<engine_actor_type<link>>
+	::extend<
 		// ask link's actor to send status changed ack AFTER it has been already changed by handle
 		caf::reacts_to<a_lnk_status, Req, ReqStatus, ReqStatus>,
-		// obtain link impl
-		caf::replies_to<a_impl>::with<sp_limpl>,
 		// delayed read for cached links
 		caf::replies_to<a_delay_load>::with<bool>
 	>::extend_with<kernel::detail::khome_actor_type>;

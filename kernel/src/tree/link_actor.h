@@ -9,18 +9,11 @@
 #pragma once
 
 #include <bs/actor_common.h>
-
 #include "node_impl.h"
 
 #include <caf/actor_system.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-
-enum class ReqOpts {
-	WaitIfBusy = 0, ErrorIfBusy = 1, ErrorIfNOK = 2, Detached = 4, DirectInvoke = 8,
-	HasDataCache = 16, Uniform = 32
-};
-
 /*-----------------------------------------------------------------------------
  *  link_actor
  *-----------------------------------------------------------------------------*/
@@ -72,7 +65,7 @@ public:
 	// parts of behavior
 	auto make_primary_behavior() -> primary_actor_type::behavior_type;
 	auto make_ack_behavior() -> ack_actor_type::behavior_type;
-	// combined link behavior: primary + ack
+	// complete & unboxed behavior
 	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;
 

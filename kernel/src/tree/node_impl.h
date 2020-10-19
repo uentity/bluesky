@@ -11,21 +11,14 @@
 #include <bs/actor_common.h>
 #include <bs/log.h>
 #include <bs/tree/node.h>
-#include <bs/detail/function_view.h>
 
 #include "node_leafs_storage.h"
 #include "link_impl.h"
-#include "../kernel/radio_subsyst.h"
 
 #include <cereal/types/vector.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-namespace bs_detail = blue_sky::detail;
-
 using existing_index = typename node::existing_index;
-
-/// link erase options
-enum class EraseOpts { Normal = 0, Silent = 1 };
 
 /*-----------------------------------------------------------------------------
  *  node_impl
@@ -44,12 +37,9 @@ public:
 	//  private node messaging interface
 	//
 	// public node iface extended with some private messages
-	using primary_actor_type = node::actor_type::extend<
-		// run transaction in node's queue
-		caf::replies_to<a_apply, simple_transaction>::with<error::box>,
-		caf::replies_to<a_apply, node_transaction>::with<error::box>,
-		// obtain node impl
-		caf::replies_to<a_impl>::with<sp_nimpl>,
+	using primary_actor_type = node::actor_type
+	::extend_with<engine_actor_type<node>>
+	::extend<
 		// join self group
 		caf::reacts_to<a_hi>,
 		// erase link by ID with specified options
@@ -81,7 +71,7 @@ public:
 	using home_actor_type = ack_actor_type;
 
 	// append private behavior to public iface
-	using actor_type = primary_actor_type::extend_with< ack_actor_type >;
+	using actor_type = primary_actor_type::extend_with<ack_actor_type>;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  member variables

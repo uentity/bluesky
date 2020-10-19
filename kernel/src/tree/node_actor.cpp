@@ -300,6 +300,12 @@ return {
 		return tr_eval(std::move(tr), bare_node(pimpl_));
 	},
 
+	// subscribe events listener
+	[=](a_subscribe, const caf::actor& baby) {
+		// remember baby & ensure it's alive
+		return delegate(caf::actor_cast<ev_listener_actor_type>(baby), a_hi(), impl.home);
+	},
+
 	// unconditionally join home group - used after deserialization
 	[=](a_hi) { join(impl.home); },
 
@@ -513,9 +519,7 @@ return {
 }; }
 
 auto node_actor::make_behavior() -> behavior_type {
-	return actor_type::behavior_type{first_then_second(
-		make_ack_behavior(), make_primary_behavior()
-	)}.unbox();
+	return first_then_second(make_ack_behavior(), make_primary_behavior()).unbox();
 }
 
 NAMESPACE_END(blue_sky::tree)

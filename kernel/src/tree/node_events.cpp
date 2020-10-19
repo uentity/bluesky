@@ -46,7 +46,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			const auto renamed_impl = [=](
 				const caf::actor& subn_actor, auto& lid, auto& new_name, auto& old_name
 			) {
-				bsout() << "*-* node: fired LinkRenamed event" << bs_end;
+				//bsout() << "*-* node: fired LinkRenamed event" << bs_end;
 				handler_impl(self, weak_root, subn_actor, Event::LinkRenamed, {
 					{"link_id", lid},
 					{"new_name", std::move(new_name)},
@@ -78,7 +78,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			const auto status_impl = [=](
 				const caf::actor& subn_actor, auto& lid, auto req, auto new_s, auto prev_s
 			) {
-				bsout() << "*-* node: fired LinkStatusChanged event" << bs_end;
+				//bsout() << "*-* node: fired LinkStatusChanged event" << bs_end;
 				handler_impl(self, weak_root, subn_actor, Event::LinkStatusChanged, {
 					{"link_id", lid},
 					{"request", prop::integer(req)},
@@ -112,7 +112,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			const auto datamod_impl = [=](
 				const caf::actor& subn_actor, auto& lid, tr_result::box&& tres_box
 			) {
-				bsout() << "*-* node: fired DataModified event" << bs_end;
+				//bsout() << "*-* node: fired DataModified event" << bs_end;
 				auto params = prop::propdict{{ "link_id", lid }};
 				if(auto tres = tr_result{std::move(tres_box)})
 					params.merge_props(extract_info(std::move(tres)));
@@ -143,7 +143,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					a_ack, const caf::actor& src, a_node_insert,
 					const lid_type& lid, std::size_t pos
 				) {
-					bsout() << "*-* node: fired LinkInserted event" << bs_end;
+					//bsout() << "*-* node: fired LinkInserted event" << bs_end;
 					handler_impl(self, weak_root, src, Event::LinkInserted, {
 						{"link_id", lid},
 						{"pos", (prop::integer)pos}
@@ -154,7 +154,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					a_ack, const caf::actor& src, a_node_insert,
 					const lid_type& lid, std::size_t to_idx, std::size_t from_idx
 				) {
-					bsout() << "*-* node: fired LinkInserted event (move)" << bs_end;
+					//bsout() << "*-* node: fired LinkInserted event (move)" << bs_end;
 					handler_impl(self, weak_root, src, Event::LinkInserted, {
 						{"link_id", lid},
 						{"to_idx", (prop::integer)to_idx},
@@ -170,8 +170,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 				[=](
 					a_ack, const caf::actor& src, a_node_erase, lids_v lids
 				) {
-					bsout() << "*-* node: fired LinkErased event" << bs_end;
-
+					//bsout() << "*-* node: fired LinkErased event" << bs_end;
 					handler_impl(self, weak_root, src, Event::LinkErased, {
 						{"lids", std::move(lids)}
 					});
@@ -184,11 +183,14 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	};
 
 	// make shiny new subscriber actor and place into parent's room
-	auto baby = system().spawn_in_group<baby_t>(
-		pimpl()->home, pimpl()->home, std::move(f), std::move(make_ev_character)
-	);
-	// and return ID
-	return baby.id();
+	auto baby = system().spawn<baby_t>(raw_actor().address(), std::move(f), std::move(make_ev_character));
+	// ensure it has started & properly initialized
+	if(auto res = actorf<std::uint64_t>(
+		*factor(), pimpl()->actor(*this), infinite, a_subscribe(), std::move(baby)
+	))
+		return *res;
+	else
+		throw res.error();
 }
 
 auto node::unsubscribe(std::uint64_t event_cb_id) -> void {
