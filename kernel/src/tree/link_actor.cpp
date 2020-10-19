@@ -341,12 +341,16 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 					auto objA = objbase_actor::actor(*obj);
 					request(std::move(objA), caf::infinite, a_delay_load(), std::move(obj))
 					.then([=, orig_me = std::move(orig_me)](error::box er) mutable {
-						// invoke original behavior inplace
-						auto m = caf::make_message(req_t(), true);
-						if(auto req_res = orig_me(m))
-							req_res->extract(
-								[&](R r) { res.deliver(std::move(r)); }
-							);
+						// if error happened - deliver it
+						if(er.ec) res.deliver(R{ tl::unexpect, std::move(er) });
+						// otherwise, request self (restored `orig_me`)
+						request(caf::actor_cast<actor_type>(this), caf::infinite, req_t(), true)
+						.then(
+							[=](R req_res) mutable { res.deliver(std::move(req_res)); },
+							[=](const caf::error& er) mutable {
+								res.deliver(R{ tl::unexpect, forward_caf_error(er) });
+							}
+						);
 					});
 					return res;
 				};

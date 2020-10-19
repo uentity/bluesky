@@ -77,19 +77,12 @@ return typed_behavior {
 				if(!F) return error{obj->type_id(), tree::Error::MissingFormatter};
 
 				// apply load job inplace
-				auto job = caf::make_message(a_apply(), transaction{
+				return actorf<error::box>(cur_me, a_apply(), transaction{
 					[=, obj = std::move(obj), fname = std::move(fname)] {
 						//caf::aout(this) << "Loading " << fname << std::endl;
 						return F->load(*obj, fname);
 					}
 				});
-
-				auto res = error::box(quiet_fail);
-				if(auto job_res = cur_me(job))
-					job_res->extract(
-						[&](error::box er) { res = std::move(er); }
-					);
-				return res;
 			}
 		}.or_else(cur_me));
 		return true;
