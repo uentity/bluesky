@@ -62,8 +62,10 @@ void py_bind_tree(py::module& m) {
 	//
 	// export Flags enum
 	py::enum_<Flags>(m, "Flags", py::arithmetic())
+		.value("Plain", Flags::Plain)
 		.value("Persistent", Flags::Persistent)
 		.value("Disabled", Flags::Disabled)
+		.value("LazyLoad", Flags::LazyLoad)
 		.export_values()
 	;
 	py::implicitly_convertible<int, Flags>();
@@ -83,12 +85,14 @@ void py_bind_tree(py::module& m) {
 
 	// Events enum
 	py::enum_<Event>(m, "Event", py::arithmetic())
+		.value("Node", Event::None)
 		.value("LinkRenamed", Event::LinkRenamed)
 		.value("LinkStatusChanged", Event::LinkStatusChanged)
 		.value("LinkInserted", Event::LinkInserted)
 		.value("LinkErased", Event::LinkErased)
 		.value("LinkDeleted", Event::LinkDeleted)
 		.value("DataModified", Event::DataModified)
+		.value("DataNodeModified", Event::DataNodeModified)
 		.value("All", Event::All)
 	;
 

@@ -55,10 +55,8 @@ public:
 		// ack on link erase from sibling node
 		caf::reacts_to<a_ack, caf::actor, a_node_erase, lids_v>
 	>;
-
-	// all acks processed by node: self acks + self leafs acks + subtree acks
-	// [NOTE] `subtree_ack_actor_type` includes `self_ack_actor_type`
-	using ack_actor_type = link_impl::subtree_ack_actor_type::extend<
+	// acks that this node receives from it's leafs
+	using leafs_ack_actor_type = caf::typed_actor<
 		// track leaf rename
 		caf::reacts_to<a_ack, lid_type, a_lnk_rename, std::string, std::string>,
 		// track leaf status
@@ -66,6 +64,10 @@ public:
 		// data altered ack
 		caf::reacts_to<a_ack, lid_type, a_data, tr_result::box>
 	>;
+
+	// all acks processed by node: self acks + self leafs acks + subtree acks
+	// [NOTE] `subtree_ack_actor_type` includes `self_ack_actor_type`
+	using ack_actor_type = link_impl::subtree_ack_actor_type::extend_with<leafs_ack_actor_type>;
 
 	// all acks are pumped via node's home group
 	using home_actor_type = ack_actor_type;

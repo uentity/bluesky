@@ -81,7 +81,7 @@ protected:
 	req_opts ropts_;
 };
 
-// helper for generating `link_impl::spawn_actor()` implementations
+// spawns link actor inside link home group
 template<typename Actor, caf::spawn_options Os = caf::no_spawn_options, class... Ts>
 inline auto spawn_lactor(sp_limpl limpl, Ts&&... args) {
 	// spawn actor

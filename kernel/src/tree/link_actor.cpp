@@ -357,7 +357,28 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 
 			// setup new behavior for Data & DataNode requests
 			become(caf::message_handler{
-				load_then_answer(a_data()), load_then_answer(a_data_node())
+				load_then_answer(a_data()), load_then_answer(a_data_node()),
+
+				// OID & OTID will trigger load
+				[=](a_lnk_otid) -> caf::result<std::string> {
+					auto res = make_response_promise<std::string>();
+					request(caf::actor_cast<caf::actor>(this), caf::infinite, a_data(), true)
+					.then([=](const obj_or_errbox& maybe_obj) mutable {
+						if(maybe_obj) res.deliver((*maybe_obj)->type_id());
+						res.deliver(std::string{nil_otid});
+					});
+					return res;
+				},
+
+				[=](a_lnk_oid) -> caf::result<std::string> {
+					auto res = make_response_promise<std::string>();
+					request(caf::actor_cast<caf::actor>(this), caf::infinite, a_data(), true)
+					.then([=](const obj_or_errbox& maybe_obj) mutable {
+						if(maybe_obj) res.deliver((*maybe_obj)->id());
+						res.deliver(std::string{nil_oid});
+					});
+					return res;
+				},
 			}.or_else(orig_me));
 			return true;
 		}

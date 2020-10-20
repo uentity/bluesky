@@ -7,6 +7,7 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/tree/map_link.h>
 #include <bs/python/tree.h>
 #include <bs/python/tr_result.h>
 #include <bs/python/result_converter.h>
@@ -284,6 +285,22 @@ void py_bind_link(py::module& m) {
 			"Populate root object structure (children)")
 		.def("pull_data", &fusion_iface::pull_data, "root"_a, "root_link"_a,
 			"Fill root object content")
+	;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  map_link
+	//
+	py::class_<map_link, link>(m, "map_link")
+		.def(py::init<
+				std::string, map_link::mapper_f, map_link::link_or_node, map_link::link_or_node,
+				Event, TreeOpts, Flags
+			>(),
+			"name"_a, "mf"_a, "src_node"_a, "dest_node"_a = map_link::link_or_node{},
+			"update_on"_a = Event::All, "opts"_a = TreeOpts::Normal, "flags"_a = Flags::Plain
+		)
+		.def(py::init<const link&>())
+
+		.def_property_readonly_static("type_id_", [](const py::object&) { return map_link::type_id_(); })
 	;
 }
 

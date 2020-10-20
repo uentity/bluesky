@@ -471,6 +471,9 @@
     <ClInclude Include="kernel\src\tree\ev_listener_actor.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\src\tree\map_engine.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\src\tree\nil_engine.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
@@ -717,6 +720,15 @@
       <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\context.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\map_link.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\map_link_actor.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\map_link_impl.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\nil_link.cpp">

@@ -19,6 +19,8 @@
 #include "engine_impl.h"
 #include "../kernel/radio_subsyst.h"
 
+#include <caf/typed_actor.hpp>
+
 #define LINK_TYPE_DEF(lnk_class, limpl_class, typename)                            \
 ENGINE_TYPE_DEF(limpl_class, typename)                                             \
 auto lnk_class::type_id_() -> std::string_view { return limpl_class::type_id_(); }
@@ -64,13 +66,15 @@ public:
 		caf::reacts_to<a_ack, a_data, tr_result::box>
 	>;
 
-	// foreign acks coming to link's home group from deeper levels
-	using subtree_ack_actor_type = caf::typed_actor<
-		// leafs changes on deeper levels
+	// leaf acks coming from subtree
+	using deep_ack_actor_type = caf::typed_actor<
 		caf::reacts_to<a_ack, caf::actor, lid_type, a_lnk_rename, std::string, std::string>,
 		caf::reacts_to<a_ack, caf::actor, lid_type, a_lnk_status, Req, ReqStatus, ReqStatus>,
-		caf::reacts_to<a_ack, caf::actor, lid_type, a_data, tr_result::box>,
+		caf::reacts_to<a_ack, caf::actor, lid_type, a_data, tr_result::box>
+	>;
 
+	// foreign acks coming to link's home group from deeper levels
+	using subtree_ack_actor_type = deep_ack_actor_type::extend<
 		// node acks from deeper levels
 		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t>,
 		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, size_t>,
