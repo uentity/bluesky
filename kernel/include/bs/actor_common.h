@@ -87,7 +87,19 @@ struct afres_keeper {
 	}
 };
 
+template<typename... Ts> struct merge_with;
+
+template<template<typename...> typename T, typename... SigsA, typename... SigsB>
+struct merge_with<T<SigsA...>, T<SigsB...>> {
+	using SigsAB = caf::detail::type_list<SigsA..., SigsB...>;
+	using type = caf::detail::tl_apply_t<caf::detail::tl_distinct_t<SigsAB>, T>;
+};
+
 NAMESPACE_END(detail)
+
+/// calculate merge result of typed actors or typed behaviors
+/// in contrast to `extend_with<>` contains only unique entries
+template<typename T, typename U> using merge_with = typename detail::merge_with<T, U>::type;
 
 /// tag value for high priority messages
 inline constexpr auto high_prio = caf::message_priority::high;
@@ -245,14 +257,11 @@ auto anon_request_result(Actor A, T timeout, bool high_priority, F f, Args&&... 
 	});
 }
 
+
 /// @brief models 'or_else' for typed behaviors - make unified behavior from `first` and `second`
 template<typename... SigsA, typename... SigsB>
 auto first_then_second(caf::typed_behavior<SigsA...> first, caf::typed_behavior<SigsB...> second) {
-	using namespace caf::detail;
-
-	using SigsAB = type_list<SigsA..., SigsB...>;
-	using result_t = tl_apply_t<tl_distinct_t<SigsAB>, caf::typed_behavior>;
-
+	using result_t = merge_with<decltype(first), decltype(second)>;
 	return result_t{
 		typename result_t::unsafe_init(),
 		caf::message_handler{ first.unbox().as_behavior_impl() }
