@@ -14,6 +14,8 @@
 #include <bs/tree/errors.h>
 #include <bs/serialize/cafbind.h>
 
+#include "../objbase_actor.h"
+
 #include <cereal/types/vector.hpp>
 #include <fmt/format.h>
 
@@ -26,18 +28,6 @@ using blue_sky::tree::Error;
 objfrm_manager::objfrm_manager(caf::actor_config& cfg, bool is_saving) :
 	objfrm_manager_t::base(cfg), is_saving_(is_saving)
 {}
-
-static auto make_frm_job(sp_obj obj, object_formatter* F, std::string fname, bool is_saving) {
-	return is_saving ? transaction{
-		[obj = std::move(obj), F, fname = std::move(fname)] {
-			return F->save(*obj, fname);
-		}
-	} :
-		[obj = std::move(obj), F, fname = std::move(fname)] {
-			return F->load(*obj, fname);
-		}
-	;
-}
 
 auto objfrm_manager::session_ack() -> void {
 	if(session_finished_ && (nstarted_ == nfinished_)) {
@@ -56,23 +46,21 @@ return {
 	},
 
 	// process given object
-	[=](const sp_obj& obj, const std::string& fmt_name, const std::string& fname) {
-		// obtain formatter
-		auto F = get_formatter(obj->type_id(), fmt_name);
-		if(!F) {
-			er_stack_.emplace_back(error{obj->type_id(), Error::MissingFormatter});
-			return;
-		}
-
+	[=](const sp_obj& obj, std::string fmt_name, std::string fname) {
+		// sanity
+		if(!obj) er_stack_.emplace_back(error{Error::EmptyData});
 		// run job in object's queue
 		++nstarted_;
-		request(
-			obj->actor(), caf::infinite, a_apply(), make_frm_job(obj, F, fname, is_saving_)
-		).then([=](tr_result::box rbox) {
+		auto objA = objbase_actor::actor(*obj);
+		auto frm_job = is_saving_ ?
+			request(objA, caf::infinite, a_save(), obj, std::move(fmt_name), std::move(fname)) :
+			request(objA, caf::infinite, a_load(), obj, std::move(fmt_name), std::move(fname))
+		;
+		// process result
+		frm_job.then([=](error::box er) {
 			// save result of finished job & inc finished counter
 			++nfinished_;
-			if(error er = std::move(rbox))
-				er_stack_.push_back(er);
+			if(er.ec) er_stack_.push_back(std::move(er));
 			session_ack();
 		}, [=](const caf::error& er) {
 			// in case smth went wrong with job posting

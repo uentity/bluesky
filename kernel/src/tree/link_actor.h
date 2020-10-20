@@ -111,7 +111,7 @@ struct BS_HIDDEN_API cached_link_actor : public link_actor {
 		// get pointee type ID
 		caf::replies_to<a_lnk_otid>::with<std::string>,
 		// delayed object load
-		caf::replies_to<a_delay_load>::with<bool>
+		caf::replies_to<a_lazy, a_load>::with<bool>
 	>;
 
 	auto make_typed_behavior() -> typed_behavior;

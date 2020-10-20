@@ -226,7 +226,7 @@ struct file_heads_manager {
 			caf::anon_send(manager_, a_bye());
 		// setup link to trigger dealyed object load
 		if constexpr(!Saving) {
-			if(auto r = tree::link_impl::actorf<bool>(L, a_delay_load()); !r)
+			if(auto r = tree::link_impl::actorf<bool>(L, a_lazy(), a_load()); !r)
 				return std::move(r.error());
 		}
 		return perfect;

@@ -286,7 +286,7 @@ return {
 	},
 
 	// noop - implement in derived links
-	[=](a_delay_load) { return false; }
+	[=](a_lazy, a_load) { return false; }
 }; }
 
 auto link_actor::make_typed_behavior() -> typed_behavior {
@@ -322,7 +322,7 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 		},
 
 		// modifies beahvior s.t. next Data request will send `a_delay_load` to stored object first
-		[=](a_delay_load) {
+		[=](a_lazy, a_load) {
 			auto orig_me = current_behavior();
 
 			// setup request impl that invokes `a_delay_load` on object once
@@ -338,12 +338,11 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 					if(!obj) return unexpected_err_quiet(Error::EmptyData);
 
 					auto res = make_response_promise<R>();
-					auto objA = objbase_actor::actor(*obj);
-					request(std::move(objA), caf::infinite, a_delay_load(), std::move(obj))
+					request(objbase_actor::actor(*obj), caf::infinite, a_load(), std::move(obj))
 					.then([=, orig_me = std::move(orig_me)](error::box er) mutable {
 						// if error happened - deliver it
 						if(er.ec) res.deliver(R{ tl::unexpect, std::move(er) });
-						// otherwise, request self (restored `orig_me`)
+						// otherwise, make data request to self (orig_me)
 						request(caf::actor_cast<actor_type>(this), caf::infinite, req_t(), true)
 						.then(
 							[=](R req_res) mutable { res.deliver(std::move(req_res)); },

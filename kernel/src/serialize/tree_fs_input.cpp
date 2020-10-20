@@ -237,7 +237,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		// instead of posting save job to manager, setup delayed read job
 		if(auto r = actorf<bool>(
 			objbase_actor::actor(obj), kernel::radio::timeout(),
-			a_delay_load(), obj_frm, abs_obj_path.string()
+			a_lazy(), a_load(), obj_frm, abs_obj_path.string()
 		); !r)
 			return r.error();
 

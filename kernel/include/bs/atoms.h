@@ -37,6 +37,9 @@ using a_bye = caf::atom_constant<caf::atom("bs bye")>;
 using a_ack = caf::atom_constant<caf::atom("bs ack")>;
 // used to invoke some processing over an object/actor
 using a_apply = caf::atom_constant<caf::atom("bs apply")>;
+// indicate that operation is lazy (won't start immediately)
+using a_lazy = caf::atom_constant<caf::atom("bs lazy")>;
+
 // get implementation part of link/node/etc...
 using a_impl = caf::atom_constant<caf::atom("bs impl")>;
 // get home group of entity
@@ -47,8 +50,9 @@ using a_home_id = caf::atom_constant<caf::atom("bs home id")>;
 using a_data = caf::atom_constant<caf::atom("bs data")>;
 // obtain data node (retrive node)
 using a_data_node = caf::atom_constant<caf::atom("bs dnode")>;
-// delay object load from storage
-using a_delay_load = caf::atom_constant<caf::atom("bs dlyload")>;
+// object save/load from storage
+using a_load = caf::atom_constant<caf::atom("bs load")>;
+using a_save = caf::atom_constant<caf::atom("bs save")>;
 // subscription manage
 using a_subscribe = caf::atom_constant<caf::atom("bs subscrb")>;
 

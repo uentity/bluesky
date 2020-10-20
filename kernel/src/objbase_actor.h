@@ -26,14 +26,18 @@ public:
 	>;
 
 	using actor_type = objbase::actor_type::extend<
-			// setup delay read action
-			caf::replies_to<a_delay_load, std::string /* fmt */, std::string /* fname */>::with<bool>,
-	   		// trigger delay read
-			caf::replies_to<a_delay_load, sp_obj /* obj */>::with<error::box>
-		>
-		::extend_with<kernel::detail::khome_actor_type>
-		::extend_with<home_actor_type>
-	;
+		// invoke object save
+		caf::replies_to<a_save, sp_obj, std::string /* fmt */, std::string /* fname */>::with<error::box>,
+		// invoke object load
+		caf::replies_to<a_load, sp_obj, std::string /* fmt */, std::string /* fname */>::with<error::box>,
+		// setup lazy read action
+		caf::replies_to<a_lazy, a_load, std::string /* fmt */, std::string /* fname */>::with<bool>,
+		// trigger lazy load
+		caf::replies_to<a_load, sp_obj /* obj */>::with<error::box>
+	>
+	::extend_with<kernel::detail::khome_actor_type>
+	::extend_with<home_actor_type>;
+
 	using typed_behavior = actor_type::behavior_type;
 
 	caf::group home_;
