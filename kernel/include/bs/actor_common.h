@@ -13,7 +13,6 @@
 #include "error.h"
 #include "timetypes.h"
 #include "transaction.h"
-#include "meta/variant.h"
 #include "kernel/radio.h"
 #include "detail/function_view.h"
 #include "detail/tuple_utils.h"
@@ -189,7 +188,7 @@ auto actorf(caf::behavior& bhv, Args&&... args) {
 	else // if no answer returned => no match was found
 		res.emplace(forward_caf_error(caf::sec::unexpected_message));
 
-	return res.get();
+	if constexpr(!std::is_same_v<R, void>) return res.get();
 }
 
 /// @brief spawn temp actor that makes specified request to `A` and pass result to callback `f`
