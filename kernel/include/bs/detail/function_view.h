@@ -14,6 +14,8 @@
 #pragma once
 
 #include "../meta.h"
+
+#include <caf/detail/type_list.hpp>
 #include <functional>
 
 namespace blue_sky {
@@ -39,21 +41,25 @@ template<typename F> using deduce_callable_t = typename deduce_callable<std::rem
 template<typename R, typename... Args>
 struct deduce_callable<R (Args...), void> {
 	using type = R (Args...);
+	using args = caf::detail::type_list<Args...>;
 	using result = R;
 };
 template<typename R, typename... Args>
 struct deduce_callable<R (*)(Args...), void> {
 	using type = R (Args...);
+	using args = caf::detail::type_list<Args...>;
 	using result = R;
 };
 template<typename C, typename R, typename... Args>
 struct deduce_callable<R (C::*)(Args...), void> {
 	using type = R (Args...);
+	using args = caf::detail::type_list<Args...>;
 	using result = R;
 };
 template<typename C, typename R, typename... Args>
 struct deduce_callable<R (C::*)(Args...) const, void> {
 	using type = R (Args...);
+	using args = caf::detail::type_list<Args...>;
 	using result = R;
 };
 
@@ -61,10 +67,16 @@ template<typename F>
 struct deduce_callable<F, std::void_t< decltype(&F::operator()) >> {
 	using deducer = deduce_callable< std::remove_reference_t<decltype(&F::operator())> >;
 	using type = typename deducer::type;
+	using args = typename deducer::args;
 	using result = typename deducer::result;
 };
 
 } // eof blue_sky::detail
+
+template<typename F> using deduce_callable = detail::deduce_callable<std::remove_reference_t<F>>;
+template<typename F> using deduce_callable_t = detail::deduce_callable_t<F>;
+
+template<typename T> inline constexpr auto is_function_view_v = detail::is_function_view_v<T>;
 
 /*-----------------------------------------------------------------------------
  *  function_view is a drop-in replacement for argument accepting any callable type
