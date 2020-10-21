@@ -86,6 +86,40 @@ struct afres_keeper {
 	}
 };
 
+template<typename F>
+struct closed_functor {
+	template<typename FF>
+	static auto make(FF f, caf::event_based_actor* self) {
+		using namespace caf::detail;
+
+		using Fargs = typename deduce_callable<F>::args;
+		using x1_t = tl_head_t<Fargs>;
+		constexpr bool add_self = std::is_pointer_v<x1_t> &&
+			std::is_base_of_v<caf::event_based_actor, std::remove_pointer_t<x1_t>>;
+
+		using res_args = std::conditional_t<add_self, tl_tail_t<Fargs>, Fargs>;
+		return tl_apply_t<res_args, impl>::template make<add_self>(std::move(f), self);
+	}
+
+private:
+	template<typename... Args>
+	struct impl {
+		template<bool AddSelf, typename FF>
+		static auto make(FF f, caf::event_based_actor* self) {
+			if constexpr(AddSelf)
+				return [f = std::move(f), self](Args... xs) mutable {
+					return f(self, std::forward<Args>(xs)...);
+				};
+			else if constexpr(std::is_same_v<F, FF>)
+				return f;
+			else
+				return [f = std::move(f)](Args... xs) mutable {
+					return f(std::forward<Args>(xs)...);
+				};
+		}
+	};
+};
+
 template<typename... Ts> struct merge_with;
 
 template<template<typename...> typename T, typename... SigsA, typename... SigsB>
@@ -199,17 +233,17 @@ template<
 >
 auto anon_request(Actor A, T timeout, bool high_priority, F f, Args&&... args) -> void {
 	kernel::radio::system().spawn<Os>([
-		high_priority, f = std::move(f), A = std::move(A), t = detail::cast_timeout(timeout),
+		high_priority, A = std::move(A), t = detail::cast_timeout(timeout), f = std::move(f),
 		args = std::make_tuple(std::forward<Args>(args)...)
-	] (caf::event_based_actor* self) mutable -> caf::behavior {
+	] (caf::event_based_actor* self) mutable {
 		std::apply([self, high_priority, A = std::move(A), t = std::move(t)](auto&&... args) {
 			return high_priority ?
-				self->request<caf::message_priority::high>(A, t, std::forward<decltype(args)>(args)...) :
-				self->request<caf::message_priority::normal>(A, t, std::forward<decltype(args)>(args)...);
+				self->request<high_prio>(A, t, std::forward<decltype(args)>(args)...) :
+				self->request(A, t, std::forward<decltype(args)>(args)...);
 		}, std::move(args))
-		.then(std::move(f));
+		.then(detail::closed_functor<F>::make(std::move(f), self));
 
-		return {};
+		self->become({});
 	});
 }
 
@@ -220,42 +254,37 @@ template<
 	typename = detail::if_actor_handle<Actor>
 >
 auto anon_request_result(Actor A, T timeout, bool high_priority, F f, Args&&... args) {
-	struct rstate {
-		// used to deliver result of `f()`
-		caf::response_promise res;
-	};
 	// spawn worker actor that will make request and invoke `f`
 	return kernel::radio::system().spawn<Os>([
-		high_priority, f = std::move(f), A = std::move(A), t = detail::cast_timeout(timeout),
+		high_priority, A = std::move(A), t = detail::cast_timeout(timeout), f = std::move(f),
 		args = std::make_tuple(std::forward<Args>(args)...)
-	] (caf::stateful_actor<rstate>* self) mutable -> caf::behavior {
+	] (caf::event_based_actor* self) mutable -> caf::behavior {
 		// prepare response
-		self->state.res = self->make_response_promise();
+		auto res = self->make_response_promise();
 		// make request
-		using Finfo = detail::deduce_callable<std::remove_reference_t<F>>;
 		std::apply([self, high_priority, A = std::move(A), t = std::move(t)](auto&&... args) {
 			return high_priority ?
 				self->template request<high_prio>(A, t, std::forward<decltype(args)>(args)...) :
 				self->template request(A, t, std::forward<decltype(args)>(args)...);
 		}, std::move(args))
-		.then(std::function<typename Finfo::type>{
-			[res = self->state.res, f = std::move(f)](auto&&... xs) mutable {
-				if constexpr(!std::is_same_v<typename Finfo::result, void>)
-					res.deliver( f(std::forward<decltype(xs)>(xs)...) );
+		.then(detail::closed_functor<F>::make(
+			[res, f = std::move(f)](auto&&... xs) mutable {
+				using Fres = typename deduce_callable<F>::result;
+				if constexpr(!std::is_same_v<Fres, void>)
+					res.deliver(f(std::forward<decltype(xs)>(xs)...));
 				else {
 					f(std::forward<decltype(xs)>(xs)...);
 					res.deliver(caf::unit);
 				}
-			}
-		});
+			}, self
+		));
 
 		return {
 			// caller might send `a_ack` message to wait for callback invocation result
-			[=](a_ack) { return self->state.res; }
+			[=](a_ack) { return res; }
 		};
 	});
 }
-
 
 /// @brief models 'or_else' for typed behaviors - make unified behavior from `first` and `second`
 template<typename... SigsA, typename... SigsB>
