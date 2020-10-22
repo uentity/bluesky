@@ -36,7 +36,7 @@ bool contains_link(const Node& N, const link& l) {
 }
 
 bool contains_obj(const node& N, const sp_obj& obj) {
-	return N.index(obj->id(), Key::OID).has_value();
+	return obj ? N.index(obj->id(), Key::OID).has_value() : false;
 }
 
 bool contains_key(const node& N, std::string key, Key meaning) {
@@ -87,11 +87,16 @@ auto find_lid(const Node& N, lid_type key) -> link {
 
 template<bool Throw = true>
 auto find_obj(const node& N, const sp_obj& obj) -> link {
-	if(auto r = N.find(obj->id(), Key::OID))
-		return r;
+	// sanity
+	if(obj) {
+		if(auto r = N.find(obj->id(), Key::OID))
+			return r;
+	}
 
-	if constexpr(Throw)
-		throw_find_err(obj->id(), Key::OID);
+	if constexpr(Throw) {
+		if(obj) throw_find_err(obj->id(), Key::OID);
+		else throw py::key_error("Nil object");
+	}
 	return {};
 }
 
@@ -116,9 +121,11 @@ auto find_idx(const Node& N, long idx) -> link {
 
 // ------- index
 auto index_obj(const node& N, const sp_obj& obj) -> py::int_ {
-	if(auto i = N.index(obj->id(), Key::OID))
-		return *i;
-	else return py::none();
+	if(obj) {
+		if(auto i = N.index(obj->id(), Key::OID))
+			return *i;
+	}
+	return py::none();
 }
 
 template<typename Node>
@@ -137,7 +144,7 @@ auto deep_search_lid(const node& N, const lid_type& key) -> link {
 }
 
 auto deep_search_obj(const node& N, const sp_obj& obj) {
-	return N.deep_search(obj->id(), Key::OID);
+	return obj ? N.deep_search(obj->id(), Key::OID) : link{};
 }
 
 // ------- erase
@@ -152,7 +159,8 @@ void erase_link(Node& N, const link& l) {
 }
 
 void erase_obj(node& N, const sp_obj& obj) {
-	N.erase(obj->id(), Key::OID);
+	if(obj)
+		N.erase(obj->id(), Key::OID);
 }
 
 template<typename Node>
