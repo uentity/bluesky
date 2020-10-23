@@ -98,6 +98,8 @@ struct nil_link::self_impl : nil_engine_impl<nil_link, link_impl> {
 		return tl::make_unexpected(Error::EmptyData);
 	}
 
+	auto data(unsafe_t) const -> sp_obj override { return nullptr; }
+
 	self_impl()
 		: super(defaults::tree::nil_link_name, Flags::Plain)
 	{

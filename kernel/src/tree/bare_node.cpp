@@ -9,9 +9,13 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-bare_node::bare_node(const node& rhs) : bare_node(rhs.bare()) {}
+bare_node::bare_node(const node& rhs) : bare_node(rhs.bare()) {
+	if(is_nil()) throw error("Bare access to nil node");
+}
 
-bare_node::bare_node(std::shared_ptr<node_impl> impl) : pimpl_(std::move(impl)) {}
+bare_node::bare_node(std::shared_ptr<node_impl> impl) : pimpl_(std::move(impl)) {
+	if(is_nil()) throw error("Bare access to nil node");
+}
 
 auto bare_node::pimpl() const -> node_impl* { return pimpl_.get(); }
 
