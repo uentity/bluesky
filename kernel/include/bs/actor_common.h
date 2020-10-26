@@ -20,7 +20,7 @@
 #include <caf/fwd.hpp>
 #include <caf/function_view.hpp>
 #include <caf/event_based_actor.hpp>
-#include <caf/stateful_actor.hpp>
+#include <caf/typed_actor.hpp>
 #include <caf/typed_behavior.hpp>
 #include <caf/is_actor_handle.hpp>
 #include <caf/send.hpp>
@@ -232,7 +232,7 @@ template<
 	typename = detail::if_actor_handle<Actor>
 >
 auto anon_request(Actor A, T timeout, bool high_priority, F f, Args&&... args) -> void {
-	kernel::radio::system().spawn<Os>([
+	kernel::radio::system().spawn<Os + caf::lazy_init>([
 		high_priority, A = std::move(A), t = detail::cast_timeout(timeout), f = std::move(f),
 		args = std::make_tuple(std::forward<Args>(args)...)
 	] (caf::event_based_actor* self) mutable {
@@ -258,14 +258,14 @@ auto anon_request_result(Actor A, T timeout, bool high_priority, F f, Args&&... 
 	return kernel::radio::system().spawn<Os>([
 		high_priority, A = std::move(A), t = detail::cast_timeout(timeout), f = std::move(f),
 		args = std::make_tuple(std::forward<Args>(args)...)
-	] (caf::event_based_actor* self) mutable -> caf::behavior {
+	] (caf::event_based_actor* self) mutable {
 		// prepare response
 		auto res = self->make_response_promise();
 		// make request
 		std::apply([self, high_priority, A = std::move(A), t = std::move(t)](auto&&... args) {
 			return high_priority ?
-				self->template request<high_prio>(A, t, std::forward<decltype(args)>(args)...) :
-				self->template request(A, t, std::forward<decltype(args)>(args)...);
+				self->request<high_prio>(A, t, std::forward<decltype(args)>(args)...) :
+				self->request(A, t, std::forward<decltype(args)>(args)...);
 		}, std::move(args))
 		.then(detail::closed_functor<F>::make(
 			[res, f = std::move(f)](auto&&... xs) mutable {
@@ -279,10 +279,8 @@ auto anon_request_result(Actor A, T timeout, bool high_priority, F f, Args&&... 
 			}, self
 		));
 
-		return {
-			// caller might send `a_ack` message to wait for callback invocation result
-			[=](a_ack) { return res; }
-		};
+		// send `a_ack` request to obtain callback invocation result
+		self->become({ [=](a_ack) { return res; } });
 	});
 }
 
@@ -293,8 +291,15 @@ auto first_then_second(caf::typed_behavior<SigsA...> first, caf::typed_behavior<
 	return result_t{
 		typename result_t::unsafe_init(),
 		caf::message_handler{ first.unbox().as_behavior_impl() }
-		.or_else( second.unbox() )
+		.or_else( std::move(second.unbox()) )
 	};
+}
+
+/// same as above, but adds typed behavior to type-erased one
+template<typename... SigsB>
+auto first_then_second(caf::behavior first, caf::typed_behavior<SigsB...> second) -> caf::behavior {
+	return caf::message_handler{ first.unbox().as_behavior_impl() }
+	.or_else( std::move(second.unbox()) );
 }
 
 /// @brief send to a group with compie-time check message against explicitly provided group typed iface
