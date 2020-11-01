@@ -80,7 +80,9 @@ BSS_FCN_EXPORT(serialize, tree::link_impl)
 //
 BSS_FCN_INL_BEGIN(serialize, tree::ilink_impl)
 	// serialize inode
-	ar(make_nvp("inode", t.inode_));
+	// [NOTE] disabled - inodes aren't actually used now
+	// [TODO] reenable later when conception will be more thought out
+	//ar(make_nvp("inode", t.inode_));
 
 	serialize<tree::link_impl>::go(ar, t, version);
 BSS_FCN_INL_END(serialize, tree::ilink_impl)
