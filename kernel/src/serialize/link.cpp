@@ -15,6 +15,7 @@
 #include "../tree/link_actor.h"
 #include "../tree/hard_link.h"
 #include "../tree/fusion_link_actor.h"
+#include "../tree/map_engine.h"
 
 #include <cereal/types/chrono.hpp>
 
@@ -167,10 +168,19 @@ BSS_FCN_INL_END(serialize, tree::fusion_link_impl)
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::fusion_link_impl)
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::fusion_link_impl, "fusion_link")
 
+///////////////////////////////////////////////////////////////////////////////
+//  map_link - not serialized
+//
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link_impl, tree::map_link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::map_link_impl, "map_link")
+
 /*-----------------------------------------------------------------------------
  *  link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::link)
+	// map links are not serialized at all
+	if(t.type_id() == tree::map_link::type_id_()) return;
+
 	// [NOTE] intentionally do net serialize owner, it will be set up when parent node is loaded
 	if constexpr(Archive::is_saving::value) {
 		// for nil links save empty impl pointer
