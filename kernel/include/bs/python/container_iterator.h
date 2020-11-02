@@ -9,7 +9,7 @@
 #pragma once
 
 #include "common.h"
-#include "pybind11/detail/common.h"
+#include <pybind11/detail/common.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
 NAMESPACE_BEGIN(detail)

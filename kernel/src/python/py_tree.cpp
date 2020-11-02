@@ -9,6 +9,7 @@
 
 #include <bs/python/tree.h>
 #include <bs/python/list.h>
+#include <bs/python/enum.h>
 #include <bs/tree/tree.h>
 #include <bs/tree/context.h>
 
@@ -60,22 +61,12 @@ void py_bind_tree(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  common part
 	//
-	// export Flags enum
-	py::enum_<Flags>(m, "Flags", py::arithmetic())
-		.value("Plain", Flags::Plain)
-		.value("Persistent", Flags::Persistent)
-		.value("Disabled", Flags::Disabled)
-		.value("LazyLoad", Flags::LazyLoad)
-		.export_values()
-	;
-	py::implicitly_convertible<int, Flags>();
-	py::implicitly_convertible<long, Flags>();
-
-	// export link request & status enums
+	// bind non-arithmetic enums
 	py::enum_<Req>(m, "Req")
 		.value("Data", Req::Data)
 		.value("DataNode", Req::DataNode)
 	;
+
 	py::enum_<ReqStatus>(m, "ReqStatus")
 		.value("Void", ReqStatus::Void)
 		.value("Busy", ReqStatus::Busy)
@@ -83,8 +74,24 @@ void py_bind_tree(py::module& m) {
 		.value("Error", ReqStatus::Error)
 	;
 
-	// Events enum
-	py::enum_<Event>(m, "Event", py::arithmetic())
+	py::enum_<Key>(m, "Key")
+		.value("ID", Key::ID)
+		.value("OID", Key::OID)
+		.value("Name", Key::Name)
+		.value("Type", Key::Type)
+		.value("AnyOrder", Key::AnyOrder)
+	;
+
+	// bind arithmetic enums (with binary ops, etc)
+	bind_enum_with_ops<Flags>(m, "Flags")
+		.value("Plain", Flags::Plain)
+		.value("Persistent", Flags::Persistent)
+		.value("Disabled", Flags::Disabled)
+		.value("LazyLoad", Flags::LazyLoad)
+		.export_values()
+	;
+
+	bind_enum_with_ops<Event>(m, "Event")
 		.value("Node", Event::None)
 		.value("LinkRenamed", Event::LinkRenamed)
 		.value("LinkStatusChanged", Event::LinkStatusChanged)
@@ -96,24 +103,14 @@ void py_bind_tree(py::module& m) {
 		.value("All", Event::All)
 	;
 
-	// node's index type
-	py::enum_<Key>(m, "Key")
-		.value("ID", Key::ID)
-		.value("OID", Key::OID)
-		.value("Name", Key::Name)
-		.value("Type", Key::Type)
-		.value("AnyOrder", Key::AnyOrder)
-	;
-	// node's insert policy
-	py::enum_<InsertPolicy>(m, "InsertPolicy", py::arithmetic())
+	bind_enum_with_ops<InsertPolicy>(m, "InsertPolicy")
 		.value("AllowDupNames", InsertPolicy::AllowDupNames)
 		.value("DenyDupNames", InsertPolicy::DenyDupNames)
 		.value("RenameDup", InsertPolicy::RenameDup)
 		.value("Merge", InsertPolicy::Merge)
 	;
 
-	// tree algo options
-	py::enum_<TreeOpts>(m, "TreeOpts", py::arithmetic())
+	bind_enum_with_ops<TreeOpts>(m, "TreeOpts")
 		.value("Normal"         , TreeOpts::Normal)
 		.value("WalkUp"         , TreeOpts::WalkUp)
 		.value("Deep"           , TreeOpts::Deep)
