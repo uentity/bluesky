@@ -28,11 +28,11 @@ public:
 		// if no overload was found. But slot should be safe in sutuation when Python object is
 		// already destroyed. In such a case just DO NOTHING and return.
 		pybind11::gil_scoped_acquire gil;
-		pybind11::function overload = pybind11::get_overload(static_cast<const bs_slot *>(this), "execute");
-		if (overload) {
-			auto o = overload(std::move(sender), signal_code, std::move(param));
-			if (pybind11::detail::cast_is_temporary_value_reference<void>::value) {
-				static pybind11::detail::overload_caster_t<void> caster;
+		pybind11::function override = pybind11::get_override(static_cast<const bs_slot *>(this), "execute");
+		if(override) {
+			auto o = override(std::move(sender), signal_code, std::move(param));
+			if(pybind11::detail::cast_is_temporary_value_reference<void>::value) {
+				static pybind11::detail::override_caster_t<void> caster;
 				return pybind11::detail::cast_ref<void>(std::move(o), caster);
 			}
 			else return pybind11::detail::cast_safe<void>(std::move(o));
