@@ -45,6 +45,9 @@ auto add_enumops(PyEnum& e) -> PyEnum& {
 	BSPY_ENUM_OP_CONV("__sub__", a - b);
 	BSPY_ENUM_OP_CONV("__rsub__", a - b);
 
+	// allow initialization from int
+	py::implicitly_convertible<int, E>();
+
 	return e;
 	#undef BSPY_ENUM_OP_CONV
 }
