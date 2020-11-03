@@ -296,7 +296,7 @@ void py_bind_link(py::module& m) {
 				Event, TreeOpts, Flags
 			>(),
 			"name"_a, "mf"_a, "src_node"_a, "dest_node"_a = map_link::link_or_node{},
-			"update_on"_a = Event::All, "opts"_a = TreeOpts::Normal, "flags"_a = Flags::Plain
+			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal, "flags"_a = Flags::Plain
 		)
 		.def(py::init<const link&>())
 

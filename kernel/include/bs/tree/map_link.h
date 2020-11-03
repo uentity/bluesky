@@ -24,8 +24,8 @@ public:
 
 	/// can pass `link` or `node` as source and destination
 	map_link(
-		std::string name, mapper_f mf, link_or_node src_node, link_or_node dest_node = node::nil(),
-		Event update_on = Event::All, TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
+		std::string name, mapper_f mf, link_or_node src_node, link_or_node dest_node = {},
+		Event update_on = Event::DataModified, TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
 	);
 	map_link(const link& rhs);
 
