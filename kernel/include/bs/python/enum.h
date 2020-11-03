@@ -22,7 +22,7 @@ auto add_enumops(PyEnum& e) -> PyEnum& {
 			[](object a_, object b_) {                   \
 				const auto a = static_cast<U>(int_(a_)); \
 				const auto b = static_cast<U>(int_(b_)); \
-				return expr;                             \
+				return static_cast<E>(expr);             \
 			},                                           \
 			name(op), is_method(e))
 
@@ -35,7 +35,7 @@ auto add_enumops(PyEnum& e) -> PyEnum& {
 		BSPY_ENUM_OP_CONV("__xor__",  a ^ b);
 		BSPY_ENUM_OP_CONV("__rxor__", a ^ b);
 		e.attr("__invert__") = cpp_function(
-			[](py::object arg) { return ~(static_cast<U>(int_(arg))); },
+			[](py::object arg) { return static_cast<E>(~(static_cast<U>(int_(arg)))); },
 			name("__invert__"), is_method(e)
 		);
 	}
