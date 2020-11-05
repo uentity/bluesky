@@ -6,6 +6,7 @@
 
 #include "map_engine.h"
 #include "node_impl.h"
+#include "request_impl.h"
 
 #include <bs/tree/tree.h>
 #include <bs/detail/enumops.h>
@@ -16,6 +17,9 @@
 #include <caf/stateful_actor.hpp>
 
 #include <algorithm>
+
+#define DEBUG_ACTOR 0
+#include "actor_debug.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
 NAMESPACE_BEGIN()
@@ -130,10 +134,14 @@ map_link_actor::map_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_l
 {
 	const auto& simpl = mimpl();
 	reset_input_listener(simpl.update_on_, simpl.opts_);
+	adbg(this) << "successfully started" << std::endl;
 }
 
 auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> void {
 	const auto& simpl = mimpl();
+	adbg(this) << "starting listener on input node, is_nil = " << simpl.in_.is_nil() << std::endl;
+
+	if(!simpl.in_) return;
 	inp_listener_ = spawn_in_group(
 		simpl.in_.home(), input_ack_retranslator,
 		caf::actor_cast<map_link_impl::map_actor_type>(this), simpl.in_.actor(), update_on, opts
@@ -145,48 +153,61 @@ auto map_link_actor::name() const -> const char* { return "map_link_actor"; }
 auto map_link_actor::make_casual_behavior() -> typed_behavior {
 	return first_then_second(typed_behavior_overload{
 
-		[=](a_data_node, bool) -> node_or_errbox { return mimpl().out_; },
+		[=](a_data, bool) -> obj_or_errbox {
+			adbg(this) << "<- a_data" << std::endl;
+			return unexpected_err_quiet(Error::EmptyData);
+		},
 
-		[=](a_lazy, a_node_clear) { become(make_refresh_behavior().unbox()); },
+		[=](a_data_node, bool) -> node_or_errbox {
+			adbg(this) << "<- a_data_node (casual)" << std::endl;
+			return mimpl().out_;
+		},
+
+		[=](a_lazy, a_node_clear) {
+			adbg(this) << "<- lazy clear" << std::endl;
+ 			become(make_behavior().unbox());
+		},
 
 		[=](a_node_clear) -> caf::result<node_or_errbox> {
+			adbg(this) << "<- immediate clear" << std::endl;
+			become(make_behavior().unbox());
 			// imediately invoke DataNode request on refresh behavior
-			become(make_refresh_behavior().unbox());
 			return delegate(caf::actor_cast<actor_type>(this), a_data_node(), true);
 		},
 
 		[=](a_ack, a_apply, const link& inp_lnk) {
+			adbg(this) << "<- update (casual)" << std::endl;
 			mimpl().update(this, inp_lnk);
 		},
 
 		[=](a_ack, a_node_erase, const lid_type& src_id) {
+			adbg(this) << "<- erase (casual)" << std::endl;
 			mimpl().erase(this, src_id);
-		}
+		},
 
-	}, super::make_typed_behavior());
-}
-
-auto map_link_actor::make_refresh_behavior() -> typed_behavior {
-	// invoke refresh once on DataNode request
-	auto casual_bhv = make_casual_behavior();
-	return first_then_second(refresh_behavior_overload{
-
-		[=](a_data_node, bool) mutable -> caf::result<node_or_errbox> {
-			// run only once
-			become(casual_bhv.unbox());
-
+		// insert mapped leafs into output node and return it
+		[=](a_node_insert, io_map_t io_map, links_v out_leafs) -> caf::result<node_or_errbox> {
 			using R = node_or_errbox;
-			auto res = make_response_promise<R>();
+			auto& simpl = mimpl();
 
-			// 1. Run output node refresh in separate actor
-			request(spawn<caf::detached>(
-				[this, simpl = std::static_pointer_cast<map_link_impl>(pimpl_)]
-				(caf::event_based_actor* rworker) {
-					rworker->become({
-						[=](a_ack) { return simpl->refresh(this, rworker); }
-					});
-				}
-			), caf::infinite, a_ack())
+			adbg(this) << "<- refresh finilize (insert)" << std::endl;
+
+			// update mappings
+			simpl.io_map_ = std::move(io_map);
+			// update output node
+			auto res = make_response_promise<node_or_errbox>();
+			request(
+				node_impl::actor(simpl.out_), caf::infinite, a_apply(),
+				simple_transaction{[this, &simpl, out_leafs = std::move(out_leafs)] {
+					auto dest_node = simpl.out_.bare();
+					dest_node.clear();
+					ulong cnt = 0;
+					for(auto& res_link : out_leafs)
+						cnt += dest_node.insert(res_link, InsertPolicy::AllowDupNames).second;
+					adbg(this) << "refresh: inserted links count = " << cnt << std::endl;
+					return perfect;
+				}}
+			)
 			// 2. Deliver result
 			.then(
 				[=](error::box erb) mutable {
@@ -200,11 +221,48 @@ auto map_link_actor::make_refresh_behavior() -> typed_behavior {
 			return res;
 		}
 
-	}, casual_bhv);
+	}, super::make_typed_behavior());
+}
+
+auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
+	// invoke refresh once on DataNode request
+	return refresh_behavior_overload{
+
+		[=, casual_bhv = make_casual_behavior().unbox()](a_data_node, bool) mutable
+		-> caf::result<node_or_errbox> {
+			adbg(this) << "<- a_data_node (refresh)" << std::endl;
+			// install casual behavior
+			become(casual_bhv);
+
+			using R = node_or_errbox;
+			auto res = make_response_promise<R>();
+
+			// run output node refresh in separate actor
+			request_impl<true, node_or_errbox>(
+				*this, Req::DataNode, ReqOpts::Detached,
+				[=](caf::event_based_actor* rworker) { return mimpl().refresh(this, rworker); },
+				[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
+			);
+			return res;
+		},
+
+		[=](a_ack, a_apply, const link&) {
+			adbg(this) << "<- update (refresh)" << std::endl;
+			request(caf::actor_cast<actor_type>(this), caf::infinite, a_data_node(), true)
+			.then([](const node_or_errbox&) {});
+		},
+
+		[=](a_ack, a_node_erase, const lid_type& src_id) {
+			adbg(this) << "<- erase (refresh)" << std::endl;
+			request(caf::actor_cast<actor_type>(this), caf::infinite, a_data_node(), true)
+			.then([](const node_or_errbox&) {});
+		}
+
+	};
 }
 
 auto map_link_actor::make_behavior() -> behavior_type {
-	return make_refresh_behavior().unbox();
+	return first_then_second(make_refresh_behavior(), make_casual_behavior()).unbox();
 }
 
 NAMESPACE_END(blue_sky::tree)

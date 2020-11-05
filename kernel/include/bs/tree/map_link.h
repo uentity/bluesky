@@ -12,15 +12,15 @@
 #include <variant>
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using link_or_node = std::variant<link, node>;
 
-class map_link : public link {
+class BS_API map_link : public link {
 public:
 	using super = link;
 	using link_mapper_f = std::function< link(link /* source */, link /* existing dest */) >;
 	using node_mapper_f = std::function< void(node /* source */, node /* existing dest */) >;
 
 	using mapper_f = std::variant<link_mapper_f, node_mapper_f>;
-	using link_or_node = std::variant<link, node>;
 
 	/// can pass `link` or `node` as source and destination
 	map_link(
@@ -31,8 +31,17 @@ public:
 
 	static auto type_id_() -> std::string_view;
 
+	auto input() const -> node;
+	auto output() const -> node;
+
 	auto l_target() const -> const link_mapper_f*;
 	auto n_target() const -> const node_mapper_f*;
 };
+
+/// returns map_link that filters objects from input node by object type ID(s)
+BS_API auto make_otid_filter(
+	std::string name, std::vector<std::string> allowed_otids, link_or_node src_node, link_or_node dest_node = {},
+	Event update_on = Event::DataNodeModified, TreeOpts opts = TreeOpts::Deep, Flags f = Flags::Plain
+) -> map_link;
 
 NAMESPACE_END(blue_sky::tree)
