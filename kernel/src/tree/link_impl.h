@@ -153,9 +153,9 @@ public:
 	struct status_handle {
 		ReqStatus value = ReqStatus::Void;
 		mutable engine_impl_mutex guard;
-		// list of waiters for request result (until value != Busy)
-		// [NOTE] waiter returns type-erased pointer to captured result processor
-		std::vector<std::function< void*() >> waiters;
+		// list of type-erased waiters for request result (until value != Busy)
+		// [NOTE] waiter accepts pointer to delivered result value
+		std::vector<std::function< void(void*) >> waiters;
 	};
 
 	// direct access to status_handle
