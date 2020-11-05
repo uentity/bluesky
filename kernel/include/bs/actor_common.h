@@ -232,7 +232,7 @@ template<
 	typename = detail::if_actor_handle<Actor>
 >
 auto anon_request(Actor A, T timeout, bool high_priority, F f, Args&&... args) -> void {
-	kernel::radio::system().spawn<Os + caf::lazy_init>([
+	kernel::radio::system().spawn<Os>([
 		high_priority, A = std::move(A), t = detail::cast_timeout(timeout), f = std::move(f),
 		args = std::make_tuple(std::forward<Args>(args)...)
 	] (caf::event_based_actor* self) mutable {
