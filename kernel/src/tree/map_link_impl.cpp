@@ -53,6 +53,8 @@ auto map_link_impl::propagate_handle() -> node_or_err {
 auto map_link_impl::data() -> obj_or_err { return unexpected_err_quiet(Error::EmptyData); }
 auto map_link_impl::data(unsafe_t) const -> sp_obj { return nullptr; }
 
+auto map_link_impl::data_node(unsafe_t) const -> node { return out_; }
+
 auto map_link_impl::erase(map_link_actor* self, lid_type src_lid) -> void {
 	if(auto pdest = io_map_.find(src_lid); pdest != io_map_.end()) {
 		io_map_.erase(pdest);

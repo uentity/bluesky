@@ -36,6 +36,12 @@ auto link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 
 auto link_impl::data(unsafe_t) const -> sp_obj { return nullptr; }
 
+auto link_impl::data_node(unsafe_t) const -> node {
+	if(auto obj = data(unsafe))
+		return obj->data_node();
+	return node::nil();
+}
+
 auto link_impl::propagate_handle(node& N) const -> node& {
 	if(N) N.pimpl()->set_handle(super_engine());
 	return N;

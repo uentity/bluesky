@@ -81,9 +81,7 @@ auto bare_link::data() -> sp_obj {
 }
 
 auto bare_link::data_node() -> node {
-	if(auto obj = pimpl_->data(unsafe))
-		return obj->data_node();
-	return node::nil();
+	return pimpl_->data_node(unsafe);
 }
 
 auto bare_link::data_node_hid() -> std::string {

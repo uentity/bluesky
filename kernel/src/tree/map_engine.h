@@ -57,6 +57,8 @@ public:
 	// return error/nullptr
 	auto data() -> obj_or_err override;
 	auto data(unsafe_t) const -> sp_obj override;
+	// returns output directory
+	auto data_node(unsafe_t) const -> node override;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  additional map-specific API
