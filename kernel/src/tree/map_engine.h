@@ -23,7 +23,8 @@ public:
 	using super = link_impl;
 	using sp_map_limpl = std::shared_ptr<map_link_impl>;
 	using link_mapper_f = map_link::link_mapper_f;
-	using link_or_node = map_link::link_or_node;
+	// mapping from input link ID -> output link ID
+	using io_map_t = std::unordered_map<lid_type, lid_type>;
 
 	// map link specific behavior
 	using map_actor_type = caf::typed_actor<
@@ -31,6 +32,8 @@ public:
 		caf::reacts_to<a_lazy, a_node_clear>,
 		// immediately refresh output node & return it
 		caf::replies_to<a_node_clear>::with<node_or_errbox>,
+		// performs insertion of mapped resulting links into output node
+		caf::replies_to<a_node_insert, io_map_t, links_v>::with<node_or_errbox>,
 		// invoke mapper on given link from given origin node (sent by retranslator)
 		caf::reacts_to<a_ack, a_apply, link /* src */>,
 		// link erased from input (sub)node
@@ -57,6 +60,8 @@ public:
 	// return error/nullptr
 	auto data() -> obj_or_err override;
 	auto data(unsafe_t) const -> sp_obj override;
+	// returns output directory
+	auto data_node(unsafe_t) const -> node override;
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  additional map-specific API
@@ -65,13 +70,11 @@ public:
 	auto update(map_link_actor* self, link src_link) -> void;
 	auto erase(map_link_actor* self, lid_type src_lid) -> void;
 	// reset all mappings from scratch, started in separate `worker` actor
-	auto refresh(map_link_actor* self, caf::event_based_actor* rworker) -> caf::result<error::box>;
+	auto refresh(map_link_actor* self, caf::event_based_actor* rworker) -> caf::result<node_or_errbox>;
 
 	// data members
 	link_mapper_f mf_;
 	node in_, out_;
-	// mapping from input link ID -> output link ID
-	using io_map_t = std::unordered_map<lid_type, lid_type>;
 	io_map_t io_map_;
 
 	Event update_on_;
@@ -86,16 +89,21 @@ public:
 class BS_HIDDEN_API map_link_actor : public link_actor {
 public:
 	using super = link_actor;
+	using io_map_t = map_link_impl::io_map_t;
 
 	using typed_map_behavior = map_link_impl::map_actor_type::behavior_type;
 	using typed_behavior = map_link_impl::actor_type::behavior_type;
 
 	using typed_behavior_overload = map_link_impl::map_actor_type::extend<
+		caf::replies_to<a_data, bool>::with<obj_or_errbox>,
 		caf::replies_to<a_data_node, bool>::with<node_or_errbox>
 	>::behavior_type;
 
 	using refresh_behavior_overload = caf::typed_behavior<
-		caf::replies_to<a_data_node, bool>::with<node_or_errbox>
+		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
+		// override update to trigger refresh first
+		caf::reacts_to<a_ack, a_apply, link /* src */>,
+		caf::reacts_to<a_ack, a_node_erase, lid_type /* ID of erased link */>
 	>;
 
 	map_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl);
@@ -105,7 +113,7 @@ public:
 	auto name() const -> const char* override;
 
 	auto make_casual_behavior() -> typed_behavior;
-	auto make_refresh_behavior() -> typed_behavior;
+	auto make_refresh_behavior() -> refresh_behavior_overload;
 
 	// returns refresh behavior
 	auto make_behavior() -> behavior_type override;

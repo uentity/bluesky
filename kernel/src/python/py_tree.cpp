@@ -118,6 +118,7 @@ void py_bind_tree(py::module& m) {
 		.value("FollowSymLinks" , TreeOpts::FollowSymLinks)
 		.value("FollowLazyLinks", TreeOpts::FollowLazyLinks)
 		.value("HighPriority"   , TreeOpts::HighPriority)
+		.value("DetachedWorkers", TreeOpts::DetachedWorkers)
 	;
 
 	// bind lists of links & nodes as opaque types

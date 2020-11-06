@@ -106,6 +106,9 @@ public:
 	/// return cached pointee data (if any), default impl returns nullptr
 	// [NOTE] overriden impl MUST NEVER start any resource-consuming task inside!
 	virtual auto data(unsafe_t) const -> sp_obj;
+	// links that doesn't operate with objbase (for ex, map_link), can override this
+	// to provide direct access to stored node (default impl works via `data(unsafe)`)
+	virtual auto data_node(unsafe_t) const -> node;
 
 	/// obtain inode pointer
 	/// default impl do it via `data_ex()` call
@@ -150,9 +153,9 @@ public:
 	struct status_handle {
 		ReqStatus value = ReqStatus::Void;
 		mutable engine_impl_mutex guard;
-		// list of waiters for request result (until value != Busy)
-		// [NOTE] waiter returns type-erased pointer to captured result processor
-		std::vector<std::function< void*() >> waiters;
+		// list of type-erased waiters for request result (until value != Busy)
+		// [NOTE] waiter accepts pointer to delivered result value
+		std::vector<std::function< void(void*) >> waiters;
 	};
 
 	// direct access to status_handle

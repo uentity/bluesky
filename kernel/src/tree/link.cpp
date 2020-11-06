@@ -210,9 +210,7 @@ auto link::data_node() const -> node {
 }
 
 auto link::data_node(unsafe_t) const -> node {
-	if(auto obj = pimpl()->data(unsafe))
-		return obj->data_node();
-	return node::nil();
+	return pimpl()->data_node(unsafe);
 }
 
 auto link::data_node_hid() const -> result_or_err<std::string> {

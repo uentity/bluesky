@@ -11,6 +11,7 @@
 #include <bs/python/tree.h>
 #include <bs/python/tr_result.h>
 #include <bs/python/result_converter.h>
+#include <bs/detail/enumops.h>
 #include "../kernel/python_subsyst_impl.h"
 
 #include <pybind11/functional.h>
@@ -54,6 +55,8 @@ inline auto adapt(adapted_data_cb&& f) {
 NAMESPACE_END()
 
 void py_bind_link(py::module& m) {
+	using namespace allow_enumops;
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  inode
 	//
@@ -292,16 +295,23 @@ void py_bind_link(py::module& m) {
 	//
 	py::class_<map_link, link>(m, "map_link")
 		.def(py::init<
-				std::string, map_link::mapper_f, map_link::link_or_node, map_link::link_or_node,
+				std::string, map_link::mapper_f, link_or_node, link_or_node,
 				Event, TreeOpts, Flags
 			>(),
-			"name"_a, "mf"_a, "src_node"_a, "dest_node"_a = map_link::link_or_node{},
-			"update_on"_a = Event::All, "opts"_a = TreeOpts::Normal, "flags"_a = Flags::Plain
+			"name"_a, "mf"_a, "src_node"_a, "dest_node"_a = link_or_node{},
+			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::DetachedWorkers,
+			"flags"_a = Flags::Plain
 		)
 		.def(py::init<const link&>())
 
 		.def_property_readonly_static("type_id_", [](const py::object&) { return map_link::type_id_(); })
 	;
+
+	m.def(
+		"make_otid_filter", &make_otid_filter, "name"_a, "allowed_otids"_a, "src_node"_a,
+		"dest_node"_a = link_or_node{}, "update_on"_a = Event::DataNodeModified | Event::LinkRenamed,
+		"opts"_a = TreeOpts::Deep, "flags"_a = Flags::Plain
+	);
 }
 
 NAMESPACE_END(blue_sky::python)

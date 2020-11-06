@@ -38,7 +38,7 @@ enum class ReqReset { Always = 0, IfEq = 1, IfNeq = 2 };
 enum class ReqStatus { Void, Busy, OK, Error };
 
 /// flags reflect link properties and state
-enum Flags {
+enum Flags : std::uint8_t {
 	Plain = 0,
 	Persistent = 1,
 	Disabled = 2,
@@ -49,7 +49,7 @@ enum Flags {
 enum class Key { ID, OID, Name, Type, AnyOrder };
 
 /// links insertions policy
-enum class InsertPolicy {
+enum class InsertPolicy : std::uint8_t {
 	AllowDupNames = 0,
 	DenyDupNames = 1,
 	RenameDup = 2,
@@ -57,14 +57,15 @@ enum class InsertPolicy {
 };
 
 /// options for algorithms working with tree
-enum class TreeOpts : unsigned {
+enum class TreeOpts : std::uint32_t {
 	Normal = 0,
 	WalkUp = 2,
 	Deep = 4,
 	Lazy = 8,
 	FollowSymLinks = 16,
 	FollowLazyLinks = 32,
-	HighPriority = 256
+	HighPriority = 256,
+	DetachedWorkers = 512
 };
 
 /// link's unique ID type

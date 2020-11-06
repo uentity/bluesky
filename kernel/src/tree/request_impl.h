@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 25.11.2019
 /// @brief Implements generic frame for making link data requests
@@ -8,26 +7,40 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <bs/kernel/radio.h>
-#include <bs/detail/enumops.h>
 #include "link_actor.h"
-// [NOTE] Following includes are required (even though objects involved in messages
-// are marked as unsafe CAF types) - for stringification inspector to work.
-// Conclusion: all involved types to be formally serializable.
+
+#include <bs/detail/enumops.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-template<bool ManageStatus = true, typename F, typename C>
+template<bool ManageStatus = true, typename R = void, typename F, typename C>
 auto request_impl(
 	link_actor& LA, Req req, ReqOpts opts, F f_request, C res_processor
 ) -> void {
 	using namespace kernel::radio;
 	using namespace allow_enumops;
-	using f_ret_t = std::invoke_result_t<F>;
-	using a_ret_t = result_or_errbox<typename f_ret_t::value_type>;
-	using res_t = result_or_err<typename f_ret_t::value_type>;
+
+	// helper that passes pointer to bg actor making a request if functor needs it
+	static constexpr auto invoke_f_request = [](auto& f, caf::event_based_actor* origin) {
+		if constexpr(std::is_invocable_v<F, caf::event_based_actor*>)
+			return f(origin);
+		else
+			return f();
+	};
+	using f_ret_t = std::invoke_result_t<decltype(invoke_f_request), F&, caf::event_based_actor*>;
+	constexpr bool expected_f_ret_t = tl::detail::is_expected<f_ret_t>::value;
+
+	// deduce request result type (must be expected)
+	using req_res_t = std::conditional_t<std::is_same_v<R, void>, f_ret_t, R>;
+	static_assert(tl::detail::is_expected<req_res_t>::value);
+	// value type that worker actor returns (always transfers error in a box)
+	using worker_ret_t = std::conditional_t<expected_f_ret_t,
+		result_or_errbox<typename req_res_t::value_type>, f_ret_t
+	>;
+	// value tpe that will be passed to result processor
+	using res_t = result_or_err<typename req_res_t::value_type>;
 
 	// if opts::Uniform is true, then both status values are changed at once
 	// returns scalar prev state of `req` request
@@ -53,7 +66,7 @@ auto request_impl(
 
 	// returns extended request result processor
 	const auto make_result = [&] {
-		return [=, &LA, rs_reset = std::move(rs_reset), rp = std::move(res_processor)](a_ret_t obj) mutable {
+		return [=, &LA, rs_reset = std::move(rs_reset), rp = std::move(res_processor)](req_res_t obj) mutable {
 			// set new status
 			if constexpr(ManageStatus)
 				rs_reset(
@@ -65,7 +78,7 @@ auto request_impl(
 				);
 
 			// if request result is nil -> return error
-			const auto res = obj.and_then([](auto&& obj) {
+			auto res = obj.and_then([](auto&& obj) {
 				return obj ? res_t(std::move(obj)) : unexpected_err_quiet(Error::EmptyData);
 			});
 			// invoke main result processor
@@ -74,14 +87,16 @@ auto request_impl(
 			// feed waiters
 			auto& waiters = LA.impl.req_status_handle(req).waiters;
 			for(auto& w : waiters)
-				(*reinterpret_cast<C*>(w()))(res);
+				w(&res);
 			waiters.clear();
 		};
 	};
 
 	// returns request result waiter
 	const auto make_waiter = [&] {
-		return [rp = std::move(res_processor)]() mutable -> void* { return &rp; };
+		return [rp = std::move(res_processor)](void* res) mutable {
+			rp(*reinterpret_cast<res_t*>(res));
+		};
 	};
 	// [NOTE] either `make_result()` or `make_waiter()` must be called once!
 
@@ -91,28 +106,32 @@ auto request_impl(
 			res_processor(res_t{ unexpected_err_quiet(Error::LinkBusy) });
 		else
 			LA.impl.req_status_handle(req).waiters.emplace_back(make_waiter());
+		return;
 	}
-	// if specified, invoke request directly
-	else if(enumval(opts & ReqOpts::DirectInvoke))
-		make_result()(f_request());
+	// if specified, invoke request directly (if possible)
+	else if(enumval(opts & ReqOpts::DirectInvoke)) {
+		if constexpr(expected_f_ret_t) {
+			make_result()(invoke_f_request(f_request, static_cast<caf::event_based_actor*>(&LA)));
+			return;
+		}
+	}
+
 	// otherwise invoke inside dedicated actor
-	else {
-		// setup worker that will invoke request and process result
-		auto worker = [f = std::move(f_request)](caf::event_based_actor* self) mutable {
-			return caf::behavior{
-				[f = std::move(f)](a_apply) mutable -> a_ret_t { return f(); }
-			};
+	// setup worker that will invoke request and process result
+	auto worker = [f = std::move(f_request)](caf::event_based_actor* self) mutable {
+		return caf::behavior{
+			[self, f = std::move(f)](a_apply) mutable -> worker_ret_t {
+				return invoke_f_request(f, self);
+			}
 		};
-
-		// spawn worker
-		auto worker_actor = enumval(opts & ReqOpts::Detached) ?
-			system().spawn<caf::detached>(std::move(worker)) :
-			system().spawn(std::move(worker));
-
-		// start work & ensure that result_processor is invoked in LA's body
-		LA.request(worker_actor, caf::infinite, a_apply())
-		.then(make_result());
-	}
+	};
+	// spawn worker
+	auto worker_actor = enumval(opts & ReqOpts::Detached) ?
+		LA.spawn<caf::detached>(std::move(worker)) :
+		LA.spawn(std::move(worker));
+	// start work & ensure that result_processor is invoked in LA's body
+	LA.request(worker_actor, caf::infinite, a_apply())
+	.then(make_result());
 }
 
 template<bool ManageStatus = true, typename C>
