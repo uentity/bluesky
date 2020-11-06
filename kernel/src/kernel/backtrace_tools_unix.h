@@ -45,7 +45,7 @@ std::string exec(const std::string& cmd) {
 	return result;
 }
 
-#if 1
+#if 0
 std::vector<std::string> sys_demangled_backtrace_names(void** callstack, char** symbollist, int size, int skip = 1) {
 	// result strings will go here
 	std::vector<std::string> res;
