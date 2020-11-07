@@ -170,18 +170,20 @@ auto node_impl::rename(iterator<Key::Name> pos, std::string new_name) -> void {
 // hardcode number of rename trials on insertion
 inline constexpr auto rename_trials = 10000;
 
+// [NOTE] assume insertion happens atomically for link being inserted
 auto node_impl::insert(link L, InsertPolicy pol) -> insert_status<Key::ID> {
 	using namespace allow_enumops;
 
-	// [NOTE] assume insertion happens atomically for `L`
-	if(!L) return { {}, false };
+	using R = insert_status<Key::ID>;
+	const auto inserr = R{ links_.get<Key_tag<Key::ID>>().end(), false };
+	if(!L) return inserr;
 	auto& Limpl = *L.pimpl();
 	const auto Lflags = Limpl.flags_;
 	const auto prev_owner = L.owner();
 
 	// can't move persistent node from it's owner
 	if((Lflags & Flags::Persistent) && prev_owner)
-		return { {}, false };
+		return inserr;
 
 	// 1. check if we have duplicated name and have to rename link after insertion
 	// If insert policy deny duplicating name & we have to rename link being inserted
