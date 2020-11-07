@@ -180,13 +180,11 @@ CEREAL_REGISTER_TYPE_WITH_NAME(tree::map_link_impl, "map_link")
  *  link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::link)
-	// map links are not serialized at all
-	if(t.type_id() == tree::map_link::type_id_()) return;
-
 	// [NOTE] intentionally do net serialize owner, it will be set up when parent node is loaded
 	if constexpr(Archive::is_saving::value) {
-		// for nil links save empty impl pointer
-		auto Limpl = t ? t.pimpl_ : tree::sp_limpl{};
+		// for nil & map links save empty impl pointer
+		const auto Limpl = !t || t.type_id() == tree::map_link::type_id_() ?
+			tree::sp_limpl{} : t.pimpl_;
 		ar(make_nvp("link", Limpl));
 	}
 	else {
