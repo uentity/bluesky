@@ -51,8 +51,8 @@ struct leafs_view {
 		for(std::size_t i = 0; i < sz; ++i) {
 			link leaf;
 			ar(leaf);
-			//N.insert(std::move(leaf));
-			any_order.insert(any_order.end(), std::move(leaf));
+			if(leaf)
+				any_order.insert(any_order.end(), std::move(leaf));
 		}
 	}
 };
