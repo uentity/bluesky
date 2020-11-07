@@ -103,7 +103,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 				leafs_order.begin(), leafs_order.end(),
 				[&](auto& f) {
 					push_error(error::eval_safe(
-						[&] { add_head(cur_path_ / std::move(f)); },
+						[&] { return add_head(cur_path_ / std::move(f)); },
 						[&] { // head is removed later by epilogue()
 							tree::link L;
 							ar(L);
@@ -131,7 +131,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 
 				// try load file as a link
 				push_error(error::eval_safe(
-					[&] { add_head(f); },
+					[&] { return add_head(f); },
 					[&] { // head is removed later by epilogue()
 						tree::link L;
 						ar(L);
@@ -149,7 +149,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 
 			//		// try load file as a link
 			//		push_error(error::eval_safe(
-			//			[&] { add_head(f); },
+			//			[&] { return add_head(f); },
 			//			[&] {
 			//				tree::link L;
 			//				ar(L);
@@ -189,9 +189,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 
 		// insert loaded leafs in one transaction
 		push_error(N.apply([&](bare_node N) {
-			std::for_each(babies.begin(), babies.end(), [&](auto& baby) {
-				N.insert(unsafe, std::move(baby));
-			});
+			N.insert(unsafe, std::move(babies));
 			return perfect;
 		}));
 
