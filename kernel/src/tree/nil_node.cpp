@@ -50,7 +50,7 @@ struct nil_node::self_actor : caf::event_based_actor {
 		[=](a_node_find, std::size_t) -> link { return link{}; },
 		[=](a_node_find, std::string, Key) -> link { return link{}; },
 
-		[=](a_node_deep_search, lid_type) -> link { return link{}; },
+		[=](a_node_deep_search, lid_type) -> links_v { return {}; },
 		[=](a_node_deep_search, std::string, Key, bool) -> links_v { return {}; },
 
 		[=](a_node_index, lid_type) -> existing_index { return {}; },

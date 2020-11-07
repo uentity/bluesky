@@ -67,7 +67,10 @@ auto input_ack_retranslator(
 		if(src_node == input)
 			self->request(src_node, caf::infinite, a_node_find(), src_id).then(std::move(notify_parent));
 		else if(enumval(opts & TreeOpts::Deep))
-			self->request(src_node, caf::infinite, a_node_deep_search(), src_id).then(std::move(notify_parent));
+			self->request(src_node, caf::infinite, a_node_deep_search(), src_id)
+			.then([notify_parent = std::move(notify_parent)](links_v ls) {
+				if(!ls.empty()) notify_parent(ls.front());
+			});
 	};
 
 	// build behavior

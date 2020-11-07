@@ -151,21 +151,22 @@ auto node::find(std::string key, Key key_meaning) const -> link {
 
 // ---- deep_search
 auto node::deep_search(lid_type id) const -> link {
-	return pimpl()->actorf<link>(
+	auto res = pimpl()->actorf<links_v>(
 		*this, a_node_deep_search(), std::move(id)
-	).value_or(link{});
+	).value_or(links_v{});
+	return res.empty() ? link{} : res.front();
 }
 
 auto node::deep_search(std::string key, Key key_meaning) const -> link {
 	auto res = pimpl()->actorf<links_v>(
-		*this, a_node_deep_search(), std::move(key), key_meaning, false
+		*this, a_node_deep_search(), std::move(key), key_meaning, true
 	).value_or(links_v{});
-	return res.empty() ? link{} : res[0];
+	return res.empty() ? link{} : res.front();
 }
 
 auto node::deep_equal_range(std::string key, Key key_meaning) const -> links_v {
 	return pimpl()->actorf<links_v>(
-		*this, a_node_deep_search(), std::move(key), key_meaning, true
+		*this, a_node_deep_search(), std::move(key), key_meaning, false
 	).value_or(links_v{});
 }
 

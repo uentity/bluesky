@@ -38,13 +38,18 @@ public:
 	//
 	// public node iface extended with some private messages
 	using primary_actor_type = node::actor_type
-	::extend_with<engine_actor_type<node>>
 	::extend<
 		// join self group
 		caf::reacts_to<a_hi>,
 		// erase link by ID with specified options
-		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>
-	>::extend_with<kernel::detail::khome_actor_type>;
+		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>,
+		// deep search by ID with active symlinks
+		caf::replies_to<a_node_deep_search, lid_type /* key */, lids_v /* active_symlinks */>::with<links_v>,
+		// deep search by key with active symlinks
+		caf::replies_to<a_node_deep_search, std::string, Key, bool /* return_first */, lids_v>::with<links_v>
+	>
+	::extend_with<engine_actor_type<node>>
+	::extend_with<kernel::detail::khome_actor_type>;
 
 	// ack signals that this node send to home group
 	using self_ack_actor_type = caf::typed_actor<

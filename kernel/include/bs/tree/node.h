@@ -54,11 +54,6 @@ public:
 		// find link by string key & meaning
 		caf::replies_to<a_node_find, std::string, Key>::with<link>,
 
-		// deep search
-		caf::replies_to<a_node_deep_search, lid_type>::with<link>,
-		// if last arg == true, then collects matching links over node's subtree
-		caf::replies_to<a_node_deep_search, std::string, Key, bool /* search_all */>::with<links_v>,
-
 		// return link index
 		caf::replies_to<a_node_index, lid_type>::with<existing_index>,
 		// return index of link with string key & meaning
@@ -66,6 +61,11 @@ public:
 
 		// equal_range
 		caf::replies_to<a_node_equal_range, std::string, Key>::with<links_v>,
+
+		// deep search by ID (returns collection of 1 elem on success)
+		caf::replies_to<a_node_deep_search, lid_type /* key */>::with<links_v>,
+		// if last arg == true, then collects matching links over node's subtree
+		caf::replies_to<a_node_deep_search, std::string, Key, bool /* return_first */>::with<links_v>,
 
 		// insert new link
 		caf::replies_to<a_node_insert, link, InsertPolicy>::with<insert_status>,

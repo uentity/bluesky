@@ -25,6 +25,8 @@
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 
+#include "deep_search_impl.h"
+
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace allow_enumops;
 using namespace std::chrono_literals;
@@ -323,10 +325,7 @@ return {
 		adbg(this) << "{a_node_leafs} " << static_cast<int>(order) << std::endl;
 		if(has_builtin_index(order))
 			return impl.leafs(order);
-		return delegate(
-			system().spawn(extraidx_search_actor),
-			a_node_leafs(), order, impl.leafs(Key::AnyOrder)
-		);
+		return delegate(spawn(extraidx_search_actor), a_node_leafs(), order, impl.leafs(Key::AnyOrder));
 	},
 
 	[=](a_node_keys, Key order) -> caf::result<lids_v> {
@@ -334,10 +333,7 @@ return {
 		if(has_builtin_index(order))
 			return impl.keys(order);
 		// others via extra index actor
-		return delegate(
-			system().spawn(extraidx_search_actor),
-			a_node_keys(), order, impl.leafs(Key::AnyOrder)
-		);
+		return delegate(spawn(extraidx_search_actor), a_node_keys(), order, impl.leafs(Key::AnyOrder));
 	},
 
 	[=](a_node_ikeys, Key order) -> caf::result<std::vector<std::size_t>> {
@@ -360,8 +356,7 @@ return {
 
 	[=](a_node_keys, Key meaning, Key order) -> caf::result<std::vector<std::string>> {
 		return delegate(
-			system().spawn(extraidx_search_actor),
-			a_node_keys(), meaning, order, impl.leafs(Key::AnyOrder)
+			spawn(extraidx_search_actor), a_node_keys(), meaning, order, impl.leafs(Key::AnyOrder)
 		);
 	},
 
@@ -383,26 +378,42 @@ return {
 			return impl.search(key, key_meaning);
 		else
 			return delegate(
-				system().spawn(extraidx_search_actor),
+				spawn(extraidx_search_actor),
 				a_node_find(), std::move(key), key_meaning, impl.values<Key::AnyOrder>()
 			);
 	},
 
 	// deep search
-	[=](a_node_deep_search, lid_type lid) -> caf::result<link> {
+	[=](a_node_deep_search, lid_type lid, lids_v active_symlinks) -> caf::result<links_v> {
 		adbg(this) << "-> a_node_deep_search lid " << to_string(lid) << std::endl;
-		return delegate(
-			system().spawn(extraidx_deep_search_actor, actor()),
-			a_node_deep_search(), std::move(lid)
-		);
+		return detail::deep_search_impl<Key::ID>(this, lid, true, std::move(active_symlinks));
+	},
+	[=](a_node_deep_search, lid_type lid) -> caf::result<links_v> {
+		return delegate(caf::actor_cast<actor_type>(this), a_node_deep_search(), lid, lids_v{});
 	},
 
-	[=](a_node_deep_search, std::string key, Key key_meaning, bool search_all)
+	[=](a_node_deep_search, std::string key, Key key_meaning, bool return_first, lids_v active_symlinks)
 	-> caf::result<links_v> {
 		adbg(this) << "-> a_node_deep_search key " << key << std::endl;
+		switch(key_meaning) {
+		case Key::ID:
+			return to_uuid(key).map([&](lid_type lid) {
+				return detail::deep_search_impl<Key::ID>(this, lid, return_first, std::move(active_symlinks));
+			}).value_or(links_v{});
+		case Key::Name:
+			return detail::deep_search_impl<Key::Name>(this, key, return_first, std::move(active_symlinks));
+		case Key::OID:
+			return detail::deep_search_impl<Key::OID>(this, key, return_first, std::move(active_symlinks));
+		case Key::Type:
+			return detail::deep_search_impl<Key::Type>(this, key, return_first, std::move(active_symlinks));
+		default:
+			return links_v{};
+		}
+	},
+	[=](a_node_deep_search, std::string key, Key key_meaning, bool return_first) -> caf::result<links_v> {
 		return delegate(
-			system().spawn(extraidx_deep_search_actor, actor()),
-			a_node_deep_search(), std::move(key), key_meaning, search_all
+			caf::actor_cast<actor_type>(this), a_node_deep_search(),
+			std::move(key), key_meaning, return_first, lids_v{}
 		);
 	},
 
