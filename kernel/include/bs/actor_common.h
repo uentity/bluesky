@@ -273,7 +273,7 @@ auto anon_request_result(Actor A, T timeout, bool high_priority, F f, Args&&... 
 		std::apply([self, high_priority, A = std::move(A), t = std::move(t)](auto&&... args) {
 			return high_priority ?
 				self->template request<high_prio>(A, t, std::forward<decltype(args)>(args)...) :
-				self->template request(A, t, std::forward<decltype(args)>(args)...);
+				self->request(A, t, std::forward<decltype(args)>(args)...);
 		}, std::move(args))
 		.then(detail::closed_functor<F>::make(
 			[self, f = std::move(f)](auto&&... xs) mutable {

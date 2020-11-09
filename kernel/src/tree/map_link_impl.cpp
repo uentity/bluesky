@@ -190,6 +190,7 @@ auto map_link_impl::refresh(map_link_actor* self, caf::event_based_actor* rworke
 	const auto map_leafs_array = [&](const links_v& in_leafs) {
 		// start mappers in parallel
 		std::for_each(in_leafs.begin(), in_leafs.end(), [&](const auto& src_link) {
+			using namespace allow_enumops;
 			// sanity - don't process self
 			if(src_link.id() == id_) return;
 
