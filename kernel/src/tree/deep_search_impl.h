@@ -29,7 +29,7 @@ auto deep_search_impl(
 	auto res_promise = self->make_response_promise<links_v>();
 
 	// 3. sequental leafs processor as recursive lambda
-	auto do_search_leafs = [=](auto fimpl, auto work, links_v res, lids_v asl) mutable {
+	auto do_search_leafs = [=](auto&& fimpl, auto work, links_v res, lids_v asl) mutable {
 		// 1st possible outcome: end of work processing chain - deliver current result
 		if(work.empty()) {
 			adbg(self) << "DS: 3. deliver result (work is empty), res size = " << res.size() << std::endl;
@@ -44,7 +44,7 @@ auto deep_search_impl(
 
 		// 2nd possible outcome: recursion step to process remaining work
 		auto make_next_iteration =
-		[=, fimpl = std::move(fimpl), work = std::move(work)](links_v res) mutable {
+		[=, work = std::move(work)](links_v res) mutable {
 			return [=, res = std::move(res)]() mutable {
 				adbg(self) << "DS: 3. recursion to next step" << std::endl;
 				// invoke self with rest of work

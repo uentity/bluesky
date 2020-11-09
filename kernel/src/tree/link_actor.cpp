@@ -42,16 +42,12 @@ static auto do_data_apply(link_actor* LA, transaction_t<tr_result, Ts...> tr) {
 	.then([=, tr = std::move(tr)](obj_or_errbox maybe_obj) mutable {
 		if(maybe_obj) {
 			// always send closed transaction
-			transaction tr_ = [&] {
+			res.delegate(maybe_obj.value()->actor(), a_apply(), [&] {
 				if constexpr(sizeof...(Ts) > 0)
 					return (*maybe_obj)->make_transaction(std::move(tr));
 				else
 					return std::move(tr);
-			}();
-			LA->request(maybe_obj.value()->actor(), caf::infinite, a_apply(), std::move(tr_))
-			.then([=](tr_result::box tres) mutable {
-				res.deliver(std::move(tres));
-			});
+			}());
 		}
 		else
 			res.deliver(pack(tr_result{std::move(maybe_obj).error()}));
