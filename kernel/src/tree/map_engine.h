@@ -32,8 +32,6 @@ public:
 		caf::reacts_to<a_lazy, a_node_clear>,
 		// immediately refresh output node & return it
 		caf::replies_to<a_node_clear>::with<node_or_errbox>,
-		// performs insertion of mapped resulting links into output node
-		caf::replies_to<a_node_insert, io_map_t, links_v>::with<node_or_errbox>,
 		// invoke mapper on given link from given origin node (sent by retranslator)
 		caf::reacts_to<a_ack, a_apply, link /* src */>,
 		// link erased from input (sub)node

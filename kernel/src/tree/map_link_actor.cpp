@@ -186,42 +186,6 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 		[=](a_ack, a_node_erase, const lid_type& src_id) {
 			adbg(this) << "<- erase (casual)" << std::endl;
 			mimpl().erase(this, src_id);
-		},
-
-		// insert mapped leafs into output node and return it
-		[=](a_node_insert, io_map_t io_map, links_v out_leafs) -> caf::result<node_or_errbox> {
-			using R = node_or_errbox;
-			auto& simpl = mimpl();
-
-			adbg(this) << "<- refresh finilize (insert)" << std::endl;
-
-			// update mappings
-			simpl.io_map_ = std::move(io_map);
-			// update output node
-			auto res = make_response_promise<node_or_errbox>();
-			request(
-				node_impl::actor(simpl.out_), caf::infinite, a_apply(),
-				simple_transaction{[this, &simpl, out_leafs = std::move(out_leafs)] {
-					auto dest_node = simpl.out_.bare();
-					dest_node.clear();
-					ulong cnt = 0;
-					for(auto& res_link : out_leafs)
-						cnt += dest_node.insert(res_link, InsertPolicy::AllowDupNames).second;
-					adbg(this) << "refresh: inserted links count = " << cnt << std::endl;
-					return perfect;
-				}}
-			)
-			// 2. Deliver result
-			.then(
-				[=](error::box erb) mutable {
-					// [WARN] formally, we must check OK by converting to `error`
-					if(erb.ec)
-						res.deliver(R{ tl::unexpect, std::move(erb) });
-					else
-						res.deliver(R{ mimpl().out_ });
-				}
-			);
-			return res;
 		}
 
 	}, super::make_typed_behavior());

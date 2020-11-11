@@ -310,7 +310,7 @@ void py_bind_link(py::module& m) {
 	m.def(
 		"make_otid_filter", &make_otid_filter, "name"_a, "allowed_otids"_a, "src_node"_a,
 		"dest_node"_a = link_or_node{}, "update_on"_a = Event::DataNodeModified | Event::LinkRenamed,
-		"opts"_a = TreeOpts::Deep, "flags"_a = Flags::Plain
+		"opts"_a = TreeOpts::Deep | TreeOpts::DetachedWorkers, "flags"_a = Flags::Plain
 	);
 }
 

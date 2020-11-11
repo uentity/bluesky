@@ -231,12 +231,45 @@ auto map_link_impl::refresh(map_link_actor* self, caf::event_based_actor* rworke
 		waiter->wait_for(std::move(mappers));
 	})) return node_or_errbox{tl::unexpect, er};
 
+	adbg(self) << "impl::refresh: delegating to self" << std::endl;
+	using R = node_or_errbox;
+	auto res = rworker->make_response_promise<R>();
+	// deliver transaction error (for ex. exception inside transaction)
+	auto deliver_err_res = [=](const error::box& erb) mutable {
+		// [WARN] formally, we must check OK by converting to `error`
+		// OK result is delivered from node transaction lower
+		if(erb.ec) {
+			res.deliver(R{ tl::unexpect, std::move(erb) });
+			rworker->quit();
+		}
+	};
+
 	// insert results into ouput node inside map_link transaction
 	// that, in turn, runs internal transaction in output node
-	adbg(self) << "impl::refresh: delegating to self" << std::endl;
-	return rworker->delegate(
-		caf::actor_cast<actor_type>(self), a_node_insert(), std::move(io_map), std::move(out_leafs)
-	);
+	rworker->request(
+		self->actor(), caf::infinite, a_apply(),
+		simple_transaction{[=, io_map = std::move(io_map), out_leafs = std::move(out_leafs)]() mutable {
+			// update mappings
+			io_map_ = std::move(io_map);
+			// update output node
+			rworker->request(
+				node_impl::actor(out_), caf::infinite, a_apply(),
+				node_transaction{[=, out_leafs = std::move(out_leafs)](bare_node dest_node) mutable {
+					dest_node.clear();
+					auto cnt = dest_node.insert(unsafe, std::move(out_leafs));
+					res.deliver(R{ out_ });
+					rworker->quit();
+					adbg(this) << "refresh: inserted links count = " << cnt << std::endl;
+					return perfect;
+				}}
+			)
+			// 2. Deliver result
+			.then(deliver_err_res);
+			return perfect;
+		}}
+	).then(deliver_err_res);
+
+	return res;
 }
 
 ENGINE_TYPE_DEF(map_link_impl, "map_link")
