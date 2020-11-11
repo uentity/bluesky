@@ -66,7 +66,7 @@ auto request_impl(
 
 	// returns extended request result processor
 	const auto make_result = [&] {
-		return [=, &LA, rs_reset = std::move(rs_reset), rp = std::move(res_processor)](req_res_t obj) mutable {
+		return [=, &LA, rs_reset = std::move(rs_reset)](req_res_t obj) mutable {
 			// set new status
 			if constexpr(ManageStatus)
 				rs_reset(
@@ -82,7 +82,7 @@ auto request_impl(
 				return obj ? res_t(std::move(obj)) : unexpected_err_quiet(Error::EmptyData);
 			});
 			// invoke main result processor
-			rp(res);
+			res_processor(res);
 
 			// feed waiters
 			auto& waiters = LA.impl.req_status_handle(req).waiters;
@@ -118,19 +118,28 @@ auto request_impl(
 
 	// otherwise invoke inside dedicated actor
 	// setup worker that will invoke request and process result
-	auto worker = [f = std::move(f_request)](caf::event_based_actor* self) mutable {
+	auto worker = [=, f = std::move(f_request)](caf::event_based_actor* self) mutable {
+		// deliver CAF errors
+		self->set_error_handler(
+			[rp = std::move(res_processor)](auto* self, const caf::error& er) mutable {
+				rp(res_t{ tl::unexpect, forward_caf_error(er) });
+				self->quit();
+			}
+		);
+
 		return caf::behavior{
-			[self, f = std::move(f)](a_apply) mutable -> worker_ret_t {
+			[self, f = std::move(f)](a_ack) mutable -> worker_ret_t {
 				return invoke_f_request(f, self);
 			}
 		};
 	};
+
 	// spawn worker
 	auto worker_actor = enumval(opts & ReqOpts::Detached) ?
 		LA.spawn<caf::detached>(std::move(worker)) :
 		LA.spawn(std::move(worker));
 	// start work & ensure that result_processor is invoked in LA's body
-	LA.request(worker_actor, caf::infinite, a_apply())
+	LA.request(worker_actor, caf::infinite, a_ack())
 	.then(make_result());
 }
 
