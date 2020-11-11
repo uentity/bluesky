@@ -17,12 +17,12 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
- *  map_link_impl
+ *  map_link_impl_base
  *-----------------------------------------------------------------------------*/
-map_link_impl::map_link_impl(
-	std::string name, link_mapper_f mf, link_or_node input, link_or_node output,
+map_link_impl_base::map_link_impl_base(
+	std::string name, link_or_node input, link_or_node output,
 	Event update_on, TreeOpts opts, Flags f
-) : super(std::move(name), f), mf_(std::move(mf)), update_on_(update_on), opts_(opts)
+) : super(std::move(name), f), update_on_(update_on), opts_(opts)
 {
 	static const auto extract_node = [](node& lhs, auto&& rhs) {
 		visit(meta::overloaded{
@@ -41,16 +41,11 @@ map_link_impl::map_link_impl(
 	rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::Void);
 }
 
-auto map_link_impl::spawn_actor(sp_limpl Limpl) const -> caf::actor {
+auto map_link_impl_base::spawn_actor(sp_limpl Limpl) const -> caf::actor {
 	return spawn_lactor<map_link_actor>(std::move(Limpl));
 }
 
-auto map_link_impl::clone(bool deep) const -> sp_limpl {
-	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
-	return std::make_shared<map_link_impl>(name_, mf_, in_, node::nil(), update_on_, opts_, flags_);
-}
-
-auto map_link_impl::propagate_handle() -> node_or_err {
+auto map_link_impl_base::propagate_handle() -> node_or_err {
 	// if output node doesn't have handle (for ex new node created in ctor) - set it to self
 	if(!out_.handle())
 		super::propagate_handle(out_);
@@ -58,10 +53,18 @@ auto map_link_impl::propagate_handle() -> node_or_err {
 }
 
 // Data request always return error
-auto map_link_impl::data() -> obj_or_err { return unexpected_err_quiet(Error::EmptyData); }
-auto map_link_impl::data(unsafe_t) const -> sp_obj { return nullptr; }
+auto map_link_impl_base::data() -> obj_or_err { return unexpected_err_quiet(Error::EmptyData); }
+auto map_link_impl_base::data(unsafe_t) const -> sp_obj { return nullptr; }
 
-auto map_link_impl::data_node(unsafe_t) const -> node { return out_; }
+auto map_link_impl_base::data_node(unsafe_t) const -> node { return out_; }
+
+/*-----------------------------------------------------------------------------
+ *  map_link_impl
+ *-----------------------------------------------------------------------------*/
+auto map_link_impl::clone(bool deep) const -> sp_limpl {
+	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
+	return std::make_shared<map_link_impl>(mf_, name_, in_, node::nil(), update_on_, opts_, flags_);
+}
 
 auto map_link_impl::erase(map_link_actor* self, lid_type src_lid) -> void {
 	if(auto pdest = io_map_.find(src_lid); pdest != io_map_.end()) {

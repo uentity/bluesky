@@ -22,7 +22,7 @@ map_link::map_link(
 		return visit(meta::overloaded{
 			[&](link_mapper_f lmf) -> sp_engine_impl {
 				return std::make_shared<map_link_impl>(
-					std::move(name), std::move(lmf), src_node, dest_node, update_on, opts, f
+					std::move(lmf), std::move(name), src_node, dest_node, update_on, opts, f
 				);
 			},
 			// [NOTE] not implemented yet

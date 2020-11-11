@@ -18,13 +18,13 @@ class map_link_actor;
 /*-----------------------------------------------------------------------------
  *  map_link impl
  *-----------------------------------------------------------------------------*/
-class BS_HIDDEN_API map_link_impl : public link_impl {
+///////////////////////////////////////////////////////////////////////////////
+//  base
+//
+class BS_HIDDEN_API map_link_impl_base : public link_impl {
 public:
 	using super = link_impl;
-	using sp_map_limpl = std::shared_ptr<map_link_impl>;
-	using link_mapper_f = map_link::link_mapper_f;
-	// mapping from input link ID -> output link ID
-	using io_map_t = std::unordered_map<lid_type, lid_type>;
+	using sp_map_limpl = std::shared_ptr<map_link_impl_base>;
 
 	// map link specific behavior
 	using map_actor_type = caf::typed_actor<
@@ -43,15 +43,13 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  base link_impl API
 	//
-	map_link_impl();
-	map_link_impl(
-		std::string name, link_mapper_f mf, link_or_node input, link_or_node output,
+	map_link_impl_base();
+	map_link_impl_base(
+		std::string name, link_or_node input, link_or_node output,
 		Event update_on, TreeOpts opts, Flags f
 	);
 
 	auto spawn_actor(sp_limpl) const -> caf::actor override;
-
-	auto clone(bool deep) const -> sp_limpl override;
 
 	auto propagate_handle() -> node_or_err override;
 
@@ -62,21 +60,48 @@ public:
 	auto data_node(unsafe_t) const -> node override;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  additional map-specific API
+	//  map-specific API
 	//
 	// update/erase single link
-	auto update(map_link_actor* self, link src_link) -> void;
-	auto erase(map_link_actor* self, lid_type src_lid) -> void;
+	virtual auto update(map_link_actor* self, link src_link) -> void = 0;
+	virtual auto erase(map_link_actor* self, lid_type src_lid) -> void = 0;
 	// reset all mappings from scratch, started in separate `worker` actor
-	auto refresh(map_link_actor* self, caf::event_based_actor* rworker) -> caf::result<node_or_errbox>;
+	virtual auto refresh(map_link_actor* self, caf::event_based_actor* rworker)
+	-> caf::result<node_or_errbox> = 0;
 
 	// data members
-	link_mapper_f mf_;
 	node in_, out_;
-	io_map_t io_map_;
-
 	Event update_on_;
 	TreeOpts opts_;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//  map link -> link
+//
+class BS_HIDDEN_API map_link_impl : public map_link_impl_base {
+public:
+	using link_mapper_f = map_link::link_mapper_f;
+
+	map_link_impl();
+
+	template<typename... Args>
+	explicit map_link_impl(link_mapper_f mf, Args&&... args) :
+		map_link_impl_base(std::forward<Args>(args)...), mf_(std::move(mf))
+	{}
+
+	auto clone(bool deep) const -> sp_limpl override;
+
+	// update/erase single link
+	auto update(map_link_actor* self, link src_link) -> void override final;
+	auto erase(map_link_actor* self, lid_type src_lid) -> void override final;
+	// reset all mappings from scratch, started in separate `worker` actor
+	auto refresh(map_link_actor* self, caf::event_based_actor* rworker)
+	-> caf::result<node_or_errbox> override final;
+
+	link_mapper_f mf_;
+	// mapping from input link ID -> output link ID
+	using io_map_t = std::unordered_map<lid_type, lid_type>;
+	io_map_t io_map_;
 
 	ENGINE_TYPE_DECL
 };
@@ -106,7 +131,7 @@ public:
 
 	map_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl);
 
-	decltype(auto) mimpl() const { return static_cast<map_link_impl&>(impl); }
+	decltype(auto) mimpl() const { return static_cast<map_link_impl_base&>(impl); }
 
 	auto name() const -> const char* override;
 
