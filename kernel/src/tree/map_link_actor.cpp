@@ -6,7 +6,6 @@
 
 #include "map_engine.h"
 #include "node_impl.h"
-#include "request_impl.h"
 
 #include <bs/tree/tree.h>
 #include <bs/detail/enumops.h>
@@ -27,12 +26,12 @@ NAMESPACE_BEGIN()
 //  helper retranslator that forwards acks from input node to parent `map_link`
 //
 struct iar_state {
-	map_link_impl::map_actor_type parent;
+	map_link_impl_base::map_actor_type parent;
 	node::actor_type input;
 };
 
 auto input_ack_retranslator(
-	caf::stateful_actor<iar_state>* self, map_link_impl::map_actor_type parent, node::actor_type input,
+	caf::stateful_actor<iar_state>* self, map_link_impl_base::map_actor_type parent, node::actor_type input,
 	Event update_on, TreeOpts opts
 ) {
 	using namespace allow_enumops;
@@ -135,9 +134,14 @@ NAMESPACE_END()
 map_link_actor::map_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl) :
 	super(cfg, std::move(self_grp), std::move(Limpl))
 {
+	using namespace allow_enumops;
 	const auto& simpl = mimpl();
-	reset_input_listener(simpl.update_on_, simpl.opts_);
-	adbg(this) << "successfully started" << std::endl;
+	// set detached flag if requested
+	if(enumval(simpl.opts_ & TreeOpts::DetachedWorkers))
+		ropts_.data_node |= ReqOpts::Detached;
+	// start input node events tracker
+	if(enumval(simpl.update_on_))
+		reset_input_listener(simpl.update_on_, simpl.opts_);
 }
 
 auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> void {
@@ -147,7 +151,7 @@ auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> voi
 	if(!simpl.in_) return;
 	inp_listener_ = spawn_in_group(
 		simpl.in_.home(), input_ack_retranslator,
-		caf::actor_cast<map_link_impl::map_actor_type>(this), simpl.in_.actor(), update_on, opts
+		caf::actor_cast<map_link_impl_base::map_actor_type>(this), simpl.in_.actor(), update_on, opts
 	);
 }
 
@@ -200,17 +204,8 @@ auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
 			adbg(this) << "<- a_data_node (refresh)" << std::endl;
 			// install casual behavior
 			become(casual_bhv);
-
-			using R = node_or_errbox;
-			auto res = make_response_promise<R>();
-
-			// run output node refresh in separate actor
-			request_impl<true, node_or_errbox>(
-				*this, Req::DataNode, ReqOpts::Detached,
-				[=](caf::event_based_actor* rworker) { return mimpl().refresh(this, rworker); },
-				[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
-			);
-			return res;
+			// invoke refresh
+			return mimpl().refresh(this);
 		},
 
 		[=](a_ack, a_apply, const link&) {

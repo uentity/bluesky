@@ -45,7 +45,7 @@ public:
 	//
 	map_link_impl_base();
 	map_link_impl_base(
-		std::string name, link_or_node input, link_or_node output,
+		bool is_link_mapper, std::string name, link_or_node input, link_or_node output,
 		Event update_on, TreeOpts opts, Flags f
 	);
 
@@ -66,13 +66,13 @@ public:
 	virtual auto update(map_link_actor* self, link src_link) -> void = 0;
 	virtual auto erase(map_link_actor* self, lid_type src_lid) -> void = 0;
 	// reset all mappings from scratch, started in separate `worker` actor
-	virtual auto refresh(map_link_actor* self, caf::event_based_actor* rworker)
-	-> caf::result<node_or_errbox> = 0;
+	virtual auto refresh(map_link_actor* self) -> caf::result<node_or_errbox> = 0;
 
 	// data members
 	node in_, out_;
 	Event update_on_;
-	TreeOpts opts_;
+	const TreeOpts opts_;
+	const bool is_link_mapper;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -86,22 +86,50 @@ public:
 
 	template<typename... Args>
 	explicit map_link_impl(link_mapper_f mf, Args&&... args) :
-		map_link_impl_base(std::forward<Args>(args)...), mf_(std::move(mf))
+		map_link_impl_base(true, std::forward<Args>(args)...), mf_(std::move(mf))
 	{}
 
-	auto clone(bool deep) const -> sp_limpl override;
+	auto clone(bool deep) const -> sp_limpl override final;
 
 	// update/erase single link
 	auto update(map_link_actor* self, link src_link) -> void override final;
 	auto erase(map_link_actor* self, lid_type src_lid) -> void override final;
 	// reset all mappings from scratch, started in separate `worker` actor
+	auto refresh(map_link_actor* self) -> caf::result<node_or_errbox> override final;
+	// refresh impl inside worker actor
 	auto refresh(map_link_actor* self, caf::event_based_actor* rworker)
-	-> caf::result<node_or_errbox> override final;
+	-> caf::result<node_or_errbox>;
 
 	link_mapper_f mf_;
 	// mapping from input link ID -> output link ID
 	using io_map_t = std::unordered_map<lid_type, lid_type>;
 	io_map_t io_map_;
+
+	ENGINE_TYPE_DECL
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//  map node -> node
+//
+class BS_HIDDEN_API map_node_impl : public map_link_impl_base {
+public:
+	using node_mapper_f = map_link::node_mapper_f;
+
+	map_node_impl();
+
+	template<typename... Args>
+	explicit map_node_impl(node_mapper_f mf, Args&&... args) :
+		map_link_impl_base(false, std::forward<Args>(args)...), mf_(std::move(mf))
+	{}
+
+	auto clone(bool deep) const -> sp_limpl override final;
+
+	// implementation is identical in all cases - just spawn mapper job
+	auto update(map_link_actor* self, link src_link) -> void override final;
+	auto erase(map_link_actor* self, lid_type src_lid) -> void override final;
+	auto refresh(map_link_actor* self) -> caf::result<node_or_errbox> override final;
+
+	node_mapper_f mf_;
 
 	ENGINE_TYPE_DECL
 };

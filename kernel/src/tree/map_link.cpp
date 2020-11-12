@@ -25,8 +25,11 @@ map_link::map_link(
 					std::move(lmf), std::move(name), src_node, dest_node, update_on, opts, f
 				);
 			},
-			// [NOTE] not implemented yet
-			[&](const node_mapper_f& nmf) -> sp_engine_impl { return nil_link::pimpl(); }
+			[&](node_mapper_f nmf) -> sp_engine_impl {
+				return std::make_shared<map_node_impl>(
+					std::move(nmf), std::move(name), src_node, dest_node, update_on, opts, f
+				);
+			}
 		}, std::move(mf));
 	}())
 {}
@@ -36,18 +39,24 @@ map_link::map_link(const link& rhs) : super(rhs, type_id_()) {}
 auto map_link::type_id_() -> std::string_view { return "map_link"; }
 
 auto map_link::input() const -> node {
-	return static_cast<map_link_impl*>(pimpl_.get())->in_;
+	return static_cast<map_link_impl_base*>(pimpl_.get())->in_;
 }
 
 auto map_link::output() const -> node {
-	return static_cast<map_link_impl*>(pimpl_.get())->out_;
+	return static_cast<map_link_impl_base*>(pimpl_.get())->out_;
 }
 
 auto map_link::l_target() const -> const link_mapper_f* {
-	return &static_cast<map_link_impl const*>(pimpl())->mf_;
+	auto simpl = static_cast<map_link_impl_base const*>(pimpl());
+	if(simpl->is_link_mapper)
+		return &static_cast<map_link_impl const*>(simpl)->mf_;
+	return nullptr;
 }
 
 auto map_link::n_target() const -> const node_mapper_f* {
+	auto simpl = static_cast<map_link_impl_base const*>(pimpl());
+	if(!simpl->is_link_mapper)
+		return &static_cast<map_node_impl const*>(simpl)->mf_;
 	return nullptr;
 }
 

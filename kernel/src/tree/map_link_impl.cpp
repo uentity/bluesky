@@ -12,6 +12,8 @@
 #include <bs/serialize/cafbind.h>
 #include <bs/log.h>
 
+#include "request_impl.h"
+
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 
@@ -20,9 +22,9 @@ NAMESPACE_BEGIN(blue_sky::tree)
  *  map_link_impl_base
  *-----------------------------------------------------------------------------*/
 map_link_impl_base::map_link_impl_base(
-	std::string name, link_or_node input, link_or_node output,
+	bool is_link_mapper_, std::string name, link_or_node input, link_or_node output,
 	Event update_on, TreeOpts opts, Flags f
-) : super(std::move(name), f), update_on_(update_on), opts_(opts)
+) : super(std::move(name), f), update_on_(update_on), opts_(opts), is_link_mapper(is_link_mapper_)
 {
 	static const auto extract_node = [](node& lhs, auto&& rhs) {
 		visit(meta::overloaded{
@@ -262,7 +264,7 @@ auto map_link_impl::refresh(map_link_actor* self, caf::event_based_actor* rworke
 					auto cnt = dest_node.insert(unsafe, std::move(out_leafs));
 					res.deliver(R{ out_ });
 					rworker->quit();
-					adbg(this) << "refresh: inserted links count = " << cnt << std::endl;
+					adbg(self) << "refresh: inserted links count = " << cnt << std::endl;
 					return perfect;
 				}}
 			)
@@ -275,6 +277,78 @@ auto map_link_impl::refresh(map_link_actor* self, caf::event_based_actor* rworke
 	return res;
 }
 
+auto map_link_impl::refresh(map_link_actor* self) -> caf::result<node_or_errbox> {
+	using R = node_or_errbox;
+	auto res = self->make_response_promise<R>();
+
+	// run output node refresh in separate actor
+	request_impl<true, node_or_errbox>(
+		*self, Req::DataNode, ReqOpts::Detached,
+		[=, pimpl = std::static_pointer_cast<map_link_impl>(self->pimpl_)]
+		(caf::event_based_actor* rworker) {
+			return pimpl->refresh(self, rworker);
+		},
+		[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
+	);
+	return res;
+}
+
 ENGINE_TYPE_DEF(map_link_impl, "map_link")
+
+/*-----------------------------------------------------------------------------
+ *  map_node_impl
+ *-----------------------------------------------------------------------------*/
+using namespace allow_enumops;
+
+template<bool DiscardResult = false>
+static auto spawn_mapper_job(map_node_impl* impl, map_link_actor* self)
+-> std::conditional_t<DiscardResult, void, caf::result<node_or_errbox>> {
+	// safely invoke mapper and return output node on success
+	auto invoke_mapper =
+		[pimpl = std::static_pointer_cast<map_node_impl>(self->pimpl_)]
+		(caf::event_based_actor* rworker) -> node_or_errbox {
+			if(auto er = error::eval_safe([&] { pimpl->mf_(pimpl->in_, pimpl->out_); }))
+				return tl::make_unexpected(er.pack());
+			return pimpl->out_;
+		};
+
+	const auto opts = enumval(impl->opts_ & TreeOpts::DetachedWorkers) ?
+		ReqOpts::Detached : ReqOpts::WaitIfBusy;
+
+	if constexpr(DiscardResult) {
+		request_impl<true, node_or_errbox>(
+			*self, Req::DataNode, opts, std::move(invoke_mapper), noop
+		);
+	}
+	else {
+		auto res = self->make_response_promise<node_or_errbox>();
+		request_impl<true, node_or_errbox>(
+			*self, Req::DataNode, opts, std::move(invoke_mapper),
+			[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
+		);
+		return res;
+	}
+}
+
+auto map_node_impl::clone(bool deep) const -> sp_limpl {
+	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
+	return std::make_shared<map_node_impl>(mf_, name_, in_, node::nil(), update_on_, opts_, flags_);
+}
+
+auto map_node_impl::erase(map_link_actor* self, lid_type) -> void {
+	spawn_mapper_job<true>(this, self);
+}
+
+auto map_node_impl::update(map_link_actor* self, link) -> void {
+	spawn_mapper_job<true>(this, self);
+}
+
+auto map_node_impl::refresh(map_link_actor* self) -> caf::result<node_or_errbox> {
+	return spawn_mapper_job(this, self);
+}
+
+// [NOTE] both link -> link & node -> node impls have same type ID,
+// because it must match with `map_link::type_id_()`
+ENGINE_TYPE_DEF(map_node_impl, "map_link")
 
 NAMESPACE_END(blue_sky::tree)
