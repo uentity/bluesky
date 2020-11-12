@@ -18,21 +18,26 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
+//  base nil actor
+//
+nil_engine_actor::nil_engine_actor(caf::actor_config& cfg) :
+	super(cfg)
+{
+	// never die on error or exit msg
+	set_error_handler(noop);
+	set_exit_handler(noop);
+	// completely ignore unexpected messages without error backpropagation
+	set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
+		return caf::none;
+	});
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //  nil link actor
 //
-struct nil_link::self_actor : caf::event_based_actor {
-	using super = caf::event_based_actor;
-
-	self_actor(caf::actor_config& cfg)
-		: super(cfg)
-	{
-		// never die on error
-		set_error_handler([](const caf::error&) {});
-		// completely ignore unexpected messages without error backpropagation
-		set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-			return caf::none;
-		});
-	}
+struct nil_link::self_actor : nil_engine_actor {
+	using super = nil_engine_actor;
+	using super::super;
 
 	auto make_behavior() -> behavior_type override { return link::actor_type::behavior_type{
 	

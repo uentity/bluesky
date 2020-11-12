@@ -19,20 +19,11 @@ NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////
 //  nil node actor
 //
-struct nil_node::self_actor : caf::event_based_actor {
-	using super = caf::event_based_actor;
+struct nil_node::self_actor : nil_engine_actor {
+	using super = nil_engine_actor;
 	using insert_status = node::insert_status;
 
-	self_actor(caf::actor_config& cfg)
-		: super(cfg)
-	{
-		// never die on error
-		set_error_handler([](const caf::error&) {});
-		// completely ignore unexpected messages without error backpropagation
-		set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-			return caf::none;
-		});
-	}
+	using super::super;
 
 	auto make_behavior() -> behavior_type override { return node::actor_type::behavior_type{
 	

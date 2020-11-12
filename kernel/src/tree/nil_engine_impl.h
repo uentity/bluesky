@@ -12,6 +12,7 @@
 #include <bs/kernel/radio.h>
 
 #include <caf/scoped_actor.hpp>
+#include <caf/event_based_actor.hpp>
 
 #include <atomic>
 
@@ -57,6 +58,13 @@ struct nil_engine_impl : ItemImpl {
 		);
 		return self_;
 	}
+};
+
+
+// base class for nil actors - prevent exit on misc events and allows only manual stopping
+struct nil_engine_actor : public caf::event_based_actor {
+	using super = caf::event_based_actor;
+	nil_engine_actor(caf::actor_config& cfg);
 };
 
 NAMESPACE_END(blue_sky::tree)
