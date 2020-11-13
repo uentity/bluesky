@@ -67,7 +67,7 @@ auto type_descriptor::nil() -> const type_descriptor& {
 }
 
 auto type_descriptor::is_nil() const -> bool {
-	return parent_td_fun_ == &nil;
+	return this == &nil();
 }
 
 auto type_descriptor::is_copyable() const -> bool {

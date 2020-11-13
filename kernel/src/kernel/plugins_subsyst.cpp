@@ -11,6 +11,7 @@
 #include <bs/kernel/errors.h>
 #include <bs/defaults.h>
 #include <bs/log.h>
+#include <bs/objbase.h>
 #include <bs/detail/scope_guard.h>
 #include <bs/detail/function_view.h>
 #include <bs/meta/is_container.h>
@@ -64,6 +65,9 @@ plugins_subsyst::plugins_subsyst() {
 	// register kernel virtual plugins
 	register_plugin(&kernel_pd(), lib_descriptor());
 	register_plugin(&runtime_pd(), lib_descriptor());
+	// register base types - we can create & clone 'em
+	register_kernel_type(objbase::bs_type());
+	register_kernel_type(objnode::bs_type());
 }
 
 plugins_subsyst::~plugins_subsyst() {}
