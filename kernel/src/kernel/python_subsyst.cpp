@@ -19,6 +19,7 @@
 
 #include <pybind11/functional.h>
 
+#include <iostream>
 #include <functional>
 
 #define WITH_KMOD \
@@ -85,6 +86,7 @@ auto python_subsyst_impl::setup_py_kmod(void* kmod_ptr) -> void {
 	// [IMPORTANT] we must clean up adapters & cache right BEFORE interpreter termination
 	auto at_pyexit = py::module::import("atexit");
 	at_pyexit.attr("register")(py::cpp_function{[this] {
+		std::cout << "~~~ Python subsystem shutting down..." << std::endl;
 		drop_adapted_cache();
 		adapters_.clear();
 		def_adapter_ = nullptr;
@@ -92,6 +94,7 @@ auto python_subsyst_impl::setup_py_kmod(void* kmod_ptr) -> void {
 		// kick all event-based actors (normally wait until all actor handles wired into Python are released)
 		auto _ = py::gil_scoped_release{};
 		KIMPL.get_radio()->kick_citizens();
+		std::cout << "~~~ Python subsystem down" << std::endl;
 	}});
 }
 

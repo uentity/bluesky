@@ -91,8 +91,7 @@ auto radio_subsyst::shutdown() -> void {
 		std::cout << "~~~ radio shutdown start" << std::endl;
 
 		// force all pending requests to exit very quickly
-		reset_timeouts(100us, 100us);
-
+		reset_timeouts(1us, 1us);
 		kick_citizens();
 
 		// explicitly kill nill link
@@ -101,10 +100,12 @@ auto radio_subsyst::shutdown() -> void {
 
 		// explicit wait until all actors done if asked for
 		// because during termination some actor may need to access live actor_system
-		std::cout << "~~~ Waiting for " << actor_sys_->registry().running() << " actors" << std::endl;
-		if(get_or(config::config(), "radio.await_actors_before_shutdown", true))
+		if(get_or(config::config(), "radio.await_actors_before_shutdown", true)) {
+			std::cout << "~~~ Waiting for " << actor_sys_->registry().running() << " actors" << std::endl;
 			actor_sys_->await_all_actors_done();
-		std::cout << "~~~ Waiting actors finished" << std::endl;
+			std::cout << "~~~ Waiting actors finished" << std::endl;
+		}
+
 		// destroy actor_system
 		actor_sys_->await_actors_before_shutdown(false);
 		get_actor_sys_ = &radio_subsyst::always_throw_as_getter;
