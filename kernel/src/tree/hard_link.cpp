@@ -50,7 +50,7 @@ auto hard_link_actor::make_typed_behavior() -> typed_behavior {
 			adbg(this) << "<- a_data fast, status = " <<
 				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
-			return pimpl_->data().and_then([](auto&& obj) {
+			return impl.data().and_then([](auto&& obj) {
 				return obj ?
 					obj_or_errbox(std::move(obj)) :
 					unexpected_err_quiet(Error::EmptyData);
@@ -61,7 +61,7 @@ auto hard_link_actor::make_typed_behavior() -> typed_behavior {
 			adbg(this) << "<- a_data_node fast, status = " <<
 				to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
-			return pimpl_->data().and_then([](const auto& obj) -> node_or_errbox {
+			return impl.data().and_then([](const auto& obj) -> node_or_errbox {
 				if(obj) {
 					if(auto n = obj->data_node())
 						return n;

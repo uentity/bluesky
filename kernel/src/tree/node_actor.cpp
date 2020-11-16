@@ -32,75 +32,19 @@ using namespace allow_enumops;
 using namespace std::chrono_literals;
 using namespace std::string_literals;
 
-[[maybe_unused]] auto adbg_impl(node_actor* A) -> caf::actor_ostream {
-	auto res = caf::aout(A);
+[[maybe_unused]] auto adbg_impl(caf::actor_ostream res, const node_impl& N) -> caf::actor_ostream {
 	res << "[N] ";
-	if(auto pgrp = A->impl.home.get())
+	if(auto pgrp = N.home.get())
 		res << "[" << pgrp->identifier() << "]";
 	else
 		res << "[homeless]";
-	return res <<  ": ";
+	res <<  ": ";
+	return res;
 }
 
 /*-----------------------------------------------------------------------------
  *  node_actor
  *-----------------------------------------------------------------------------*/
-node_actor::node_actor(caf::actor_config& cfg, caf::group nhome, sp_nimpl Nimpl)
-	: super(cfg), pimpl_(std::move(Nimpl)), impl([this]() -> node_impl& {
-		if(!pimpl_) throw error{"node actor: bad (null) node impl passed"};
-		return *pimpl_;
-	}())
-{
-	// remember link's local group
-	impl.home = std::move(nhome);
-	if(impl.home)
-		adbg(this) << "joined self group " << impl.home.get()->identifier() << std::endl;
-
-	// exit after kernel
-	KRADIO.register_citizen(this);
-
-	// prevent termination in case some errors happens in group members
-	// for ex. if they receive unexpected messages (translators normally do)
-	set_error_handler([this](caf::error er) {
-		switch(static_cast<caf::sec>(er.code())) {
-		case caf::sec::unexpected_message :
-		case caf::sec::request_timeout :
-		case caf::sec::request_receiver_down :
-			break;
-		default:
-			default_error_handler(this, er);
-		}
-	});
-
-	set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-		return caf::none;
-	});
-}
-
-node_actor::~node_actor() = default;
-
-auto node_actor::on_exit() -> void {
-	adbg(this) << "dies" << std::endl;
-
-	// be polite with everyone
-	goodbye();
-	// [IMPORTANT] manually reset pimpl, otherwise cycle won't break:
-	// actor dtor never called until at least one strong ref to it still exists
-	// (even though behavior is terminated by sending `exit` message)
-	pimpl_->release_factors();
-	pimpl_.reset();
-
-	KRADIO.release_citizen(this);
-}
-
-auto node_actor::goodbye() -> void {
-	adbg(this) << "goodbye" << std::endl;
-	if(auto& H = impl.home) {
-		send(H, a_bye());
-		leave(H);
-	}
-}
-
 auto node_actor::name() const -> const char* {
 	return "node_actor";
 }
@@ -293,14 +237,14 @@ auto node_actor::erase(const lid_type& victim, EraseOpts opts) -> size_t {
 //
 auto node_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
-	[=](a_impl) -> sp_nimpl { return pimpl_; },
+	[=](a_impl) -> sp_nimpl { return spimpl(); },
 
 	[=](a_apply, simple_transaction tr) -> error::box {
 		return tr_eval(std::move(tr));
 	},
 
 	[=](a_apply, node_transaction tr) -> error::box {
-		return tr_eval(std::move(tr), bare_node(pimpl_));
+		return tr_eval(std::move(tr), bare_node(spimpl()));
 	},
 
 	// subscribe events listener

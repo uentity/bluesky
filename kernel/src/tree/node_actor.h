@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 29.06.2018
 /// @brief BS tree node implementation part of PIMPL
@@ -8,16 +7,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <bs/atoms.h>
 #include <bs/actor_common.h>
-#include <bs/tree/node.h>
 #include <bs/kernel/radio.h>
 
+#include "engine_actor.h"
 #include "node_impl.h"
-
-#include <boost/uuid/uuid_hash.hpp>
-
-#include <caf/actor_cast.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
@@ -25,24 +19,15 @@ using namespace kernel::radio;
 /*-----------------------------------------------------------------------------
  *  node_actor
  *-----------------------------------------------------------------------------*/
-class BS_HIDDEN_API node_actor : public caf::event_based_actor {
+class BS_HIDDEN_API node_actor : public engine_actor<node> {
 public:
-	using super = caf::event_based_actor;
-	using actor_type = node_impl::actor_type;
+	using super = engine_actor;
 	using primary_actor_type = node_impl::primary_actor_type;
 	using ack_actor_type = node_impl::ack_actor_type;
 
-	// holds reference to node impl
-	sp_nimpl pimpl_;
-	node_impl& impl;
+	using super::super;
 
-	node_actor(caf::actor_config& cfg, caf::group nhome, sp_nimpl Nimpl);
-	~node_actor();
-
-	// get typed node actor handle
-	inline auto actor() -> node_impl::actor_type {
-		return caf::actor_cast<node_impl::actor_type>(this);
-	}
+	auto name() const -> const char* override;
 
 	// pass message to upper (owner) level of tree structure
 	template<typename... Args>
@@ -65,13 +50,6 @@ public:
 	auto ack_up(Args&&... args) -> void {
 		forward_up(a_ack(), this, std::forward<Args>(args)...);
 	}
-
-	auto on_exit() -> void override;
-
-	auto name() const -> const char* override;
-
-	// say goodbye to others & leave home
-	auto goodbye() -> void;
 
 	// parts of behavior
 	auto make_primary_behavior() -> primary_actor_type::behavior_type;

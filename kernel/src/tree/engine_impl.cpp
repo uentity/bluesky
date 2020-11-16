@@ -8,12 +8,19 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "engine_impl.h"
+#include "engine_actor.h"
+#include "../kernel/radio_subsyst.h"
 
 #include <bs/kernel/radio.h>
 
+#define DEBUG_ACTOR 0
+#include "actor_debug.h"
+
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace kradio = kernel::radio;
-
+/*-----------------------------------------------------------------------------
+ *  engine_impl
+ *-----------------------------------------------------------------------------*/
 auto engine::impl::factor(const engine* L) -> sp_scoped_actor {
 	// check if elem is already inserted and find insertion position
 	{
@@ -44,6 +51,63 @@ auto engine::impl::swap(impl& rhs) -> void {
 	using std::swap;
 	swap(home, rhs.home);
 	swap(rpool_, rhs.rpool_);
+}
+
+/*-----------------------------------------------------------------------------
+ *  engine_actor
+ *-----------------------------------------------------------------------------*/
+engine_actor_base::engine_actor_base(caf::actor_config& cfg, caf::group egrp, sp_engine_impl Eimpl) :
+	super(cfg), pimpl_(std::move(Eimpl))
+{
+	// sanity
+	if(!pimpl_) throw error{"engine actor: bad (null) impl passed"};
+	// remember link's local group
+	pimpl_->home = std::move(egrp);
+	if(pimpl_->home)
+		adbg(this) << "joined self group " << std::endl;
+
+	// exit after kernel
+	KRADIO.register_citizen(this);
+
+	// prevent termination in case some errors happens in group members
+	// for ex. if they receive unexpected messages (translators normally do)
+	set_error_handler([this](caf::error er) {
+		switch(static_cast<caf::sec>(er.code())) {
+		case caf::sec::unexpected_message :
+		case caf::sec::request_timeout :
+		case caf::sec::request_receiver_down :
+			break;
+		default:
+			default_error_handler(this, er);
+		}
+	});
+
+	// completely ignore unexpected messages without error backpropagation
+	set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
+		return caf::none;
+	});
+}
+
+auto engine_actor_base::goodbye() -> void {
+	adbg(this) << "goodbye" << std::endl;
+	auto& home = pimpl_->home;
+	if(home) {
+		// say goodbye to self group
+		send(home, a_bye());
+		leave(home);
+		adbg(this) << "left self group " << pimpl_->home_id() << std::endl;
+	}
+}
+
+auto engine_actor_base::on_exit() -> void {
+	adbg(this) << "dies" << std::endl;
+	// be polite with everyone
+	goodbye();
+	// force release strong ref to engine's impl
+	pimpl_->release_factors();
+	pimpl_.reset();
+
+	KRADIO.release_citizen(this);
 }
 
 NAMESPACE_END(blue_sky::tree)

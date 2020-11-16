@@ -9,38 +9,25 @@
 #pragma once
 
 #include <bs/actor_common.h>
-#include "node_impl.h"
+#include <bs/kernel/radio.h>
 
-#include <caf/actor_system.hpp>
+#include "engine_actor.h"
+#include "node_impl.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  link_actor
  *-----------------------------------------------------------------------------*/
-class BS_HIDDEN_API link_actor : public caf::event_based_actor {
+class BS_HIDDEN_API link_actor : public engine_actor<link> {
 public:
-	using super = caf::event_based_actor;
+	using super = engine_actor;
 	using primary_actor_type = link_impl::primary_actor_type;
 	using ack_actor_type = link_impl::ack_actor_type;
-	using actor_type = link_impl::actor_type;
-	using typed_behavior = actor_type::behavior_type;
 	using behavior_type = super::behavior_type;
 
-	link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl);
-	// virtual dtor
-	virtual ~link_actor();
-
-	// cleanup code executes leaving from local group & must be called from outside
-	auto goodbye() -> void;
-
-	auto on_exit() -> void override;
+	link_actor(caf::actor_config& cfg, caf::group home, sp_limpl Limpl);
 
 	auto name() const -> const char* override;
-
-	// get typed link actor handle
-	inline auto actor() -> actor_type {
-		return caf::actor_cast<actor_type>(this);
-	}
 
 	// forward call to impl + send notification to self group
 	auto rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs, bool silent = false)
@@ -68,10 +55,6 @@ public:
 	// complete & unboxed behavior
 	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;
-
-	// holds reference to link impl
-	sp_limpl pimpl_;
-	link_impl& impl;
 
 protected:
 	// default options for making Data & DataNode queries

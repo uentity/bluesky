@@ -132,6 +132,7 @@
     <ClInclude Include="kernel\src\serialize\tree_impl.h" />
     <ClInclude Include="kernel\src\serialize\tree_fs_impl.h" />
     <ClInclude Include="kernel\src\tree\actor_debug.h" />
+    <ClInclude Include="kernel\src\tree\engine_actor.h" />
     <ClInclude Include="kernel\src\tree\engine_impl.h" />
     <ClInclude Include="kernel\src\tree\ev_listener_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_actor.h" />

@@ -29,9 +29,9 @@ using namespace allow_enumops;
 using namespace kernel::radio;
 using namespace std::chrono_literals;
 
-[[maybe_unused]] auto adbg_impl(link_actor* A) -> caf::actor_ostream {
-	return caf::aout(A) << "[L:" << A->impl.type_id() << "] [" << to_string(A->impl.id_) <<
-		"] [" << A->impl.name_ << "]: ";
+[[maybe_unused]] auto adbg_impl(caf::actor_ostream out, const link_impl& L) -> caf::actor_ostream {
+	out << "[L:" << L.type_id() << "] [" << to_string(L.id_) << "] [" << L.name_ << "]: ";
+	return out;
 }
 
 // helper to apply data transactions
@@ -58,63 +58,9 @@ static auto do_data_apply(link_actor* LA, transaction_t<tr_result, Ts...> tr) {
 /*-----------------------------------------------------------------------------
  *  link
  *-----------------------------------------------------------------------------*/
-link_actor::link_actor(caf::actor_config& cfg, caf::group lgrp, sp_limpl Limpl) :
-	super(cfg), pimpl_(std::move(Limpl)), impl([this]() -> link_impl& {
-		if(!pimpl_) throw error{"link actor: bad (null) link impl passed"};
-		return *pimpl_;
-	}()), ropts_{ReqOpts::WaitIfBusy, ReqOpts::WaitIfBusy}
-{
-	// remember link's local group
-	impl.home = std::move(lgrp);
-	if(impl.home)
-		adbg(this) << "joined self group " << std::endl;
-
-	// exit after kernel
-	KRADIO.register_citizen(this);
-
-	// prevent termination in case some errors happens in group members
-	// for ex. if they receive unexpected messages (translators normally do)
-	set_error_handler([this](caf::error er) {
-		switch(static_cast<caf::sec>(er.code())) {
-		case caf::sec::unexpected_message :
-		case caf::sec::request_timeout :
-		case caf::sec::request_receiver_down :
-			break;
-		default:
-			default_error_handler(this, er);
-		}
-	});
-
-	// completely ignore unexpected messages without error backpropagation
-	set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-		return caf::none;
-	});
-}
-
-link_actor::~link_actor() = default;
-
-auto link_actor::on_exit() -> void {
-	adbg(this) << "dies" << std::endl;
-
-	// be polite with everyone
-	goodbye();
-	// force release strong ref to link's impl
-	pimpl_->release_factors();
-	pimpl_.reset();
-
-	KRADIO.release_citizen(this);
-}
-
-auto link_actor::goodbye() -> void {
-	adbg(this) << "goodbye" << std::endl;
-	if(impl.home) {
-		// say goodbye to self group
-		send(impl.home, a_bye());
-		leave(impl.home);
-		adbg(this) << "left self group " << impl.home.get()->identifier() << std::endl;
-		//	<< "\n" << kernel::tools::get_backtrace(30, 4) << std::endl;
-	}
-}
+link_actor::link_actor(caf::actor_config& cfg, caf::group home, sp_limpl Limpl) :
+	super(cfg, std::move(home), std::move(Limpl)), ropts_{ReqOpts::WaitIfBusy, ReqOpts::WaitIfBusy}
+{}
 
 auto link_actor::name() const -> const char* {
 	return "link_actor";
@@ -146,9 +92,7 @@ return {
 
 	[=](a_home_id) { return std::string(impl.home_id()); },
 
-	[=](a_impl) -> sp_limpl {
-		return pimpl_;
-	},
+	[=](a_impl) -> sp_limpl { return spimpl(); },
 
 	// subscribe events listener
 	[=](a_subscribe, const caf::actor& baby) {
@@ -162,7 +106,7 @@ return {
 	},
 
 	[=](a_apply, link_transaction tr) -> error::box {
-		return tr_eval(std::move(tr), bare_link(pimpl_));
+		return tr_eval(std::move(tr), bare_link(spimpl()));
 	},
 
 	// apply data transactions
@@ -230,7 +174,7 @@ return {
 	},
 
 	// get status
-	[=](a_lnk_status, Req req) -> ReqStatus { return pimpl_->req_status(req); },
+	[=](a_lnk_status, Req req) -> ReqStatus { return impl.req_status(req); },
 
 	// change status
 	[=](a_lnk_status, Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs) -> ReqStatus {
@@ -245,8 +189,8 @@ return {
 	},
 
 	// get/set flags
-	[=](a_lnk_flags) { return pimpl_->flags_; },
-	[=](a_lnk_flags, Flags f) { pimpl_->flags_ = f; },
+	[=](a_lnk_flags) { return impl.flags_; },
+	[=](a_lnk_flags, Flags f) { impl.flags_ = f; },
 
 	// obtain inode
 	// [NOTE] assume it's a fast call, override behaviour where needed (sym_link for ex)

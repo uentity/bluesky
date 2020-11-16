@@ -28,6 +28,7 @@ class BS_API link : public engine {
 public:
 	using bare_type = bare_link;
 	using engine_impl = link_impl;
+	using engine_actor = link_actor;
 	using weak_ptr = engine::weak_ptr<link>;
 
 	/// Interface of link actor, you can only send messages matching it

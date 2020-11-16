@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 15.09.2016
 /// @brief BlueSky tree node class declaration
@@ -22,6 +21,7 @@ class BS_API node : public engine {
 public:
 	using bare_type = bare_node;
 	using engine_impl = node_impl;
+	using engine_actor = node_actor;
 	using weak_ptr = engine::weak_ptr<node>;
 	using existing_index = bare_node::existing_index;
 	using insert_status = bare_node::insert_status;

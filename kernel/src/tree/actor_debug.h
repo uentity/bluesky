@@ -9,7 +9,6 @@
 #pragma once
 
 #include <bs/log.h>
-#include <bs/tree/common.h>
 
 #include <caf/actor_ostream.hpp>
 
@@ -17,23 +16,20 @@
 	#define DEBUG_ACTOR 0
 #endif
 
-NAMESPACE_BEGIN(blue_sky::tree)
+static inline constexpr auto adbg(...) { return blue_sky::log::D(); }
 
-#if DEBUG_ACTOR == 0
+#if DEBUG_ACTOR == 1
+	#include "engine_actor.h"
 
-template<typename Actor, typename... Ts>
-static constexpr auto adbg(Actor*, Ts&&...) {
-	return blue_sky::log::D();
-}
+	NAMESPACE_BEGIN(blue_sky::tree)
 
-#else
+	auto adbg_impl(caf::actor_ostream, const link_impl&) -> caf::actor_ostream;
+	auto adbg_impl(caf::actor_ostream, const node_impl&) -> caf::actor_ostream;
 
-auto adbg_impl(link_actor*) -> caf::actor_ostream;
-auto adbg_impl(node_actor*) -> caf::actor_ostream;
+	template<typename Item>
+	static auto adbg(engine_actor<Item>* A) {
+		return adbg_impl(caf::aout(A), A->impl);
+	}
 
-template<typename Actor>
-static auto adbg(Actor* A) { return adbg_impl(A); }
-
+	NAMESPACE_END(blue_sky::tree)
 #endif
-
-NAMESPACE_END(blue_sky::tree)

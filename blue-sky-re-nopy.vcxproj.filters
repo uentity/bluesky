@@ -402,6 +402,9 @@
     <ClInclude Include="kernel\src\tree\actor_debug.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
+    <ClInclude Include="kernel\src\tree\engine_actor.h">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClInclude>
     <ClInclude Include="kernel\src\tree\engine_impl.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
