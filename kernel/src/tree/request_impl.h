@@ -15,6 +15,10 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
+template<typename T> struct TD;
+
+// `f_request` must return `result_or_errbox<R>`, `R` can be specified explicitly or auto-deduced.
+// Otherwise matching is not guranteed if work is started in standalone actor.
 template<bool ManageStatus = true, typename R = void, typename F, typename C>
 auto request_impl(
 	link_actor& LA, Req req, ReqOpts opts, F f_request, C res_processor
@@ -32,15 +36,13 @@ auto request_impl(
 	using f_ret_t = std::invoke_result_t<decltype(invoke_f_request), F&, caf::event_based_actor*>;
 	constexpr bool expected_f_ret_t = tl::detail::is_expected<f_ret_t>::value;
 
-	// deduce request result type (must be expected)
-	using req_res_t = std::conditional_t<std::is_same_v<R, void>, f_ret_t, R>;
-	static_assert(tl::detail::is_expected<req_res_t>::value);
+	// deduce request result type (must be result_or_errbox<R>)
+	using R_deduced = std::conditional_t<std::is_same_v<R, void>, f_ret_t, result_or_errbox<R>>;
+	static_assert(tl::detail::is_expected<R_deduced>::value);
+	// assume request result is `result_or_errbox<R>`
+	using res_t = result_or_errbox<typename R_deduced::value_type>;
 	// value type that worker actor returns (always transfers error in a box)
-	using worker_ret_t = std::conditional_t<expected_f_ret_t,
-		result_or_errbox<typename req_res_t::value_type>, f_ret_t
-	>;
-	// value tpe that will be passed to result processor
-	using res_t = result_or_err<typename req_res_t::value_type>;
+	using worker_ret_t = std::conditional_t<expected_f_ret_t, res_t, f_ret_t>;
 
 	// if opts::Uniform is true, then both status values are changed at once
 	// returns scalar prev state of `req` request
@@ -66,7 +68,7 @@ auto request_impl(
 
 	// returns extended request result processor
 	const auto make_result = [&] {
-		return [=, &LA, rs_reset = std::move(rs_reset)](req_res_t obj) mutable {
+		return [=, &LA, rs_reset = std::move(rs_reset)](res_t obj) mutable {
 			// set new status
 			if constexpr(ManageStatus)
 				rs_reset(

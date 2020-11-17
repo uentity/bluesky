@@ -282,7 +282,7 @@ auto map_link_impl::refresh(map_link_actor* self) -> caf::result<node_or_errbox>
 	auto res = self->make_response_promise<R>();
 
 	// run output node refresh in separate actor
-	request_impl<true, node_or_errbox>(
+	request_impl<true, node>(
 		*self, Req::DataNode, ReqOpts::Detached,
 		[=, pimpl = std::static_pointer_cast<map_link_impl>(self->pimpl_)]
 		(caf::event_based_actor* rworker) {
@@ -316,13 +316,13 @@ static auto spawn_mapper_job(map_node_impl* impl, map_link_actor* self)
 		ReqOpts::Detached : ReqOpts::WaitIfBusy;
 
 	if constexpr(DiscardResult) {
-		request_impl<true, node_or_errbox>(
+		request_impl<true, node>(
 			*self, Req::DataNode, opts, std::move(invoke_mapper), noop
 		);
 	}
 	else {
 		auto res = self->make_response_promise<node_or_errbox>();
-		request_impl<true, node_or_errbox>(
+		request_impl<true, node>(
 			*self, Req::DataNode, opts, std::move(invoke_mapper),
 			[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
 		);
