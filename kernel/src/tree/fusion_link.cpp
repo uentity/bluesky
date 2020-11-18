@@ -23,13 +23,17 @@ auto fusion_iface::is_uniform(const sp_obj&) const -> bool {
 }
 
 auto fusion_iface::pull_data(sp_obj root, link root_link) -> error {
-	return do_pull_data(std::move(root), std::move(root_link));
+	return error::eval_safe([&] {
+		do_pull_data(std::move(root), std::move(root_link));
+	});
 }
 
 auto fusion_iface::populate(sp_obj root, link root_link, const std::string& child_type_id) -> error {
 	// check precondition: passed object contains valid node
 	if(root->data_node())
-		return do_populate(std::move(root), std::move(root_link), child_type_id);
+		return error::eval_safe([&] {
+			do_populate(std::move(root), std::move(root_link), child_type_id);
+		});
 	else
 		return Error::NotANode;
 }

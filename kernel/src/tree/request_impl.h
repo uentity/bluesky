@@ -180,4 +180,13 @@ auto request_data_node(link_actor& LA, ReqOpts opts, C res_processor) {
 	);
 }
 
+template<bool ManageStatus = true, typename C>
+auto request_data_node(unsafe_t, link_actor& LA, ReqOpts opts, C res_processor) {
+	request_impl<ManageStatus>(
+		LA, Req::DataNode, opts,
+		[Limpl = LA.spimpl()]() -> node_or_errbox { return Limpl->data_node(unsafe); },
+		std::move(res_processor)
+	);
+}
+
 NAMESPACE_END(blue_sky::tree)

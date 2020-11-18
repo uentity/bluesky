@@ -98,7 +98,9 @@ auto fusion_link_actor::make_ropts(Req r) -> ReqOpts {
 	auto opts = (r == Req::Data ? ropts_.data : ropts_.data_node) |
 		ReqOpts::HasDataCache | ReqOpts::Detached;
 	if(auto B = fimpl().bridge())
-		if(B->is_uniform(fimpl().data_)) opts |= ReqOpts::Uniform;
+		error::eval_safe([&] {
+			if(B->is_uniform(fimpl().data_)) opts |= ReqOpts::Uniform;
+		});
 	return opts;
 }
 
