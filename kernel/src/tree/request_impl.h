@@ -46,10 +46,9 @@ auto request_impl(
 
 	// if opts::Uniform is true, then both status values are changed at once
 	// returns scalar prev state of `req` request
-	auto rs_reset = [=](auto& LA, auto... xs) {
-		if(enumval(opts) & enumval(ReqOpts::Uniform))
-			LA.impl.rs_reset(req == Req::Data ? Req::DataNode : Req::Data, xs...);
-		return LA.impl.rs_reset(req, xs...);
+	auto rs_reset = [=](auto& LA, ReqReset cond, auto... xs) {
+		if(enumval(opts) & enumval(ReqOpts::Uniform)) cond |= ReqReset::Broadcast;
+		return LA.impl.rs_reset(req, cond, xs...);
 	};
 
 	auto prev_rs = ReqStatus::OK;

@@ -16,6 +16,9 @@
 #include <bs/uuid.h>
 #include <bs/kernel/tools.h>
 
+#include <optional>
+#include <variant>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  link_impl
@@ -84,29 +87,41 @@ auto link_impl::rs_reset(
 ) -> ReqStatus {
 	using namespace allow_enumops;
 
-	const auto i = (unsigned)request;
-	if(i >= 2) return ReqStatus::Error;
-
-	// remove possible extra flags from cond
-	cond &= 3;
+	const auto i = enumval<unsigned>(request);
+	if(i > 1) return ReqStatus::Error;
 	auto& S = status_[i];
 
-	// atomic set value
-	S.guard.lock();
+	// obtain either single lock or global lock depending on `ReqReset::Broadcast` flag
+	using single_lock_t = std::scoped_lock<engine_impl_mutex>;
+	using global_lock_t = std::scoped_lock<engine_impl_mutex, engine_impl_mutex>;
+	using either_lock_t = std::optional<std::variant<single_lock_t, global_lock_t>>;
+	auto locker = [&] {
+		if(enumval(cond & ReqReset::Broadcast))
+			return either_lock_t{
+				std::in_place, std::in_place_type_t<global_lock_t>(), S.guard, status_[1 - i].guard
+			};
+		else
+			return either_lock_t{
+				std::in_place, std::in_place_type_t<single_lock_t>(), S.guard
+			};
+	}();
+
+	// remove possible extra flags from cond
+	const auto cond_ = cond & 3;	
+	// atomic value set
 	const auto self = S.value;
-	if( cond == ReqReset::Always ||
-		(cond == ReqReset::IfEq && self == old_rs) ||
-		(cond == ReqReset::IfNeq && self != old_rs)
+	if( cond_ == ReqReset::Always ||
+		(cond_ == ReqReset::IfEq && self == old_rs) ||
+		(cond_ == ReqReset::IfNeq && self != old_rs)
 	) {
 		S.value = new_rs;
-		S.guard.unlock();
+		if(enumval(cond & ReqReset::Broadcast))
+			status_[1 - i].value = new_rs;
+		locker.reset();
 		// status = OK will always fire (works as 'dirty' signal)
 		if(new_rs != self || new_rs == ReqStatus::OK)
 			on_rs_changed(request, new_rs, self);
 	}
-	else
-		S.guard.unlock();
-
 	return self;
 }
 

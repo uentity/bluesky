@@ -33,7 +33,7 @@ enum class Event : std::uint32_t {
 /// link object data requests
 enum class Req { Data = 0, DataNode = 1 };
 /// request status reset conditions
-enum class ReqReset { Always = 0, IfEq = 1, IfNeq = 2 };
+enum class ReqReset { Always = 0, IfEq = 1, IfNeq = 2, Broadcast = 4 };
 /// states of reuqest
 enum class ReqStatus { Void, Busy, OK, Error };
 
