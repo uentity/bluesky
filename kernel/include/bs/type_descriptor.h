@@ -13,6 +13,7 @@
 #include "type_macro.h"
 #include "propdict.h"
 #include "detail/function_view.h"
+#include "kernel/errors.h"
 
 #include <type_traits>
 #include <unordered_map>
@@ -67,11 +68,11 @@ auto make_assigner() {
 	else
 		return [](sp_obj target, sp_obj source, prop::propdict params) -> error {
 			// sanity
-			if(!target) return error{"Empty target"};
-			if(!source) return error{"Empty source"};
+			if(!target) return error{"assign target", kernel::Error::BadObject};
+			if(!source) return error{"assign source", kernel::Error::BadObject};
 			auto& td = T::bs_type();
 			if(!isinstance(target, td) || !isinstance(source, td))
-				return error{"Object of incompatible type passed as assign source or target"};
+				return error{"assign source or target", kernel::Error::UnexpectedObjectType};
 			// invoke overload for type T
 			return assign(static_cast<T&>(*target), static_cast<T&>(*source), std::move(params));
 		};

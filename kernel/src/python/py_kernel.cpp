@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 08.09.2017
 /// @brief Python bindings for BS kernel
@@ -95,6 +94,15 @@ auto bind_tfactory_api(py::module& m) -> void {
 
 	m.def("assign", &kernel::tfactory::assign,
 		"target"_a, "source"_a, "params"_a = prop::propdict{}, "Assign content from source to target");
+	// assign that works on links level
+	m.def("assign", [](tree::link tar, tree::link src, prop::propdict params) -> error {
+		if(tar && src) {
+			return tar.data_apply([&](sp_obj tar_obj) -> tr_result {
+				return kernel::tfactory::assign(tar_obj, src.data());
+			});
+		}
+		return { "assign: either source or target link is nil" };
+	}, "target"_a, "source"_a, "params"_a = prop::propdict{}, "Assign pointee from source to target link");
 }
 
 auto bind_config_api(py::module& m) -> void {

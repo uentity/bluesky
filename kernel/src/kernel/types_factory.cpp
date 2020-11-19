@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 14.01.2019
 /// @brief Kernel types factory API impl
@@ -7,6 +6,7 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/kernel/errors.h>
 #include <bs/kernel/types_factory.h>
 #include <bs/objbase.h>
 #include "kimpl.h"
@@ -39,8 +39,11 @@ auto clone_object(bs_type_copy_param source) -> type_descriptor::shared_ptr_cast
 }
 
 auto assign(sp_obj target, sp_obj source, prop::propdict params) -> error {
-	auto& tar_td = target->bs_resolve_type();
-	return tar_td.assign(std::move(target), std::move(source), std::move(params));
+	if(!target || !source) return {"assign source or target", kernel::Error::BadObject};
+	if(auto& tar_td = target->bs_resolve_type(); !tar_td.is_nil())
+		return tar_td.assign(std::move(target), std::move(source), std::move(params));
+	else
+		return {"assign target", kernel::Error::TypeIsNil};
 }
 
 NAMESPACE_END(blue_sky::kernel::tfactory)

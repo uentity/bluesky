@@ -224,7 +224,7 @@ void py_bind_node(py::module& m) {
 
 		// insert given link
 		.def("insert", [](node_type& N, link l, InsertPolicy pol) {
-			return N.insert(std::move(l), pol).second;
+			return N.insert(std::move(l), pol);
 		}, "link"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert given link", gil...)
 		// insert bunch of links
 		.def("insert", [](node_type& N, links_v ls, InsertPolicy pol) {

@@ -50,6 +50,12 @@ BS_API std::error_code make_error_code(Error e) {
 			case Error::BadPymod:
 				return "BS Python module isn't initialized";
 
+			case Error::BadObject:
+				return "Bad (null) object passed";
+
+			case Error::UnexpectedObjectType:
+				return "Object of unexpected type passed";
+
 			default:
 				return "";
 			}
