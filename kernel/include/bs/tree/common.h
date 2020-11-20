@@ -96,3 +96,9 @@ using node_or_err = result_or_err<node>;
 using node_or_errbox = result_or_errbox<node>;
 
 NAMESPACE_END(blue_sky::tree)
+
+BS_ALLOW_ENUMOPS(tree::Event)
+BS_ALLOW_ENUMOPS(tree::ReqReset)
+BS_ALLOW_ENUMOPS(tree::Flags)
+BS_ALLOW_ENUMOPS(tree::InsertPolicy)
+BS_ALLOW_ENUMOPS(tree::TreeOpts)
