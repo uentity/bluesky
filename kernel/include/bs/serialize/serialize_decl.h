@@ -11,6 +11,7 @@
 #include "atomizer.h"
 #include "macro.h"
 #include "make_base_class.h"
+#include "../detail/enumops.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/polymorphic.hpp>
@@ -39,5 +40,19 @@ struct is_archive_inspector< archive_inspector<Archive> > : std::true_type {};
 template<typename T>
 inline constexpr auto is_archive_inspector_v = is_archive_inspector<T>::value;
 
+/// options for using with Tree FS archives
+enum class TFSOpts {
+	None = 0,
+	// clear dirs when entering 'em
+	SaveClearDirs = 1,
+	// if not set - node is reconstructed exactly from leafs stored with it's handle link.
+	// if set - for any node N all link files found inside N's directory will be loaded into N.
+	LoadNodeRecover = 2
+};
+
+/// current version of TreeFS archive format
+inline static constexpr std::uint32_t tree_fs_version = 0;
+
 NAMESPACE_END(blue_sky)
 
+BS_ALLOW_ENUMOPS(TFSOpts)

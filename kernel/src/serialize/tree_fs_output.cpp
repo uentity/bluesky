@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 29.05.2019
 /// @brief Tree filesystem archive implementation
@@ -36,8 +35,8 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	using fmanager_t = detail::objfrm_manager;
 	using Error = tree::Error;
 
-	impl(std::string root_fname, std::string objects_dirname) :
-		heads_mgr_t{ std::move(root_fname), std::move(objects_dirname) }
+	impl(std::string root_fname, TFSOpts opts) :
+		heads_mgr_t{ opts, std::move(root_fname), ".objects" }
 	{}
 
 	auto begin_link(const tree::link& L) -> error {
@@ -109,7 +108,8 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		EVAL
 			[&]{ return enter_root(); },
 			[&]{ return objects_path_.empty() ?
-				enter_dir(root_path_ / objects_dname_, objects_path_) : perfect;
+				// [NOTE] eplicitly disable objects directory cleanup
+				enter_dir(root_path_ / objects_dname_, objects_path_, TFSOpts::None) : perfect;
 			}
 		RETURN_EVAL_ERR
 
@@ -175,10 +175,8 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 ///////////////////////////////////////////////////////////////////////////////
 //  output archive
 //
-tree_fs_output::tree_fs_output(
-	std::string root_fname, std::string objects_dir
-)
-	: Base(this), pimpl_{ std::make_unique<impl>(std::move(root_fname), std::move(objects_dir)) }
+tree_fs_output::tree_fs_output(std::string root_fname, TFSOpts opts)
+	: Base(this), pimpl_{ std::make_unique<impl>(std::move(root_fname), opts) }
 {}
 
 tree_fs_output::~tree_fs_output() = default;

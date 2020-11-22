@@ -12,7 +12,7 @@
 #include "../error.h"
 #include "../meta.h"
 #include "../timetypes.h"
-#include "atomizer.h"
+#include "serialize_decl.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
@@ -29,13 +29,9 @@ public:
 	// tweak serialization behaviour to better support out-of-order loading
 	static constexpr auto always_emit_class_version = true;
 	static constexpr auto custom_node_serialization = true;
+	static constexpr auto default_opts = TFSOpts::None;
 
-	// 'Normal' - node is reconstructed exactly from leafs stored with it's handle link.
-	// 'Recover' - for any node N all link files found inside N's directory
-	// will be loaded into N.
-	enum class NodeLoad { Normal, Recover };
-
-	tree_fs_input(std::string root_fname, NodeLoad mode = NodeLoad::Normal);
+	tree_fs_input(std::string root_fname, TFSOpts mode = default_opts);
 	~tree_fs_input();
 
 	// retrive stream for archive's head
@@ -54,10 +50,7 @@ public:
 	// detect types that have empty prologue/epilogue
 private:
 	template<typename T> struct has_empty {
-		static constexpr auto prologue = std::is_same_v<T, std::nullptr_t> |
-			std::is_arithmetic_v<T> |
-			// match any link
-			std::is_base_of_v<tree::link, std::remove_cv_t<T>>;
+		static constexpr auto prologue = std::is_same_v<T, std::nullptr_t> | std::is_arithmetic_v<T>;
 		static constexpr auto epilogue = prologue;
 	};
 
@@ -73,18 +66,11 @@ private:
 		struct dispatch< std::basic_string<Char, Traits, Alloc>, Partial > {
 			static constexpr auto value = true;
 		};
-		// unique ptrs
-		template<typename X, typename D, typename Partial>
-		struct dispatch< std::unique_ptr<X, D>, Partial > {
-			static constexpr auto value = std::is_base_of_v<tree::link, std::remove_cv_t<X>>;
-		};
 
 		static constexpr auto prologue =
 			std::is_same_v<type, cereal::NameValuePair<U>> |
 			std::is_same_v<type, cereal::DeferredData<U>> |
 			std::is_same_v<type, cereal::SizeTag<U>> |
-			// match shared_ptr to link and derived friends
-			(std::is_same_v<type, std::shared_ptr<U>> && std::is_base_of_v<tree::link, std::remove_cv_t<U>>) |
 			dispatch<type>::value;
 
 		static constexpr auto epilogue = prologue;
@@ -175,17 +161,6 @@ inline auto load(blue_sky::tree_fs_input& ar, SizeTag<T>& t) -> void {
 ///////////////////////////////////////////////////////////////////////////////
 //  prologue/epilogue for misc types - repeat JSONInputArchive
 //
-
-// empty prologue/epilogue for corresponding types
-template< typename T>
-inline auto prologue(blue_sky::tree_fs_input& ar, T const&)
--> std::enable_if_t<blue_sky::tree_fs_input::has_empty_prologue<T>>
-{}
-
-template< typename T>
-inline auto epilogue(blue_sky::tree_fs_input& ar, T const&)
--> std::enable_if_t<blue_sky::tree_fs_input::has_empty_epilogue<T>>
-{}
 
 //! Prologue for all other types for JSON archives (except minimal types)
 /*! Starts a new node, named either automatically or by some NVP,

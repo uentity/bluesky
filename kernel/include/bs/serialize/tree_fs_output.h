@@ -12,7 +12,7 @@
 #include "../error.h"
 #include "../meta.h"
 #include "../timetypes.h"
-#include "atomizer.h"
+#include "serialize_decl.h"
 #include "object_formatter.h"
 
 #include <cereal/cereal.hpp>
@@ -31,8 +31,9 @@ public:
 	static constexpr auto always_emit_polymorphic_name = true;
 	static constexpr auto always_emit_class_version = true;
 	static constexpr auto custom_node_serialization = true;
+	static constexpr auto default_opts = TFSOpts::SaveClearDirs;
 
-	tree_fs_output(std::string root_fname, std::string objects_dir = ".objects");
+	tree_fs_output(std::string root_fname, TFSOpts opts = default_opts);
 	~tree_fs_output();
 
 	// retrive stream for archive's head
@@ -171,17 +172,6 @@ inline auto save(blue_sky::tree_fs_output&, SizeTag<T> const&) -> void {}
 ///////////////////////////////////////////////////////////////////////////////
 //  prologue/epilogue for misc types - repeat JSONOutputArchive
 //
-
-// empty prologue/epilogue for corresponding types
-template< typename T>
-inline auto prologue(blue_sky::tree_fs_output& ar, T const&)
--> std::enable_if_t<blue_sky::tree_fs_output::has_empty_prologue<T>>
-{}
-
-template< typename T>
-inline auto epilogue(blue_sky::tree_fs_output& ar, T const&)
--> std::enable_if_t<blue_sky::tree_fs_output::has_empty_epilogue<T>>
-{}
 
 //! Prologue for SizeTags for JSON archives
 /*! SizeTags are strictly ignored for JSON, they just indicate

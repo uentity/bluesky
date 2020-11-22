@@ -24,6 +24,18 @@
 #include <filesystem>
 #include <fstream>
 #include <list>
+#include <unordered_set>
+
+// allow hashing path objects
+namespace std {
+
+template<> struct hash<std::filesystem::path> {
+	auto operator()(const std::filesystem::path& p) const {
+		return std::filesystem::hash_value(p);
+	}
+};
+
+} // eof namespace std
 
 NAMESPACE_BEGIN(blue_sky::detail)
 namespace fs = std::filesystem;
@@ -98,8 +110,8 @@ struct file_heads_manager {
 
 	// ctor
 	// [NOTE] assume that paths come in UTF-8
-	file_heads_manager(const std::string& root_fname, const std::string& objects_dirname = {})
-		: root_fname_(ustr2str(root_fname)), objects_dname_(ustr2str(objects_dirname))
+	file_heads_manager(TFSOpts opts, const std::string& root_fname, const std::string& objects_dirname = {})
+		: opts_(opts), root_fname_(ustr2str(root_fname)), objects_dname_(ustr2str(objects_dirname))
 	{
 		// [NOTE] `root_fname_`, `root_dname_` & `objects_dname_` will be converted to native encoding
 #ifdef _WIN32
@@ -132,7 +144,7 @@ struct file_heads_manager {
 	// if entering `src_path` is successfull, set `tar_path` to src_path
 	// if `tar_path` already equals `src_path` return success
 	template<typename Path>
-	auto enter_dir(Path src_path, fs::path& tar_path) -> error {
+	auto enter_dir(Path src_path, fs::path& tar_path, TFSOpts opts) -> error {
 		auto path = fs::path(std::move(src_path));
 		//if(path == tar_path) return perfect;
 		if(path.empty()) return { path.u8string(), Error::EmptyPath };
@@ -141,8 +153,17 @@ struct file_heads_manager {
 			// do something when path doesn't exist
 			[&] {
 				if(!fs::exists(path)) {
-					if constexpr(Saving)
+					if constexpr(Saving) {
+						// clear directory when saving if TFSOpts::SaveClearDirs is set
+						// and directory wasn't seen earlier
+						if(enumval(opts & TFSOpts::SaveClearDirs)) {
+							if(auto p = seen_dirs_.find(path); p == seen_dirs_.end()) {
+								seen_dirs_.emplace(path);
+								fs::remove_all(path);
+							}
+						}
 						fs::create_directories(path);
+					}
 					else
 						return error{ path.u8string(), Error::PathNotExists };
 				}
@@ -159,7 +180,15 @@ struct file_heads_manager {
 		return perfect;
 	}
 
+	template<typename Path>
+	auto enter_dir(Path src_path, fs::path& tar_path) -> error {
+		return enter_dir(src_path, tar_path, opts_);
+	}
+
 	auto enter_root() -> error {
+		if constexpr(Saving) {
+			seen_dirs_.clear();
+		}
 		if(root_path_.empty())
 			if(auto er = enter_dir(root_dname_, root_path_)) return er;
 		if(cur_path_.empty()) cur_path_ = root_path_;
@@ -198,17 +227,23 @@ struct file_heads_manager {
 	}
 
 	auto head() -> result_or_err<head_t*> {
+		using namespace cereal;
+
 		if(heads_.empty()) {
 			if(auto er = error::eval_safe(
 				[&] { return enter_root(); },
 				[&] { return add_head(fs::path(root_path_) / root_fname_); },
-				[&] { // read/write objects directory encoded in UTF-8
-					if constexpr(Saving)
-						heads_.back()( cereal::make_nvp("objects_dir", str2ustr(objects_dname_)) );
+				[&] {
+					// read/write format version
+					heads_.back()(make_nvp("format_version", version_));
+					if constexpr(Saving) {
+						// write objects dir name in UTF-8
+						heads_.back()( make_nvp("objects_dir", str2ustr(objects_dname_)) );
+					}
 					else {
 						// read in UTF-8 & converto to native
 						auto objects_dname = std::string{};
-						heads_.back()( cereal::make_nvp("objects_dir", objects_dname) );
+						heads_.back()( make_nvp("objects_dir", objects_dname) );
 						objects_dname_ = ustr2str(objects_dname);
 					}
 				}
@@ -234,6 +269,8 @@ struct file_heads_manager {
 		return perfect;
 	}
 
+	TFSOpts opts_;
+
 	std::string root_fname_, objects_dname_, root_dname_;
 	fs::path root_path_, cur_path_, objects_path_;
 
@@ -241,6 +278,14 @@ struct file_heads_manager {
 
 	std::list<neck_t> necks_;
 	std::list<head_t> heads_;
+
+	std::uint32_t version_ = tree_fs_version;
+
+	// needed only when saving
+	using seen_dirs_cache = std::conditional_t<
+		Saving, std::unordered_set<fs::path>, identity<void>
+	>;
+	seen_dirs_cache seen_dirs_;
 };
 
 NAMESPACE_END(blue_sky::detail)

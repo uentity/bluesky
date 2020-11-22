@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 29.05.2019
 /// @brief Tree filesystem archive implementation
@@ -29,7 +28,6 @@
 
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
-using NodeLoad = tree_fs_input::NodeLoad;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  tree_fs_input::impl
@@ -39,8 +37,8 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 	using fmanager_t = detail::objfrm_manager;
 	using Error = tree::Error;
 
-	impl(std::string root_fname, NodeLoad mode) :
-		heads_mgr_t{std::move(root_fname)}, mode_(mode)
+	impl(std::string root_fname, TFSOpts opts) :
+		heads_mgr_t{opts, std::move(root_fname)}
 	{}
 
 	auto begin_node(tree_fs_input& ar) -> error {
@@ -78,11 +76,12 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 	auto load_node(
 		tree_fs_input& ar, tree::node& N, std::vector<std::string> leafs_order
 	) -> error {
+		using namespace allow_enumops;
 		using namespace tree;
 		using Options = fs::directory_options;
 
 		// skip empty dirs in normal mode
-		if(mode_ == NodeLoad::Normal && leafs_order.empty()) return perfect;
+		if(!enumval(opts_ & TFSOpts::LoadNodeRecover) && leafs_order.empty()) return perfect;
 		// enter node's dir
 		if(auto er = enter_dir(cur_path_ / N.home_id(), cur_path_)) return er;
 
@@ -182,7 +181,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		};
 
 		// invoke laod
-		if(mode_ == NodeLoad::Normal)
+		if(!enumval(opts_ & TFSOpts::LoadNodeRecover))
 			normal_load();
 		else
 			recover_load();
@@ -256,7 +255,6 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		return res;
 	}
 
-	NodeLoad mode_;
 	// async loaders manager
 	bool has_wait_deferred_ = false;
 };
@@ -264,8 +262,8 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 ///////////////////////////////////////////////////////////////////////////////
 //  input archive
 //
-tree_fs_input::tree_fs_input(std::string root_fname, NodeLoad mode)
-	: Base(this), pimpl_{ std::make_unique<impl>(std::move(root_fname), mode) }
+tree_fs_input::tree_fs_input(std::string root_fname, TFSOpts opts)
+	: Base(this), pimpl_{ std::make_unique<impl>(std::move(root_fname), opts) }
 {}
 
 tree_fs_input::~tree_fs_input() = default;
