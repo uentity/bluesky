@@ -279,17 +279,11 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 
 					auto res = make_response_promise<R>();
 					request(objbase_actor::actor(*obj), caf::infinite, a_load(), std::move(obj))
-					.then([=, orig_me = std::move(orig_me)](error::box er) mutable {
+					.then([=](error::box er) mutable {
 						// if error happened - deliver it
 						if(er.ec) res.deliver(R{ tl::unexpect, std::move(er) });
-						// otherwise, make data request to self (orig_me)
-						request(caf::actor_cast<actor_type>(this), caf::infinite, req_t(), true)
-						.then(
-							[=](R req_res) mutable { res.deliver(std::move(req_res)); },
-							[=](const caf::error& er) mutable {
-								res.deliver(R{ tl::unexpect, forward_caf_error(er) });
-							}
-						);
+						// otherwise, forward data request to self (with orig_me installed)
+						res.delegate(actor(this), req_t(), true);
 					});
 					return res;
 				};
@@ -297,28 +291,7 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 
 			// setup new behavior for Data & DataNode requests
 			become(caf::message_handler{
-				load_then_answer(a_data()), load_then_answer(a_data_node()),
-
-				// OID & OTID will trigger load
-				[=](a_lnk_otid) -> caf::result<std::string> {
-					auto res = make_response_promise<std::string>();
-					request(caf::actor_cast<caf::actor>(this), caf::infinite, a_data(), true)
-					.then([=](const obj_or_errbox& maybe_obj) mutable {
-						if(maybe_obj) res.deliver((*maybe_obj)->type_id());
-						res.deliver(std::string{nil_otid});
-					});
-					return res;
-				},
-
-				[=](a_lnk_oid) -> caf::result<std::string> {
-					auto res = make_response_promise<std::string>();
-					request(caf::actor_cast<caf::actor>(this), caf::infinite, a_data(), true)
-					.then([=](const obj_or_errbox& maybe_obj) mutable {
-						if(maybe_obj) res.deliver((*maybe_obj)->id());
-						res.deliver(std::string{nil_oid});
-					});
-					return res;
-				},
+				load_then_answer(a_data()), load_then_answer(a_data_node())
 			}.or_else(orig_me));
 			return true;
 		}

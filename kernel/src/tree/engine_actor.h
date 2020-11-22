@@ -41,9 +41,14 @@ struct engine_actor : public engine_actor_base {
 		}())
 	{}
 
+	template<typename Actor>
+	inline auto actor(Actor* A) -> actor_type {
+		return caf::actor_cast<typename Actor::actor_type>(A);
+	}
+
 	// get typed node actor handle
 	inline auto actor() -> actor_type {
-		return caf::actor_cast<actor_type>(this);
+		return actor(this);
 	}
 
 	inline auto spimpl() const {
