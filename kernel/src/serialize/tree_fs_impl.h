@@ -142,11 +142,9 @@ struct file_heads_manager {
 	}
 
 	// if entering `src_path` is successfull, set `tar_path` to src_path
-	// if `tar_path` already equals `src_path` return success
 	template<typename Path>
 	auto enter_dir(Path src_path, fs::path& tar_path, TFSOpts opts) -> error {
 		auto path = fs::path(std::move(src_path));
-		//if(path == tar_path) return perfect;
 		if(path.empty()) return { path.u8string(), Error::EmptyPath };
 
 		EVAL_SAFE
@@ -186,11 +184,12 @@ struct file_heads_manager {
 	}
 
 	auto enter_root() -> error {
-		if constexpr(Saving) {
-			seen_dirs_.clear();
-		}
-		if(root_path_.empty())
+		if(root_path_.empty()) {
 			if(auto er = enter_dir(root_dname_, root_path_)) return er;
+			if constexpr(Saving) {
+				seen_dirs_.clear();
+			}
+		}
 		if(cur_path_.empty()) cur_path_ = root_path_;
 		return perfect;
 	}
@@ -232,18 +231,16 @@ struct file_heads_manager {
 		if(heads_.empty()) {
 			if(auto er = error::eval_safe(
 				[&] { return enter_root(); },
-				[&] { return add_head(fs::path(root_path_) / root_fname_); },
+				[&] { return add_head(root_path_ / root_fname_); },
 				[&] {
 					// read/write format version
-					heads_.back()(make_nvp("format_version", version_));
-					if constexpr(Saving) {
-						// write objects dir name in UTF-8
-						heads_.back()( make_nvp("objects_dir", str2ustr(objects_dname_)) );
-					}
-					else {
-						// read in UTF-8 & converto to native
+					auto& rhead = heads_.back();
+					rhead(make_nvp("format_version", version_));
+					// read objects directory path
+					if constexpr(!Saving) {
+						// read in UTF-8 & conver to to native
 						auto objects_dname = std::string{};
-						heads_.back()( make_nvp("objects_dir", objects_dname) );
+						rhead( make_nvp("objects_dir", objects_dname) );
 						objects_dname_ = ustr2str(objects_dname);
 					}
 				}

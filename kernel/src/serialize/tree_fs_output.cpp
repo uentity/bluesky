@@ -40,8 +40,23 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	{}
 
 	auto begin_link(const tree::link& L) -> error {
-		if(auto er = enter_root()) return er;
-		if(cur_path_ == root_path_) return perfect;
+		if(root_path_.empty()) {
+			// add root link head & write correct rel path to objects dir
+			auto res = head().map([&](auto* ar) { return error::eval_safe([&] {
+				auto objects_rel_path = fs::path{};
+				if(auto N = L.data_node())
+					objects_rel_path /= N.home_id();
+				objects_rel_path /= objects_dname_;
+				// write objects dir name in UTF-8
+				(*ar)(
+					cereal::make_nvp("objects_dir", str2ustr(objects_rel_path.generic_string()))
+				);
+				// construct full objects path (create nessessary dirs)
+				// [NOTE] eplicitly disable objects directory cleanup
+				enter_dir(root_path_ / objects_rel_path, objects_path_, TFSOpts::None);
+			}); });
+			return res ? res.value() : res.error();
+		}
 
 		return add_head(cur_path_ / to_string(L.id()));
 	}
@@ -104,12 +119,13 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		// 3. if object is pure node - we're done and can skip data processing
 		if(obj.bs_resolve_type() == objnode::bs_type()) return perfect;
 
-		// 4. enter objects directory
+		// 4. ensure we  objects directory
 		EVAL
-			[&]{ return enter_root(); },
-			[&]{ return objects_path_.empty() ?
-				// [NOTE] eplicitly disable objects directory cleanup
-				enter_dir(root_path_ / objects_dname_, objects_path_, TFSOpts::None) : perfect;
+			[&] { return enter_root(); },
+			[&] {
+				// in fallback case assume that projects dir is located in root path
+				return objects_path_.empty() ?
+					enter_dir(root_path_ / objects_dname_, objects_path_, TFSOpts::None) : perfect;
 			}
 		RETURN_EVAL_ERR
 

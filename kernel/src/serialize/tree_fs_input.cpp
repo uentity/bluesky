@@ -216,21 +216,17 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		// [TODO] resolve this via formatter
 		if(obj.bs_resolve_type() == objnode::bs_type()) return perfect;
 
-		// 4. read object data from specified file
-		EVAL
-			[&]{ return enter_root(); },
-			[&]{ return objects_path_.empty() ?
-				enter_dir(root_path_ / objects_dname_, objects_path_) : perfect;
-			}
-		RETURN_EVAL_ERR
-
-		// 5. read object data from file
-		auto obj_path = objects_path_ / (std::string(obj.home_id()) + '.' + obj_frm);
+		// 4. format absolute object data file path
 		auto abs_obj_path = fs::path{};
 		SCOPE_EVAL_SAFE
+			// [NOTE] assume objects dir is stored in generic format
+			if(objects_path_.empty())
+				objects_path_ = root_path_ / fs::path(objects_dname_, fs::path::format::generic_format);
+			auto obj_path = objects_path_ / (std::string(obj.home_id()) + '.' + obj_frm);
 			abs_obj_path = fs::absolute(obj_path);
 		RETURN_SCOPE_ERR
 
+		// 4. read object data
 		// instead of posting save job to manager, setup delayed read job
 		if(auto r = actorf<bool>(
 			objbase_actor::actor(obj), kernel::radio::timeout(),
