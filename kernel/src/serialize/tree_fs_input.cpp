@@ -102,7 +102,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 				leafs_order.begin(), leafs_order.end(),
 				[&](auto& f) {
 					push_error(error::eval_safe(
-						[&] { return add_head(cur_path_ / std::move(f)); },
+						[&] { return add_head(cur_path_ / (std::move(f) + link_file_ext)); },
 						[&] { // head is removed later by epilogue()
 							tree::link L;
 							ar(L);
@@ -130,7 +130,11 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 
 				// try load file as a link
 				push_error(error::eval_safe(
-					[&] { return add_head(f); },
+					[&]{
+						auto link_path = f.path();
+						link_path += link_file_ext;
+						return add_head(std::move(link_file_ext));
+					},
 					[&] { // head is removed later by epilogue()
 						tree::link L;
 						ar(L);

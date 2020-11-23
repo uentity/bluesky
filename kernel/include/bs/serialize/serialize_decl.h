@@ -50,9 +50,6 @@ enum class TFSOpts {
 	LoadNodeRecover = 2
 };
 
-/// current version of TreeFS archive format
-inline static constexpr std::uint32_t tree_fs_version = 0;
-
 NAMESPACE_END(blue_sky)
 
 BS_ALLOW_ENUMOPS(TFSOpts)

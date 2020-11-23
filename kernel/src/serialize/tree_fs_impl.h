@@ -86,6 +86,12 @@ template<bool Saving>
 struct file_heads_manager {
 	using Error = tree::Error;
 
+	/// current version of TreeFS archive format
+	static constexpr std::uint32_t tree_fs_version = 0;
+
+	// extension of link files
+	static constexpr auto link_file_ext = ".bsl";
+
 	// setup traits depending on save/load mode
 	template<bool Saving_, typename = void>
 	struct trait {

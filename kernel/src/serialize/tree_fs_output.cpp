@@ -58,7 +58,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 			return res ? res.value() : res.error();
 		}
 
-		return add_head(cur_path_ / to_string(L.id()));
+		return add_head(cur_path_ / (to_string(L.id()) + link_file_ext));
 	}
 
 	auto begin_node(const tree::node& N) -> error {
