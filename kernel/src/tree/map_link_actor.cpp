@@ -155,6 +155,12 @@ auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> voi
 	);
 }
 
+auto map_link_actor::on_exit() -> void {
+	super::on_exit();
+	// explicitly terminate listener
+	send_exit(inp_listener_, caf::exit_reason::user_shutdown);
+}
+
 auto map_link_actor::name() const -> const char* { return "map_link_actor"; }
 
 auto map_link_actor::make_casual_behavior() -> typed_behavior {
