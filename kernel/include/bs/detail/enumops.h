@@ -32,6 +32,19 @@ static constexpr auto enumops_allowed(int) -> std::enable_if_t<enumops_enabled_v
 	return std::is_enum_v<T>;
 }
 
+template<typename T, typename = void> struct underlying_type {};
+template<typename T> using underlying_type_t = typename underlying_type<T>::type;
+
+template<typename T>
+struct underlying_type<T, std::enable_if_t<std::is_integral_v<T>>> {
+	using type = T;
+};
+
+template<typename T>
+struct underlying_type<T, std::enable_if_t<std::is_enum_v<T>>> {
+	using type = std::underlying_type_t<T>;
+};
+
 } // eof namespace blue_sky::detail
 
 template<bool Force, typename T, typename R = void>
@@ -41,9 +54,12 @@ using if_enumops_allowed = std::enable_if_t<Force | detail::enumops_allowed<T>(0
 //  extract enum underlying type value
 //
 // allows to optionally specify return type
-template<typename R = void, typename T, typename = std::enable_if_t<std::is_enum_v<T>>>
+template<
+	typename R = void, typename T,
+	typename = std::enable_if_t<std::is_enum_v<T> || std::is_integral_v<T>>
+>
 constexpr auto enumval(T a) {
-	using R_ = std::conditional_t<std::is_same_v<R, void>, std::underlying_type_t<T>, R>;
+	using R_ = typename std::conditional_t<std::is_same_v<R, void>, detail::underlying_type_t<T>, R>;
 	return static_cast<R_>(a);
 }
 
