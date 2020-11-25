@@ -126,6 +126,15 @@ public:
 		checked_send<home_actor_t, P>(*src, src->impl.home, std::forward<Ts>(xs)...);
 	}
 
+	/// same as above but accepts Handle (or it's impl) instead of engine actor
+	template<
+		caf::message_priority P = caf::message_priority::normal, typename Handle, typename... Ts
+	>
+	static auto send_home(const Handle& H, Ts&&... xs) -> void {
+		using home_actor_t = typename engine_impl_t<Handle>::home_actor_type;
+		checked_send<home_actor_t, P>(get_impl(H).home, std::forward<Ts>(xs)...);
+	}
+
 private:
 	// requesters pool { link addr -> `scoped_actor` instance }
 	using rpool_t = std::unordered_map<const engine*, sp_scoped_actor>;
