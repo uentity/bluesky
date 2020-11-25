@@ -81,15 +81,8 @@ auto link_impl::req_status_handle(Req request) -> status_handle& {
 	return status_[enumval(request) & 1];
 }
 
-auto link_impl::rs_reset(
-	Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs,
-	on_rs_changed_fn on_rs_changed
-) -> ReqStatus {
-	using namespace allow_enumops;
-
-	const auto i = enumval<unsigned>(request);
-	if(i > 1) return ReqStatus::Error;
-	auto& S = status_[i];
+auto link_impl::rs_apply(Req req, function_view< void() > f, ReqReset cond, ReqStatus cond_value) -> bool {
+	const auto i = enumval<unsigned>(req);
 
 	// obtain either single lock or global lock depending on `ReqReset::Broadcast` flag
 	using single_lock_t = std::scoped_lock<engine_impl_mutex>;
@@ -98,31 +91,61 @@ auto link_impl::rs_reset(
 	auto locker = [&] {
 		if(enumval(cond & ReqReset::Broadcast))
 			return either_lock_t{
-				std::in_place, std::in_place_type_t<global_lock_t>(), S.guard, status_[1 - i].guard
+				std::in_place, std::in_place_type_t<global_lock_t>(), status_[i].guard, status_[1 - i].guard
 			};
 		else
 			return either_lock_t{
-				std::in_place, std::in_place_type_t<single_lock_t>(), S.guard
+				std::in_place, std::in_place_type_t<single_lock_t>(), status_[i].guard
 			};
 	}();
 
+	// run f
 	// remove possible extra flags from cond
-	const auto cond_ = cond & 3;	
+	cond &= 3;
 	// atomic value set
-	const auto self = S.value;
-	if( cond_ == ReqReset::Always ||
-		(cond_ == ReqReset::IfEq && self == old_rs) ||
-		(cond_ == ReqReset::IfNeq && self != old_rs)
+	const auto self = status_[i].value;
+	if( cond == ReqReset::Always ||
+		(cond == ReqReset::IfEq && self == cond_value) ||
+		(cond == ReqReset::IfNeq && self != cond_value)
 	) {
+		f();
+		return true;
+	}
+	return false;
+}
+
+auto link_impl::rs_reset(
+	Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs,
+	on_rs_changed_fn on_rs_changed
+) -> ReqStatus {
+	const auto i = enumval<unsigned>(request);
+	if(i > 1) return ReqStatus::Error;
+	auto& S = status_[i];
+
+	bool trigger_event = false;
+	auto self = ReqStatus::Void;
+	rs_apply(request, [&] {
+		self = S.value;
 		S.value = new_rs;
 		if(enumval(cond & ReqReset::Broadcast))
 			status_[1 - i].value = new_rs;
-		locker.reset();
 		// status = OK will always fire (works as 'dirty' signal)
 		if(new_rs != self || new_rs == ReqStatus::OK)
-			on_rs_changed(request, new_rs, self);
-	}
+			trigger_event = true;
+	}, cond, old_rs);
+
+	if(trigger_event)
+		on_rs_changed(request, new_rs, self);
 	return self;
+}
+
+auto link_impl::rs_reset(Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs) -> ReqStatus {
+	return rs_reset(request, cond, new_rs, old_rs, [this](auto req, auto new_rs, auto prev_rs) {
+		// send notification to link's home group
+		checked_send<link_impl::home_actor_type, high_prio>(
+			home, a_ack(), a_lnk_status(), req, new_rs, prev_rs
+		);
+	});
 }
 
 auto link_impl::rename(std::string new_name)-> void {

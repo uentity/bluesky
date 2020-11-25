@@ -131,9 +131,20 @@ public:
 	using on_rs_changed_fn = function_view< void(Req, ReqStatus /*new*/, ReqStatus /*old*/) >;
 
 	auto rs_reset(
-		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void,
-		on_rs_changed_fn on_rs_changed = noop
+		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs, on_rs_changed_fn on_rs_changed
 	) -> ReqStatus;
+	// variant of above that sends notification about status change to link's home group
+	auto rs_reset(
+		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void
+	) -> ReqStatus;
+
+	// run generic function while holding exclusive lock to status handles
+	// if ReqReset::Broadcast is on, lock both handles
+	// returns whether `f` was applied (condition satisfied)
+	auto rs_apply(
+		Req req, function_view< void() > f,
+		ReqReset cond = ReqReset::Always, ReqStatus cond_value = ReqStatus::Void
+	) -> bool;
 
 	// rename and send notification to home group
 	auto rename(std::string new_name) -> void;

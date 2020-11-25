@@ -141,30 +141,15 @@ auto link::req_status(Req request) const -> ReqStatus {
 }
 
 auto link::rs_reset(Req request, ReqStatus new_rs) const -> ReqStatus {
-	return pimpl()->rs_reset(
-		request, ReqReset::Always, new_rs, ReqStatus::Void,
-		[&](auto Req, auto new_rs, auto prev_rs) {
-			caf::anon_send<high_prio>(pimpl()->actor(*this), a_lnk_status(), request, new_rs, prev_rs);
-		}
-	);
+	return pimpl()->rs_reset(request, ReqReset::Always, new_rs);
 }
 
 auto link::rs_reset_if_eq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
-	return pimpl()->rs_reset(
-		request, ReqReset::IfEq, new_rs, self,
-		[&](auto Req, auto new_rs, auto prev_rs) {
-			caf::anon_send<high_prio>(pimpl()->actor(*this), a_lnk_status(), request, new_rs, prev_rs);
-		}
-	);
+	return pimpl()->rs_reset(request, ReqReset::IfEq, new_rs, self);
 }
 
 auto link::rs_reset_if_neq(Req request, ReqStatus self, ReqStatus new_rs) const -> ReqStatus {
-	return pimpl()->rs_reset(
-		request, ReqReset::IfNeq, new_rs, self,
-		[&](auto Req, auto new_rs, auto prev_rs) {
-			caf::anon_send<high_prio>(pimpl()->actor(*this), a_lnk_status(), request, new_rs, prev_rs);
-		}
-	);
+	return pimpl()->rs_reset(request, ReqReset::IfNeq, new_rs, self);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

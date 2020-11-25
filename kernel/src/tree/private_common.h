@@ -47,3 +47,5 @@ using ev_listener_actor_type = caf::typed_actor<
 >;
 
 NAMESPACE_END(blue_sky::tree)
+
+BS_ALLOW_ENUMOPS(tree::ReqOpts)
