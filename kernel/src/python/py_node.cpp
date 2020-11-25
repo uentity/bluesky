@@ -58,7 +58,7 @@ bool contains_key(const node& N, std::string key, Key meaning) {
 
 // ------- find
 auto throw_find_err(const std::string& key, Key meaning) {
-	py::gil_scoped_acquire();
+	auto gil = py::gil_scoped_acquire();
 
 	std::string msg = "Node doesn't contain link ";
 	switch(meaning) {
@@ -114,7 +114,7 @@ auto find_idx(const Node& N, long idx) -> link {
 	if(auto res = N.find(positive_idx))
 		return res;
 	else {
-		py::gil_scoped_acquire();
+		auto gil = py::gil_scoped_acquire();
 		throw py::key_error("Index out of bounds");
 	}
 }
@@ -167,7 +167,7 @@ template<typename Node>
 void erase_idx(Node& N, const long idx) {
 	// support for Pythonish indexing from both ends
 	if(std::size_t(std::abs(idx)) > N.size()) {
-		py::gil_scoped_acquire();
+		auto gil = py::gil_scoped_acquire();
 		throw py::key_error("Index out of bounds");
 	}
 	N.erase(idx < 0 ? N.size() + idx : idx);
@@ -196,10 +196,17 @@ void py_bind_node(py::module& m) {
 
 		.def("leafs", &node_type::leafs,
 			"Key"_a = Key::AnyOrder, "Return snapshot of node content", gil...)
-		.def("keys", &node_type::keys,
-			"ordering"_a = Key::AnyOrder, "Return link IDs sorted according to `ordering`", gil...)
-		.def("ikeys", &node_type::ikeys,
-			"ordering"_a = Key::AnyOrder, "Return link positions sorted according to `ordering`", gil...)
+
+		.def("keys", [](const node& N, Key key_meaning, Key ordering) {
+				if(key_meaning == Key::ID)
+					return py::cast(N.keys(ordering));
+				else if(key_meaning == Key::AnyOrder)
+					return py::cast(N.ikeys(ordering));
+				else
+				   return py::cast(N.skeys(key_meaning, ordering));
+			}, "key_meaning"_a = Key::ID, "ordering"_a = Key::AnyOrder,
+			"Return keys of `key_meaning` type sorted according to `ordering`"
+		)
 
 		// check if node contains key
 		// [NOTE] it's essential to register UUID overload first, because Python native UUID has a
