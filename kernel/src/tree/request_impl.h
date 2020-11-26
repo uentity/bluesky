@@ -26,7 +26,7 @@ struct request_traits {
 			return f();
 	};
 
-	using f_ret_t = std::invoke_result_t<decltype(invoke_f_request), F&, caf::event_based_actor*>;
+	using f_ret_t = decltype( invoke_f_request(std::declval<F&>(), std::declval<caf::event_based_actor*>()) );
 	static constexpr bool can_invoke_inplace = tl::detail::is_expected<f_ret_t>::value;
 
 	// deduce request result type (must be result_or_errbox<R>)
