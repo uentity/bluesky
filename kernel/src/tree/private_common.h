@@ -21,7 +21,7 @@ inline const auto nil_otid = blue_sky::defaults::nil_type_name;
 /// link erase options
 enum class EraseOpts { Normal = 0, Silent = 1 };
 
-enum class ReqOpts {
+enum class ReqOpts : std::uint32_t {
 	WaitIfBusy = 0, ErrorIfBusy = 1, ErrorIfNOK = 2, Detached = 4, DirectInvoke = 8,
 	HasDataCache = 16, Uniform = 32
 };

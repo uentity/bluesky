@@ -74,9 +74,14 @@ using lid_type = uuid;
 /// can be passed as callback that does nothing
 inline constexpr auto noop = [](auto&&...) {};
 
+template<bool Res = true>
+inline constexpr auto bool_noop = [](auto&&...) { return Res; };
+inline constexpr auto noop_true = bool_noop<true>;
+inline constexpr auto noop_false = bool_noop<false>;
+
 template<typename R>
 constexpr auto noop_r(R res = {}) {
-	return [res = std::move(res)](auto&&...) mutable -> R { return res; };
+	return [res = std::move(res)](auto&&...) mutable -> R { return std::move(res); };
 }
 
 /// forward declare major types

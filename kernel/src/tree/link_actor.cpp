@@ -70,9 +70,10 @@ auto link_actor::rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus pr
 -> ReqStatus {
 	return impl.rs_reset(
 		req, cond, new_rs, prev_rs,
-		silent ? noop :
+		silent ? noop_true :
 			function_view{[=](Req req, ReqStatus new_s, ReqStatus old_s) {
 				impl.send_home<high_prio>(this, a_ack(), a_lnk_status(), req, new_s, old_s);
+				return true;
 			}}
 	);
 }

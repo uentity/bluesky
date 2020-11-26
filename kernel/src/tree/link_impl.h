@@ -19,7 +19,10 @@
 #include "engine_impl.h"
 #include "../kernel/radio_subsyst.h"
 
+#include <caf/actor.hpp>
 #include <caf/typed_actor.hpp>
+
+#include <variant>
 
 #define LINK_TYPE_DEF(lnk_class, limpl_class, typename)                            \
 ENGINE_TYPE_DEF(limpl_class, typename)                                             \
@@ -128,23 +131,33 @@ public:
 
 	auto req_status(Req request) const -> ReqStatus;
 
-	using on_rs_changed_fn = function_view< void(Req, ReqStatus /*new*/, ReqStatus /*old*/) >;
+	// can return `false` to indicate failed postcondition & revert status to original value
+	using on_rs_changed_fn = function_view< bool(Req, ReqStatus /*new*/, ReqStatus /*old*/) >;
 
 	auto rs_reset(
 		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs, on_rs_changed_fn on_rs_changed
 	) -> ReqStatus;
-	// variant of above that sends notification about status change to link's home group
+
+	// sends notification about status change to link's home group
 	auto rs_reset(
 		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void
 	) -> ReqStatus;
 
+	// set proper status after request result was received & release pending waiters
+	// [NOTE] only Broadcast flag is used from 2nd arg
+	using req_result = std::variant<obj_or_errbox, node_or_errbox>;
+	auto rs_update_from_data(req_result rdata, ReqReset opts = ReqReset::Always) -> void;
+
 	// run generic function while holding exclusive lock to status handles
 	// if ReqReset::Broadcast is on, lock both handles
-	// returns whether `f` was applied (condition satisfied)
+	// returns request status value before call
 	auto rs_apply(
 		Req req, function_view< void() > f,
 		ReqReset cond = ReqReset::Always, ReqStatus cond_value = ReqStatus::Void
-	) -> bool;
+	) -> ReqStatus;
+
+	// add actor to list of waiters for request result
+	auto rs_add_waiter(Req req, caf::actor w) -> void;
 
 	// rename and send notification to home group
 	auto rename(std::string new_name) -> void;
@@ -164,13 +177,9 @@ public:
 	struct status_handle {
 		ReqStatus value = ReqStatus::Void;
 		mutable engine_impl_mutex guard;
-		// list of type-erased waiters for request result (until value != Busy)
-		// [NOTE] waiter accepts pointer to delivered result value
-		std::vector<std::function< void(void*) >> waiters;
+		// list of waiters for request result (until value != Busy)
+		std::vector<caf::actor> waiters;
 	};
-
-	// direct access to status_handle
-	auto req_status_handle(Req request) -> status_handle&;
 
 private:
 	friend node_impl;
@@ -179,6 +188,9 @@ private:
 	status_handle status_[2];
 	// owner node
 	node::weak_ptr owner_;
+
+	// direct access to status_handle
+	auto req_status_handle(Req request) -> status_handle&;
 };
 using sp_limpl = link_impl::sp_limpl;
 

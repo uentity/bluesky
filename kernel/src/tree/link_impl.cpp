@@ -16,8 +16,10 @@
 #include <bs/uuid.h>
 #include <bs/kernel/tools.h>
 
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/tree.h>
+
 #include <optional>
-#include <variant>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
@@ -81,7 +83,8 @@ auto link_impl::req_status_handle(Req request) -> status_handle& {
 	return status_[enumval(request) & 1];
 }
 
-auto link_impl::rs_apply(Req req, function_view< void() > f, ReqReset cond, ReqStatus cond_value) -> bool {
+auto link_impl::rs_apply(Req req, function_view< void() > f, ReqReset cond, ReqStatus cond_value)
+-> ReqStatus {
 	const auto i = enumval<unsigned>(req);
 
 	// obtain either single lock or global lock depending on `ReqReset::Broadcast` flag
@@ -99,7 +102,6 @@ auto link_impl::rs_apply(Req req, function_view< void() > f, ReqReset cond, ReqS
 			};
 	}();
 
-	// run f
 	// remove possible extra flags from cond
 	cond &= 3;
 	// atomic value set
@@ -109,43 +111,77 @@ auto link_impl::rs_apply(Req req, function_view< void() > f, ReqReset cond, ReqS
 		(cond == ReqReset::IfNeq && self != cond_value)
 	) {
 		f();
-		return true;
 	}
-	return false;
+	return self;
 }
 
 auto link_impl::rs_reset(
-	Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs,
-	on_rs_changed_fn on_rs_changed
+	Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs, on_rs_changed_fn on_rs_changed
 ) -> ReqStatus {
 	const auto i = enumval<unsigned>(request);
 	if(i > 1) return ReqStatus::Error;
-	auto& S = status_[i];
 
-	bool trigger_event = false;
-	auto self = ReqStatus::Void;
-	rs_apply(request, [&] {
-		self = S.value;
+	return rs_apply(request, [&] {
+		// update status value
+		auto& S = status_[i];
+		const auto self = S.value;
 		S.value = new_rs;
 		if(enumval(cond & ReqReset::Broadcast))
 			status_[1 - i].value = new_rs;
-		// status = OK will always fire (works as 'dirty' signal)
-		if(new_rs != self || new_rs == ReqStatus::OK)
-			trigger_event = true;
-	}, cond, old_rs);
 
-	if(trigger_event)
-		on_rs_changed(request, new_rs, self);
-	return self;
+		// new status = OK will always trigger callback
+		if(new_rs != self || new_rs == ReqStatus::OK) {
+			// if postcondition failed - restore prev status
+			if(!on_rs_changed(request, new_rs, self)) {
+				S.value = self;
+				if(enumval(cond & ReqReset::Broadcast))
+					status_[1 - i].value = self;
+			}
+		}
+	}, cond, old_rs);
 }
 
 auto link_impl::rs_reset(Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs) -> ReqStatus {
 	return rs_reset(request, cond, new_rs, old_rs, [this](auto req, auto new_rs, auto prev_rs) {
 		// send notification to link's home group
-		checked_send<link_impl::home_actor_type, high_prio>(
-			home, a_ack(), a_lnk_status(), req, new_rs, prev_rs
-		);
+		send_home<high_prio>(*this, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
+		return true;
 	});
+}
+
+auto link_impl::rs_update_from_data(req_result rdata, ReqReset opts) -> void {
+	const auto req = rdata.index() == 0 ? Req::Data : Req::DataNode;
+	std::visit([&](auto&& obj) {
+		// prepare transaction that will run after status is updated
+		using res_t = decltype(obj);
+		const auto req_transaction = [this, &obj](Req req, ReqStatus new_rs, ReqStatus old_rs) {
+			// send notification
+			send_home<high_prio>(*this, a_ack(), a_lnk_status(), req, new_rs, old_rs);
+			// if request result is nil -> return error
+			auto res = obj.and_then([](auto&& obj) {
+				return obj ? res_t(std::move(obj)) : unexpected_err_quiet(Error::EmptyData);
+			});
+			// feed waiters
+			auto& rsh = req_status_handle(req);
+			for(auto& w : rsh.waiters)
+				caf::anon_send(w, a_apply(), res);
+			rsh.waiters.clear();
+
+			return true;
+		};
+
+		// update status & run transaction
+		auto cond = ReqReset::Always;
+		if(enumval(opts) & enumval(ReqOpts::Uniform)) cond |= ReqReset::Broadcast;
+		rs_reset(
+			req, cond, obj ? (*obj ? ReqStatus::OK : ReqStatus::Void) : ReqStatus::Error,
+			ReqStatus::Void, req_transaction
+		);
+	}, std::move(rdata));
+}
+
+auto link_impl::rs_add_waiter(Req req, caf::actor w) -> void {
+	rs_apply(req, [&] { req_status_handle(req).waiters.push_back(std::move(w)); });
 }
 
 auto link_impl::rename(std::string new_name)-> void {
