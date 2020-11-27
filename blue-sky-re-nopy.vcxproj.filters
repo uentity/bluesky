@@ -348,9 +348,6 @@
     <ClInclude Include="kernel\include\bs\serialize\tree_fs_output.h">
       <Filter>Заголовочные файлы\bs\serialize</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\src\tree\actor_common.h">
-      <Filter>Файлы исходного кода\tree</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\src\tree\fusion_link_actor.h">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClInclude>
@@ -481,9 +478,6 @@
     </ClCompile>
     <ClCompile Include="kernel\src\error.cpp">
       <Filter>Файлы исходного кода</Filter>
-    </ClCompile>
-    <ClCompile Include="kernel\src\serialize\array.cpp">
-      <Filter>Файлы исходного кода\serialize</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\serialize\base_types.cpp">
       <Filter>Файлы исходного кода\serialize</Filter>
