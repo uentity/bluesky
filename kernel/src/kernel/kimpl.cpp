@@ -26,8 +26,8 @@ NAMESPACE_BEGIN()
 
 struct python_subsyt_dumb : public blue_sky::kernel::detail::python_subsyst {
 	auto py_init_plugin(
-		const blue_sky::detail::lib_descriptor&, plugin_descriptor&
-	) -> result_or_err<std::string> override {
+		const blue_sky::detail::lib_descriptor&, blue_sky::plugin_descriptor&
+	) -> blue_sky::result_or_err<std::string> override {
 		return "";
 	}
 
