@@ -52,6 +52,9 @@
     <Filter Include="Файлы исходного кода\kernel">
       <UniqueIdentifier>{35bfd074-8831-4541-9a45-cc23fede9f1c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Заголовочные файлы\bs\meta">
+      <UniqueIdentifier>{ec7604b1-3a85-4fea-841f-74b910b5e4b5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="kernel\include\bs\any_array.h">
@@ -360,9 +363,6 @@
     <ClInclude Include="kernel\include\bs\detail\object_ptr.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\include\bs\detail\tensor_meta.h">
-      <Filter>Заголовочные файлы\bs\detail</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\include\bs\python\object_ptr.h">
       <Filter>Заголовочные файлы\bs\python</Filter>
     </ClInclude>
@@ -494,6 +494,18 @@
     </ClInclude>
     <ClInclude Include="kernel\include\bs\python\result_converter.h">
       <Filter>Заголовочные файлы\bs\python</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta\is_container.h">
+      <Filter>Заголовочные файлы\bs\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta\is_shared_ptr.h">
+      <Filter>Заголовочные файлы\bs\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta\tensor.h">
+      <Filter>Заголовочные файлы\bs\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta\variant.h">
+      <Filter>Заголовочные файлы\bs\meta</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

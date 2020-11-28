@@ -55,7 +55,6 @@
     <ClInclude Include="kernel\include\bs\detail\scope_guard.h" />
     <ClInclude Include="kernel\include\bs\detail\sharded_mutex.h" />
     <ClInclude Include="kernel\include\bs\detail\str_utils.h" />
-    <ClInclude Include="kernel\include\bs\detail\tensor_meta.h" />
     <ClInclude Include="kernel\include\bs\detail\tuple_utils.h" />
     <ClInclude Include="kernel\include\bs\detail\typestring.h" />
     <ClInclude Include="kernel\include\bs\error.h" />
@@ -72,6 +71,10 @@
     <ClInclude Include="kernel\include\bs\kernel\type_tuple.h" />
     <ClInclude Include="kernel\include\bs\log.h" />
     <ClInclude Include="kernel\include\bs\meta.h" />
+    <ClInclude Include="kernel\include\bs\meta\is_container.h" />
+    <ClInclude Include="kernel\include\bs\meta\is_shared_ptr.h" />
+    <ClInclude Include="kernel\include\bs\meta\tensor.h" />
+    <ClInclude Include="kernel\include\bs\meta\variant.h" />
     <ClInclude Include="kernel\include\bs\misc.h" />
     <ClInclude Include="kernel\include\bs\objbase.h" />
     <ClInclude Include="kernel\include\bs\objbase_macro.h" />

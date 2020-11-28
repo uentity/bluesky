@@ -9,7 +9,7 @@
 #pragma once
 
 #include <pybind11/numpy.h>
-#include "../detail/tensor_meta.h"
+#include "../meta/tensor.h"
 
 // Eigen prior to 3.2.7 doesn't have proper move constructors--but worse, some classes get implicit
 // move constructors that break things.  We could detect this an explicitly copy, but an extra copy

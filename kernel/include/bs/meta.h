@@ -18,6 +18,9 @@ inline constexpr bool static_false = false;
 /// tag to denote empty variadic pack
 struct empty_t {};
 
+/// C++20 have this in <type_traits>
+template<typename T> struct identity { using type = T; };
+
 /// same as `std::forward`, but forward value AS if it has type `AsT`
 /// with all type type props copied from `T`
 template<typename T, typename AsT>

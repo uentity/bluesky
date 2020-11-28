@@ -7,7 +7,8 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/bs.h>
+#include <bs/python/common.h>
+#include <bs/misc.h>
 
 NAMESPACE_BEGIN(blue_sky)
 NAMESPACE_BEGIN(python)

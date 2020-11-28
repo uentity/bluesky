@@ -7,12 +7,13 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/objbase.h>
-#include <bs/tree/inode.h>
 #include <bs/python/common.h>
 #include <bs/python/expected.h>
 #include <bs/python/tr_result.h>
 #include <bs/python/result_converter.h>
+
+#include <bs/objbase.h>
+#include <bs/tree/inode.h>
 #include <bs/serialize/object_formatter.h>
 
 #include <pybind11/functional.h>

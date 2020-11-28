@@ -13,6 +13,7 @@
 #include "error.h"
 #include "type_descriptor.h"
 #include "tree/node.h"
+#include "detail/object_ptr.h"
 
 #include <caf/actor.hpp>
 #include <caf/typed_actor.hpp>

@@ -6,11 +6,13 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/bs.h>
-#include <bs/tree/node.h>
+#include <bs/python/common.h>
 #include <bs/python/kernel.h>
 #include <bs/python/any_array.h>
 #include <bs/python/map.h>
+
+#include <bs/kernel/kernel.h>
+#include <bs/tree/node.h>
 
 #include "../kernel/radio_subsyst.h"
 

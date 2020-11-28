@@ -46,6 +46,9 @@
     <Filter Include="Файлы исходного кода\kernel">
       <UniqueIdentifier>{84a84146-698b-4c12-9304-3025a424c9a3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Заголовочные файлы\bs\meta">
+      <UniqueIdentifier>{0d3a41f0-5826-4322-ace9-b6c24a8aba89}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="kernel\include\bs\any_array.h">
@@ -363,9 +366,6 @@
     <ClInclude Include="kernel\include\bs\detail\sharded_mutex.h">
       <Filter>Заголовочные файлы\bs\detail</Filter>
     </ClInclude>
-    <ClInclude Include="kernel\include\bs\detail\tensor_meta.h">
-      <Filter>Заголовочные файлы\bs\detail</Filter>
-    </ClInclude>
     <ClInclude Include="kernel\include\bs\kernel\radio.h">
       <Filter>Заголовочные файлы\bs\kernel</Filter>
     </ClInclude>
@@ -431,6 +431,18 @@
     </ClInclude>
     <ClInclude Include="kernel\include\bs\defaults.h">
       <Filter>Заголовочные файлы\bs</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta\is_container.h">
+      <Filter>Заголовочные файлы\bs\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta\is_shared_ptr.h">
+      <Filter>Заголовочные файлы\bs\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta\tensor.h">
+      <Filter>Заголовочные файлы\bs\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="kernel\include\bs\meta\variant.h">
+      <Filter>Заголовочные файлы\bs\meta</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

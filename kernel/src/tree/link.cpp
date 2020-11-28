@@ -10,9 +10,9 @@
 #include "engine_impl.h"
 #include "link_actor.h"
 #include "nil_engine.h"
-#include "node.h"
 
 #include <bs/log.h>
+#include <bs/tree/node.h>
 #include <bs/kernel/radio.h>
 
 #include <bs/serialize/tree.h>

@@ -6,19 +6,13 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
-#include "../fwd.h"
-#include "../common.h"
-#include "../error.h"
+#include "common.h"
 #include "../compat/arrbase_shared.h"
 #include "../compat/array.h"
 
 #include <pybind11/numpy.h>
-//#include <numpy/arrayobject.h>
-// DEBUG
-//#include <iostream>
 
 /*-----------------------------------------------------------------------------
  *  numpy traits for bs_array
