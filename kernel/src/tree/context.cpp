@@ -13,9 +13,6 @@
 #include <bs/kernel/radio.h>
 #include "tree_impl.h"
 
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/string_generator.hpp>
-#include <boost/uuid/uuid_hash.hpp>
 #include <boost/container_hash/hash.hpp>
 
 #include <unordered_map>
@@ -23,7 +20,6 @@
 #include <algorithm>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-[[maybe_unused]] const auto uuid_from_str = boost::uuids::string_generator{};
 
 auto to_string(const lids_v& path, bool as_absolute) -> std::string {
 	auto res = std::vector<std::string>(as_absolute ? path.size() + 1 : path.size());
@@ -36,9 +32,8 @@ auto to_string(const lids_v& path, bool as_absolute) -> std::string {
 }
 
 // convert string path to vector of lids
-static auto to_lids_v(const std::string& path) -> lids_v {
+static auto to_lids_v(unsafe_t, const std::string& path) -> lids_v {
 	auto path_split = std::vector< std::pair<std::string::const_iterator, std::string::const_iterator> >{};
-	boost::split(path_split, path, boost::is_any_of("/"));
 	if(path_split.empty()) return {};
 
 	auto from = path_split.begin();
@@ -46,8 +41,19 @@ static auto to_lids_v(const std::string& path) -> lids_v {
 	auto res = skip_first ? lids_v(path_split.size() - 1) : lids_v(path_split.size());
 	std::transform(
 		skip_first ? ++from : from, path_split.end(), res.begin(),
-		[](const auto& Lid) { return uuid_from_str(Lid.first, Lid.second); }
+		[](const auto& Lid) {
+			return to_uuid(
+				unsafe, {&*Lid.first, static_cast<std::size_t>(Lid.second - Lid.first)}
+			);
+		}
 	);
+	return res;
+}
+
+static auto to_lids_v(const std::string& path) -> result_or_err<lids_v> {
+	auto res = lids_v{};
+	if(auto er = error::eval_safe_quiet([&] { res = to_lids_v(unsafe, path); }))
+		return unexpected_err_quiet(er);
 	return res;
 }
 
@@ -197,13 +203,13 @@ struct BS_HIDDEN_API context::impl {
 
 	// find tag by path - returns unique element
 	auto find(const std::string& path) const -> existing_tag {
-		if(path.empty() || path == "/") return {};
-		// conversion from string -> lids vector can throw if string is non-valid path
-		try {
-			if(auto r = idata_.find(to_lids_v(path)); r != idata_.end())
+		if(path.empty() || path == "/") return std::nullopt;
+		return to_lids_v(path).map([&](auto&& upath) -> existing_tag {
+			if(auto r = idata_.find(upath); r != idata_.end())
 				return &*r;
-		} catch(...) {}
-		return {};
+			return std::nullopt;
+		})
+		.value_or(std::nullopt);
 	}
 
 	// find tag by link - can return multiple tags for same link, including invalid ones
@@ -232,13 +238,13 @@ struct BS_HIDDEN_API context::impl {
 				auto [parent, _] = make(L_tag);
 				if(parent) {
 					const auto& [_, parent_ptr] = **parent;
-					if(data_node(parent_ptr.lock()) == parent_node)
+					if(parent_ptr.lock().home_id() == parent_node.home_id())
 						L_row = parent_node.index(L.id());
 				}
 			}
-			// if valid row is found - return, otherwise remove incorrect tag
+			// if valid row is found - return
 			if(L_row) return { std::move(L_tag), *L_row };
-			// [NOTE] disabled, because clients may rely on invalid entries
+			// [NOTE] disable remove invalid rows, because clients may rely on 'em
 			//else
 			//	pop(L_path);
 		}
@@ -248,7 +254,7 @@ struct BS_HIDDEN_API context::impl {
 	// simpler and quicker version of above when item row inside parent isn't needed
 	auto verify_tag(existing_tag L_tag, const link& L) -> existing_tag {
 		const auto parent_node = L.owner();
-		if(!parent_node) return {};
+		if(!parent_node) return std::nullopt;
 
 		const auto& [L_path, L_ptr] = **L_tag;
 		if(L_ptr == L) {
@@ -259,12 +265,12 @@ struct BS_HIDDEN_API context::impl {
 				auto [parent, _] = make(L_tag);
 				if(parent) {
 					const auto& [_, parent_ptr] = **parent;
-					if(data_node(parent_ptr.lock()) == parent_node)
+					if(parent_ptr.lock().home_id() == parent_node.home_id())
 						return L_tag;
 				}
 			}
 		}
-		return {};
+		return std::nullopt;
 	}
 
 	auto make(const std::string& path, bool nonexact_match = false) -> item_index {
@@ -274,14 +280,17 @@ struct BS_HIDDEN_API context::impl {
 
 		auto cur_subpath = lids_v{};
 		auto push_subpath = [&](const std::string& next_lid, const node& cur_level) {
-			if(auto item = level.find(next_lid, Key::ID)) {
-				if(auto item_row = level.index(item.id())) {
-					cur_subpath.push_back(uuid_from_str(next_lid));
-					res = { push(cur_subpath, item), *item_row };
-					return item;
+			return to_uuid(next_lid).map([&](auto cur_uuid) {
+				if(auto item = level.find(cur_uuid)) {
+					if(auto item_row = level.index(item.id())) {
+						cur_subpath.push_back(std::move(cur_uuid));
+						res = { push(cur_subpath, item), *item_row };
+						return item;
+					}
 				}
-			}
-			return link{};
+				return link{};
+			})
+			.value_or(link{});
 		};
 
 		// walk down tree
