@@ -58,8 +58,6 @@ bool contains_key(const node& N, std::string key, Key meaning) {
 
 // ------- find
 auto throw_find_err(const std::string& key, Key meaning) {
-	auto gil = py::gil_scoped_acquire();
-
 	std::string msg = "Node doesn't contain link ";
 	switch(meaning) {
 	default:
@@ -113,10 +111,8 @@ auto find_idx(const Node& N, long idx) -> link {
 
 	if(auto res = N.find(positive_idx))
 		return res;
-	else {
-		auto gil = py::gil_scoped_acquire();
+	else
 		throw py::key_error("Index out of bounds");
-	}
 }
 
 // ------- index
@@ -166,10 +162,8 @@ void erase_obj(node& N, const sp_obj& obj) {
 template<typename Node>
 void erase_idx(Node& N, const long idx) {
 	// support for Pythonish indexing from both ends
-	if(std::size_t(std::abs(idx)) > N.size()) {
-		auto gil = py::gil_scoped_acquire();
+	if(std::size_t(std::abs(idx)) > N.size())
 		throw py::key_error("Index out of bounds");
-	}
 	N.erase(idx < 0 ? N.size() + idx : idx);
 }
 
@@ -219,10 +213,10 @@ void py_bind_node(py::module& m) {
 		.def("contains",     &contains_link<node_type>, "link"_a, "Check if node contains given link")
 
 		// search by link ID
-		.def("__getitem__", &find_lid<true, node_type>, "lid"_a, gil...)
-		.def("find",        &find_lid<false, node_type>, "lid"_a, "Find link with given ID", gil...)
+		.def("__getitem__", &find_lid<true, node_type>, "lid"_a)
+		.def("find",        &find_lid<false, node_type>, "lid"_a, "Find link with given ID")
 		// get item by int index
-		.def("__getitem__", &find_idx<node_type>, "link_idx"_a, gil...)
+		.def("__getitem__", &find_idx<node_type>, "link_idx"_a)
 
 		// obtain index in custom order from link ID
 		.def("index", &index_lid<node_type>, "lid"_a, "Find index of link with given ID", gil...)
@@ -252,8 +246,8 @@ void py_bind_node(py::module& m) {
 		.def("__delitem__", &erase_lid<node_type>, "lid"_a, gil...)
 		.def("erase",       &erase_lid<node_type>, "lid"_a, "Erase link with given ID", gil...)
 		// erase by given index
-		.def("__delitem__", &erase_idx<node_type>, "idx"_a, gil...)
-		.def("erase",       &erase_idx<node_type>, "idx"_a, "Erase link with given index", gil...)
+		.def("__delitem__", &erase_idx<node_type>, "idx"_a)
+		.def("erase",       &erase_idx<node_type>, "idx"_a, "Erase link with given index")
 		// erase given link
 		.def("__delitem__", &erase_link<node_type>, "link"_a, gil...)
 		.def("erase",       &erase_link<node_type>, "link"_a, "Erase given link", gil...)
@@ -299,7 +293,7 @@ void py_bind_node(py::module& m) {
 		.def(py::init<>())
 		.def(py::init<const bare_node&>())
 	;
-	add_common_api(node_pyface, nogil);
+	add_common_api(node_pyface);
 
 	// append node-specific API
 	node_pyface
@@ -322,14 +316,14 @@ void py_bind_node(py::module& m) {
 		.def("contains", &contains_key, "key"_a, "key_meaning"_a, "Check if node contains link with given key")
 
 		// search by object instance
-		.def("__getitem__", &find_obj<true>, "obj"_a, nogil)
-		.def("find",        &find_obj<false>, "obj"_a, "Find link to given object", nogil)
+		.def("__getitem__", &find_obj<true>, "obj"_a)
+		.def("find",        &find_obj<false>, "obj"_a, "Find link to given object")
 		// search by string key & key treatment
 		.def("find", py::overload_cast<std::string, Key>(&node::find, py::const_),
 			"key"_a, "key_meaning"_a, "Find link by key with specified treatment", nogil)
 
 		// obtain index in custom order from object
-		.def("index", &index_obj, "obj"_a, "Find index of link to given object", nogil)
+		.def("index", &index_obj, "obj"_a, "Find index of link to given object")
 		// ... from string key with specified treatment
 		.def("index", py::overload_cast<std::string, Key>(&node::index, py::const_),
 			"key"_a, "key_meaning"_a, "Find index of link with specified key and treatment", nogil)
@@ -351,30 +345,30 @@ void py_bind_node(py::module& m) {
 
 		// insert link at given index
 		.def("insert", [](node& N, link l, const long idx, InsertPolicy pol) {
-			return N.insert(std::move(l), idx, pol).second;
-		}, "link"_a, "idx"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert link at given index", nogil)
+			return N.insert(std::move(l), idx, pol);
+		}, "link"_a, "idx"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert link at given index")
 
 		// erase by object instance
-		.def("__delitem__", &erase_obj, "obj"_a, nogil)
-		.def("erase",       &erase_obj, "obj"_a, "Erase links to given object", nogil)
+		.def("__delitem__", &erase_obj, "obj"_a)
+		.def("erase",       &erase_obj, "obj"_a, "Erase links to given object")
 		// generic erase by key & meaning
 		.def("erase", py::overload_cast<std::string, Key>(&node::erase, py::const_),
 			"key"_a, "key_meaning"_a = Key::Name, "Erase all leafs with given key", nogil)
 
 		// misc container-related functions
-		.def("clear", py::overload_cast<>(&node::clear, py::const_), "Clears all node contents", nogil)
+		.def("clear", py::overload_cast<>(&node::clear, py::const_), "Clears all node contents")
 		.def("clear", py::overload_cast<launch_async_t>(&node::clear, py::const_),
 			"Async clear all node contents")
 
 		// link rename
 		.def("rename", py::overload_cast<std::string, std::string>(&node::rename, py::const_),
-			"old_name"_a, "new_name"_a, "Rename all links with given old_name", nogil)
+			"old_name"_a, "new_name"_a, "Rename all links with given old_name")
 		// by index offset
 		.def("rename", py::overload_cast<std::size_t, std::string>(&node::rename, py::const_),
-			"idx"_a, "new_name"_a, "Rename link with given index", nogil)
+			"idx"_a, "new_name"_a, "Rename link with given index")
 		// by ID
 		.def("rename", py::overload_cast<lid_type, std::string>(&node::rename, py::const_),
-			"lid"_a, "new_name"_a, "Rename link with given ID", nogil)
+			"lid"_a, "new_name"_a, "Rename link with given ID")
 
 		.def("rearrange", py::overload_cast<lids_v>(&node::rearrange, py::const_),
 			"new_order"_a, "Apply custom order to node")
@@ -382,7 +376,7 @@ void py_bind_node(py::module& m) {
 			"new_order"_a, "Apply custom order to node")
 
 		// events subscrition
-		.def("subscribe", &node::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
+		.def("subscribe", &node::subscribe, "event_cb"_a, "events"_a = Event::All)
 		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
 	;
 

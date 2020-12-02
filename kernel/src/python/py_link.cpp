@@ -141,9 +141,9 @@ void py_bind_link(py::module& m) {
 
 		.def("bare", &link::bare, "Convert to bare (unsafe) link")
 
-		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link", nogil)
+		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link")
 
-		.def("name", py::overload_cast<>(&link::name, py::const_), nogil)
+		.def("name", py::overload_cast<>(&link::name, py::const_))
 		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
 
 		.def("rename", py::overload_cast<std::string>(&link::rename, py::const_))
@@ -207,15 +207,15 @@ void py_bind_link(py::module& m) {
 
 		.def("rs_reset", &link::rs_reset,
 			"request"_a, "new_status"_a = ReqStatus::Void,
-			"Unconditionally set status of given request", nogil
+			"Unconditionally set status of given request"
 		)
 		.def("rs_reset_if_eq", &link::rs_reset_if_eq,
 			"request"_a, "self_rs"_a, "new_rs"_a = ReqStatus::Void,
-			"Set status of given request if it is equal to given value, returns prev status", nogil
+			"Set status of given request if it is equal to given value, returns prev status"
 		)
 		.def("rs_reset_if_neq", &link::rs_reset_if_neq,
 			"request"_a, "self_rs"_a, "new_rs"_a = ReqStatus::Void,
-			"Set status of given request if it is NOT equal to given value, returns prev status", nogil
+			"Set status of given request if it is NOT equal to given value, returns prev status"
 		)
 
 		.def("is_node", &link::is_node, "Check if pointee is a node", nogil)
@@ -223,12 +223,12 @@ void py_bind_link(py::module& m) {
 			"If pointee is a node, return node's actor group ID", nogil)
 
 		// events subscrition
-		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All, nogil)
+		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All)
 		.def_static("unsubscribe", &link::unsubscribe, "event_cb_id"_a)
 	;
 
 	// add mixins
-	add_common_api(link_pyface, nogil);
+	add_common_api(link_pyface);
 	bind_weak_ptr(link_pyface);
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -272,7 +272,7 @@ void py_bind_link(py::module& m) {
 		.def(py::init<const link&>())
 		.def_property_readonly_static("type_id_", [](const py::object&) { return fusion_link::type_id_(); })
 
-		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge, nogil)
+		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge)
 
 		.def("populate",
 			py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),
