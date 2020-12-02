@@ -52,7 +52,7 @@ public:
 		// ask link's actor to send status changed ack AFTER it has been already changed by handle
 		caf::reacts_to<a_lnk_status, Req, ReqStatus, ReqStatus>,
 		// delayed read for cached links
-		caf::replies_to<a_lazy, a_load>::with<bool>
+		caf::replies_to<a_lazy, a_load, bool /* with_node */>::with<bool>
 	>::extend_with<kernel::detail::khome_actor_type>;
 
 	// ack signals that this link send to home group

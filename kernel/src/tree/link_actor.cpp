@@ -227,7 +227,7 @@ return {
 	},
 
 	// noop - implement in derived links
-	[=](a_lazy, a_load) { return false; }
+	[=](a_lazy, a_load, bool) { return false; }
 }; }
 
 auto link_actor::make_typed_behavior() -> typed_behavior {
@@ -263,7 +263,8 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 		},
 
 		// modifies beahvior s.t. next Data request will send `a_delay_load` to stored object first
-		[=](a_lazy, a_load) {
+		// if `with_node` is true, then do the same for DataNode request
+		[=](a_lazy, a_load, bool with_node) {
 			auto orig_me = current_behavior();
 
 			// setup request impl that invokes `a_delay_load` on object once
@@ -274,6 +275,8 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 				return [=](req_t, bool) mutable -> caf::result<R> {
 					// this handler triggered only once
 					become(orig_me);
+					// drop lazy load flag
+					impl.flags_ &= ~Flags::LazyLoad;
 					// get cached object
 					auto obj = impl.data(unsafe);
 					if(!obj) return unexpected_err_quiet(Error::EmptyData);
@@ -290,10 +293,14 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 				};
 			};
 
+			auto lazy_me = caf::message_handler{ load_then_answer(a_data()) };
+			if(with_node) {
+				// raise lazy load flag
+				impl.flags_ |= Flags::LazyLoad;
+				lazy_me = lazy_me.or_else( load_then_answer(a_data_node()) );
+			}
 			// setup new behavior for Data & DataNode requests
-			become(caf::message_handler{
-				load_then_answer(a_data()), load_then_answer(a_data_node())
-			}.or_else(orig_me));
+			become(lazy_me.or_else(orig_me));
 			return true;
 		}
 	}, super::make_typed_behavior() );
