@@ -238,7 +238,7 @@ struct BS_HIDDEN_API context::impl {
 				auto [parent, _] = make(L_tag);
 				if(parent) {
 					const auto& [_, parent_ptr] = **parent;
-					if(parent_ptr.lock().home_id() == parent_node.home_id())
+					if(parent_ptr == parent_node.handle())
 						L_row = parent_node.index(L.id());
 				}
 			}
@@ -265,7 +265,7 @@ struct BS_HIDDEN_API context::impl {
 				auto [parent, _] = make(L_tag);
 				if(parent) {
 					const auto& [_, parent_ptr] = **parent;
-					if(parent_ptr.lock().home_id() == parent_node.home_id())
+					if(parent_ptr == parent_node.handle())
 						return L_tag;
 				}
 			}
@@ -321,6 +321,11 @@ struct BS_HIDDEN_API context::impl {
 		auto res = none;
 		auto develop_link = [&](link R, std::list<link>& nodes, std::vector<link>& objs)
 		mutable {
+			// early exit if we already found valid result
+			if(is_valid(res)) {
+				nodes.clear();
+				return;
+			}
 			// get current root path
 			auto R_path = path_t{};
 			if(R == start_link && R != root_lnk_)
@@ -340,7 +345,9 @@ struct BS_HIDDEN_API context::impl {
 
 			// leaf checker
 			const auto check_link = [&, Lid = L.id()](auto& item) {
-				auto ltag = push(R_path, Lid, item);
+				// remember each encountered link
+				auto ltag = push(R_path, item.id(), item);
+				// match check
 				if(item.id() == Lid) {
 					if(auto Rnode = data_node(R)) {
 						if(auto row = Rnode.index(Lid))

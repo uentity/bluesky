@@ -235,13 +235,13 @@ void py_bind_tree(py::module& m) {
 		// [NOTE] it's essential to keep returned tags in Python as long as context exists
 		// use combined return value policy:
 		// py::keep_alive<1, 0>() - keeps returned value while context exists
-		// py::return_value_policy::reference - don't destruct C++ tag insatance on cleanup
+		// py::return_value_policy::reference - don't destruct C++ tag instance on cleanup
 		.def("__call__", py::overload_cast<const std::string&, bool>(&context::operator()),
 			"path"_a, "nonexact_match"_a = false,
 			py::keep_alive<1, 0>(), py::return_value_policy::reference
 		)
 		.def("__call__", py::overload_cast<const link&, std::string>(&context::operator()),
-			"path"_a, "path_hint"_a = "/",
+			"lnk"_a, "path_hint"_a = "/",
 			py::keep_alive<1, 0>(), py::return_value_policy::reference
 		)
 		.def("__call__", py::overload_cast<std::int64_t, existing_tag>(&context::operator()),
