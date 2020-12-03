@@ -166,13 +166,13 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 
 		// ... otherwise perform request on `a_ack` message
 		// prepare request result processor
-		auto rp = [self, Limpl = std::move(Limpl)](res_t obj) mutable {
+		auto rp = [self, opts, Limpl = std::move(Limpl)](res_t obj) mutable {
 			if constexpr(!rtraits::can_invoke_inplace) {
 				// deliver result to waiting client
 				self->state.get(self).deliver(obj);
 			}
 			// update status & quit
-			Limpl->rs_update_from_data(std::move(obj));
+			Limpl->rs_update_from_data(std::move(obj), enumval(opts & ReqOpts::DirectInvoke));
 			self->quit();
 		};
 
@@ -186,8 +186,7 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 		// install behavior
 		if constexpr(rtraits::can_invoke_inplace) {
 			// helper to generate handler for `a_ack` message
-			auto handle_ack = [self, rp = std::move(rp), f = std::move(f)](auto extra_rp)
-			mutable {
+			auto handle_ack = [self, rp = std::move(rp), f = std::move(f)](auto extra_rp) mutable {
 				res_t res = rtraits::invoke_f_request(f, self);
 				// update status inplace
 				rtraits::chain_rp(rp, std::move(extra_rp))(res);
@@ -207,8 +206,7 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 		}
 		else {
 			// helper to generate handler for `a_ack` message
-			auto handle_ack = [self, rp = std::move(rp)](auto extra_rp) mutable
-			-> caf::result<res_t> {
+			auto handle_ack = [self, rp = std::move(rp)](auto extra_rp) mutable -> caf::result<res_t> {
 				// launch work
 				self->request(caf::actor_cast<caf::actor>(self), caf::infinite, a_apply())
 				.then(rtraits::chain_rp(rp, std::move(extra_rp)));
@@ -260,7 +258,7 @@ auto request_impl(
 			if constexpr(rtraits::can_invoke_inplace) {
 				// invoke request inplace & update status
 				auto res = rtraits::invoke_f_request(f_request, &LA);
-				LA.impl.rs_update_from_data(res);
+				LA.impl.rs_update_from_data(res, enumval(opts & ReqOpts::DirectInvoke));
 				// invoke extra processor
 				res_processor(std::move(res));
 			}

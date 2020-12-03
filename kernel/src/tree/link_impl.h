@@ -144,9 +144,9 @@ public:
 	) -> ReqStatus;
 
 	// set proper status after request result was received & release pending waiters
-	// [NOTE] only Broadcast flag is used from 2nd arg
+	// [NOTE] if `broadcast` flag is set, update both statuses at once
 	using req_result = std::variant<obj_or_errbox, node_or_errbox>;
-	auto rs_update_from_data(req_result rdata, ReqReset opts = ReqReset::Always) -> void;
+	auto rs_update_from_data(req_result rdata, bool broadcast = false) -> void;
 
 	// run generic function while holding exclusive lock to status handles
 	// if ReqReset::Broadcast is on, lock both handles

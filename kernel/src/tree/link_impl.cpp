@@ -149,30 +149,66 @@ auto link_impl::rs_reset(Req request, ReqReset cond, ReqStatus new_rs, ReqStatus
 	});
 }
 
-auto link_impl::rs_update_from_data(req_result rdata, ReqReset opts) -> void {
-	const auto req = rdata.index() == 0 ? Req::Data : Req::DataNode;
+auto link_impl::rs_update_from_data(req_result rdata, bool broadcast) -> void {
 	std::visit([&](auto&& obj) {
+		// infer static request type & result
+		using res_t = meta::remove_cvref_t<decltype(obj)>;
+		static constexpr auto req = [&] {
+			if constexpr(std::is_same_v<res_t, obj_or_errbox>)
+				return Req::Data;
+			else
+				return Req::DataNode;
+		}();
+
+		// convert req result to result of another req
+		const auto convert_req_res = [&](const res_t& obj) {
+			if constexpr(req == Req::Data)
+				// feed DataNode waiters by extracting node from object
+				return obj.and_then([&](const auto& obj) -> node_or_errbox {
+					return obj->data_node();
+				});
+			else
+				// if uniform DataNode request is completed => we already have valid object
+				// get it using data(unsafe)
+				return obj.and_then([&](auto&) -> obj_or_errbox {
+					if(auto obj = data(unsafe))
+						return obj;
+					return unexpected_err_quiet(Error::EmptyData);
+				});
+		};
+
+		// release all waiers with given value
+		const auto feed_waiters = [&](Req who, const auto& value) {
+			auto& rsh = req_status_handle(who);
+			for(auto& w : rsh.waiters)
+				caf::anon_send(w, a_apply(), value);
+			rsh.waiters.clear();
+		};
+
 		// prepare transaction that will run after status is updated
-		using res_t = decltype(obj);
-		const auto req_transaction = [this, &obj](Req req, ReqStatus new_rs, ReqStatus old_rs) {
+		const auto req_transaction = [&](Req, ReqStatus new_rs, ReqStatus old_rs) {
 			// send notification
 			send_home<high_prio>(*this, a_ack(), a_lnk_status(), req, new_rs, old_rs);
-			// if request result is nil -> return error
-			auto res = obj.and_then([](auto&& obj) {
-				return obj ? res_t(std::move(obj)) : unexpected_err_quiet(Error::EmptyData);
-			});
-			// feed waiters
-			auto& rsh = req_status_handle(req);
-			for(auto& w : rsh.waiters)
-				caf::anon_send(w, a_apply(), res);
-			rsh.waiters.clear();
+
+			// for Data request if object is nil -> return error
+			if constexpr(req == Req::Data) {
+				obj = obj.and_then([](auto&& obj) -> res_t {
+					return obj ? res_t{std::move(obj)} : unexpected_err_quiet(Error::EmptyData);
+				});
+			}
+
+			// feed primary request waiters
+			feed_waiters(req, obj);
+			// for broadcasted request feed waiters on another queue
+			if(broadcast)
+				feed_waiters(enumval<Req>(1 - enumval(req)), convert_req_res(obj));
 
 			return true;
 		};
 
 		// update status & run transaction
 		auto cond = ReqReset::Always;
-		if(enumval(opts) & enumval(ReqOpts::Uniform)) cond |= ReqReset::Broadcast;
+		if(broadcast) cond |= ReqReset::Broadcast;
 		rs_reset(
 			req, cond, obj ? (*obj ? ReqStatus::OK : ReqStatus::Void) : ReqStatus::Error,
 			ReqStatus::Void, req_transaction
