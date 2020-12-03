@@ -71,7 +71,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					renamed_impl(src, lid, new_name, old_name);
 				}
 			);
-			bsout() << "*-* node: subscribed to LinkRenamed event" << bs_end;
+			//bsout() << "*-* node: subscribed to LinkRenamed event" << bs_end;
 		}
 
 		if(enumval(listen_to & Event::LinkStatusChanged)) {
@@ -105,7 +105,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					status_impl(src, lid, req, new_s, prev_s);
 				}
 			);
-			bsout() << "*-* node: subscribed to LinkStatusChanged event" << bs_end;
+			//bsout() << "*-* node: subscribed to LinkStatusChanged event" << bs_end;
 		}
 
 		if(enumval(listen_to & Event::DataModified)) {
@@ -133,7 +133,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					datamod_impl(src, lid, std::move(trbox));
 				}
 			);
-			bsout() << "*-* node: subscribed to DataModified event" << bs_end;
+			//bsout() << "*-* node: subscribed to DataModified event" << bs_end;
 		}
 
 		if(enumval(listen_to & Event::LinkInserted)) {
@@ -162,7 +162,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					});
 				}
 			);
-			bsout() << "*-* node: subscribed to LinkInserted event" << bs_end;
+			//bsout() << "*-* node: subscribed to LinkInserted event" << bs_end;
 		}
 
 		if(enumval(listen_to & Event::LinkErased)) {
@@ -176,7 +176,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					});
 				}
 			);
-			bsout() << "*-* node: subscribed to LinkErased event" << bs_end;
+			//bsout() << "*-* node: subscribed to LinkErased event" << bs_end;
 		}
 
 		return res;
