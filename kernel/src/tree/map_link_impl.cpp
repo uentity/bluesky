@@ -172,7 +172,7 @@ auto map_link_impl::refresh(map_link_actor* self, caf::event_based_actor* rworke
 	auto out_leafs = links_v{};
 	io_map_t io_map;
 
-	// body of actor that will ivoke mapper for given link on `a_ack` message
+	// body of actor that will map given link on `a_ack` message
 	auto mapper_solo = engine_impl_mutex{};
 	const auto mapper_actor = [&](caf::event_based_actor* self, link src_link) {
 		// immediately start job
@@ -277,19 +277,14 @@ auto map_link_impl::refresh(map_link_actor* self, caf::event_based_actor* rworke
 }
 
 auto map_link_impl::refresh(map_link_actor* self) -> caf::result<node_or_errbox> {
-	using R = node_or_errbox;
-	auto res = self->make_response_promise<R>();
-
 	// run output node refresh in separate actor
-	request_impl<node>(
+	return request_data_impl<node>(
 		*self, Req::DataNode, ReqOpts::Detached,
 		[=, pimpl = std::static_pointer_cast<map_link_impl>(self->pimpl_)]
 		(caf::event_based_actor* rworker) {
 			return pimpl->refresh(self, rworker);
-		},
-		[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
+		}
 	);
-	return res;
 }
 
 ENGINE_TYPE_DEF(map_link_impl, "map_link")
@@ -297,8 +292,6 @@ ENGINE_TYPE_DEF(map_link_impl, "map_link")
 /*-----------------------------------------------------------------------------
  *  map_node_impl
  *-----------------------------------------------------------------------------*/
-using namespace allow_enumops;
-
 template<bool DiscardResult = false>
 static auto spawn_mapper_job(map_node_impl* impl, map_link_actor* self)
 -> std::conditional_t<DiscardResult, void, caf::result<node_or_errbox>> {
@@ -315,18 +308,14 @@ static auto spawn_mapper_job(map_node_impl* impl, map_link_actor* self)
 		ReqOpts::Detached : ReqOpts::WaitIfBusy;
 
 	if constexpr(DiscardResult) {
-		request_impl<node>(
-			*self, Req::DataNode, opts, std::move(invoke_mapper), noop
-		);
+		// trigger async request by sending `a_ack` message to worker actor
+		request_impl<node>(*self, Req::DataNode, opts, std::move(invoke_mapper))
+		.map([&](auto&& rworker) {
+			self->send(rworker, a_ack());
+		});
 	}
-	else {
-		auto res = self->make_response_promise<node_or_errbox>();
-		request_impl<node>(
-			*self, Req::DataNode, opts, std::move(invoke_mapper),
-			[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
-		);
-		return res;
-	}
+	else
+		return request_data_impl<node>(*self, Req::DataNode, opts, std::move(invoke_mapper));
 }
 
 auto map_node_impl::clone(bool deep) const -> sp_limpl {
