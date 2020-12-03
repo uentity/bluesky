@@ -36,6 +36,22 @@ struct request_traits {
 	using res_t = result_or_errbox<typename R_deduced::value_type>;
 	// value type that worker actor returns (always transfers error in a box)
 	using worker_ret_t = std::conditional_t<can_invoke_inplace, res_t, f_ret_t>;
+	// type of extra result processing functor
+	using custom_rp_f = std::function< void(res_t) >;
+	// worker actor iface
+	using actor_type = caf::typed_actor<
+		typename caf::replies_to<a_ack>::template with<res_t>,
+		typename caf::replies_to<a_ack, custom_rp_f>::template with<res_t>
+	>;
+
+	template<typename U, typename V>
+	static auto chain_rp(U base_rp, V extra_rp) {
+		return [base_rp = std::move(base_rp), extra_rp = std::move(extra_rp)](res_t obj) mutable {
+			error::eval_safe([&] { base_rp(obj); });
+			if constexpr(!std::is_same_v<V, std::nullopt_t>)
+				error::eval_safe([&] { extra_rp(std::move(obj)); });
+		};
+	};
 };
 
 NAMESPACE_END(detail)
@@ -45,7 +61,8 @@ NAMESPACE_END(detail)
 // If opts::Uniform is true, then both status values are changed at once.
 // Returns worker actor handle, result can be obtain in lazy manner by sending `a_ack` message to it
 template<typename R = void, typename F>
-auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request) -> result_or_err<caf::actor> {
+auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
+-> result_or_err<typename detail::request_traits<R, F>::actor_type> {
 	using namespace kernel::radio;
 	using namespace allow_enumops;
 
@@ -105,6 +122,8 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request) -> result_
 	// worker stateful actor that will invoke request and process result or wait for it
 	auto worker = [=, f = std::move(f_request), Limpl = LA.spimpl()]
 	(caf::stateful_actor<rstate>* self) mutable -> caf::behavior {
+		using custom_rp_f = typename rtraits::custom_rp_f;
+
 		// if we were in busy state, install self as waiter
 		if(prev_rs == ReqStatus::Busy) {
 			// prepare request result processor
@@ -125,16 +144,27 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request) -> result_
 			Limpl->rs_add_waiter(req, caf::actor_cast<caf::actor>(self));
 			// install behavior
 			return {
-				// deliver result from waiting state
-				[rp = std::move(rp)](a_apply, res_t res) mutable {
-					rp(std::move(res));
-				},
+				// invoke result processor on delivered result
+				[rp](a_apply, res_t res) mutable { rp(std::move(res)); },
+
 				// `a_ack` simply returns result promise
-				[self](a_ack) { return self->state.get(self); }
+				[self](a_ack) { return self->state.get(self); },
+
+				// invoke additional result processor on `a_apply` message
+				[self, rp](a_ack, custom_rp_f extra_rp) mutable {
+					self->become(caf::message_handler{
+						[rp = rtraits::chain_rp(std::move(rp), std::move(extra_rp))](a_apply, res_t res)
+						mutable {
+							rp(std::move(res));
+						}
+					}.or_else(self->current_behavior()));
+
+					return self->state.get(self);
+				}
 			};
 		}
 
-		// ... otherwise setup for performing request
+		// ... otherwise perform request on `a_ack` message
 		// prepare request result processor
 		auto rp = [self, Limpl = std::move(Limpl)](res_t obj) mutable {
 			if constexpr(!rtraits::can_invoke_inplace) {
@@ -155,38 +185,60 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request) -> result_
 
 		// install behavior
 		if constexpr(rtraits::can_invoke_inplace) {
+			// helper to generate handler for `a_ack` message
+			auto handle_ack = [self, rp = std::move(rp), f = std::move(f)](auto extra_rp)
+			mutable {
+				res_t res = rtraits::invoke_f_request(f, self);
+				// update status inplace
+				rtraits::chain_rp(rp, std::move(extra_rp))(res);
+				return res;
+			};
+
 			return {
 				// do complete processing on `a_ack` message
-				[self, rp = std::move(rp), f = std::move(f)](a_ack) mutable {
-					res_t res = rtraits::invoke_f_request(f, self);
-					// update status inplace
-					rp(res);
-					return res;
+				[handle_ack](a_ack) mutable {
+					return handle_ack(std::nullopt);
+				},
+				// same with extra result processing
+				[handle_ack](a_ack, custom_rp_f extra_rp) mutable {
+					return handle_ack(std::move(extra_rp));
 				}
 			};
 		}
 		else {
+			// helper to generate handler for `a_ack` message
+			auto handle_ack = [self, rp = std::move(rp)](auto extra_rp) mutable
+			-> caf::result<res_t> {
+				// launch work
+				self->request(caf::actor_cast<caf::actor>(self), caf::infinite, a_apply())
+				.then(rtraits::chain_rp(rp, std::move(extra_rp)));
+				// return result promise
+				return self->state.get(self);
+			};
+
 			return {
 				// invoke request functor & return result
 				[self, f = std::move(f)](a_apply) mutable -> worker_ret_t {
 					return rtraits::invoke_f_request(f, self);
 				},
 				// launch request on `a_ack` message
-				[self, rp = std::move(rp)](a_ack) mutable -> caf::result<res_t> {
-					// launch work
-					auto res_promise = self->state.get(self);
-					self->request(caf::actor_cast<caf::actor>(self), caf::infinite, a_apply())
-					.then(std::move(rp));
-					return res_promise;
+				[handle_ack](a_ack) mutable {
+					return handle_ack(std::nullopt);
+				},
+				// request with extra res processor
+				[handle_ack](a_ack, custom_rp_f extra_rp) mutable {
+					return handle_ack(std::move(extra_rp));
 				}
 			};
 		}
 	};
 
 	// spawn & return worker
-	return enumval(opts & ReqOpts::Detached) ?
-		LA.spawn<caf::detached>(std::move(worker)) :
-		LA.spawn(std::move(worker));
+	return caf::actor_cast<typename rtraits::actor_type>(
+		enumval(opts & ReqOpts::Detached) ?
+			LA.spawn<caf::detached>(std::move(worker)) :
+			LA.spawn(std::move(worker))
+	);
 }
 
 // non-lazy version that immediately starts processing
@@ -200,12 +252,8 @@ auto request_impl(
 
 	request_impl<R>(LA, req, opts, f_request)
 	.map([&](auto&& req_worker) {
-		LA.request(req_worker, caf::infinite, a_ack()).then(
-			[=](res_t r) mutable { res_processor(std::move(r)); },
-			[=](const caf::error& er) mutable {
-				res_processor(res_t{ tl::unexpect, forward_caf_error(er) });
-			}
-		);
+		using custom_rp_f = typename rtraits::custom_rp_f;
+		LA.send(req_worker, a_ack(), custom_rp_f{std::move(res_processor)});
 	})
 	.or_else([&](const auto& er) {
 		if(er.ok()) {
@@ -224,47 +272,64 @@ auto request_impl(
 	});
 }
 
-template<typename C>
-auto request_data(link_actor& LA, ReqOpts opts, C res_processor) {
-	request_impl(
+// if actor-based request is used (result processor callback is not given)
+// then return delegated promise inside `caf::result< req result type >`
+template<typename R = void, typename F, typename... C>
+auto request_data_impl(link_actor& LA, Req req, ReqOpts opts, F f_request, C... res_processor) {
+	if constexpr(sizeof...(C) > 0)
+		return request_impl<R>(LA, req, opts, std::move(f_request), std::move(res_processor)...);
+	else {
+		using res_t = caf::result<typename detail::request_traits<R, F>::res_t>;
+		if( auto A = request_impl<R>(LA, req, opts, std::move(f_request)) )
+			return res_t{ LA.delegate(*A, a_ack()) };
+		else
+			return res_t{ unexpected_err_quiet(A.error()) };
+	}
+}
+
+template<typename... C>
+auto request_data(link_actor& LA, ReqOpts opts, C... res_processor) {
+	return request_data_impl(
 		LA, Req::Data, opts,
 		[Limpl = LA.spimpl()] { return Limpl->data(); },
-		std::move(res_processor)
+		std::move(res_processor)...
 	);
 }
 
-template<typename C>
-auto request_data(unsafe_t, link_actor& LA, ReqOpts opts, C res_processor) {
-	request_impl(
+template<typename... C>
+auto request_data(unsafe_t, link_actor& LA, ReqOpts opts, C... res_processor) {
+	return request_data_impl(
 		LA, Req::Data, opts,
 		[Limpl = LA.spimpl()]() -> obj_or_errbox { return Limpl->data(unsafe); },
-		std::move(res_processor)
+		std::move(res_processor)...
 	);
 }
 
-template<typename C>
-auto request_data_node(link_actor& LA, ReqOpts opts, C res_processor) {
-	using namespace allow_enumops;
-	// make uniform request, as node is extracted from downloaded object
-	request_impl(
-		LA, Req::DataNode, opts | ReqOpts::Uniform,
-		[Limpl = LA.spimpl()]() { return Limpl->data(); },
-		[rp = std::move(res_processor)](const auto& maybe_obj) mutable {
-			rp(maybe_obj.and_then( [&](const auto& obj) -> node_or_err {
-				if(auto n = obj->data_node())
-					return n;
-				return unexpected_err_quiet(Error::NotANode);
-			} ));
-		}
-	);
-}
-
-template<typename C>
-auto request_data_node(unsafe_t, link_actor& LA, ReqOpts opts, C res_processor) {
-	request_impl(
+template<typename... C>
+auto request_data_node(unsafe_t, link_actor& LA, ReqOpts opts, C... res_processor) {
+	return request_data_impl(
 		LA, Req::DataNode, opts,
 		[Limpl = LA.spimpl()]() -> node_or_errbox { return Limpl->data_node(unsafe); },
-		std::move(res_processor)
+		std::move(res_processor)...
+	);
+}
+
+template<typename... C>
+auto request_data_node(link_actor& LA, ReqOpts opts, C... res_processor) {
+	return request_data_impl(
+		LA, Req::DataNode, opts,
+		[Limpl = LA.spimpl()]() -> node_or_errbox {
+			return Limpl->data()
+			.and_then([&](const auto& obj) -> node_or_err {
+				if(obj) {
+					if(auto n = obj->data_node())
+						return n;
+					return unexpected_err_quiet(Error::NotANode);
+				}
+				return unexpected_err_quiet(Error::EmptyData);
+			});
+		},
+		std::move(res_processor)...
 	);
 }
 
