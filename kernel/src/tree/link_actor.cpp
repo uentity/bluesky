@@ -205,12 +205,9 @@ return {
 		adbg(this) << "<- a_data, status = " <<
 			to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
-		auto res = make_response_promise< obj_or_errbox >();
-		request_data(
-			*this, ropts_.data | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
-			[=](obj_or_errbox obj) mutable { res.deliver(std::move(obj)); }
+		return request_data(
+			*this, ropts_.data | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy)
 		);
-		return res;
 	},
 
 	// get data node
@@ -218,12 +215,9 @@ return {
 		adbg(this) << "<- a_data_node, status = " <<
 			to_string(impl.req_status(Req::Data)) << "," << to_string(impl.req_status(Req::DataNode)) << std::endl;
 
-		auto res = make_response_promise< node_or_errbox >();
-		request_data_node(
-			*this, ropts_.data_node | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
-			[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
+		return request_data_node(
+			*this, ropts_.data_node | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy)
 		);
-		return res;
 	},
 
 	// noop - implement in derived links

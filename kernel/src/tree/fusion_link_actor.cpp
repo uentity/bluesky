@@ -13,9 +13,6 @@
 #include <bs/kernel/types_factory.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
-using namespace allow_enumops;
-using bs_detail::shared;
-
 /*-----------------------------------------------------------------------------
  *  fusion_link impl
  *-----------------------------------------------------------------------------*/
@@ -108,16 +105,13 @@ auto fusion_link_actor::make_typed_behavior() -> typed_behavior {
 	return first_then_second(typed_behavior_overload{
 		// invoke populate with specified child type
 		[=](a_flnk_populate, std::string child_type_id, bool wait_if_busy) -> caf::result<node_or_errbox> {
-			auto res = make_response_promise<node_or_errbox>();
-			request_impl(
+			return request_data_impl(
 				*this, Req::DataNode,
 				make_ropts(Req::DataNode) | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
 				[Limpl = pimpl_, ctid = std::move(child_type_id)] {
 					return static_cast<fusion_link_impl&>(*Limpl).populate(ctid);
-				},
-				[=](node_or_errbox N) mutable { res.deliver(std::move(N)); }
+				}
 			);
-			return res;
 		},
 
 		// DataNode request = populate with empty child_type_id
@@ -130,12 +124,9 @@ auto fusion_link_actor::make_typed_behavior() -> typed_behavior {
 
 		// Data
 		[=](a_data, bool wait_if_busy) -> caf::result<obj_or_errbox> {
-			auto res = make_response_promise<obj_or_errbox>();
-			request_data(
-				*this, make_ropts(Req::Data) | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
-				[=](obj_or_errbox obj) mutable { res.deliver(std::move(obj)); }
+			return request_data(
+				*this, make_ropts(Req::Data) | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy)
 			);
-			return res;
 		},
 
 		// bridge manip
