@@ -27,12 +27,12 @@ public:
 	using Fusion::Fusion;
 
 private:
-	auto do_populate(sp_obj root, tree::link root_link, const std::string& child_type_id) -> error override {
-		PYBIND11_OVERLOAD_PURE(error, Fusion, populate, std::move(root), root_link, child_type_id);
+	auto do_populate(sp_obj root, tree::link root_link, prop::propdict params) -> error override {
+		PYBIND11_OVERLOAD_PURE(error, Fusion, populate, std::move(root), root_link, std::move(params));
 	}
 
-	auto do_pull_data(sp_obj root, tree::link root_link) -> error override {
-		PYBIND11_OVERLOAD_PURE(error, Fusion, pull_data, std::move(root), root_link);
+	auto do_pull_data(sp_obj root, tree::link root_link, prop::propdict params) -> error override {
+		PYBIND11_OVERLOAD_PURE(error, Fusion, pull_data, std::move(root), root_link, std::move(params));
 	}
 };
 

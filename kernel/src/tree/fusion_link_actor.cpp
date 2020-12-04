@@ -11,6 +11,11 @@
 #include "request_impl.h"
 
 #include <bs/kernel/types_factory.h>
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/propdict.h>
+
+#define DEBUG_ACTOR 0
+#include "actor_debug.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
@@ -57,15 +62,19 @@ auto fusion_link_impl::reset_bridge(sp_fusion&& new_bridge) -> void {
 }
 
 // request data via bridge
-auto fusion_link_impl::data() -> obj_or_err {
+auto fusion_link_impl::pull_data(prop::propdict params) -> obj_or_err {
 	if(req_status(Req::Data) != ReqStatus::OK) {
 		const auto B = bridge();
 		if(!B) return unexpected_err(Error::NoFusionBridge);
 
-		if(auto err = B->pull_data(data_, super_engine()))
+		if(auto err = B->pull_data(data_, super_engine(), std::move(params)))
 			return tl::make_unexpected(std::move(err));
 	}
 	return data_;
+}
+
+auto fusion_link_impl::data() -> obj_or_err {
+	return pull_data({});
 }
 
 // unsafe version returns cached value
@@ -74,14 +83,16 @@ auto fusion_link_impl::data(unsafe_t) const -> sp_obj {
 }
 
 // populate with specified child type
-auto fusion_link_impl::populate(const std::string& child_type_id) -> node_or_err {
+auto fusion_link_impl::populate(prop::propdict params) -> node_or_err {
 	// assume that if `child_type_id` is nonepmty,
 	// then we should force `populate()` regardless of status
-	if(req_status(Req::DataNode) != ReqStatus::OK || !child_type_id.empty()) {
+	if( req_status(Req::DataNode) != ReqStatus::OK
+		|| !prop::get_or<prop::string>(&params, "child_type_id", "").empty()
+	) {
 		const auto B = bridge();
 		if(!B) return unexpected_err(Error::NoFusionBridge);
 
-		if(auto err = B->populate(data_, super_engine(), child_type_id))
+		if(auto err = B->populate(data_, super_engine(), std::move(params)))
 			return tl::make_unexpected(std::move(err));
 	}
 	return data_->data_node();
@@ -103,29 +114,43 @@ auto fusion_link_actor::make_ropts(Req r) -> ReqOpts {
 
 auto fusion_link_actor::make_typed_behavior() -> typed_behavior {
 	return first_then_second(typed_behavior_overload{
-		// invoke populate with specified child type
-		[=](a_flnk_populate, std::string child_type_id, bool wait_if_busy) -> caf::result<node_or_errbox> {
+		// Data
+		[=](a_flnk_data, prop::propdict params, bool wait_if_busy) -> caf::result<obj_or_errbox> {
+			adbg(this) << "<- a_data, status = " << to_string(impl.req_status(Req::Data)) << ","
+				<< to_string(impl.req_status(Req::DataNode)) << std::endl;
 			return request_data_impl(
-				*this, Req::DataNode,
-				make_ropts(Req::DataNode) | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
-				[Limpl = pimpl_, ctid = std::move(child_type_id)] {
-					return static_cast<fusion_link_impl&>(*Limpl).populate(ctid);
+				*this, Req::Data,
+				make_ropts(Req::Data) | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
+				[Limpl = pimpl_, params = std::move(params)]() mutable {
+					return static_cast<fusion_link_impl&>(*Limpl).pull_data(std::move(params));
 				}
 			);
 		},
 
-		// DataNode request = populate with empty child_type_id
-		[=](a_data_node, bool wait_if_busy) -> caf::result<node_or_errbox> {
+		[=](a_data, bool wait_if_busy) -> caf::result<obj_or_errbox> {
 			return delegate(
 				caf::actor_cast<fusion_link::actor_type>(this),
-				a_flnk_populate(), std::string{}, wait_if_busy
+				a_flnk_data(), prop::propdict{}, wait_if_busy
 			);
 		},
 
-		// Data
-		[=](a_data, bool wait_if_busy) -> caf::result<obj_or_errbox> {
-			return request_data(
-				*this, make_ropts(Req::Data) | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy)
+		// DataNode
+		[=](a_flnk_populate, prop::propdict params, bool wait_if_busy) -> caf::result<node_or_errbox> {
+			adbg(this) << "<- a_data_node, status = " << to_string(impl.req_status(Req::Data)) << ","
+				<< to_string(impl.req_status(Req::DataNode)) << std::endl;
+			return request_data_impl(
+				*this, Req::DataNode,
+				make_ropts(Req::DataNode) | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy),
+				[Limpl = pimpl_, params = std::move(params)]() mutable {
+					return static_cast<fusion_link_impl&>(*Limpl).populate(std::move(params));
+				}
+			);
+		},
+
+		[=](a_data_node, bool wait_if_busy) -> caf::result<node_or_errbox> {
+			return delegate(
+				caf::actor_cast<fusion_link::actor_type>(this),
+				a_flnk_populate(), prop::propdict{}, wait_if_busy
 			);
 		},
 

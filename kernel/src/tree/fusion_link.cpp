@@ -7,9 +7,13 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include "fusion_link_actor.h"
+
 #include <bs/log.h>
 #include <bs/kernel/types_factory.h>
-#include "fusion_link_actor.h"
+
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/propdict.h>
 
 #define FIMPL static_cast<fusion_link_impl&>(*pimpl())
 
@@ -22,17 +26,17 @@ auto fusion_iface::is_uniform(const sp_obj&) const -> bool {
 	return true;
 }
 
-auto fusion_iface::pull_data(sp_obj root, link root_link) -> error {
+auto fusion_iface::pull_data(sp_obj root, link root_link, prop::propdict params) -> error {
 	return error::eval_safe([&] {
-		do_pull_data(std::move(root), std::move(root_link));
+		do_pull_data(std::move(root), std::move(root_link), std::move(params));
 	});
 }
 
-auto fusion_iface::populate(sp_obj root, link root_link, const std::string& child_type_id) -> error {
+auto fusion_iface::populate(sp_obj root, link root_link, prop::propdict params) -> error {
 	// check precondition: passed object contains valid node
 	if(root->data_node())
 		return error::eval_safe([&] {
-			do_populate(std::move(root), std::move(root_link), child_type_id);
+			do_populate(std::move(root), std::move(root_link), std::move(params));
 		});
 	else
 		return Error::NotANode;
@@ -73,14 +77,31 @@ fusion_link::fusion_link()
 	: super(std::make_shared<fusion_link_impl>(), false)
 {}
 
-auto fusion_link::populate(const std::string& child_type_id, bool wait_if_busy) const
--> node_or_err {
-	return pimpl()->actorf<node_or_errbox>(
-		*this, a_flnk_populate(), child_type_id, wait_if_busy
+auto fusion_link::pull_data(prop::propdict params, bool wait_if_busy) const -> obj_or_err {
+	return pimpl()->actorf<obj_or_errbox>(
+		*this, a_flnk_data(), std::move(params), wait_if_busy
 	);
 }
 
-auto fusion_link::populate(link::process_dnode_cb f, std::string child_type_id) const -> void {
+auto fusion_link::pull_data(link::process_data_cb f, prop::propdict params) const -> void {
+	using result_t = obj_or_errbox;
+
+	anon_request<caf::detached>(
+		actor(*this), kernel::radio::timeout(true), false,
+		[f = std::move(f), self = *this](result_t data) mutable {
+			f( std::move(data), std::move(self) );
+		},
+		a_flnk_data(), std::move(params), true
+	);
+}
+
+auto fusion_link::populate(prop::propdict params, bool wait_if_busy) const -> node_or_err {
+	return pimpl()->actorf<node_or_errbox>(
+		*this, a_flnk_populate(), std::move(params), wait_if_busy
+	);
+}
+
+auto fusion_link::populate(link::process_dnode_cb f, prop::propdict params) const -> void {
 	using result_t = node_or_errbox;
 
 	anon_request<caf::detached>(
@@ -88,7 +109,7 @@ auto fusion_link::populate(link::process_dnode_cb f, std::string child_type_id) 
 		[f = std::move(f), self = *this](result_t data) mutable {
 			f( std::move(data), std::move(self) );
 		},
-		a_flnk_populate(), std::move(child_type_id), true
+		a_flnk_populate(), std::move(params), true
 	);
 }
 

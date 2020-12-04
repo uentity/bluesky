@@ -19,7 +19,7 @@
 #include <bs/tree/fusion.h>
 #include <bs/tree/tree.h>
 
-#include <bs/serialize/base_types.h>
+#include <bs/serialize/cafbind.h>
 #include <bs/serialize/array.h>
 #include <bs/serialize/tree.h>
 
@@ -46,11 +46,14 @@ struct test_bridge : tree::fusion_iface {
 		return res;
 	}
 
-	auto do_pull_data(sp_obj root, tree::link root_lnk) -> error override {
+	auto do_pull_data(sp_obj root, tree::link root_lnk, prop::propdict) -> error override {
 		return perfect;
 	}
 
-	auto do_populate(sp_obj root, tree::link root_lnk, const std::string&) -> error override {
+	auto do_populate(sp_obj root, tree::link root_lnk, prop::propdict) -> error override {
+		bsout() << "<- populating [{}, {}]" <<
+			to_string(root_lnk.id()) << root_lnk.name(unsafe) << bs_end;
+
 		auto N = root->data_node();
 		if(!N) return tree::Error::NotANode;
 		const auto D = depth(root_lnk);
@@ -79,16 +82,22 @@ auto fetched_count() -> std::atomic<int>& {
 auto fetch_tree(tree::node_or_err N, tree::link lnk) {
 	using namespace blue_sky;
 
-	bsout() << "-> cb [{}, {}] {}: {}" <<
+	bsout() << "-> fetch_tree [D = {}, DN = {}] {}: valid = {}, is nill = {}, size = {}" <<
 		int(lnk.req_status(Req::Data)) << int(lnk.req_status(Req::DataNode)) <<
-		lnk.name(unsafe) << bool(N) << std::endl;
-	if(!N && N.error().code == tree::Error::NotANode) {
+		lnk.name(unsafe) << bool(N) <<
+		(N ? N->is_nil() : true) << (N ? N->size() : 0) << std::endl;
+
+	if((!N && N.error().code == tree::Error::NotANode) || N->is_nil()) {
 		++fetched_count();
 		return;
 	}
 
+	//for(auto& child_lnk : N->leafs())
+	//	child_lnk.data_node(fetch_tree);
+
 	anon_request(
 		N->actor(), kernel::radio::timeout(), false, [](const tree::links_v& leafs) {
+			bsout() << "-> fetch_tree::leafs size = {}" << leafs.size() << bs_end;
 			for(auto& child_lnk : leafs)
 				child_lnk.data_node(fetch_tree);
 		}, a_node_leafs(), tree::Key::AnyOrder

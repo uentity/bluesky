@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 
 	// test properties serialization
 	using namespace blue_sky::prop;
-	propdict D = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", std::vector{2L, 3L, 4L}}};
+	propdict D = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", {2L, 3L, 4L}}};
 	D.ss<integer>("E") = 142;
 	D.ss<timestamp>("now") = make_timestamp();
 	test_json(D["E"]);

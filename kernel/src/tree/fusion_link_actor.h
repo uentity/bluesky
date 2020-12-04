@@ -41,14 +41,13 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 
 	auto reset_bridge(sp_fusion&& new_bridge) -> void;
 
-	// implement `data`
+	// link API
 	auto data() -> obj_or_err override;
-
-	// unsafe version returns cached value
 	auto data(unsafe_t) const -> sp_obj override;
 
-	// populate with specified child type
-	auto populate(const std::string& child_type_id = "") -> node_or_err;
+	// fusion API
+	auto pull_data(prop::propdict params) -> obj_or_err;
+	auto populate(prop::propdict params) -> node_or_err;
 
 	ENGINE_TYPE_DECL
 
@@ -71,12 +70,12 @@ struct BS_HIDDEN_API fusion_link_actor : public cached_link_actor {
 
 	// part of behavior overloaded/added from super actor type
 	using typed_behavior_overload = caf::typed_behavior<
-		// get data
+		// link API
 		caf::replies_to<a_data, bool>::with<result_or_errbox<sp_obj>>,
-		// get data node
 		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
-		// populate (can download selected types)
-		caf::replies_to<a_flnk_populate, std::string, bool>::with<node_or_errbox>,
+		// Fusion API
+		caf::replies_to<a_flnk_data, prop::propdict, bool>::with<obj_or_errbox>,
+		caf::replies_to<a_flnk_populate, prop::propdict, bool>::with<node_or_errbox>,
 		// bridge get/set
 		caf::replies_to<a_flnk_bridge>::with<sp_fusion>,
 		caf::reacts_to<a_flnk_bridge, sp_fusion>

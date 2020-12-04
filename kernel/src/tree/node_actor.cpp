@@ -108,7 +108,9 @@ auto do_insert(
 			adbg(self) << "-> a_node_insert [L][" << to_string(L.id()) <<
 				"][" << L.name(unsafe) << "]" << std::endl;
 			// make insertion
-			auto ir = self->impl.insert(L, pol);
+			auto ir = insert_status<Key::ID>{};
+			if(auto er = error::eval_safe([&] { ir = self->impl.insert(L, pol); }))
+				return er;
 			// invoke postprocessing & deliver result
 			res.deliver(pp(ir));
 			// report success if insertion happened

@@ -18,9 +18,9 @@ NAMESPACE_BEGIN(blue_sky::tree)
 class BS_API fusion_iface {
 public:
 	/// download object's 'Data' content from third-party backend
-	auto pull_data(sp_obj root, link root_link) -> error;
+	auto pull_data(sp_obj root, link root_link, prop::propdict params = {}) -> error;
 	/// download object's children metadata (fill bundled node)
-	auto populate(sp_obj root, link root_link, const std::string& child_type_id = "") -> error;
+	auto populate(sp_obj root, link root_link, prop::propdict params = {}) -> error;
 	// [NOTE] `pull_data()` and `populate()` can be invoked in parallel
 
 	/// test if object is either pure container or pure data and can be fetched using single request
@@ -33,8 +33,8 @@ public:
 
 private:
 	/// derived fusion bridges must override these
-	virtual auto do_pull_data(sp_obj root, link root_link) -> error = 0;
-	virtual auto do_populate(sp_obj root, link root_link, const std::string& child_type_id) -> error = 0;
+	virtual auto do_pull_data(sp_obj root, link root_link, prop::propdict params) -> error = 0;
+	virtual auto do_populate(sp_obj root, link root_link, prop::propdict params) -> error = 0;
 };
 using sp_fusion = std::shared_ptr<fusion_iface>;
 
@@ -53,7 +53,9 @@ public:
 
 	using fusion_actor_type = caf::typed_actor<
 		// populate pointee with given children types
-		caf::replies_to<a_flnk_populate, std::string, bool>::with<node_or_errbox>,
+		caf::replies_to<a_flnk_data, prop::propdict, bool>::with<obj_or_errbox>,
+		// populate pointee with given children types
+		caf::replies_to<a_flnk_populate, prop::propdict, bool>::with<node_or_errbox>,
 		// get link's bridge
 		caf::replies_to<a_flnk_bridge>::with<sp_fusion>,
 		// set link's bridge
@@ -81,13 +83,12 @@ public:
 
 	static auto type_id_() -> std::string_view;
 
-	// force `fusion_iface::populate()` call with specified children types
-	// regardless of populate status
-	auto populate(const std::string& child_type_id, bool wait_if_busy = true) const
-	-> node_or_err;
-	// async populate
-	auto populate(process_dnode_cb f, std::string child_type_id) const
-	-> void;
+	// provide access to Fusion API of installed bridge
+	auto pull_data(prop::propdict params = {}, bool wait_if_busy = true) const -> obj_or_err;
+	auto pull_data(process_data_cb f, prop::propdict params) const -> void;
+
+	auto populate(prop::propdict params = {}, bool wait_if_busy = true) const -> node_or_err;
+	auto populate(process_dnode_cb f, prop::propdict params) const -> void;
 
 	// access to link's fusion bridge
 	auto bridge() const -> sp_fusion;

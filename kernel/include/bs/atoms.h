@@ -59,12 +59,6 @@ using a_subscribe = caf::atom_constant<caf::atom("bs subscrb")>;
 ///////////////////////////////////////////////////////////////////////////////
 //  link API
 //
-// async invoke `link::data()`
-using a_lnk_dcache = caf::atom_constant<caf::atom("tl dcache")>;
-// async invoke `fusion_link::populate()`
-using a_flnk_populate = caf::atom_constant<caf::atom("tfl pull")>;
-using a_flnk_bridge = caf::atom_constant<caf::atom("tfl bridge")>;
-
 using a_lnk_id = caf::atom_constant<caf::atom("tl id")>;
 using a_lnk_name = caf::atom_constant<caf::atom("tl name")>;
 using a_lnk_rename = caf::atom_constant<caf::atom("tl rename")>;
@@ -74,6 +68,11 @@ using a_lnk_oid = caf::atom_constant<caf::atom("tl oid")>;
 using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
 using a_lnk_inode = caf::atom_constant<caf::atom("tl inode")>;
 using a_lnk_flags = caf::atom_constant<caf::atom("tl flags")>;
+
+// async invoke `fusion_link::populate()`
+using a_flnk_data = caf::atom_constant<caf::atom("tfl data")>;
+using a_flnk_populate = caf::atom_constant<caf::atom("tfl dnode")>;
+using a_flnk_bridge = caf::atom_constant<caf::atom("tfl bridge")>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  node API

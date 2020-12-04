@@ -274,20 +274,29 @@ void py_bind_link(py::module& m) {
 
 		.def_property("bridge", &fusion_link::bridge, &fusion_link::reset_bridge)
 
+		.def("pull_data",
+			py::overload_cast<prop::propdict, bool>(&fusion_link::pull_data, py::const_),
+			"params"_a, "wait_if_busy"_a = true, nogil
+		)
+		.def("pull_data",
+			py::overload_cast<link::process_data_cb, prop::propdict>(&fusion_link::pull_data, py::const_),
+			"f"_a, "obj_type_id"_a, nogil
+		)
+
 		.def("populate",
-			py::overload_cast<const std::string&, bool>(&fusion_link::populate, py::const_),
+			py::overload_cast<prop::propdict, bool>(&fusion_link::populate, py::const_),
 			"child_type_id"_a, "wait_if_busy"_a = true, nogil
 		)
 		.def("populate",
-			py::overload_cast<link::process_dnode_cb, std::string>(&fusion_link::populate, py::const_),
+			py::overload_cast<link::process_dnode_cb, prop::propdict>(&fusion_link::populate, py::const_),
 			"f"_a, "obj_type_id"_a, nogil
 		)
 	;
 
 	py::class_<fusion_iface, py_fusion<>, std::shared_ptr<fusion_iface>>(m, "fusion_iface")
-		.def("populate", &fusion_iface::populate, "root"_a, "root_link"_a, "child_type_id"_a = "",
+		.def("populate", &fusion_iface::populate, "root"_a, "root_link"_a, "params"_a = prop::propdict{},
 			"Populate root object structure (children)")
-		.def("pull_data", &fusion_iface::pull_data, "root"_a, "root_link"_a,
+		.def("pull_data", &fusion_iface::pull_data, "root"_a, "root_link"_a, "params"_a = prop::propdict{},
 			"Fill root object content")
 	;
 
