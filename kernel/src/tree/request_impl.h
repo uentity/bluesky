@@ -167,12 +167,12 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 		// ... otherwise perform request on `a_ack` message
 		// prepare request result processor
 		auto rp = [self, opts, Limpl = std::move(Limpl)](res_t obj) mutable {
-			if constexpr(!rtraits::can_invoke_inplace) {
-				// deliver result to waiting client
-				self->state.get(self).deliver(obj);
-			}
-			// update status & quit
-			Limpl->rs_update_from_data(std::move(obj), enumval(opts & ReqOpts::DirectInvoke));
+			// update status
+			Limpl->rs_update_from_data(obj, enumval(opts & ReqOpts::DirectInvoke));
+			// deliver result to waiting client
+			if constexpr(!rtraits::can_invoke_inplace)
+				self->state.get(self).deliver(std::move(obj));
+			// and quit
 			self->quit();
 		};
 
