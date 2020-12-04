@@ -233,7 +233,7 @@ template<
 auto anon_request(Actor A, T timeout, bool high_priority, F f, Args&&... args) -> void {
 	kernel::radio::system().spawn<Os>([
 		high_priority, A = std::move(A), t = detail::cast_timeout(timeout), f = std::move(f),
-		args = std::forward_as_tuple(std::forward<Args>(args)...)
+		args = std::make_tuple(std::forward<Args>(args)...)
 	] (caf::event_based_actor* self) mutable {
 		std::apply([self, high_priority, A = std::move(A), t = std::move(t)](auto&&... args) {
 			return high_priority ?
@@ -267,7 +267,7 @@ auto anon_request_result(Actor A, T timeout, bool high_priority, F f, Args&&... 
 	// spawn worker actor that will make request and invoke `f`
 	return kernel::radio::system().spawn<Os>([
 		high_priority, A = std::move(A), t = detail::cast_timeout(timeout), f = std::move(f),
-		args = std::forward_as_tuple(std::forward<Args>(args)...)
+		args = std::make_tuple(std::forward<Args>(args)...)
 	] (caf::stateful_actor<rstate>* self) mutable {
 		// make request
 		std::apply([self, high_priority, A = std::move(A), t = std::move(t)](auto&&... args) {
