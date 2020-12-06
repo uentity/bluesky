@@ -64,7 +64,6 @@ template<typename R = void, typename F>
 auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 -> result_or_err<typename detail::request_traits<R, F>::actor_type> {
 	using namespace kernel::radio;
-	using namespace allow_enumops;
 
 	using rtraits = detail::request_traits<R, F>;
 	using res_t = typename rtraits::res_t;
@@ -239,49 +238,46 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 	);
 }
 
-// non-lazy version that immediately starts processing
-template<typename R = void, typename F, typename C>
-auto request_impl(
-	link_actor& LA, Req req, ReqOpts opts, F f_request, C res_processor
-) -> void {
-	using namespace allow_enumops;
+// If actor-based request is used (`res_processor` is not given)
+// then return delegated promise or request result inside `caf::result< req result type >`
+// Otherwise, immediately start processing and pipe result into specified `res_processor`
+template<typename R = void, typename F, typename... C>
+auto request_data_impl(link_actor& LA, Req req, ReqOpts opts, F f_request, C... res_processor) {
 	using rtraits = detail::request_traits<R, F>;
 	using res_t = typename rtraits::res_t;
+	using caf_res_t = caf::result<res_t>;
 
-	request_impl<R>(LA, req, opts, f_request)
-	.map([&](auto&& req_worker) {
-		using custom_rp_f = typename rtraits::custom_rp_f;
-		LA.send(req_worker, a_ack(), custom_rp_f{std::move(res_processor)});
-	})
-	.or_else([&](const auto& er) {
+	static_assert(sizeof...(C) < 2, "Only one result processor is supported");
+
+	const auto process_err = [&](auto&& er) -> res_t {
 		if(er.ok()) {
 			if constexpr(rtraits::can_invoke_inplace) {
 				// invoke request inplace & update status
 				auto res = rtraits::invoke_f_request(f_request, &LA);
 				LA.impl.rs_update_from_data(res, enumval(opts & ReqOpts::DirectInvoke));
-				// invoke extra processor
-				res_processor(std::move(res));
+				return res;
 			}
 			else
-				res_processor(unexpected_err("Can't invoke request inplace"));
+				return unexpected_err("Can't invoke request inplace");
 		}
 		else
-			res_processor(res_t{ tl::unexpect, er });
-	});
-}
+			return res_t{tl::unexpect, er};
+	};
 
-// if actor-based request is used (result processor callback is not given)
-// then return delegated promise inside `caf::result< req result type >`
-template<typename R = void, typename F, typename... C>
-auto request_data_impl(link_actor& LA, Req req, ReqOpts opts, F f_request, C... res_processor) {
-	if constexpr(sizeof...(C) > 0)
-		return request_impl<R>(LA, req, opts, std::move(f_request), std::move(res_processor)...);
-	else {
-		using res_t = caf::result<typename detail::request_traits<R, F>::res_t>;
-		if( auto A = request_impl<R>(LA, req, opts, std::move(f_request)) )
-			return res_t{ LA.delegate(*A, a_ack()) };
+	if(auto rworker = request_impl<R>(LA, req, opts, f_request)) {
+		if constexpr(sizeof...(C) > 0) {
+			using custom_rp_f = typename rtraits::custom_rp_f;
+			(LA.send(*rworker, a_ack(), custom_rp_f{std::move(res_processor)}), ...);
+		}
 		else
-			return res_t{ unexpected_err_quiet(A.error()) };
+			return caf_res_t{ LA.delegate(*rworker, a_ack()) };
+	}
+	else {
+		auto res = process_err(rworker.error());
+		if constexpr(sizeof...(C) > 0)
+			(res_processor(std::move(res)), ...);
+		else
+			return caf_res_t{ std::move(res) };
 	}
 }
 

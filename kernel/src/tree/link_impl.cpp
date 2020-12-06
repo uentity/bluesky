@@ -187,8 +187,9 @@ auto link_impl::rs_update_from_data(req_result rdata, bool broadcast) -> void {
 
 		// prepare transaction that will run after status is updated
 		const auto req_transaction = [&](Req, ReqStatus new_rs, ReqStatus old_rs) {
-			// send notification
-			send_home<high_prio>(*this, a_ack(), a_lnk_status(), req, new_rs, old_rs);
+			// send notification strictly if status changes
+			if(new_rs != old_rs)
+				send_home<high_prio>(*this, a_ack(), a_lnk_status(), req, new_rs, old_rs);
 
 			// for Data request if object is nil -> return error
 			if constexpr(req == Req::Data) {
