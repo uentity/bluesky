@@ -265,10 +265,16 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 			const auto load_then_answer = [&](auto req) {
 				using req_t = decltype(req);
 				using R = std::conditional_t<std::is_same_v<req_t, a_data>, obj_or_errbox, node_or_errbox>;
+				constexpr auto req_id = [&] {
+					if constexpr(std::is_same_v<req_t, a_data>) return Req::Data;
+					else return Req::DataNode;
+				}();
 
 				return [=](req_t, bool) mutable -> caf::result<R> {
 					// this handler triggered only once
 					become(orig_me);
+
+					impl.rs_reset(req_id, ReqReset::Always, ReqStatus::Busy);
 					// drop lazy load flag
 					impl.flags_ &= ~Flags::LazyLoad;
 					// get cached object
@@ -277,12 +283,26 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 
 					auto res = make_response_promise<R>();
 					request(objbase_actor::actor(*obj), caf::infinite, a_load(), std::move(obj))
-					.then([=](error::box er) mutable {
-						// if error happened - deliver it
-						if(er.ec) res.deliver(R{ tl::unexpect, std::move(er) });
-						// otherwise, forward data request to self (with orig_me installed)
-						res.delegate(actor(this), req_t(), true);
-					});
+					.then(
+						[=](error::box er) mutable {
+							// if error happened - deliver it
+							// [NOTE] assume that req status = status of lazy load op
+							if(er.ec) {
+								impl.rs_reset(req_id, ReqReset::Always, ReqStatus::Error);
+								res.deliver(R{ tl::unexpect, std::move(er) });
+							}
+							// otherwise, forward data request to self (with orig_me installed)
+							else {
+								impl.rs_reset(req_id, ReqReset::Always, ReqStatus::OK);
+								res.delegate(actor(this), req_t(), true);
+							}
+						},
+
+						[=](const caf::error& er) mutable {
+							impl.rs_reset(req_id, ReqReset::Always, ReqStatus::Error);
+							res.deliver(R{ tl::unexpect, forward_caf_error(er) });
+						}
+					);
 					return res;
 				};
 			};
