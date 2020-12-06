@@ -110,7 +110,7 @@ auto link_impl::rs_apply(Req req, function_view< void() > f, ReqReset cond, ReqS
 		(cond == ReqReset::IfEq && self == cond_value) ||
 		(cond == ReqReset::IfNeq && self != cond_value)
 	) {
-		f();
+		error::eval_safe([&] { f(); });
 	}
 	return self;
 }

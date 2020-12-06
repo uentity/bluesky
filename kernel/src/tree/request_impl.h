@@ -61,54 +61,13 @@ NAMESPACE_END(detail)
 // If opts::Uniform is true, then both status values are changed at once.
 // Returns worker actor handle, result can be obtain in lazy manner by sending `a_ack` message to it
 template<typename R = void, typename F>
-auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
--> result_or_err<typename detail::request_traits<R, F>::actor_type> {
-	using namespace kernel::radio;
-
+auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts, F f_request)
+-> typename detail::request_traits<R, F>::actor_type {
 	using rtraits = detail::request_traits<R, F>;
 	using res_t = typename rtraits::res_t;
 	using worker_ret_t = typename rtraits::worker_ret_t;
 
-	auto err_if_nok = false;
-	const auto req_transaction = [&](Req req, ReqStatus new_rs, ReqStatus old_rs) {
-		// restore status if we were only allowed to run in OK state
-		if(enumval(opts & ReqOpts::ErrorIfNOK)) {
-			err_if_nok = true;
-			return false;
-		}
-		else {
-			// send notification
-			link_impl::send_home<high_prio>(&LA, a_ack(), a_lnk_status(), req, new_rs, old_rs);
-			return true;
-		}
-	};
-
-	// change status to Busy if it wasn't OK
-	auto cond = ReqReset::IfNeq;
-	if(enumval(opts) & enumval(ReqOpts::Uniform)) cond |= ReqReset::Broadcast;
-	const auto prev_rs = LA.impl.rs_reset(req, cond, ReqStatus::Busy, ReqStatus::OK, req_transaction);
-
-	// early error reporting
-	if(err_if_nok)
-		return unexpected_err_quiet(Error::EmptyData);
-	if(prev_rs == ReqStatus::Busy && enumval(opts & (ReqOpts::ErrorIfBusy | ReqOpts::DirectInvoke)))
-		return unexpected_err_quiet(Error::LinkBusy);
-
-	// detect inplace invoke
-	if constexpr(rtraits::can_invoke_inplace) {
-		if(prev_rs == ReqStatus::OK && enumval(opts & ReqOpts::HasDataCache))
-			opts |= ReqOpts::DirectInvoke;
-	}
-	// return OK error to indicate that work mst be invoked inplace
-	if(enumval(opts & ReqOpts::DirectInvoke))
-		return unexpected_err_quiet(perfect);
-
-	// don't start detached actor if status is OK or we start waiting
-	if(prev_rs == ReqStatus::OK || prev_rs == ReqStatus::Busy)
-		opts &= ~ReqOpts::Detached;
-
-	// worker stateful actor that will invoke request and process result
-	// we need state to share lazily response promise
+	// we need state to share response promise
 	struct rstate {
 		std::optional<caf::typed_response_promise<res_t>> res;
 
@@ -118,7 +77,7 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 		}
 	};
 
-	// worker stateful actor that will invoke request and process result or wait for it
+	// define stateful actor that will invoke request and process result or wait for it
 	auto worker = [=, f = std::move(f_request), Limpl = LA.spimpl()]
 	(caf::stateful_actor<rstate>* self) mutable -> caf::behavior {
 		using custom_rp_f = typename rtraits::custom_rp_f;
@@ -167,7 +126,7 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 		// prepare request result processor
 		auto rp = [self, opts, Limpl = std::move(Limpl)](res_t obj) mutable {
 			// update status
-			Limpl->rs_update_from_data(obj, enumval(opts & ReqOpts::DirectInvoke));
+			Limpl->rs_update_from_data(obj, enumval(opts & ReqOpts::Uniform));
 			// deliver result to waiting client
 			if constexpr(!rtraits::can_invoke_inplace)
 				self->state.get(self).deliver(std::move(obj));
@@ -238,6 +197,62 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 	);
 }
 
+// Launch request actor or return error to indicate fail or inplace invoke (error == OK)
+template<typename R = void, typename F>
+auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
+-> result_or_err<typename detail::request_traits<R, F>::actor_type> {
+	using rtraits = detail::request_traits<R, F>;
+	using res_t = result_or_err<typename rtraits::actor_type>;
+	auto res = std::optional<res_t>{};
+
+	const auto request_tr = [&](Req req, ReqStatus new_rs, ReqStatus prev_rs) {
+		// check if unable to perform request
+		if(enumval(opts & ReqOpts::ErrorIfNOK) && prev_rs != ReqStatus::OK)
+			res.emplace(unexpected_err_quiet(Error::EmptyData));
+		else if(prev_rs == ReqStatus::Busy && enumval(opts & (ReqOpts::ErrorIfBusy | ReqOpts::DirectInvoke)))
+			res.emplace(unexpected_err_quiet(Error::LinkBusy));
+		// revert status (return false) in case of error
+		if(res) return false;
+
+		// by default, change to Busy state only if was in non-OK
+		bool do_change_status = prev_rs != ReqStatus::OK && prev_rs != ReqStatus::Busy;
+
+		// if possible, invoke req inplace if status was OK
+		if constexpr(rtraits::can_invoke_inplace) {
+			if(prev_rs == ReqStatus::OK && enumval(opts & ReqOpts::HasDataCache))
+				opts |= ReqOpts::DirectInvoke;
+		}
+
+		// if request must be ivoked inplace return OK error, otherwise spawn worker actor
+		if(enumval(opts & ReqOpts::DirectInvoke)) {
+			res.emplace(unexpected_err_quiet(perfect));
+		}
+		else {
+			// don't start detached actor if status is OK or we start waiting
+			if(prev_rs == ReqStatus::OK || prev_rs == ReqStatus::Busy)
+				opts &= ~ReqOpts::Detached;
+			// spawn request worker actor
+			res.emplace(make_request_actor<R>(prev_rs, LA, req, opts, std::move(f_request)));
+			// if we do some non-waiting work, we must change to Busy
+			do_change_status = prev_rs != ReqStatus::Busy;
+		}
+
+		// change to Busy state only if was in non-OK
+		if(do_change_status) {
+			// send notification
+			link_impl::send_home<high_prio>(&LA, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
+			return true;
+		}
+		return false;
+	};
+
+	// change status to Busy & invoke request transaction
+	auto cond = ReqReset::Always;
+	if(enumval(opts) & enumval(ReqOpts::Uniform)) cond |= ReqReset::Broadcast;
+	LA.impl.rs_reset(req, cond, ReqStatus::Busy, ReqStatus::OK, request_tr);
+	return std::move(*res);
+}
+
 // If actor-based request is used (`res_processor` is not given)
 // then return delegated promise or request result inside `caf::result< req result type >`
 // Otherwise, immediately start processing and pipe result into specified `res_processor`
@@ -254,7 +269,7 @@ auto request_data_impl(link_actor& LA, Req req, ReqOpts opts, F f_request, C... 
 			if constexpr(rtraits::can_invoke_inplace) {
 				// invoke request inplace & update status
 				auto res = rtraits::invoke_f_request(f_request, &LA);
-				LA.impl.rs_update_from_data(res, enumval(opts & ReqOpts::DirectInvoke));
+				LA.impl.rs_update_from_data(res, enumval(opts & ReqOpts::Uniform));
 				return res;
 			}
 			else
