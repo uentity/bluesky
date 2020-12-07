@@ -303,12 +303,32 @@ void py_bind_link(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  map_link
 	//
+	// there's no way in Python to select function overload based an arg types, so need to introduce
+	// additional enum
+	enum class MappingLevel { Link, Node };
+	py::enum_<MappingLevel>(m, "MappingLevel")
+		.value("Link", MappingLevel::Link)
+		.value("Node", MappingLevel::Node)
+	;
+
 	py::class_<map_link, link>(m, "map_link")
-		.def(py::init<
-				std::string, map_link::mapper_f, link_or_node, link_or_node,
-				Event, TreeOpts, Flags
-			>(),
-			"name"_a, "mf"_a, "src_node"_a, "dest_node"_a = link_or_node{},
+		.def(py::init([](
+				MappingLevel mlevel, std::string name, py::function py_mf, link_or_node src, link_or_node dst,
+				Event update_on, TreeOpts opts, Flags flags
+			) {
+				auto mf = [&]() -> map_link::mapper_f {
+					if(mlevel == MappingLevel::Link)
+						return py::cast<map_link::link_mapper_f>(std::move(py_mf));
+					else
+						return py::cast<map_link::node_mapper_f>(std::move(py_mf));
+				}();
+
+				return map_link(
+					std::move(name), std::move(mf), std::move(src), std::move(dst),
+					update_on, opts, flags
+				);
+			}),
+			"mlevel"_a, "name"_a, "mf"_a, "src_node"_a, "dest_node"_a = link_or_node{},
 			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::DetachedWorkers,
 			"flags"_a = Flags::Plain
 		)
