@@ -39,7 +39,7 @@ auto fusion_iface::populate(sp_obj root, link root_link, prop::propdict params) 
 			do_populate(std::move(root), std::move(root_link), std::move(params));
 		});
 	else
-		return Error::NotANode;
+		return error::quiet(Error::NotANode);
 }
 
 /*-----------------------------------------------------------------------------
