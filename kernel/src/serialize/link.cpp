@@ -21,7 +21,6 @@
 
 using namespace cereal;
 using namespace blue_sky;
-using blue_sky::detail::shared;
 
 /*-----------------------------------------------------------------------------
  *  inode
@@ -151,14 +150,35 @@ CEREAL_REGISTER_TYPE_WITH_NAME(tree::sym_link_impl, "sym_link")
 //  fusion_link_impl
 //
 BSS_FCN_INL_BEGIN(serialize, tree::fusion_link_impl)
+	using namespace blue_sky::tree;
 	if constexpr(Archive::is_saving::value) {
 		ar( make_nvp("bridge", t.bridge_) );
+		// save status values
+		ar(
+			make_nvp("data_status", t.req_status(Req::Data)),
+			make_nvp("dnode_status", t.req_status(Req::DataNode))
+		);
+		// save cached object
+		ar( make_nvp("data", t.data_) );
 	}
 	else {
 		// load bridge with deferred trial
 		ar(defer_failed(
 			t.bridge_,
 			[&t](auto B) { t.bridge_ = std::move(B); },
+			PtrInitTrigger::SuccessAndRetry
+		));
+		// restore status
+		tree::ReqStatus s;
+		ar(make_nvp("data_status", s));
+		t.rs_reset(Req::Data, ReqReset::Always, s);
+		ar(make_nvp("dnode_status", s));
+		t.rs_reset(Req::DataNode, ReqReset::Always, s);
+
+		// load data with deferred 2nd trial
+		ar(defer_failed(
+			t.data_,
+			[&](auto obj) { t.data_ = std::move(obj); },
 			PtrInitTrigger::SuccessAndRetry
 		));
 	}
