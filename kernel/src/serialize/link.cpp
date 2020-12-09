@@ -18,6 +18,7 @@
 #include "../tree/map_engine.h"
 
 #include <cereal/types/chrono.hpp>
+#include <cereal/types/unordered_map.hpp>
 
 using namespace cereal;
 using namespace blue_sky;
@@ -183,17 +184,49 @@ BSS_FCN_INL_BEGIN(serialize, tree::fusion_link_impl)
 	}
 
 	serialize<tree::ilink_impl>::go(ar, t, version);
-	//ar( make_nvp("linkbase", base_class<tree::ilink_impl>(&t)) );
 BSS_FCN_INL_END(serialize, tree::fusion_link_impl)
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::fusion_link_impl)
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::fusion_link_impl, "fusion_link")
 
 ///////////////////////////////////////////////////////////////////////////////
-//  map_link - not serialized
+//  map_link
 //
-CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link_impl, tree::map_link_impl)
+BSS_FCN_INL_BEGIN(serialize, tree::map_link_impl_base)
+	if constexpr(Archive::is_saving::value) {
+		// dump contained node only if map_link owns it
+		if(t.out_.handle().id() == t.id_)
+			ar(make_nvp( "out", t.out_ ));
+		else
+			ar(make_nvp( "out", tree::node::nil() ));
+	}
+	else {
+		// load out node
+		tree::node out_node;
+		ar(make_nvp( "out", out_node ));
+		if(t.out_ = out_node)
+			t.link_impl::propagate_handle(t.out_);
+	}
+
+	serialize<tree::link_impl>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::map_link_impl_base)
+
+
+BSS_FCN_INL_BEGIN(serialize, tree::map_link_impl)
+	ar(make_nvp( "io_map", t.io_map_  ));
+	serialize<tree::map_link_impl_base>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::map_link_impl)
+
+
+BSS_FCN_INL_BEGIN(serialize, tree::map_node_impl)
+	serialize<tree::map_link_impl_base>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::map_node_impl)
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link_impl, tree::map_link_impl_base)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::map_link_impl_base, tree::map_link_impl)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::map_link_impl_base, tree::map_node_impl)
 CEREAL_REGISTER_TYPE_WITH_NAME(tree::map_link_impl, "map_link")
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::map_node_impl, "map_node")
 
 /*-----------------------------------------------------------------------------
  *  link
@@ -201,10 +234,8 @@ CEREAL_REGISTER_TYPE_WITH_NAME(tree::map_link_impl, "map_link")
 BSS_FCN_BEGIN(serialize, tree::link)
 	// [NOTE] intentionally do net serialize owner, it will be set up when parent node is loaded
 	if constexpr(Archive::is_saving::value) {
-		// for nil & map links save empty impl pointer
-		const auto Limpl = !t || t.type_id() == tree::map_link::type_id_() ?
-			tree::sp_limpl{} : t.pimpl_;
-		ar(make_nvp("link", Limpl));
+		// for nil link save empty impl pointer
+		ar(make_nvp( "link", t ? t.pimpl_ : tree::sp_limpl{} ));
 	}
 	else {
 		ar(make_nvp("link", t.pimpl_));

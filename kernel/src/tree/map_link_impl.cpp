@@ -21,6 +21,10 @@ NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  map_link_impl_base
  *-----------------------------------------------------------------------------*/
+map_link_impl_base::map_link_impl_base() :
+	in_(node::nil()), out_(node::nil()), update_on_(Event::None), opts_(TreeOpts::Normal), is_link_mapper(false)
+{}
+
 map_link_impl_base::map_link_impl_base(
 	bool is_link_mapper_, std::string name, link_or_node input, link_or_node output,
 	Event update_on, TreeOpts opts, Flags f
@@ -63,6 +67,11 @@ auto map_link_impl_base::data_node(unsafe_t) const -> node { return out_; }
 /*-----------------------------------------------------------------------------
  *  map_link_impl
  *-----------------------------------------------------------------------------*/
+// default ctor installs noop mapping fn
+map_link_impl::map_link_impl() :
+	map_link_impl_base(), mf_([](auto&&... args) { return link{}; })
+{}
+
 auto map_link_impl::clone(bool deep) const -> sp_limpl {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
 	return std::make_shared<map_link_impl>(mf_, name_, in_, node::nil(), update_on_, opts_, flags_);
@@ -292,6 +301,11 @@ ENGINE_TYPE_DEF(map_link_impl, "map_link")
 /*-----------------------------------------------------------------------------
  *  map_node_impl
  *-----------------------------------------------------------------------------*/
+// default ctor installs noop mapping fn
+map_node_impl::map_node_impl() :
+	map_link_impl_base(), mf_(noop)
+{}
+
 template<bool DiscardResult = false>
 static auto spawn_mapper_job(map_node_impl* impl, map_link_actor* self)
 -> std::conditional_t<DiscardResult, void, caf::result<node_or_errbox>> {
