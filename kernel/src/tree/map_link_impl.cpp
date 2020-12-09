@@ -297,8 +297,7 @@ static auto spawn_mapper_job(map_node_impl* impl, map_link_actor* self)
 -> std::conditional_t<DiscardResult, void, caf::result<node_or_errbox>> {
 	// safely invoke mapper and return output node on success
 	auto invoke_mapper =
-		[pimpl = std::static_pointer_cast<map_node_impl>(self->pimpl_)]
-		(caf::event_based_actor* rworker) -> node_or_errbox {
+		[pimpl = std::static_pointer_cast<map_node_impl>(self->pimpl_)]() -> node_or_errbox {
 			if(auto er = error::eval_safe([&] { pimpl->mf_(pimpl->in_, pimpl->out_); }))
 				return tl::make_unexpected(er.pack());
 			return pimpl->out_;

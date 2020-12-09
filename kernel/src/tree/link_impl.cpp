@@ -30,7 +30,7 @@ link_impl::link_impl(std::string name, Flags f)
 {}
 
 link_impl::link_impl()
-	: link_impl("", Flags::Plain)
+	: link_impl({}, Flags::Plain)
 {}
 
 link_impl::~link_impl() = default;

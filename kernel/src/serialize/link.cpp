@@ -128,7 +128,6 @@ BSS_FCN_INL_BEGIN(serialize, tree::weak_link_impl)
 	}
 
 	serialize<tree::ilink_impl>::go(ar, t, version);
-	//ar( make_nvp("linkbase", base_class<tree::ilink_impl>(&t)) );
 BSS_FCN_INL_END(serialize, tree::weak_link_impl)
 
 CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::weak_link_impl)
@@ -209,11 +208,14 @@ BSS_FCN_BEGIN(serialize, tree::link)
 	}
 	else {
 		ar(make_nvp("link", t.pimpl_));
-		if(!t.pimpl_) t = tree::link{};
-		// ID is ready, we can start internal actor
-		t.start_engine();
-		// if pointee is a node, correct it's handle
-		t.pimpl()->propagate_handle();
+		if(t.pimpl_) {
+			// ID is ready, we can start internal actor
+			t.start_engine();
+			// if pointee is a node, correct it's handle
+			t.pimpl()->propagate_handle();
+		}
+		else
+			t = tree::link{};
 	}
 BSS_FCN_END
 

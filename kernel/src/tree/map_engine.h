@@ -43,7 +43,6 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  base link_impl API
 	//
-	map_link_impl_base();
 	map_link_impl_base(
 		bool is_link_mapper, std::string name, link_or_node input, link_or_node output,
 		Event update_on, TreeOpts opts, Flags f
@@ -82,8 +81,6 @@ class BS_HIDDEN_API map_link_impl : public map_link_impl_base {
 public:
 	using link_mapper_f = map_link::link_mapper_f;
 
-	map_link_impl();
-
 	template<typename... Args>
 	explicit map_link_impl(link_mapper_f mf, Args&&... args) :
 		map_link_impl_base(true, std::forward<Args>(args)...), mf_(std::move(mf))
@@ -114,8 +111,6 @@ public:
 class BS_HIDDEN_API map_node_impl : public map_link_impl_base {
 public:
 	using node_mapper_f = map_link::node_mapper_f;
-
-	map_node_impl();
 
 	template<typename... Args>
 	explicit map_node_impl(node_mapper_f mf, Args&&... args) :
