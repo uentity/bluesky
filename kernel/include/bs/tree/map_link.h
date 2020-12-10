@@ -17,6 +17,7 @@ using link_or_node = std::variant<link, node>;
 class BS_API map_link : public link {
 public:
 	using super = link;
+	using engine_impl = class map_link_impl_base;
 	using link_mapper_f = std::function< link(link /* source */, link /* existing dest */) >;
 	using node_mapper_f = std::function< void(node /* source */, node /* existing dest */) >;
 
@@ -27,10 +28,19 @@ public:
 		std::string name, mapper_f mf, link_or_node src_node, link_or_node dest_node = {},
 		Event update_on = Event::DataModified, TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
 	);
+	/// with custom tag
+	map_link(
+		uuid tag, std::string name, mapper_f mf, link_or_node src_node, link_or_node dest_node = {},
+		Event update_on = Event::DataModified, TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
+	);
+	/// construct from existing copy of map_link but with another mapping
+	map_link(const map_link& rhs, mapper_f mf, link_or_node src_node, link_or_node dest_node = {});
+
 	map_link(const link& rhs);
 
 	static auto type_id_() -> std::string_view;
 
+	auto tag() const -> uuid;
 	auto input() const -> node;
 	auto output() const -> node;
 

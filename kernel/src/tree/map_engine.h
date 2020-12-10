@@ -43,10 +43,10 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  base link_impl API
 	//
-	map_link_impl_base();
+	map_link_impl_base(bool is_link_mapper);
 
 	map_link_impl_base(
-		bool is_link_mapper, std::string name, link_or_node input, link_or_node output,
+		bool is_link_mapper, uuid tag, std::string name, link_or_node input, link_or_node output,
 		Event update_on, TreeOpts opts, Flags f
 	);
 
@@ -71,8 +71,9 @@ public:
 
 	// data members
 	node in_, out_;
+	uuid tag_;
 	Event update_on_;
-	const TreeOpts opts_;
+	TreeOpts opts_;
 	const bool is_link_mapper;
 };
 
@@ -86,8 +87,8 @@ public:
 	map_link_impl();
 
 	template<typename... Args>
-	explicit map_link_impl(link_mapper_f mf, Args&&... args) :
-		map_link_impl_base(true, std::forward<Args>(args)...), mf_(std::move(mf))
+	explicit map_link_impl(uuid tag, link_mapper_f mf, Args&&... args) :
+		map_link_impl_base(true, tag, std::forward<Args>(args)...), mf_(std::move(mf))
 	{}
 
 	auto clone(bool deep) const -> sp_limpl override final;
@@ -119,8 +120,8 @@ public:
 	map_node_impl();
 
 	template<typename... Args>
-	explicit map_node_impl(node_mapper_f mf, Args&&... args) :
-		map_link_impl_base(false, std::forward<Args>(args)...), mf_(std::move(mf))
+	explicit map_node_impl(uuid tag, node_mapper_f mf, Args&&... args) :
+		map_link_impl_base(false, tag, std::forward<Args>(args)...), mf_(std::move(mf))
 	{}
 
 	auto clone(bool deep) const -> sp_limpl override final;

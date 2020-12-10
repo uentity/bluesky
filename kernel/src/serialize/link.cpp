@@ -220,6 +220,9 @@ BSS_FCN_INL_BEGIN(serialize, tree::map_link_impl_base)
 		if(t.out_ = out_node)
 			t.link_impl::propagate_handle(t.out_);
 	}
+	// dump settings
+	ar(make_nvp("tag", t.tag_));
+	ar(make_nvp("update_on", t.update_on_), make_nvp("opts", t.opts_));
 
 	serialize_status(ar, t);
 	serialize<tree::link_impl>::go(ar, t, version);

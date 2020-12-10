@@ -21,14 +21,15 @@ NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  map_link_impl_base
  *-----------------------------------------------------------------------------*/
-map_link_impl_base::map_link_impl_base() :
-	in_(node::nil()), out_(node::nil()), update_on_(Event::None), opts_(TreeOpts::Normal), is_link_mapper(false)
+map_link_impl_base::map_link_impl_base(bool is_link_mapper) :
+	in_(node::nil()), out_(node::nil()), tag_(), update_on_(Event::None), opts_(TreeOpts::Normal),
+	is_link_mapper(is_link_mapper)
 {}
 
 map_link_impl_base::map_link_impl_base(
-	bool is_link_mapper_, std::string name, link_or_node input, link_or_node output,
+	bool is_link_mapper_, uuid tag, std::string name, link_or_node input, link_or_node output,
 	Event update_on, TreeOpts opts, Flags f
-) : super(std::move(name), f), update_on_(update_on), opts_(opts), is_link_mapper(is_link_mapper_)
+) : super(std::move(name), f), tag_(tag), update_on_(update_on), opts_(opts), is_link_mapper(is_link_mapper_)
 {
 	static const auto extract_node = [](node& lhs, auto&& rhs) {
 		visit(meta::overloaded{
@@ -69,12 +70,12 @@ auto map_link_impl_base::data_node(unsafe_t) const -> node { return out_; }
  *-----------------------------------------------------------------------------*/
 // default ctor installs noop mapping fn
 map_link_impl::map_link_impl() :
-	map_link_impl_base(), mf_([](auto&&... args) { return link{}; })
+	map_link_impl_base(true), mf_([](auto&&... args) { return link{}; })
 {}
 
 auto map_link_impl::clone(bool deep) const -> sp_limpl {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
-	return std::make_shared<map_link_impl>(mf_, name_, in_, node::nil(), update_on_, opts_, flags_);
+	return std::make_shared<map_link_impl>(tag_, mf_, name_, in_, node::nil(), update_on_, opts_, flags_);
 }
 
 auto map_link_impl::erase(map_link_actor* self, lid_type src_lid) -> void {
@@ -303,7 +304,7 @@ ENGINE_TYPE_DEF(map_link_impl, "map_link")
  *-----------------------------------------------------------------------------*/
 // default ctor installs noop mapping fn
 map_node_impl::map_node_impl() :
-	map_link_impl_base(), mf_(noop)
+	map_link_impl_base(false), mf_(noop)
 {}
 
 template<bool DiscardResult = false>
@@ -333,7 +334,7 @@ static auto spawn_mapper_job(map_node_impl* impl, map_link_actor* self)
 
 auto map_node_impl::clone(bool deep) const -> sp_limpl {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
-	return std::make_shared<map_node_impl>(mf_, name_, in_, node::nil(), update_on_, opts_, flags_);
+	return std::make_shared<map_node_impl>(tag_, mf_, name_, in_, node::nil(), update_on_, opts_, flags_);
 }
 
 auto map_node_impl::erase(map_link_actor* self, lid_type) -> void {
