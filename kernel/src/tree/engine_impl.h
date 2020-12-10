@@ -32,21 +32,6 @@ using engine_impl_mutex = caf::detail::shared_spinlock;
 
 /// tree element must inherit impl class from this one
 class engine::impl {
-private:
-	template<typename Handle>
-	using if_engine_handle = std::enable_if_t<std::is_base_of_v<engine, Handle>>;
-
-	template<typename Handle>
-	static decltype(auto) get_impl(const Handle& H) {
-		if constexpr(std::is_base_of_v<engine, Handle>)
-			return static_cast<typename Handle::engine_impl&>(*static_cast<const engine&>(H).pimpl_);
-		else if constexpr(std::is_base_of_v<engine::impl, Handle>)
-			return H;
-	}
-
-	template<typename Handle>
-	using engine_impl_t = std::remove_reference_t<decltype( get_impl(std::declval<Handle>()) )>;
-
 public:
 	// mixin to obtain Item instance from impl
 	template<typename Item>
@@ -62,6 +47,30 @@ public:
 	protected:
 		engine::weak_ptr<Item> super_;
 	};
+
+	/// obtan conrecte downcasted impl realization from handle
+	template<typename EngineImpl, typename Handle>
+	static decltype(auto) pimpl(const Handle& H) {
+		if constexpr(std::is_base_of_v<engine, Handle>)
+			return static_cast<EngineImpl&>(*static_cast<const engine&>(H).pimpl_);
+		else if constexpr(std::is_base_of_v<engine::impl, Handle>)
+			return static_cast<const EngineImpl&>(H);
+	}
+
+	template<typename Handle>
+	static decltype(auto) pimpl(const Handle& H) {
+		if constexpr(std::is_base_of_v<engine, Handle>)
+			return pimpl<typename Handle::engine_impl>(H);
+		else if constexpr(std::is_base_of_v<engine::impl, Handle>)
+			return H;
+	}
+
+private:
+	template<typename Handle>
+	using if_engine_handle = std::enable_if_t<std::is_base_of_v<engine, Handle>>;
+
+	template<typename Handle>
+	using engine_impl_t = std::remove_reference_t<decltype( pimpl(std::declval<Handle>()) )>;
 
 public:
 	using sp_engine_impl = std::shared_ptr<impl>;
@@ -102,19 +111,19 @@ public:
 	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
 	static auto actorf(const Handle& H, caf::duration timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
-			*get_impl(H).factor(&H), Handle::engine_impl::actor(H), timeout, std::forward<Args>(args)...
+			*pimpl(H).factor(&H), Handle::engine_impl::actor(H), timeout, std::forward<Args>(args)...
 		);
 	}
 
 	/// same as above, but substitute configured timeouts
 	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
 	static auto actorf(const Handle& H, Args&&... args) {
-		return actorf<R>(H, get_impl(H).timeout(false), std::forward<Args>(args)...);
+		return actorf<R>(H, pimpl(H).timeout(false), std::forward<Args>(args)...);
 	}
 
 	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
 	static auto actorf(long_op_t, const Handle& H, Args&&... args) {
-		return actorf<R>(H, get_impl(H).timeout(true), std::forward<Args>(args)...);
+		return actorf<R>(H, pimpl(H).timeout(true), std::forward<Args>(args)...);
 	}
 
 	/// send message to home group with compile-time check against home actor type
@@ -132,7 +141,7 @@ public:
 	>
 	static auto send_home(const Handle& H, Ts&&... xs) -> void {
 		using home_actor_t = typename engine_impl_t<Handle>::home_actor_type;
-		checked_send<home_actor_t, P>(get_impl(H).home, std::forward<Ts>(xs)...);
+		checked_send<home_actor_t, P>(pimpl(H).home, std::forward<Ts>(xs)...);
 	}
 
 private:
