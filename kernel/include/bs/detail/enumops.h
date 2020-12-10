@@ -32,13 +32,8 @@ static constexpr auto enumops_allowed(int) -> std::enable_if_t<enumops_enabled_v
 	return std::is_enum_v<T>;
 }
 
-template<typename T, typename = void> struct underlying_type {};
+template<typename T, typename = void> struct underlying_type { using type = T; };
 template<typename T> using underlying_type_t = typename underlying_type<T>::type;
-
-template<typename T>
-struct underlying_type<T, std::enable_if_t<std::is_integral_v<T>>> {
-	using type = T;
-};
 
 template<typename T>
 struct underlying_type<T, std::enable_if_t<std::is_enum_v<T>>> {
