@@ -11,6 +11,7 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/boost_uuid.h>
 
+#include "bs/serialize/carray.h"
 #include "tree_impl.h"
 #include "../tree/link_actor.h"
 #include "../tree/hard_link.h"
@@ -149,15 +150,33 @@ CEREAL_REGISTER_TYPE_WITH_NAME(tree::sym_link_impl, "sym_link")
 ///////////////////////////////////////////////////////////////////////////////
 //  fusion_link_impl
 //
+NAMESPACE_BEGIN()
+
+template<typename Archive>
+auto serialize_status(Archive& ar, tree::link_impl& t) {
+	using namespace blue_sky::tree;
+	using array_t = std::array<tree::ReqStatus, 2>;
+
+	auto stat = [&]() -> array_t {
+		if constexpr(Archive::is_saving::value)
+			return {t.req_status(Req::Data), t.req_status(Req::DataNode)};
+		else return {};
+	}();
+	serialize_carray(ar, stat, "status");
+
+	if constexpr(Archive::is_loading::value) {
+		t.rs_reset(Req::Data, ReqReset::Always, stat[0]);
+		t.rs_reset(Req::DataNode, ReqReset::Always, stat[1]);
+	}
+}
+
+NAMESPACE_END()
+
 BSS_FCN_INL_BEGIN(serialize, tree::fusion_link_impl)
 	using namespace blue_sky::tree;
+
 	if constexpr(Archive::is_saving::value) {
 		ar( make_nvp("bridge", t.bridge_) );
-		// save status values
-		ar(
-			make_nvp("data_status", t.req_status(Req::Data)),
-			make_nvp("dnode_status", t.req_status(Req::DataNode))
-		);
 		// save cached object
 		ar( make_nvp("data", t.data_) );
 	}
@@ -168,13 +187,6 @@ BSS_FCN_INL_BEGIN(serialize, tree::fusion_link_impl)
 			[&t](auto B) { t.bridge_ = std::move(B); },
 			PtrInitTrigger::SuccessAndRetry
 		));
-		// restore status
-		tree::ReqStatus s;
-		ar(make_nvp("data_status", s));
-		t.rs_reset(Req::Data, ReqReset::Always, s);
-		ar(make_nvp("dnode_status", s));
-		t.rs_reset(Req::DataNode, ReqReset::Always, s);
-
 		// load data with deferred 2nd trial
 		ar(defer_failed(
 			t.data_,
@@ -183,6 +195,7 @@ BSS_FCN_INL_BEGIN(serialize, tree::fusion_link_impl)
 		));
 	}
 
+	serialize_status(ar, t);
 	serialize<tree::ilink_impl>::go(ar, t, version);
 BSS_FCN_INL_END(serialize, tree::fusion_link_impl)
 
@@ -208,6 +221,7 @@ BSS_FCN_INL_BEGIN(serialize, tree::map_link_impl_base)
 			t.link_impl::propagate_handle(t.out_);
 	}
 
+	serialize_status(ar, t);
 	serialize<tree::link_impl>::go(ar, t, version);
 BSS_FCN_INL_END(serialize, tree::map_link_impl_base)
 
