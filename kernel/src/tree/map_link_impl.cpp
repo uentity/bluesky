@@ -75,7 +75,7 @@ map_link_impl::map_link_impl() :
 
 auto map_link_impl::clone(bool deep) const -> sp_limpl {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
-	return std::make_shared<map_link_impl>(tag_, mf_, name_, in_, node::nil(), update_on_, opts_, flags_);
+	return std::make_shared<map_link_impl>(mf_, tag_, name_, in_, node::nil(), update_on_, opts_, flags_);
 }
 
 auto map_link_impl::erase(map_link_actor* self, lid_type src_lid) -> void {
@@ -334,7 +334,7 @@ static auto spawn_mapper_job(map_node_impl* impl, map_link_actor* self)
 
 auto map_node_impl::clone(bool deep) const -> sp_limpl {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
-	return std::make_shared<map_node_impl>(tag_, mf_, name_, in_, node::nil(), update_on_, opts_, flags_);
+	return std::make_shared<map_node_impl>(mf_, tag_, name_, in_, node::nil(), update_on_, opts_, flags_);
 }
 
 auto map_node_impl::erase(map_link_actor* self, lid_type) -> void {

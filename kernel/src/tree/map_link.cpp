@@ -17,18 +17,18 @@ NAMESPACE_BEGIN(blue_sky::tree)
 using ei = engine::impl;
 
 map_link::map_link(
-	uuid tag, std::string name, mapper_f mf, link_or_node src_node, link_or_node dest_node,
+	mapper_f mf, uuid tag, std::string name, link_or_node src_node, link_or_node dest_node,
 	Event update_on, TreeOpts opts, Flags f
 ) : super([&] {
 		return visit(meta::overloaded{
 			[&](link_mapper_f lmf) -> sp_engine_impl {
 				return std::make_shared<map_link_impl>(
-					tag, std::move(lmf), std::move(name), src_node, dest_node, update_on, opts, f
+					std::move(lmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
 				);
 			},
 			[&](node_mapper_f nmf) -> sp_engine_impl {
 				return std::make_shared<map_node_impl>(
-					tag, std::move(nmf), std::move(name), src_node, dest_node, update_on, opts, f
+					std::move(nmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
 				);
 			}
 		}, std::move(mf));
@@ -36,16 +36,16 @@ map_link::map_link(
 {}
 
 map_link::map_link(
-	std::string name, mapper_f mf, link_or_node src_node, link_or_node dest_node,
+	mapper_f mf, std::string name, link_or_node src_node, link_or_node dest_node,
 	Event update_on, TreeOpts opts, Flags f
 ) : map_link(
-	gen_uuid(), std::move(name), std::move(mf), std::move(src_node), std::move(dest_node), update_on, opts, f
+	std::move(mf), gen_uuid(), std::move(name), std::move(src_node), std::move(dest_node), update_on, opts, f
 ) {}
 
 
-map_link::map_link(const map_link& rhs, mapper_f mf, link_or_node src_node, link_or_node dest_node) :
+map_link::map_link(mapper_f mf, const map_link& rhs, link_or_node src_node, link_or_node dest_node) :
 	map_link(
-		ei::pimpl(rhs).tag_, ei::pimpl(rhs).name_, std::move(mf), std::move(src_node),
+		std::move(mf), ei::pimpl(rhs).tag_, ei::pimpl(rhs).name_, std::move(src_node),
 		dest_node.index() == 0 || std::get<1>(dest_node).is_nil() ?
 			ei::pimpl(rhs).out_ : std::get<1>(dest_node),
 		ei::pimpl(rhs).update_on_, ei::pimpl(rhs).opts_, ei::pimpl(rhs).flags_
@@ -86,17 +86,17 @@ auto map_link::n_target() const -> const node_mapper_f* {
  *  bundled mappers
  *-----------------------------------------------------------------------------*/
 auto make_otid_filter(
-	std::string name, std::vector<std::string> allowed_otids, link_or_node src_node, link_or_node dest_node,
+	std::vector<std::string> allowed_otids, std::string name, link_or_node src_node, link_or_node dest_node,
 	Event update_on, TreeOpts opts, Flags f
 ) -> map_link {
 	std::sort(allowed_otids.begin(), allowed_otids.end());
 	// [NOTE] dest link is ignored
 	return map_link(
-		std::move(name), [otids = std::move(allowed_otids)](link src, link /* dest */) -> link {
+		[otids = std::move(allowed_otids)](link src, link /* dest */) -> link {
 			if(std::binary_search(otids.begin(), otids.end(), src.obj_type_id()))
 				return link(src.name(), src.data(), Flags::Plain);
 			return link{};
-		}, std::move(src_node), std::move(dest_node), update_on, opts, f
+		}, std::move(name), std::move(src_node), std::move(dest_node), update_on, opts, f
 	);
 }
 

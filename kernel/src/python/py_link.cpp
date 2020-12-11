@@ -311,34 +311,69 @@ void py_bind_link(py::module& m) {
 		.value("Node", MappingLevel::Node)
 	;
 
+	static const auto make_map_link = [](MappingLevel mlevel, py::function py_mf, auto&&... args) {
+		return map_link(
+			[&]() -> map_link::mapper_f {
+				if(mlevel == MappingLevel::Link)
+					return py::cast<map_link::link_mapper_f>(std::move(py_mf));
+				else
+					return py::cast<map_link::node_mapper_f>(std::move(py_mf));
+			}(), std::forward<decltype(args)>(args)...
+		);
+	};
+
 	py::class_<map_link, link>(m, "map_link")
+		// normal ctor
 		.def(py::init([](
-				MappingLevel mlevel, std::string name, py::function py_mf, link_or_node src, link_or_node dst,
+				MappingLevel mlevel, py::function py_mf, std::string name, link_or_node src, link_or_node dst,
 				Event update_on, TreeOpts opts, Flags flags
 			) {
-				auto mf = [&]() -> map_link::mapper_f {
-					if(mlevel == MappingLevel::Link)
-						return py::cast<map_link::link_mapper_f>(std::move(py_mf));
-					else
-						return py::cast<map_link::node_mapper_f>(std::move(py_mf));
-				}();
-
-				return map_link(
-					std::move(name), std::move(mf), std::move(src), std::move(dst),
-					update_on, opts, flags
+				return make_map_link(
+					mlevel, std::move(py_mf),
+					std::move(name), std::move(src), std::move(dst), update_on, opts, flags
 				);
 			}),
-			"mlevel"_a, "name"_a, "mf"_a, "src_node"_a, "dest_node"_a = link_or_node{},
+			"mlevel"_a, "mf"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
 			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::DetachedWorkers,
 			"flags"_a = Flags::Plain
 		)
+		// normal ctor with tag
+		.def(py::init([](
+				MappingLevel mlevel, py::function py_mf, uuid tag, std::string name,
+				link_or_node src, link_or_node dst, Event update_on, TreeOpts opts, Flags flags
+			) {
+				return make_map_link(
+					mlevel, std::move(py_mf),
+					tag, std::move(name), std::move(src), std::move(dst), update_on, opts, flags
+				);
+			}),
+			"mlevel"_a, "mf"_a, "tag"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
+			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::DetachedWorkers,
+			"flags"_a = Flags::Plain
+		)
+		// from mapper & existing map_link
+		.def(py::init([](
+				MappingLevel mlevel, py::function py_mf, const map_link& rhs,
+				link_or_node src, link_or_node dst
+			) {
+				return make_map_link(
+					mlevel, std::move(py_mf), rhs, std::move(src), std::move(dst)
+				);
+			}),
+			"mlevel"_a, "mf"_a, "rhs"_a, "src_node"_a, "dest_node"_a = link_or_node{}
+		)
+		// conversion ctor
 		.def(py::init<const link&>())
 
 		.def_property_readonly_static("type_id_", [](const py::object&) { return map_link::type_id_(); })
+
+		.def_property_readonly("tag", &map_link::tag)
+		.def_property_readonly("input", &map_link::input)
+		.def_property_readonly("output", &map_link::output)
 	;
 
 	m.def(
-		"make_otid_filter", &make_otid_filter, "name"_a, "allowed_otids"_a, "src_node"_a,
+		"make_otid_filter", &make_otid_filter, "allowed_otids"_a, "name"_a, "src_node"_a,
 		"dest_node"_a = link_or_node{}, "update_on"_a = Event::DataNodeModified | Event::LinkRenamed,
 		"opts"_a = TreeOpts::Deep | TreeOpts::DetachedWorkers, "flags"_a = Flags::Plain
 	);

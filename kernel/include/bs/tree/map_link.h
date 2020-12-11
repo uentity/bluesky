@@ -25,17 +25,17 @@ public:
 
 	/// can pass `link` or `node` as source and destination
 	map_link(
-		std::string name, mapper_f mf, link_or_node src_node, link_or_node dest_node = {},
+		mapper_f mf, std::string name, link_or_node src_node, link_or_node dest_node = {},
 		Event update_on = Event::DataModified, TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
 	);
 	/// with custom tag
 	map_link(
-		uuid tag, std::string name, mapper_f mf, link_or_node src_node, link_or_node dest_node = {},
+		mapper_f mf, uuid tag, std::string name, link_or_node src_node, link_or_node dest_node = {},
 		Event update_on = Event::DataModified, TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
 	);
 	/// construct from existing copy of map_link but with another mapping
-	map_link(const map_link& rhs, mapper_f mf, link_or_node src_node, link_or_node dest_node = {});
-
+	map_link(mapper_f mf, const map_link& rhs, link_or_node src_node, link_or_node dest_node = {});
+	/// convert from link
 	map_link(const link& rhs);
 
 	static auto type_id_() -> std::string_view;
@@ -50,7 +50,7 @@ public:
 
 /// returns map_link that filters objects from input node by object type ID(s)
 BS_API auto make_otid_filter(
-	std::string name, std::vector<std::string> allowed_otids, link_or_node src_node, link_or_node dest_node = {},
+	std::vector<std::string> allowed_otids, std::string name, link_or_node src_node, link_or_node dest_node = {},
 	Event update_on = Event::DataNodeModified, TreeOpts opts = TreeOpts::Deep, Flags f = Flags::Plain
 ) -> map_link;
 

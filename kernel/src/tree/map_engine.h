@@ -89,8 +89,8 @@ public:
 	map_link_impl();
 
 	template<typename... Args>
-	explicit map_link_impl(uuid tag, link_mapper_f mf, Args&&... args) :
-		map_link_impl_base(true, tag, std::forward<Args>(args)...), mf_(std::move(mf))
+	explicit map_link_impl(link_mapper_f mf, Args&&... args) :
+		map_link_impl_base(true, std::forward<Args>(args)...), mf_(std::move(mf))
 	{}
 
 	auto clone(bool deep) const -> sp_limpl override final;
@@ -122,8 +122,8 @@ public:
 	map_node_impl();
 
 	template<typename... Args>
-	explicit map_node_impl(uuid tag, node_mapper_f mf, Args&&... args) :
-		map_link_impl_base(false, tag, std::forward<Args>(args)...), mf_(std::move(mf))
+	explicit map_node_impl(node_mapper_f mf, Args&&... args) :
+		map_link_impl_base(false, std::forward<Args>(args)...), mf_(std::move(mf))
 	{}
 
 	auto clone(bool deep) const -> sp_limpl override final;
