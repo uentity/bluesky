@@ -208,7 +208,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(tree::fusion_link_impl, "fusion_link")
 BSS_FCN_INL_BEGIN(serialize, tree::map_link_impl_base)
 	if constexpr(Archive::is_saving::value) {
 		// dump contained node only if map_link owns it
-		if(t.out_.handle().id() == t.id_)
+		if(t.out_.handle().id() == t.id_ && t.req_status(tree::Req::DataNode) == tree::ReqStatus::OK)
 			ar(make_nvp( "out", t.out_ ));
 		else
 			ar(make_nvp( "out", tree::node::nil() ));
@@ -263,7 +263,9 @@ BSS_FCN_BEGIN(serialize, tree::link)
 			t.pimpl()->propagate_handle();
 			// for map linkss disable refresh behavior as there's no mapping function anyway
 			if(t.type_id() == tree::map_link::type_id_())
-				caf::anon_send(caf::actor_cast<tree::map_link_impl::actor_type>(t.raw_actor()), a_mlnk_fresh{});
+				caf::anon_send<high_prio>(
+					caf::actor_cast<tree::map_link_impl::actor_type>(t.raw_actor()), a_mlnk_fresh{}
+				);
 		}
 		else
 			t = tree::link{};

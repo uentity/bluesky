@@ -50,7 +50,11 @@ map_link::map_link(mapper_f mf, const map_link& rhs, link_or_node src_node, link
 			ei::pimpl(rhs).out_ : std::get<1>(dest_node),
 		ei::pimpl(rhs).update_on_, ei::pimpl(rhs).opts_, ei::pimpl(rhs).flags_
 	)
-{}
+{
+	// ensure that dest node is relinked to this new link
+	pimpl()->propagate_handle(ei::pimpl(*this).out_);
+	rs_reset(Req::DataNode, rhs.req_status(Req::DataNode));
+}
 
 map_link::map_link(const link& rhs) : super(rhs, type_id_()) {}
 
