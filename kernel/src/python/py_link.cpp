@@ -353,7 +353,7 @@ void py_bind_link(py::module& m) {
 		)
 		// from mapper & existing map_link
 		.def(py::init([](
-				MappingLevel mlevel, py::function py_mf, const map_link& rhs,
+				MappingLevel mlevel, py::function py_mf, const link& rhs,
 				link_or_node src, link_or_node dst
 			) {
 				return make_map_link(
