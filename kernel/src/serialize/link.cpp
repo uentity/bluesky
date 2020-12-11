@@ -261,6 +261,9 @@ BSS_FCN_BEGIN(serialize, tree::link)
 			t.start_engine();
 			// if pointee is a node, correct it's handle
 			t.pimpl()->propagate_handle();
+			// for map linkss disable refresh behavior as there's no mapping function anyway
+			if(t.type_id() == tree::map_link::type_id_())
+				caf::anon_send(caf::actor_cast<tree::map_link_impl::actor_type>(t.raw_actor()), a_mlnk_fresh{});
 		}
 		else
 			t = tree::link{};

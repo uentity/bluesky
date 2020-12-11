@@ -196,7 +196,9 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 		[=](a_ack, a_node_erase, const lid_type& src_id) {
 			adbg(this) << "<- erase (casual)" << std::endl;
 			mimpl().erase(this, src_id);
-		}
+		},
+
+		[](a_mlnk_fresh) {}
 
 	}, super::make_typed_behavior());
 }
@@ -204,8 +206,12 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
 	// invoke refresh once on DataNode request
 	return refresh_behavior_overload{
+		// if output node is filled after deserialization, just switcto casual bhv
+		[=](a_mlnk_fresh) {
+			become(make_casual_behavior().unbox());
+		},
 
-		[=, casual_bhv = make_casual_behavior().unbox()](a_data_node, bool) mutable
+		[=, casual_bhv = make_casual_behavior().unbox()](a_data_node, bool)
 		-> caf::result<node_or_errbox> {
 			adbg(this) << "<- a_data_node (refresh)" << std::endl;
 			// install casual behavior

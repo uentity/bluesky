@@ -69,6 +69,8 @@ using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
 using a_lnk_inode = caf::atom_constant<caf::atom("tl inode")>;
 using a_lnk_flags = caf::atom_constant<caf::atom("tl flags")>;
 
+using a_mlnk_fresh = caf::atom_constant<caf::atom("ml fresh")>;
+
 // async invoke `fusion_link::populate()`
 using a_flnk_data = caf::atom_constant<caf::atom("tfl data")>;
 using a_flnk_populate = caf::atom_constant<caf::atom("tfl dnode")>;
