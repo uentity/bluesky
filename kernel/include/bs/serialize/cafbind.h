@@ -80,23 +80,13 @@ auto inspect(Inspector& f, T& x)
 	vistream ss(x_data);
 	cereal::PortableBinaryInputArchive A(ss);
 
-	// for BS types run serialization in object's queue
 	auto g = caf::detail::make_scope_guard([&]() -> error {
-		if constexpr(std::is_base_of_v<::blue_sky::objbase, T>) {
-			if(x.apply([&]() -> blue_sky::error {
-				A(x);
-				return blue_sky::perfect;
-			}))
-				return sec::state_not_serializable;
+		try {
+			A(x);
+			return none;
 		}
-		else {
-			try {
-				A(x);
-				return none;
-			}
-			catch(...) {
-				return sec::state_not_serializable;
-			}
+		catch(...) {
+			return sec::state_not_serializable;
 		}
 	});
 	return f.apply_raw(x_data.size()*sizeof(char), x_data.data());
