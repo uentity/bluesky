@@ -38,12 +38,12 @@ auto serialize_array(Archive& ar, Array& array, const char* name) -> void {
 	using T = typename Array::value_type;
 	constexpr auto size = sizeof(T) * N;
 	if constexpr(detail::binary_carray_support<Archive, T>)
-		ar(binary_data( array.begin(), size ));
+		ar(binary_data( &array[0], size ));
 	else {
 		if constexpr(Archive::is_saving::value)
-			ar.saveBinaryValue(array.begin(), size, name);
+			ar.saveBinaryValue(&array[0], size, name);
 		else
-			ar.loadBinaryValue(array.begin(), size, name);
+			ar.loadBinaryValue(&array[0], size, name);
 	}
 }
 

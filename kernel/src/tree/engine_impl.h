@@ -48,7 +48,7 @@ public:
 		engine::weak_ptr<Item> super_;
 	};
 
-	/// obtan conrecte downcasted impl realization from handle
+	/// get downcasted impl realization from handle
 	template<typename EngineImpl, typename Handle>
 	static decltype(auto) pimpl(const Handle& H) {
 		if constexpr(std::is_base_of_v<engine, Handle>)
@@ -96,7 +96,7 @@ public:
 	auto release_factors() -> void;
 
 	/// can be shadowed in derived handle impl class to further customize timeouts
-	inline auto timeout(bool for_long_task) {
+	inline auto timeout(bool for_long_task) const {
 		return kernel::radio::timeout(for_long_task);
 	}
 

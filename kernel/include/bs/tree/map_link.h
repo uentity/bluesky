@@ -13,11 +13,12 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using link_or_node = std::variant<link, node>;
+class map_link_impl_base;
 
 class BS_API map_link : public link {
 public:
 	using super = link;
-	using engine_impl = class map_link_impl_base;
+	using engine_impl = map_link_impl_base;
 	using link_mapper_f = std::function< link(link /* source */, link /* existing dest */) >;
 	using node_mapper_f = std::function< void(node /* source */, node /* existing dest */) >;
 
