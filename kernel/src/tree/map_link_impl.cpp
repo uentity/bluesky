@@ -329,7 +329,7 @@ static auto spawn_mapper_job(map_node_impl* impl, map_link_actor* self)
 		});
 	}
 	else
-		return request_data_impl<node>(*self, Req::DataNode, opts, std::move(invoke_mapper));
+		return request_data_impl(*self, Req::DataNode, opts, std::move(invoke_mapper));
 }
 
 auto map_node_impl::clone(bool deep) const -> sp_limpl {

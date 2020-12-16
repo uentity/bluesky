@@ -6,6 +6,7 @@
 
 #include "map_engine.h"
 #include "node_impl.h"
+#include "request_impl.h"
 
 #include <bs/tree/tree.h>
 #include <bs/detail/enumops.h>
@@ -171,14 +172,18 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 			return unexpected_err_quiet(Error::EmptyData);
 		},
 
-		[=](a_data_node, bool) -> node_or_errbox {
+		[=](a_data_node, bool) -> caf::result<node_or_errbox> {
 			adbg(this) << "<- a_data_node (casual)" << std::endl;
-			return mimpl().out_;
+			return request_data_impl(
+				*this, Req::DataNode, ReqOpts::HasDataCache,
+				[=]() -> node_or_errbox { return mimpl().out_; }
+			);
 		},
 
 		[=](a_lazy, a_node_clear) {
 			adbg(this) << "<- lazy clear" << std::endl;
- 			become(make_behavior().unbox());
+			// [NOTE] installs refresh behavior (default) that will force clear + remap
+			become(make_behavior().unbox());
 		},
 
 		[=](a_node_clear) -> caf::result<node_or_errbox> {
