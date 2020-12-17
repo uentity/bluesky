@@ -116,7 +116,7 @@ auto link_impl::rs_apply(Req req, function_view< void() > f, ReqReset cond, ReqS
 }
 
 auto link_impl::rs_reset(
-	Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs, on_rs_changed_fn on_rs_changed
+	Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs, on_rs_reset_fn on_rs_reset
 ) -> ReqStatus {
 	const auto i = enumval<unsigned>(request);
 	if(i > 1) return ReqStatus::Error;
@@ -126,25 +126,21 @@ auto link_impl::rs_reset(
 		auto& S = status_[i];
 		const auto self = S.value;
 		S.value = new_rs;
-		if(enumval(cond & ReqReset::Broadcast))
-			status_[1 - i].value = new_rs;
 
-		// new status = OK will always trigger callback
-		if(new_rs != self || new_rs == ReqStatus::OK) {
-			// if postcondition failed - restore prev status
-			if(!on_rs_changed(request, new_rs, self)) {
-				S.value = self;
-				if(enumval(cond & ReqReset::Broadcast))
-					status_[1 - i].value = self;
-			}
-		}
+		// if postcondition failed - rollback, otherwise broadcast if specified
+		if(!on_rs_reset(request, new_rs, self))
+			S.value = self;
+		else if(enumval(cond & ReqReset::Broadcast))
+			status_[1 - i].value = new_rs;
 	}, cond, old_rs);
 }
 
-auto link_impl::rs_reset(Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs) -> ReqStatus {
-	return rs_reset(request, cond, new_rs, old_rs, [this](auto req, auto new_rs, auto prev_rs) {
-		// send notification to link's home group
-		send_home<high_prio>(*this, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
+auto link_impl::rs_reset(Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs)
+-> ReqStatus {
+	return rs_reset(request, cond, new_rs, old_rs, [&](auto req, auto new_rs, auto prev_rs) {
+		// send notification to link's home group if status changed or new value is OK
+		if(new_rs != prev_rs || new_rs == ReqStatus::OK)
+			send_home<high_prio>(*this, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
 		return true;
 	});
 }

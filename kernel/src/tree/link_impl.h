@@ -132,13 +132,13 @@ public:
 	auto req_status(Req request) const -> ReqStatus;
 
 	// can return `false` to indicate failed postcondition & revert status to original value
-	using on_rs_changed_fn = function_view< bool(Req, ReqStatus /*new*/, ReqStatus /*old*/) >;
-
+	using on_rs_reset_fn = function_view< bool(Req, ReqStatus /*new*/, ReqStatus /*old*/) >;
+	// [NOTE] `on_rs_reset` is invoked IF `cond` is met REGARDLESS of whether status changed or not
 	auto rs_reset(
-		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs, on_rs_changed_fn on_rs_changed
+		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs, on_rs_reset_fn on_rs_reset
 	) -> ReqStatus;
 
-	// sends notification about status change to link's home group
+	// sends notification about status change to link's home group (if `silent` is false)
 	auto rs_reset(
 		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void
 	) -> ReqStatus;
@@ -147,14 +147,6 @@ public:
 	// [NOTE] if `broadcast` flag is set, update both statuses at once
 	using req_result = std::variant<obj_or_errbox, node_or_errbox>;
 	auto rs_update_from_data(req_result rdata, bool broadcast = false) -> void;
-
-	// run generic function while holding exclusive lock to status handles
-	// if ReqReset::Broadcast is on, lock both handles
-	// returns request status value before call
-	auto rs_apply(
-		Req req, function_view< void() > f,
-		ReqReset cond = ReqReset::Always, ReqStatus cond_value = ReqStatus::Void
-	) -> ReqStatus;
 
 	// add actor to list of waiters for request result
 	auto rs_add_waiter(Req req, caf::actor w) -> void;
@@ -191,6 +183,14 @@ private:
 
 	// direct access to status_handle
 	auto req_status_handle(Req request) -> status_handle&;
+
+	// run generic function while holding exclusive lock to status handles
+	// if ReqReset::Broadcast is on, lock both handles
+	// returns request status value before call
+	auto rs_apply(
+		Req req, function_view< void() > f,
+		ReqReset cond = ReqReset::Always, ReqStatus cond_value = ReqStatus::Void
+	) -> ReqStatus;
 };
 using sp_limpl = link_impl::sp_limpl;
 

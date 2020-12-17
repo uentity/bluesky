@@ -29,10 +29,6 @@ public:
 
 	auto name() const -> const char* override;
 
-	// forward call to impl + send notification to self group
-	auto rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs, bool silent = false)
-	-> ReqStatus;
-
 	// pass message to upper (owner) level of tree structure
 	template<typename... Args>
 	auto forward_up(Args&&... args) -> void {

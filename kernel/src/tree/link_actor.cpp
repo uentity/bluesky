@@ -42,7 +42,7 @@ static auto do_data_apply(link_actor* LA, transaction_t<tr_result, Ts...> tr) {
 	.then([=, tr = std::move(tr)](obj_or_errbox maybe_obj) mutable {
 		if(maybe_obj) {
 			// always send closed transaction
-			res.delegate(maybe_obj.value()->actor(), a_apply(), [&] {
+			res.delegate((*maybe_obj)->actor(), a_apply(), [&] {
 				if constexpr(sizeof...(Ts) > 0)
 					return (*maybe_obj)->make_transaction(std::move(tr));
 				else
@@ -64,18 +64,6 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group home, sp_limpl Limpl) 
 
 auto link_actor::name() const -> const char* {
 	return "link_actor";
-}
-
-auto link_actor::rs_reset(Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs, bool silent)
--> ReqStatus {
-	return impl.rs_reset(
-		req, cond, new_rs, prev_rs,
-		silent ? noop_true :
-			function_view{[=](Req req, ReqStatus new_s, ReqStatus old_s) {
-				impl.send_home<high_prio>(this, a_ack(), a_lnk_status(), req, new_s, old_s);
-				return true;
-			}}
-	);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -102,12 +90,13 @@ return {
 	},
 
 	// apply link transaction
-	[=](a_apply, simple_transaction tr) -> error::box {
-		return tr_eval(std::move(tr));
+	[=](a_apply, const simple_transaction& tr) -> error::box {
+		adbg(this) << "<- a_apply simple_transaction" << std::endl;
+		return tr_eval(tr);
 	},
 
-	[=](a_apply, link_transaction tr) -> error::box {
-		return tr_eval(std::move(tr), bare_link(spimpl()));
+	[=](a_apply, const link_transaction& tr) -> error::box {
+		return tr_eval(tr, bare_link(spimpl()));
 	},
 
 	// apply data transactions
@@ -181,7 +170,7 @@ return {
 	[=](a_lnk_status, Req req, ReqReset cond, ReqStatus new_rs, ReqStatus prev_rs) -> ReqStatus {
 		adbg(this) << "<- a_lnk_status: " << to_string(req) << " " <<
 			to_string(prev_rs) << "->" << to_string(new_rs) << std::endl;
-		return rs_reset(req, cond, new_rs, prev_rs);
+		return impl.rs_reset(req, cond, new_rs, prev_rs);
 	},
 
 	// just send notification about just changed status
