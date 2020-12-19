@@ -29,7 +29,8 @@ map_link_impl_base::map_link_impl_base(bool is_link_mapper) :
 map_link_impl_base::map_link_impl_base(
 	bool is_link_mapper_, uuid tag, std::string name, link_or_node input, link_or_node output,
 	Event update_on, TreeOpts opts, Flags f
-) : super(std::move(name), f), tag_(tag), update_on_(update_on), opts_(opts), is_link_mapper(is_link_mapper_)
+) : super(std::move(name), f | Flags::LazyLoad), tag_(tag), update_on_(update_on), opts_(opts),
+	is_link_mapper(is_link_mapper_)
 {
 	static const auto extract_node = [](node& lhs, auto&& rhs) {
 		visit(meta::overloaded{
