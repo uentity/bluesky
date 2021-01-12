@@ -17,7 +17,6 @@ namespace blue_sky {
 template< class > class singleton;
 
 // type_info && type_descriptor
-class nil;
 class type_descriptor;
 struct plugin_descriptor;
 
@@ -26,8 +25,12 @@ class atomizer;
 
 // objbase & command
 class objbase;
-typedef std::shared_ptr< objbase > sp_obj;
-typedef std::shared_ptr< const objbase > sp_cobj;
+using sp_obj = std::shared_ptr<objbase>;
+using sp_cobj = std::shared_ptr<const objbase>;
+
+class objnode;
+using sp_objnode = std::shared_ptr<objnode>;
+using sp_cobjnode = std::shared_ptr<const objnode>;
 
 // signals & slots
 class bs_signal;
@@ -43,9 +46,9 @@ namespace log {
 	class bs_log;
 }
 
-// exception
 class error;
 
+// array
 template< template< class > class > class any_array;
 
 template< class > class bs_arrbase;
@@ -60,15 +63,19 @@ namespace tree {
 
 struct inode;
 class link;
+class bare_link;
+class link_actor;
+class link_impl;
 class node;
-typedef std::shared_ptr< link > sp_link;
-typedef std::shared_ptr< node > sp_node;
+class bare_node;
+class node_actor;
+class node_impl;
 
 }
 
 // common typedefs
-typedef std::size_t  ulong; //!< unsigned long
-typedef unsigned int uint; //!< unsigned int
+using ulong = std::size_t;
+using uint = unsigned int;
 
 } // eof blue_sky namespace
 

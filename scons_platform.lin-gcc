@@ -13,8 +13,8 @@ if build_kind == "init" :
 	custom_env.AppendUnique(
 		CPPDEFINES = ['UNIX'],
 		CCFLAGS = [
-			'-std=c++17', '-x', 'c++', '-W', '-Wall', '-Wno-deprecated', '-fvisibility-inlines-hidden',
-			'-pipe', '-Wno-unknown-pragmas', '-Wno-unused-parameter', '-fsized-deallocation'
+			'-std=c++17', '-W', '-Wall', '-Wno-deprecated', '-fvisibility-inlines-hidden',
+			'-pipe', '-Wno-unknown-pragmas', '-Wno-unused-parameter'
 		],
 		LINKFLAGS = ['-Wl,--as-needed']
 	);

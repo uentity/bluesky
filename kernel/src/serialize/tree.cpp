@@ -7,93 +7,78 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/actor_common.h>
+#include <bs/atoms.h>
+#include <bs/kernel/radio.h>
 #include <bs/log.h>
-#include "../tree/node_impl.h"
+#include <bs/tree/tree.h>
 #include <bs/serialize/serialize.h>
 #include <bs/serialize/tree.h>
+#include <bs/serialize/cafbind.h>
 
 #include <fstream>
-#include <cereal/types/vector.hpp>
 
-NAMESPACE_BEGIN(blue_sky)
-using namespace cereal;
-using namespace tree;
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::on_serialized_f)
 
+NAMESPACE_BEGIN(blue_sky::tree)
+using namespace kernel::radio;
 /*-----------------------------------------------------------------------------
- *  node::node_impl
+ *  tree serialization actor impl
  *-----------------------------------------------------------------------------*/
-namespace {
-// proxy leafs view to serialize 'em as separate block or 'unit'
-struct leafs_view {
-	links_container& links_;
-
-	leafs_view(const links_container& L) : links_(const_cast<links_container&>(L)) {}
-
-	template<typename Archive>
-	auto save(Archive& ar) const -> void {
-		ar(make_size_tag(links_.size()));
-		// save links in custom index order
-		const auto& any_order = links_.get<Key_tag<Key::AnyOrder>>();
-		for(const auto& leaf : any_order)
-			ar(leaf);
-	}
-
-	template<typename Archive>
-	auto load(Archive& ar) -> void {
-		std::size_t sz;
-		ar(make_size_tag(sz));
-		// load links in custom index order
-		auto& any_order = links_.get<Key_tag<Key::AnyOrder>>();
-		for(std::size_t i = 0; i < sz; ++i) {
-			sp_link leaf;
-			ar(leaf);
-			any_order.insert(any_order.end(), std::move(leaf));
+NAMESPACE_BEGIN()
+///////////////////////////////////////////////////////////////////////////////
+//  Tree FS archive
+//
+auto unite_errors(const std::vector<error>& errs) -> error {
+	std::string reduced_er;
+	for(const auto& er : errs) {
+		if(er) {
+			if(!reduced_er.empty()) reduced_er += '\n';
+			reduced_er += er.what();
 		}
 	}
-};
+	return reduced_er.empty() ? success() : error::quiet(reduced_er);
+}
 
-} // eof hidden namespace
-
-BSS_FCN_INL_BEGIN(serialize, node::node_impl)
-	ar(
-		make_nvp("allowed_otypes", t.allowed_otypes_),
-		make_nvp("leafs", leafs_view(t.links_))
-	);
-BSS_FCN_INL_END(save, node::node_impl)
-
-/*-----------------------------------------------------------------------------
- *  node
- *-----------------------------------------------------------------------------*/
-BSS_FCN_BEGIN(serialize, node)
-	//t.propagate_owner();
-	ar(
-		make_nvp("objbase", base_class<objbase>(&t)),
-		make_nvp("node_impl", t.pimpl_)
-	);
-	// correct owner of all loaded links
-	if(Archive::is_loading::value)
-		t.propagate_owner();
-BSS_FCN_END
-
-BSS_FCN_EXPORT(serialize, node)
-
-NAMESPACE_BEGIN(tree)
-/*-----------------------------------------------------------------------------
- *  tree save/load impl
- *-----------------------------------------------------------------------------*/
-auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar) -> error {
-	if(ar == TreeArchive::FS) {
+auto save_fs(const link& root, const std::string& filename) -> error {
+	// collect all errors happened
+	auto errs = std::vector<error>{};
+	if(auto er = error::eval_safe([&] {
 		auto ar = tree_fs_output(filename);
 		ar(root);
-		ar.serializeDeferments();
-		return success();
-	}
+		//ar.serializeDeferments();
+		errs = ar.wait_objects_saved(infinite);
+	}))
+		errs.push_back(er);
+
+	return unite_errors(errs);
+}
+
+auto load_fs(link& root, const std::string& filename) -> error {
+	// collect all errors happened
+	auto errs = std::vector<error>{};
+	if(auto er = error::eval_safe([&] {
+		auto ar = tree_fs_input(filename, tree_fs_input::default_opts);
+		ar(root);
+		//ar.serializeDeferments();
+		errs = ar.wait_objects_loaded(infinite);
+	}))
+		errs.push_back(er);
+
+	return unite_errors(errs);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  generic archives
+//
+auto save_generic(const link& root, const std::string& filename, TreeArchive ar) -> error {
+return error::eval_safe([&] {
 	// open file for writing
 	std::ofstream fs(
 		filename,
-		std::ios::out | std::ios::trunc | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode())
+		std::ios::out | std::ios::trunc |
+			(ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode(0))
 	);
-	if(!fs) return error(std::string("Cannot create file {}") + filename);
 
 	// dump link to JSON archive
 	if(ar == TreeArchive::Binary) {
@@ -104,41 +89,121 @@ auto save_tree(const sp_link& root, const std::string& filename, TreeArchive ar)
 		cereal::JSONOutputArchive ja(fs);
 		ja(root);
 	}
-	return success();
-}
+}); }
 
-auto load_tree(const std::string& filename, TreeArchive ar) -> result_or_err<sp_link> {
-	sp_link res;
-	if(ar == TreeArchive::FS) {
-		auto ar = tree_fs_input(filename);
-		ar(res);
-		ar.serializeDeferments();
-		return res;
-	}
-
+auto load_generic(link& root, const std::string& filename, TreeArchive ar) -> error {
+return error::eval_safe([&] {
 	// open file for reading
 	std::ifstream fs(
 		filename,
-		std::ios::in | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode())
+		std::ios::in | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode(0))
 	);
-	if(!fs) return tl::make_unexpected(error(std::string("Cannot create file {}") + filename));
 
 	// load link from JSON archive
 	if(ar == TreeArchive::Binary) {
 		cereal::PortableBinaryInputArchive ja(fs);
-		ja(res);
+		ja(root);
 	}
 	else {
 		cereal::JSONInputArchive ja(fs);
-		ja(res);
+		ja(root);
 	}
-	return res;
+}); }
+
+///////////////////////////////////////////////////////////////////////////////
+//  actor to launch jobe above and result processing callback
+//
+auto save_actor(
+	caf::event_based_actor* self, link root, std::string filename, TreeArchive ar,
+	on_serialized_f cb
+) -> caf::behavior {
+	return {
+		[ar, r = std::move(root), filename = std::move(filename), cb = std::move(cb)](a_apply) mutable
+		-> error::box {
+			// launch work
+			auto er = ar == TreeArchive::FS ? save_fs(r, filename) : save_generic(r, filename, ar);
+			// invoke callback
+			if(cb) error::eval_safe([&]{ cb(std::move(r), er); });
+			return er;
+		}
+	};
 }
 
-NAMESPACE_END(tree)
-NAMESPACE_END(blue_sky)
+auto load_actor(
+	caf::event_based_actor* self, std::string filename, TreeArchive ar,
+	on_serialized_f cb
+) -> caf::behavior {
+	return {
+		[ar, filename = std::move(filename), cb = std::move(cb)](a_apply) mutable
+		-> link_or_errbox {
+			// launch work
+			link r;
+			auto er = ar == TreeArchive::FS ? load_fs(r, filename) : load_generic(r, filename, ar);
+			// invoke callback
+			if(cb) error::eval_safe([&]{ cb(r, er); });
+			if(er.ok())
+				return r;
+			else
+				return tl::make_unexpected(std::move(er));
+		}
+	};
+}
 
-BSS_REGISTER_TYPE(blue_sky::tree::node)
+NAMESPACE_END()
 
-BSS_REGISTER_DYNAMIC_INIT(node)
+/*-----------------------------------------------------------------------------
+ *  tree save impl
+ *-----------------------------------------------------------------------------*/
+auto save_tree(link root, std::string filename, TreeArchive ar, timespan wait_for) -> error {
+	//bsout() << "*** save_tree with {} timeout" <<
+	//	(wait_for == infinite ? "infinite" : to_string(wait_for)) << bs_end;
+	// launch worker in detached actor
+	return actorf<error>(
+		system().spawn<caf::detached>(
+			save_actor, std::move(root), std::move(filename), ar, on_serialized_f{}
+		),
+		wait_for, a_apply()
+	);
+}
 
+BS_API auto save_tree(
+	on_serialized_f cb, link root, std::string filename, TreeArchive ar
+) -> void {
+	// [NOTE] spawn save in detached actor to prevent starvation
+	auto A = system().spawn<caf::detached>(
+		save_actor, std::move(root), std::move(filename), ar, std::move(cb)
+	);
+	caf::anon_send(A, a_apply());
+}
+
+/*-----------------------------------------------------------------------------
+ *  tree load impl
+ *-----------------------------------------------------------------------------*/
+auto load_tree(std::string filename, TreeArchive ar) -> link_or_err {
+	//link r;
+	//auto er = ar == TreeArchive::FS ? load_fs(r, filename) : load_generic(r, filename, ar);
+	//if(er.ok())
+	//	return r;
+	//else
+	//	return tl::make_unexpected(std::move(er));
+
+	// launch worker in detached actor
+	return actorf<link_or_errbox>(
+		system().spawn<caf::spawn_options::detach_flag>(
+			load_actor, std::move(filename), ar, on_serialized_f{}
+		),
+		infinite, a_apply()
+	);
+}
+
+auto load_tree(
+	on_serialized_f cb, std::string filename, TreeArchive ar
+) -> void {
+	// [NOTE] spawn save in detached actor to prevent starvation
+	auto A = system().spawn<caf::detached>(
+		load_actor, std::move(filename), ar, std::move(cb)
+	);
+	caf::anon_send(A, a_apply());
+}
+
+NAMESPACE_END(blue_sky::tree)

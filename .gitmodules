@@ -13,7 +13,7 @@
 	#url = https://github.com/actor-framework/actor-framework.git
 [submodule "third_party/eigen"]
 	path = third_party/eigen
-	url = https://github.com/eigenteam/eigen-git-mirror.git
+	url = https://gitlab.com/libeigen/eigen.git
 [submodule "third_party/cereal"]
 	path = third_party/cereal
 	url = https://github.com/uentity/cereal.git

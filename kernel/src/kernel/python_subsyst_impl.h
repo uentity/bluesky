@@ -11,11 +11,12 @@
 #include <pybind11/pybind11.h>
 
 #include <bs/objbase.h>
+#include <bs/tree/link.h>
+#include "python_subsyst.h"
 
 #include <unordered_map>
 #include <functional>
-
-#include "python_subsyst.h"
+#include <mutex>
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
@@ -44,10 +45,11 @@ struct BS_HIDDEN_API python_subsyst_impl : public python_subsyst {
 
 	auto adapted_types() const -> std::vector<std::string>;
 
-	auto adapt(sp_obj source) -> pybind11::object;
+	auto adapt(sp_obj source, const tree::link& L) -> pybind11::object;
 
+	auto get_cached_adapter(const sp_obj& source) const -> pybind11::object;
 	// returns number of cleared instances
-	auto drop_adapted_cache(const sp_obj& obj = nullptr) -> std::size_t;
+	auto drop_adapted_cache(const sp_obj& source = nullptr) -> std::size_t;
 
 	// access to instance of Python subsystem
 	static auto self() -> python_subsyst_impl&;
@@ -57,8 +59,19 @@ private:
 	// adapters map {obj_type_id -> adapter fcn}
 	std::unordered_map<std::string, adapter_fn> adapters_;
 	adapter_fn def_adapter_;
-	// adapters instances cache
-	std::unordered_map<std::size_t, pybind11::object> acache_;
+
+	// cache value = { adapter instance, ref_counter }
+	// when `ref_counter` reaches zero, cache value is dropped
+	// ref counter counts links that point to source object
+	using acache_value = std::pair<pybind11::object, size_t>;
+	// adapters cache { object ptr, adapter }
+	std::unordered_map<const objbase*, acache_value> acache_;
+	// used to resolve link ID -> object pointer when link is erased
+	// by keeping this map we can omit (expensive) call to `link::data()`
+	// [NOTE] link ID is stored as string for convinience
+	std::unordered_map<std::string, const objbase*> lnk2obj_;
+
+	mutable std::mutex guard_;
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)

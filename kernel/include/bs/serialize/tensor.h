@@ -9,7 +9,7 @@
 #pragma once
 
 #include "../error.h"
-#include "../detail/tensor_meta.h"
+#include "../meta/tensor.h"
 #include "carray.h"
 
 namespace cereal {

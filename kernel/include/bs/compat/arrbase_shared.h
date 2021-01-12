@@ -11,6 +11,7 @@
 
 #include "../fwd.h"
 #include "../common.h"
+#include "../meta.h"
 #include "arrbase.h"
 #include <iterator>
 
@@ -52,9 +53,6 @@ public:
 		: shared_data_(std::make_shared< array_t >(0))
 	{}
 
-	bs_arrbase_shared_impl(const bs_arrbase_shared_impl&) = default;
-	bs_arrbase_shared_impl(bs_arrbase_shared_impl&&) = default;
-
 	// special ctor if container is passed
 	bs_arrbase_shared_impl(const container& c) {
 		init_inplace(c);
@@ -62,17 +60,9 @@ public:
 
 	// perfect forwarding ctor forwards all args to container
 	// specifically treats first argument to allow vonstructors above
-	template<
-		typename First, typename... Args,
-		typename = std::enable_if_t<
-			!std::is_base_of< bs_arrbase_shared_impl, std::decay_t< First > >::value &&
-			!std::is_base_of< container, std::decay_t< First > >::value
-		>
-	>
-	bs_arrbase_shared_impl(First&& first, Args&&... args)
-		: shared_data_(std::make_shared< array_t >(
-			std::forward< First >(first), std::forward< Args >(args)...
-		))
+	template<typename... Args, typename = meta::enable_pf_ctor_to<bs_arrbase_shared_impl, array_t, Args...>>
+	bs_arrbase_shared_impl(Args&&... args) :
+		shared_data_(std::make_shared< array_t >(std::forward< Args >(args)...))
 	{}
 
 	// perfect forwarding init

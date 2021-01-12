@@ -35,10 +35,6 @@ BS_REGISTER_PLUGIN {
 	kernel::init();
 	BOOST_CHECK(kernel::plugins::register_plugin(bs_get_plugin_descriptor()));
 
-	// explicitly init serialization subsystem
-	// [UPDATE] not needed, because auto-invoked by `register_plugin()`
-	//kernel::unify_serialization();
-
 	// register fixture objects constructors, etc
 	register_test_objects();
 
@@ -48,7 +44,7 @@ BS_REGISTER_PLUGIN {
 struct bs_global_fixture {
 	void setup() { bs_register_plugin( {bs_get_plugin_descriptor()} ); }
 
-	void teardown() {}
+	void teardown() { blue_sky::kernel::shutdown(); }
 };
 
 BOOST_TEST_GLOBAL_FIXTURE(bs_global_fixture);

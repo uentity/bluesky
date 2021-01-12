@@ -8,18 +8,18 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "common.h"
-#include <iterator>
+#include "vector.h"
 
 NAMESPACE_BEGIN(blue_sky::python)
 NAMESPACE_BEGIN(detail)
 
-template <typename List, typename Class_> auto set_if_insertion_operator(Class_ &cl, std::string const &name)
-	-> decltype(std::declval<std::ostream&>() << std::declval<typename List::value_type>(), void()) {
+template <typename List, typename Class_>
+auto list_if_insertion_operator(Class_ &cl, std::string const &name)
+-> decltype(std::declval<std::ostream&>() << std::declval<typename List::value_type>(), void()) {
 	using size_type = typename List::size_type;
 
 	cl.def("__repr__",
-		   [name](List &L) {
+		[name](List &L) {
 			std::ostringstream s;
 			s << name << '[';
 			bool first = true;
@@ -39,22 +39,30 @@ template <typename List, typename Class_> auto set_if_insertion_operator(Class_ 
 // (Technically, some of these (pop and __delitem__) don't actually require copyability, but it seems
 // silly to allow deletion but not insertion, so include them here too.)
 template <typename List, typename Class_>
-void set_modifiers(std::enable_if_t<std::is_copy_constructible<typename List::value_type>::value, Class_> &cl) {
+void list_modifiers(std::enable_if_t<std::is_copy_constructible<typename List::value_type>::value, Class_> &cl) {
 	using T = typename List::value_type;
 	using SizeType = typename List::size_type;
 	using DiffType = typename List::difference_type;
 
-	cl.def("append",
-		   [](List &v, const T &value) { v.push_back(value); },
-		   py::arg("x"),
-		   "Add an item to the end of the list");
+	static const auto wrap_i = [](DiffType i, SizeType n) {
+		if (i < 0)
+			i += n;
+		if (i < 0 || (SizeType)i >= n)
+			throw py::index_error();
+		return i;
+	};
 
 	cl.def(py::init([](py::iterable it) {
 		auto v = std::make_unique<List>();
 		for (py::handle h : it)
-		   v->push_back(h.cast<T>());
+			v->push_back(h.cast<T>());
 		return v.release();
 	}));
+
+	cl.def("append",
+		[](List &v, const T &value) { v.push_back(value); },
+		py::arg("x"), "Add an item to the end of the list"
+	);
 
 	cl.def("extend",
 		[](List &v, const List &src) {
@@ -65,10 +73,13 @@ void set_modifiers(std::enable_if_t<std::is_copy_constructible<typename List::va
 	);
 
 	cl.def("insert",
-		[](List &v, SizeType i, const T &x) {
-			if (i > v.size())
+		[](List &v, DiffType i, const T &x) {
+			// Can't use wrap_i; i == v.size() is OK
+			if (i < 0)
+				i += v.size();
+			if (i < 0 || (SizeType)i > v.size())
 				throw py::index_error();
-			v.insert(std::next(v.begin(), (DiffType) i), x);
+			v.insert(std::next(v.begin(), i), x);
 		},
 		py::arg("i"), py::arg("x"),
 		"Insert an item at a given position."
@@ -86,10 +97,9 @@ void set_modifiers(std::enable_if_t<std::is_copy_constructible<typename List::va
 	);
 
 	cl.def("pop",
-		[](List &v, SizeType i) {
-			if (i >= v.size())
-				throw py::index_error();
-			auto p_victim = std::next(v.begin(), DiffType(i));
+		[](List &v, DiffType i) {
+			i = wrap_i(i, v.size());
+			auto p_victim = std::next(v.begin(), i);
 			T t = *p_victim;
 			v.erase(p_victim);
 			return t;
@@ -99,9 +109,8 @@ void set_modifiers(std::enable_if_t<std::is_copy_constructible<typename List::va
 	);
 
 	cl.def("__setitem__",
-		[](List &v, SizeType i, const T &t) {
-			if (i >= v.size())
-				throw py::index_error();
+		[](List &v, DiffType i, const T &t) {
+			i = wrap_i(i, v.size());
 			*std::next(v.begin(), i) = t;
 		}
 	);
@@ -147,10 +156,9 @@ void set_modifiers(std::enable_if_t<std::is_copy_constructible<typename List::va
 	);
 
 	cl.def("__delitem__",
-		[](List &v, SizeType i) {
-			if (i >= v.size())
-				throw py::index_error();
-			v.erase( std::next(v.begin(), DiffType(i)) );
+		[](List &v, DiffType i) {
+			i = wrap_i(i, v.size());
+			v.erase( std::next(v.begin(), i) );
 		},
 		"Delete the list elements at index ``i``"
 	);
@@ -169,42 +177,6 @@ void set_modifiers(std::enable_if_t<std::is_copy_constructible<typename List::va
 		},
 		"Delete list elements using a slice object"
 	);
-}
-
-// ------- add some mmethods to opaque list-like class
-template<typename List, typename PyList>
-auto make_rich_pylist(PyList& cl) -> PyList& {
-	using size_type = typename List::size_type;
-	using T = typename List::value_type;
-
-	cl.def(py::init<size_type>());
-
-	cl.def("erase",
-		[](List &v, size_type i) {
-		if (i >= v.size())
-			throw py::index_error();
-		v.erase(std::next(v.begin(), i));
-	}, "erases element at index ``i``");
-
-	cl.def("empty",         &List::empty,         "checks whether the container is empty");
-	cl.def("size",          &List::size,          "returns the number of elements");
-	cl.def("push_back", (void (List::*)(const T&)) &List::push_back, "adds an element to the end");
-	cl.def("pop_back",                               &List::pop_back, "removes the last element");
-
-	cl.def("clear", &List::clear, "clears the contents");
-	cl.def("swap",   &List::swap, "swaps the contents");
-
-	cl.def("front", [](List &v) {
-		if (v.size()) return v.front();
-		else throw py::index_error();
-	}, "access the first element");
-
-	cl.def("back", [](List &v) {
-		if (v.size()) return v.back();
-		else throw py::index_error();
-	}, "access the last element ");
-
-	return cl;
 }
 
 NAMESPACE_END(detail)
@@ -233,29 +205,13 @@ auto bind_list(py::handle scope, std::string const &name, Args&&... args) {
 	py::detail::vector_if_equal_operator<List, Class_>(cl);
 
 	// Register stream insertion operator (if possible)
-	detail::set_if_insertion_operator<List, Class_>(cl, name);
+	detail::list_if_insertion_operator<List, Class_>(cl, name);
 
 	// Modifiers require copyable vector value type
-	detail::set_modifiers<List, Class_>(cl);
+	detail::list_modifiers<List, Class_>(cl);
 
 	// Accessor and iterator; return by value if copyable, otherwise we return by ref + keep-alive
-	cl.def("__getitem__",
-		[](List &v, SizeType i) -> T & {
-			if (i >= v.size())
-				throw py::index_error();
-			return *std::next(v.begin(), i);
-		},
-		py::return_value_policy::reference_internal // ref + keepalive
-	);
-
-	cl.def("__iter__",
-			[](List &v) {
-				return py::make_iterator<
-					py::return_value_policy::reference_internal, ItType, ItType, T&>(
-					v.begin(), v.end());
-			},
-			py::keep_alive<0, 1>() /* Essential: keep list alive while iterator exists */
-	);
+	detail::rich_accessors<List, Class_>(cl);
 
 	cl.def("__bool__",
 		[](const List &v) -> bool {
@@ -266,7 +222,6 @@ auto bind_list(py::handle scope, std::string const &name, Args&&... args) {
 
 	cl.def("__len__", &List::size);
 
-	detail::make_rich_pylist<List>(cl);
 	return cl;
 }
 

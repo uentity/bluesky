@@ -40,7 +40,8 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{96FE31ED-C0F9-4B61-AC2B-22B3E1CACBAF}</ProjectGuid>
     <RootNamespace>tests</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <UseNativeEnvironment>true</UseNativeEnvironment>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -59,13 +60,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -119,7 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)third_party\fmt\include;$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\actor-framework\libcaf_core;$(SolutionDir)third_party\actor-framework\libcaf_io;$(SolutionDir)third_party\cereal\include;$(SolutionDir)third_party\eigen;$(SolutionDir)third_party\spdlog\include;$(SolutionDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;NOMINMAX;FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -133,7 +134,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)third_party\fmt\include;$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\actor-framework\libcaf_core;$(SolutionDir)third_party\actor-framework\libcaf_io;$(SolutionDir)third_party\cereal\include;$(SolutionDir)third_party\eigen;$(SolutionDir)third_party\spdlog\include;$(SolutionDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;NOMINMAX;FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;NOMINMAX;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -149,7 +150,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)third_party\fmt\include;$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\actor-framework\libcaf_core;$(SolutionDir)third_party\actor-framework\libcaf_io;$(SolutionDir)third_party\cereal\include;$(SolutionDir)third_party\eigen;$(SolutionDir)third_party\spdlog\include;$(SolutionDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;NOMINMAX;FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -167,7 +168,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)third_party\fmt\include;$(SolutionDir)kernel\include;$(SolutionDir)third_party\pybind11\include;$(SolutionDir)third_party\actor-framework\libcaf_core;$(SolutionDir)third_party\actor-framework\libcaf_io;$(SolutionDir)third_party\cereal\include;$(SolutionDir)third_party\eigen;$(SolutionDir)third_party\spdlog\include;$(SolutionDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(BLUE_SKY_WINDEPS)\loki\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;NOMINMAX;FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BS_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;NOMINMAX;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>

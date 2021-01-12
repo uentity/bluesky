@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 15.09.2016
 /// @brief BlueSky tree node class declaration
@@ -6,310 +5,271 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
-#include "../objbase.h"
-#include "../tree/errors.h"
-#include "../detail/is_container.h"
-#include "../detail/enumops.h"
+#include "bare_node.h"
 #include "link.h"
+#include "errors.h"
+#include "../meta/is_container.h"
+#include "../detail/enumops.h"
 
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/mem_fun.hpp>
+#include <optional>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-// global alias to shorten typing
-namespace mi = boost::multi_index;
-
-class BS_API node : public objbase {
+class BS_API node : public engine {
 public:
-	using id_type = link::id_type;
+	using bare_type = bare_node;
+	using engine_impl = node_impl;
+	using engine_actor = node_actor;
+	using weak_ptr = engine::weak_ptr<node>;
+	using existing_index = bare_node::existing_index;
+	using insert_status = bare_node::insert_status;
 
-	// links are sorted by unique ID
-	using id_key = mi::const_mem_fun<
-		link, const id_type&, &link::id
+	/// Interface of node actor, you can only send messages matching it
+	using actor_type = caf::typed_actor<
+		// get home group
+		caf::replies_to<a_home>::with<caf::group>,
+		// get node's group ID
+		caf::replies_to<a_home_id>::with<std::string>,
+		// get node's handle
+		caf::replies_to<a_node_handle>::with<link>,
+		// get number of leafs
+		caf::replies_to<a_node_size>::with<std::size_t>,
+
+		// obtain node's content sorted by given order
+		caf::replies_to<a_node_leafs, Key /* order */>::with<links_v>,
+
+		// obtain leafs keys sorted by given index
+		caf::replies_to<a_node_keys, Key /* order */>::with<lids_v>,
+		// sorted string keys
+		caf::replies_to<a_node_keys, Key /* meaning */, Key /* order */>::with<std::vector<std::string>>,
+		// sorted indexes (offsets)
+		caf::replies_to<a_node_ikeys, Key /* order */>::with<std::vector<std::size_t>>,
+
+		// find link by ID
+		caf::replies_to<a_node_find, lid_type>::with<link>,
+		// find link at specified index
+		caf::replies_to<a_node_find, std::size_t>::with<link>,
+		// find link by string key & meaning
+		caf::replies_to<a_node_find, std::string, Key>::with<link>,
+
+		// return link index
+		caf::replies_to<a_node_index, lid_type>::with<existing_index>,
+		// return index of link with string key & meaning
+		caf::replies_to<a_node_index, std::string, Key>::with<existing_index>,
+
+		// equal_range
+		caf::replies_to<a_node_equal_range, std::string, Key>::with<links_v>,
+
+		// deep search by ID (returns collection of 1 elem on success)
+		caf::replies_to<a_node_deep_search, lid_type /* key */>::with<links_v>,
+		// if last arg == true, then collects matching links over node's subtree
+		caf::replies_to<a_node_deep_search, std::string, Key, bool /* return_first */>::with<links_v>,
+
+		// insert new link
+		caf::replies_to<a_node_insert, link, InsertPolicy>::with<insert_status>,
+		// insert into specified position
+		caf::replies_to<a_node_insert, link, std::size_t, InsertPolicy>::with<insert_status>,
+		// insert bunch of links
+		caf::replies_to<a_node_insert, links_v, InsertPolicy>::with<std::size_t>,
+
+		// erase link by ID with specified options
+		caf::replies_to<a_node_erase, lid_type>::with<std::size_t>,
+		// erase link at specified position
+		caf::replies_to<a_node_erase, std::size_t>::with<std::size_t>,
+		// erase link with given string key & meaning
+		caf::replies_to<a_node_erase, std::string, Key>::with<std::size_t>,
+		// erase bunch of links
+		caf::replies_to<a_node_erase, lids_v>::with<std::size_t>,
+		// clears node content
+		caf::replies_to<a_node_clear>::with<std::size_t>,
+
+		// erase link by ID with specified options
+		caf::replies_to<a_lnk_rename, lid_type, std::string>::with<std::size_t>,
+		// erase link at specified position
+		caf::replies_to<a_lnk_rename, std::size_t, std::string>::with<std::size_t>,
+		// rename link(s) with specified name
+		caf::replies_to<a_lnk_rename, std::string, std::string>::with<std::size_t>,
+
+		// apply custom order
+		caf::replies_to<a_node_rearrange, std::vector<std::size_t>>::with<error::box>,
+		caf::replies_to<a_node_rearrange, lids_v>::with<error::box>
 	>;
-	// and non-unique name
-	using name_key = mi::const_mem_fun<
-		link, std::string, &link::name
-	>;
-	// and non-unique object ID
-	using oid_key = mi::const_mem_fun<
-		link, std::string, &link::oid
-	>;
-	// and non-unique object type
-	using type_key = mi::const_mem_fun<
-		link, std::string, &link::obj_type_id
-	>;
-	// and have random-access index that preserve custom items ordering
-	struct any_order {};
 
-	// container that will store all node elements (links)
-	using links_container = mi::multi_index_container<
-		sp_link,
-		mi::indexed_by<
-			mi::sequenced< mi::tag< any_order > >,
-			mi::hashed_unique< mi::tag< id_key >, id_key >,
-			mi::ordered_non_unique< mi::tag< name_key >, name_key >,
-			mi::ordered_non_unique< mi::tag< oid_key >, oid_key >,
-			mi::ordered_non_unique< mi::tag< type_key >, type_key >
-		>
-	>;
+	///////////////////////////////////////////////////////////////////////////////
+	//  constructors & maintance
+	//
+	/// create empty node and optionally add leafs
+	node(links_v = {});
+	explicit node(const bare_node& rhs);
 
-	// key alias
-	enum class Key { ID, OID, Name, Type, AnyOrder };
-	template<Key K> using Key_const = std::integral_constant<Key, K>;
+	/// copy ctor & assignment
+	node(const node& src) = default;
+	auto operator=(const node& rhs) -> node& = default;
+	auto operator=(const bare_node& rhs) -> node&;
 
-private:
-	// convert from key alias -> key type
-	template<Key K, class _ = void>
-	struct Key_dispatch {
-		using tag = id_key;
-		using type = id_type;
-	};
-	template<class _>
-	struct Key_dispatch<Key::Name, _> {
-		using tag = name_key;
-		using type = std::string;
-	};
-	template<class _>
-	struct Key_dispatch<Key::OID, _> {
-		using tag = oid_key;
-		using type = std::string;
-	};
-	template<class _>
-	struct Key_dispatch<Key::Type, _> {
-		using tag = type_key;
-		using type = std::string;
-	};
-	template<class _>
-	struct Key_dispatch<Key::AnyOrder, _> {
-		using tag = any_order;
-		using type = std::size_t;
-	};
+	/// convert to bare link with direct access to internals (bypassing actor)
+	auto bare() const -> bare_node;
 
-public:
-	template<Key K> using Key_tag = typename Key_dispatch<K>::tag;
-	template<Key K> using Key_type = typename Key_dispatch<K>::type;
+	/// swap support
+	friend auto swap(node& lhs, node& rhs) noexcept -> void {
+		static_cast<engine&>(lhs).swap(rhs);
+	}
 
-	// some useful type aliases
-	template<Key K = Key::AnyOrder> using Index = typename links_container::index<Key_tag<K>>::type;
-	template<Key K = Key::AnyOrder> using iterator = typename Index<K>::iterator;
-	template<Key K = Key::AnyOrder> using const_iterator = typename Index<K>::const_iterator;
-	template<Key K = Key::ID> using insert_status = std::pair<iterator<K>, bool>;
+	/// obtain/make node nil
+	static auto nil() -> node;
+	auto reset() -> void;
 
-	/// range is a pair that supports iteration
-	template<typename Iterator>
-	struct range_t : public std::pair<Iterator, Iterator> {
-		using base_t = std::pair<Iterator, Iterator>;
-		using base_t::base_t;
-		range_t(const range_t&) = default;
-		range_t(range_t&&) = default;
-		range_t(const base_t& rhs) : base_t(rhs) {}
+	/// test if node is nil
+	auto is_nil() const -> bool;
+	operator bool() const { return !is_nil(); }
 
-		Iterator begin() const { return this->first; }
-		Iterator end() const { return this->second; }
-	};
-	template<Key K = Key::ID> using range = range_t<iterator<K>>;
-	template<Key K = Key::ID> using const_range = range_t<const_iterator<K>>;
+	/// obtain link to this node conained in owner (parent) node
+	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)
+	auto handle() const -> link;
 
-public:
-	/// Main API
+	/// return node's typed actor handle
+	using engine::actor;
+	auto actor() const -> actor_type {
+		return engine::actor(*this);
+	}
 
+	/// `deep` flag is propagated to leafs
+	auto clone(bool deep = false) const -> node;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  public API
+	//
 	/// number of elements in this node
-	std::size_t size() const;
+	auto size() const -> std::size_t;
 
 	/// check if node is empty
-	bool empty() const;
+	auto empty() const -> bool;
 
 	/// clears node
-	void clear();
+	// return number of cleared elements
+	auto clear() const -> std::size_t;
+	auto clear(launch_async_t) const -> void;
 
-	// iterate in IDs order
-	template<Key K = Key::AnyOrder>
-	iterator<K> begin() const {
-		return begin(Key_const<K>());
-	}
+	/// get snapshot of node's content sorted with given order
+	auto leafs(Key order = Key::AnyOrder) const -> links_v;
 
-	template<Key K = Key::AnyOrder>
-	iterator<K> end() const {
-		return end(Key_const<K>());
-	}
-	// non-template versions to support STL iteration features
-	iterator<> begin() const {
-		return begin<>();
-	}
-	iterator<> end() const {
-		return end<>();
-	}
+	/// obtain vector of link ID keys, sorted with given order
+	auto keys(Key ordering = Key::AnyOrder) const -> lids_v;
+	/// obtain vector of link indexes (offsets from beginning)
+	auto ikeys(Key ordering = Key::AnyOrder) const -> std::vector<std::size_t>;
+	/// obtain vector of leafs keys of `key_meaning` index type sorted by `ordering` key
+	auto skeys(Key key_meaning, Key ordering = Key::AnyOrder) const -> std::vector<std::string>;
 
 	// search link by given key
-	iterator<Key::AnyOrder> find(const std::size_t idx) const;
-	iterator<Key::AnyOrder> find(const id_type& id) const;
+	auto find(std::size_t idx) const -> link;
+	auto find(lid_type id) const -> link;
 	/// find link by given key with specified treatment
-	iterator<Key::AnyOrder> find(const std::string& key, Key key_meaning = Key::ID) const;
-
-	/// returns link pointer instead of iterator
-	template<Key K>
-	sp_link search(const Key_type<K>& k) const {
-		auto i = find(k);
-		if(i == end<K>()) throw error("node::search", Error::KeyMismatch);
-		return *i;
-	}
-
-	/// get integer index of a link relative to beginning
-	std::size_t index(const id_type& lid) const;
-	std::size_t index(const iterator<Key::AnyOrder>& lid) const;
-	std::size_t index(const std::string& key, Key key_meaning) const;
+	auto find(std::string key, Key key_meaning) const -> link;
 
 	/// search among all subtree elements
-	sp_link deep_search(const id_type& id) const;
+	auto deep_search(lid_type id) const -> link;
 	/// deep search by given key with specified treatment
-	sp_link deep_search(const std::string& key, Key key_meaning) const;
+	auto deep_search(std::string key, Key key_meaning) const -> link;
+	/// collect matching links over node's subtree
+	auto deep_equal_range(std::string key, Key key_meaning) const -> links_v;
 
-	range<Key::Name> equal_range(const std::string& link_name) const;
-	range<Key::OID>  equal_range_oid(const std::string& oid) const;
-	range<Key::Type> equal_type(const std::string& type_id) const;
+	/// get integer index of a link relative to beginning
+	auto index(lid_type lid) const -> existing_index;
+	auto index(std::string key, Key key_meaning) const -> existing_index;
 
-	/// links insertions policy
-	enum class InsertPolicy {
-		AllowDupNames = 0,
-		DenyDupNames = 1,
-		RenameDup = 2,
-		DenyDupOID = 4,
-		ReplaceDupOID = 8,
-		Merge = 16
-	};
+	/// find all links with given name, OID or type
+	auto equal_range(std::string key, Key key_meaning) const -> links_v;
+
 	/// leafs insertion
-	insert_status<Key::ID> insert(sp_link l, InsertPolicy pol = InsertPolicy::AllowDupNames);
-	/// insert link just before given position
-	insert_status<Key::AnyOrder> insert(sp_link l, iterator<> pos, InsertPolicy pol = InsertPolicy::AllowDupNames);
+	auto insert(link l, InsertPolicy pol = InsertPolicy::AllowDupNames) const -> insert_status;
 	/// insert link at given index
-	insert_status<Key::AnyOrder> insert(sp_link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames);
-	/// auto-create and insert hard link that points to object
-	insert_status<Key::ID> insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames);
+	auto insert(link l, std::size_t idx, InsertPolicy pol = InsertPolicy::AllowDupNames) const
+	-> insert_status;
+	/// insert bunch of links
+	auto insert(links_v ls, InsertPolicy pol = InsertPolicy::AllowDupNames) const -> std::size_t;
+	/// create and insert hard link that points to object
+	auto insert(std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) const
+	-> insert_status;
+	/// create `objnode` with given node and insert hard link that points to it
+	auto insert(std::string name, node N, InsertPolicy pol = InsertPolicy::AllowDupNames) const
+	-> insert_status;
+
 	/// insert links from given container
 	/// [NOTE] container elements will be moved from passed container!
-	template<
-		typename C,
-		typename = std::enable_if_t<meta::is_container_v<C>>
-	>
-	void insert(C&& links, InsertPolicy pol = InsertPolicy::AllowDupNames) {
+	template<typename C, typename = std::enable_if_t<meta::is_container_v<C>>>
+	auto insert(C&& links, InsertPolicy pol = InsertPolicy::AllowDupNames) const -> void {
 		for(auto& L : links) {
 			static_assert(
-				std::is_base_of<link, std::decay_t<decltype(*L)>>::value,
-				"Links container should contain pointers to `tree::link` objects!"
+				std::is_base_of<link, std::decay_t<decltype(L)>>::value,
+				"Links container should contain shared pointers to `tree::link` objects"
 			);
 			insert(std::move(L), pol);
 		}
 	}
 
 	/// leafs removal
-	void erase(const std::size_t idx);
-	void erase(const id_type& link_id);
+	/// return removed leafs count
+	auto erase(std::size_t idx) const -> std::size_t;
+	auto erase(lid_type link_id) const -> std::size_t;
 	/// erase leaf adressed by string key with specified treatment
-	void erase(const std::string& key, Key key_meaning);
-
-	void erase(const range<Key::AnyOrder>& r);
-	void erase(const range<Key::ID>& r);
-	void erase(const range<Key::Name>& r);
-	void erase(const range<Key::OID>& r);
-
-	template<Key K>
-	void erase(iterator<K> pos) {
-		erase(range<K>{pos, std::advance(pos)});
-	}
-
-	/// obtain vector of keys for given index type
-	template<Key K = Key::ID>
-	std::vector<Key_type<K>> keys() const {
-		static_assert(K != Key::AnyOrder, "There are no keys for custom order index");
-		return keys(Key_const<K>());
-	}
+	auto erase(std::string key, Key key_meaning) const -> std::size_t;
+	/// erase bunch of leafs with given IDs
+	auto erase(lids_v r) const -> std::size_t;
 
 	/// rename link at given position
-	bool rename(iterator<Key::AnyOrder> pos, std::string new_name);
-	bool rename(const std::size_t idx, std::string new_name);
+	auto rename(std::size_t idx, std::string new_name) const -> bool;
 	/// rename link with given ID
-	bool rename(const id_type& lid, std::string new_name);
-	/// rename link adresses by given key
-	/// if `all == true`, rename all links matced by key, otherwise first found link is renamed
-	std::size_t rename(
-		const std::string& key, std::string new_name, Key key_meaning = Key::ID, bool all = false
-	);
+	auto rename(lid_type lid, std::string new_name) const -> bool;
+	/// rename link(s) with specified name
+	auto rename(std::string old_name, std::string new_name) const -> std::size_t;
 
-	/// project any given iterator into custom order
-	iterator<Key::AnyOrder> project(iterator<Key::ID>) const;
-	iterator<Key::AnyOrder> project(iterator<Key::Name>) const;
-	iterator<Key::AnyOrder> project(iterator<Key::OID>) const;
-	iterator<Key::AnyOrder> project(iterator<Key::Type>) const;
+	/// apply custom order
+	auto rearrange(std::vector<lid_type> new_order) const -> error;
+	auto rearrange(std::vector<std::size_t> new_order) const -> error;
 
-	/// API for managing link filters
-	/// test is given link can be inserted into the node
-	bool accepts(const sp_link& what) const;
-	/// only simple object type filtera are supported now
-	void accept_object_types(std::vector<std::string> allowed_types);
-	std::vector<std::string> allowed_object_types() const;
+	/// applies functor to node atomically (invoke in node's queue)
+	auto apply(simple_transaction tr) const -> error;
+	auto apply(node_transaction tr) const -> error;
 
-	/// obtain link to this node conained in owner (parent) node
-	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)
-	sp_link handle() const;
+	auto apply(launch_async_t, simple_transaction tr) const -> void;
+	auto apply(launch_async_t, node_transaction tr) const -> void;
 
-	/// ensure that owner of all contained leafs is correctly set to this node
-	/// if deep is true, correct owners in all subtree
-	void propagate_owner(bool deep = false);
+	///////////////////////////////////////////////////////////////////////////////
+	//  events handling
+	//
+	using event_handler = std::function< void(node /* root */, node /* subnode */, Event, prop::propdict) >;
 
-	/// ctor - creates hard self link with given name
-	node(std::string custom_id = "");
-	// copy ctor makes deep copy of contained links
-	node(const node& src);
-
-	virtual ~node();
+	/// returns ID of suscriber that is required for unsubscribe
+	auto subscribe(event_handler f, Event listen_to = Event::All) const -> std::uint64_t;
+	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
 private:
-	friend class blue_sky::atomizer;
-	friend class link;
-	// PIMPL
-	class node_impl;
-	std::unique_ptr< node_impl > pimpl_;
+	friend atomizer;
+	friend weak_ptr;
+	friend link_impl;
+	friend node_impl;
+	friend node_actor;
 
-	// set node's handle
-	void set_handle(const sp_link& handle);
+	using engine::operator=;
 
-	/// Implementation details
-	iterator<Key::ID> begin(Key_const<Key::ID>) const;
-	iterator<Key::Name> begin(Key_const<Key::Name>) const;
-	iterator<Key::OID> begin(Key_const<Key::OID>) const;
-	iterator<Key::Type> begin(Key_const<Key::Type>) const;
-	iterator<Key::AnyOrder> begin(Key_const<Key::AnyOrder>) const;
+	auto pimpl() const -> node_impl*;
 
-	iterator<Key::ID> end(Key_const<Key::ID>) const;
-	iterator<Key::Name> end(Key_const<Key::Name>) const;
-	iterator<Key::OID> end(Key_const<Key::OID>) const;
-	iterator<Key::Type> end(Key_const<Key::Type>) const;
-	iterator<Key::AnyOrder> end(Key_const<Key::AnyOrder>) const;
+	auto start_engine() -> bool;
 
-	std::vector<Key_type<Key::ID>> keys(Key_const<Key::ID>) const;
-	std::vector<Key_type<Key::Name>> keys(Key_const<Key::Name>) const;
-	std::vector<Key_type<Key::OID>> keys(Key_const<Key::OID>) const;
-	std::vector<Key_type<Key::Type>> keys(Key_const<Key::Type>) const;
+	node(sp_engine_impl impl);
 
-	auto on_rename(const id_type& renamed_lnk) const -> void;
-
-	BS_TYPE_DECL
+	node(engine&&);
 };
-// handy aliases
-using sp_node = std::shared_ptr<node>;
-using sp_cnode = std::shared_ptr<const node>;
 
 NAMESPACE_END(blue_sky::tree)
 
-// allow bitwise operations for InsertPoiicy enum class
-BS_ALLOW_ENUMOPS(blue_sky::tree::node::InsertPolicy)
+NAMESPACE_BEGIN(std)
 
+/// support for engines in hashed containers
+template<> struct hash<::blue_sky::tree::node> {
+	auto operator()(const ::blue_sky::tree::node& N) const noexcept { return N.hash(); }
+};
+
+NAMESPACE_END(std)

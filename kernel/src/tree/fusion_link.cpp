@@ -7,30 +7,58 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include "fusion_link_actor.h"
+
 #include <bs/log.h>
-#include <bs/kernel/config.h>
 #include <bs/kernel/types_factory.h>
-//#include <bs/tree/fusion.h>
-//#include <bs/tree/node.h>
 
-#include "link_invoke.h"
-#include "link_impl.h"
-#include "fusion_link_impl.h"
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/propdict.h>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(tree)
+#define FIMPL static_cast<fusion_link_impl&>(*pimpl())
 
-// default destructor for fusion_iface
-fusion_iface::~fusion_iface() {}
+NAMESPACE_BEGIN(blue_sky::tree)
+/*-----------------------------------------------------------------------------
+ *  fusion_iface
+ *-----------------------------------------------------------------------------*/
+auto fusion_iface::is_uniform(const sp_obj&) const -> bool {
+	// [NOTE] assume that objects are usually uniform
+	return true;
+}
+
+auto fusion_iface::pull_data(sp_obj root, link root_link, prop::propdict params) -> error {
+	return error::eval_safe([&] {
+		do_pull_data(std::move(root), std::move(root_link), std::move(params));
+	});
+}
+
+auto fusion_iface::populate(sp_obj root, link root_link, prop::propdict params) -> error {
+	// check precondition: passed object contains valid node
+	if(root->data_node())
+		return error::eval_safe([&] {
+			do_populate(std::move(root), std::move(root_link), std::move(params));
+		});
+	else
+		return error::quiet(Error::NotANode);
+}
 
 /*-----------------------------------------------------------------------------
  *  fusion_link
  *-----------------------------------------------------------------------------*/
 fusion_link::fusion_link(
-	std::string name, sp_node data, sp_fusion bridge, Flags f
-) :
-	// set LazyLoad flag by default
-	ilink(std::move(name), data, Flags(f | link::LazyLoad)),
-	pimpl_(std::make_unique<impl>(std::move(bridge), std::move(data)))
+	std::string name, sp_obj data, sp_fusion bridge, Flags f
+) : // set LazyLoad flag by default
+	super(std::make_shared<fusion_link_impl>(
+		std::move(name), std::move(data), std::move(bridge), Flags(f | LazyLoad)
+	))
+{}
+
+fusion_link::fusion_link(
+	std::string name, node folder, sp_fusion bridge, Flags f
+) : // set LazyLoad flag by default
+	fusion_link(
+		std::move(name), std::make_shared<objnode>(std::move(folder)), std::move(bridge), Flags(f | LazyLoad)
+	)
 {}
 
 fusion_link::fusion_link(
@@ -41,98 +69,59 @@ fusion_link::fusion_link(
 		kernel::tfactory::create_object(obj_type, std::move(oid)), std::move(bridge), f
 	)
 {
-	if(!pimpl_->data_)
-		bserr() << log::E("fusion_link: cannot create object of type '{}'! Empty link!") <<
-			obj_type << log::end;
+	if(!FIMPL.data_)
+		throw error(fmt::format("fusion_link: cannot create object of type '{}'! Empty link!", obj_type));
 }
 
-fusion_link::~fusion_link() {}
+fusion_link::fusion_link()
+	: super(std::make_shared<fusion_link_impl>(), false)
+{}
 
-auto fusion_link::clone(bool deep) const -> sp_link {
-	auto res = std::make_shared<fusion_link>(
-		name(),
-		deep ? kernel::tfactory::clone_object(pimpl_->data_) : pimpl_->data_,
-		pimpl_->bridge_, flags()
-	);
-	return res;
-}
-
-auto fusion_link::type_id() const -> std::string {
-	return "fusion_link";
-}
-
-auto fusion_link::data_impl() const -> result_or_err<sp_obj> {
-	if(req_status(Req::Data) == ReqStatus::OK) {
-		return pimpl_->data_;
-	}
-	if(const auto B = bridge()) {
-		auto err = B->pull_data(pimpl_->data_);
-		if(err.code == obj_fully_loaded)
-			rs_reset_if_neq(Req::DataNode, ReqStatus::Busy, ReqStatus::OK);
-		return err.ok() ? result_or_err<sp_obj>(pimpl_->data_) : tl::make_unexpected(std::move(err));
-	}
-	return tl::make_unexpected(Error::NoFusionBridge);
-}
-
-auto fusion_link::data_node_impl() const -> result_or_err<sp_node> {
-	return impl::populate(this);
-}
-
-auto fusion_link::populate(const std::string& child_type_id, bool wait_if_busy) const
--> result_or_err<sp_node> {
-	// [NOTE] we access here internals of base link
-	// to obtain status of DataNode operation
-	return detail::link_invoke(
-		this,
-		[&child_type_id](const fusion_link* lnk) { return impl::populate(lnk, child_type_id); },
-		pimpl()->status_[1], wait_if_busy
+auto fusion_link::pull_data(prop::propdict params, bool wait_if_busy) const -> obj_or_err {
+	return pimpl()->actorf<obj_or_errbox>(
+		*this, a_flnk_data(), std::move(params), wait_if_busy
 	);
 }
 
-auto fusion_link::populate(link::process_data_cb f, std::string child_type_id) const
--> void {
-	pimpl_->send(
-		flnk_populate_atom(), this->bs_shared_this<link>(), std::move(f), std::move(child_type_id)
+auto fusion_link::pull_data(link::process_data_cb f, prop::propdict params) const -> void {
+	using result_t = obj_or_errbox;
+
+	anon_request<caf::detached>(
+		actor(*this), kernel::radio::timeout(true), false,
+		[f = std::move(f), self = *this](result_t data) mutable {
+			f( std::move(data), std::move(self) );
+		},
+		a_flnk_data(), std::move(params), true
+	);
+}
+
+auto fusion_link::populate(prop::propdict params, bool wait_if_busy) const -> node_or_err {
+	return pimpl()->actorf<node_or_errbox>(
+		*this, a_flnk_populate(), std::move(params), wait_if_busy
+	);
+}
+
+auto fusion_link::populate(link::process_dnode_cb f, prop::propdict params) const -> void {
+	using result_t = node_or_errbox;
+
+	anon_request<caf::detached>(
+		actor(*this), kernel::radio::timeout(true), false,
+		[f = std::move(f), self = *this](result_t data) mutable {
+			f( std::move(data), std::move(self) );
+		},
+		a_flnk_populate(), std::move(params), true
 	);
 }
 
 auto fusion_link::bridge() const -> sp_fusion {
-	if(pimpl_->bridge_) return pimpl_->bridge_;
-	// try to look up in parent link
-	if(auto parent = owner()) {
-		if(auto phandle = parent->handle()) {
-			if(phandle->type_id() == "fusion_link") {
-				return std::static_pointer_cast<fusion_link>(phandle)->bridge();
-			}
-		}
-	}
-	return nullptr;
+	return FIMPL.bridge();
 }
 
 auto fusion_link::reset_bridge(sp_fusion new_bridge) -> void {
-	pimpl_->reset_bridge(std::move(new_bridge));
+	FIMPL.reset_bridge(std::move(new_bridge));
 }
 
-auto fusion_link::propagate_handle() -> result_or_err<sp_node> {
-	// set handle of cached node object to this link instance
-	self_handle_node(pimpl_->data_);
-	return pimpl_->data_ ?
-		result_or_err<sp_node>(pimpl_->data_) : tl::make_unexpected(Error::EmptyData);
-}
+LINK_CONVERT_TO(fusion_link)
+LINK_TYPE_DEF(fusion_link, fusion_link_impl, "fusion_link")
 
-auto fusion_link::obj_type_id() const -> std::string {
-	return pimpl_->data_ ?
-		pimpl_->data_->type_id() : type_descriptor::nil().name;
-}
-
-auto fusion_link::oid() const -> std::string {
-	return pimpl_->data_ ?
-		pimpl_->data_->id() : boost::uuids::to_string(boost::uuids::nil_uuid());
-}
-
-auto fusion_link::cache() const -> sp_node {
-	return pimpl_->data_;
-}
-
-NAMESPACE_END(blue_sky) NAMESPACE_END(tree)
-
+NAMESPACE_END(blue_sky::tree)

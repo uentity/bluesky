@@ -6,72 +6,107 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
+#include <bs/actor_common.h>
+#include <bs/log.h>
 #include <bs/tree/node.h>
-#include <set>
-#include <mutex>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(tree)
+#include "node_leafs_storage.h"
+#include "link_impl.h"
 
-using links_container = node::links_container;
-using Key = node::Key;
-template<Key K> using iterator = typename node::iterator<K>;
-template<Key K> using Key_tag = typename node::Key_tag<K>;
-template<Key K> using Key_type = typename node::Key_type<K>;
-template<Key K> using Key_const = typename node::Key_const<K>;
-template<Key K> using insert_status = typename node::insert_status<K>;
-template<Key K> using range = typename node::range<K>;
+#include <cereal/types/vector.hpp>
 
-using Flags = link::Flags;
-using Req = link::Req;
-using ReqStatus = link::ReqStatus;
+NAMESPACE_BEGIN(blue_sky::tree)
+using existing_index = typename node::existing_index;
 
 /*-----------------------------------------------------------------------------
  *  node_impl
  *-----------------------------------------------------------------------------*/
-class node::node_impl {
+class BS_HIDDEN_API node_impl :
+	public engine::impl, public engine::impl::access<node>,
+	public bs_detail::sharded_mutex<engine_impl_mutex>
+{
 public:
-	friend struct access_node_impl;
+	friend node;
 
-	template<Key K = Key::ID>
-	static sp_link deep_search_impl(
-		const node_impl& n, const Key_type<K>& key,
-		std::set<Key_type<Key::ID>> active_symlinks = {}
-		//std::unordered_set<Key_type<Key::ID>, boost::hash<Key_type<Key::ID>>> active_symlinks = {}
-	) {
-		// first do direct search in leafs
-		auto r = n.find<K, K>(key);
-		if(r != n.end<K>()) return *r;
+	using sp_nimpl = std::shared_ptr<node_impl>;
+	using sp_scoped_actor = engine::impl::sp_scoped_actor;
 
-		// if not succeeded search in children nodes
-		for(const auto& l : n.links_) {
-			// remember symlink
-			const auto is_symlink = l->type_id() == "sym_link";
-			if(is_symlink){
-				if(active_symlinks.find(l->id()) == active_symlinks.end())
-					active_symlinks.insert(l->id());
-				else continue;
-			}
-			// check populated status before moving to next level
-			if(l->flags() & link::LazyLoad && l->req_status(Req::DataNode) != ReqStatus::OK)
-				continue;
-			// search on next level
-			if(const auto next_n = l->data_node()) {
-				auto next_l = deep_search_impl<K>(*next_n->pimpl_, key, active_symlinks);
-				if(next_l) return next_l;
-			}
-			// remove symlink
-			if(is_symlink)
-				active_symlinks.erase(l->id());
-		}
-		return nullptr;
-	}
+	///////////////////////////////////////////////////////////////////////////////
+	//  private node messaging interface
+	//
+	// public node iface extended with some private messages
+	using primary_actor_type = node::actor_type
+	::extend<
+		// join self group
+		caf::reacts_to<a_hi>,
+		// erase link by ID with specified options
+		caf::replies_to<a_node_erase, lid_type, EraseOpts>::with<std::size_t>,
+		// deep search by ID with active symlinks
+		caf::replies_to<a_node_deep_search, lid_type /* key */, lids_v /* active_symlinks */>::with<links_v>,
+		// deep search by key with active symlinks
+		caf::replies_to<a_node_deep_search, std::string, Key, bool /* return_first */, lids_v>::with<links_v>
+	>
+	::extend_with<engine_actor_type<node>>
+	::extend_with<kernel::detail::khome_actor_type>;
 
-	//static deep_merge(const node_impl& n, )
+	// ack signals that this node send to home group
+	using self_ack_actor_type = caf::typed_actor<
+		// ack on insert - reflect insert from sibling node actor
+		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t>,
+		// ack on link move
+		caf::reacts_to<a_ack, caf::actor, a_node_insert, lid_type, size_t, size_t>,
+		// ack on link erase from sibling node
+		caf::reacts_to<a_ack, caf::actor, a_node_erase, lids_v>
+	>;
+	// acks that this node receives from it's leafs
+	using leafs_ack_actor_type = caf::typed_actor<
+		// track leaf rename
+		caf::reacts_to<a_ack, lid_type, a_lnk_rename, std::string, std::string>,
+		// track leaf status
+		caf::reacts_to<a_ack, lid_type, a_lnk_status, Req, ReqStatus, ReqStatus>,
+		// data altered ack
+		caf::reacts_to<a_ack, lid_type, a_data, tr_result::box>
+	>;
 
+	// all acks processed by node: self acks + self leafs acks + subtree acks
+	// [NOTE] `subtree_ack_actor_type` includes `self_ack_actor_type`
+	using ack_actor_type = link_impl::subtree_ack_actor_type::extend_with<leafs_ack_actor_type>;
+
+	// all acks are pumped via node's home group
+	using home_actor_type = ack_actor_type;
+
+	// append private behavior to public iface
+	using actor_type = primary_actor_type::extend_with<ack_actor_type>;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  member variables
+	//
+	// leafs
+	links_container links_;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  API
+	//
+	// manipulate with node's handle (protected by mutex)
+	auto handle() const -> link;
+	auto set_handle(const link& handle) -> void;
+
+	// setup super (weak engine ptr) + correct leafs owner
+	// node is REQUIRED to call this after engine is started
+	auto propagate_owner(const node& super, bool deep) -> void;
+
+	/// clone this impl
+	auto clone(bool deep = false) const -> sp_nimpl;
+
+	static auto spawn_actor(sp_nimpl nimpl) -> caf::actor;
+
+	ENGINE_TYPE_DECL
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  iterate
+	//
 	template<Key K = Key::AnyOrder>
 	auto begin() const {
 		return links_.get<Key_tag<K>>().begin();
@@ -82,208 +117,195 @@ public:
 	}
 
 	template<Key K, Key R = Key::AnyOrder>
-	auto find(
-		const Key_type<K>& key,
-		std::enable_if_t<std::is_same<Key_const<K>, Key_const<R>>::value>* = nullptr
-	) const {
-		return links_.get<Key_tag<K>>().find(key);
+	auto project(iterator<K> pos) const {
+		if constexpr(K == R)
+			return pos;
+		else
+			return links_.project<Key_tag<R>>(std::move(pos));
 	}
 
+	///////////////////////////////////////////////////////////////////////////////
+	//  search
+	//
 	template<Key K, Key R = Key::AnyOrder>
-	auto find(
-		const Key_type<K>& key,
-		std::enable_if_t<!std::is_same<Key_const<K>, Key_const<R>>::value>* = nullptr
-	) const {
-		return links_.project<Key_tag<R>>(
-			links_.get<Key_tag<K>>().find(key)
-		);
+	auto find(const Key_type<K>& key) const {
+		if constexpr(K == Key::AnyOrder)
+			// prevent indexing past array size
+			return project<K, R>(std::next( begin<K>(), std::min(key, links_.size()) ));
+		else
+			return project<K, R>(links_.get<Key_tag<K>>().find(key));
 	}
 
-	template<Key K = Key::ID>
-	auto equal_range(const Key_type<K>& key) const {
-		return links_.get<Key_tag<K>>().equal_range(key);
-	}
-
-	template<Key K = Key::ID>
-	void erase(const Key_type<K>& key) {
-		links_locker_t my_turn(links_guard_);
-		links_.get<Key_tag<K>>().erase(key);
-	}
-
-	template<Key K = Key::ID>
-	void erase(const range<K>& r) {
-		links_locker_t my_turn(links_guard_);
-		links_.get<Key_tag<K>>().erase(r.first, r.second);
-	}
-
-	template<Key K = Key::ID>
-	sp_link deep_search(const Key_type<K>& key) const {
-		return this->deep_search_impl<K>(*this, key);
-	}
-
-	insert_status<Key::ID> insert(sp_link L, const InsertPolicy pol) {
-		// can't move persistent node from it's owner
-		if(!L || !accepts(L) || (L->flags() & Flags::Persistent && L->owner()))
-			return {end<Key::ID>(), false};
-
-		// make insertion in one single transaction
-		links_locker_t my_turn(links_guard_);
-		// check if we have duplication name
-		iterator<Key::ID> dup;
-		if(enumval(pol & 3) > 0) {
-			dup = find<Key::Name, Key::ID>(L->name());
-			if(dup != end<Key::ID>() && (*dup)->id() != L->id()) {
-				bool unique_found = false;
-				// first check if dup names are prohibited
-				if(enumval(pol & InsertPolicy::DenyDupNames)) return {dup, false};
-				else if(enumval(pol & InsertPolicy::RenameDup) && !(L->flags() & Flags::Persistent)) {
-					// try to auto-rename link
-					std::string new_name;
-					for(int i = 0; i < 10000; ++i) {
-						new_name = L->name() + '_' + std::to_string(i);
-						if(find<Key::Name, Key::Name>(new_name) == end<Key::Name>()) {
-							// we've found a unique name
-							L->rename_silent(std::move(new_name));
-							unique_found = true;
-							break;
-						}
-					}
-				}
-				// if no unique name was found - return fail
-				if(!unique_found) return {dup, false};
-			}
-		}
-
-		// check for duplicating OID
-		auto& I = links_.get<Key_tag<Key::ID>>();
-		if( enumval(pol & (InsertPolicy::DenyDupOID | InsertPolicy::ReplaceDupOID)) ) {
-			dup = find<Key::OID, Key::ID>(L->oid());
-			if(dup != end<Key::ID>()) {
-				bool is_inserted = false;
-				if(enumval(pol & InsertPolicy::ReplaceDupOID))
-					is_inserted = I.replace(dup, std::move(L));
-				return {dup, is_inserted};
-			}
-		}
-		// try to insert given link
-		return I.insert(std::move(L));
-	}
-
+	// same as find, but returns link (null if not found)
 	template<Key K>
-	std::vector<Key_type<K>> keys() const {
-		std::set<Key_type<K>> r;
-		auto kex = Key_tag<K>();
-		for(const auto& i : links_)
-			r.insert(kex(*i));
-		return {r.begin(), r.end()};
+	auto search(const Key_type<K>& key) const -> link {
+		if(auto p = find<K, K>(key); p != end<K>())
+			return *p;
+		return {};
 	}
 
-	template<Key K>
-	bool rename(iterator<K>&& pos, std::string&& new_name) {
-		links_locker_t my_turn(links_guard_);
+	auto search(const std::string& key, Key key_meaning) const -> link;
 
-		if(pos == end<K>()) return false;
-		return links_.get<Key_tag<K>>().modify(pos, [name = std::move(new_name)](sp_link& l) {
-			l->rename_silent(std::move(name));
+	// equal key
+	template<Key K = Key::ID>
+	auto equal_range(const Key_type<K>& key) const -> range<K> {
+		if constexpr(K != Key::AnyOrder) {
+			return links_.get<Key_tag<K>>().equal_range(key);
+		}
+		else {
+			auto pos = find<K>(key);
+			return {pos, std::next(pos)};
+		}
+	}
+
+	auto equal_range(const std::string& key, Key key_meaning) const -> links_v;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  index of element in AnyOrder
+	//
+	// convert iterator to offset from beginning of AnyOrder index
+	template<Key K = Key::AnyOrder>
+	auto index(iterator<K> pos) const -> existing_index {
+		auto& I = links_.get<Key_tag<Key::AnyOrder>>();
+		if(auto ipos = project<K>(std::move(pos)); ipos != I.end())
+			return static_cast<std::size_t>(std::distance(I.begin(), ipos));
+		return {};
+	}
+
+	// index of link with given key in AnyOrder index
+	template<Key K>
+	auto index(const Key_type<K>& key) const -> existing_index {
+		return index(find<K>(key));
+	}
+
+	auto index(const std::string& key, Key key_meaning) const -> existing_index;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  keys & values
+	//
+	template<Key K, typename Iterator>
+	static auto keys(Iterator start, Iterator finish) {
+		return range_t<Iterator>{ std::move(start), std::move(finish) }
+		.template extract_keys<K>();
+	}
+
+	// AnyOrder keys are special
+	template<typename Iterator>
+	auto ikeys(Iterator start, Iterator finish) const {
+		return range_t<Iterator>{ std::move(start), std::move(finish) }
+		.template extract_it<std::size_t>([&](auto it) {
+			// builtin iterators are always projected to valid index
+			if constexpr(std::is_same_v<Iterator, iterator<Key::ID>>)
+				return *index<Key::ID>(std::move(it));
+			else if constexpr(std::is_same_v<Iterator, iterator<Key::Name>>)
+				return *index<Key::Name>(std::move(it));
+			else if constexpr(std::is_same_v<Iterator, iterator<Key::AnyOrder>>)
+				return *index<Key::AnyOrder>(std::move(it));
+			else {
+				// non-builtin iterator must point to link, find index via link's ID
+				// not found elems will have index > number of links (-1)
+				auto idx = index<Key::ID>(it->id());
+				return idx ? *idx : static_cast<std::size_t>(-1);
+			}
 		});
 	}
 
-	template<Key K>
-	std::size_t rename(const Key_type<K>& key, const std::string& new_name, bool all = false) {
-		links_locker_t my_turn(links_guard_);
-
-		range<K> matched_items = equal_range<K>(key);
-		auto& storage = links_.get<Key_tag<K>>();
-		auto renamer = [&new_name](sp_link& l) {
-			l->rename_silent(new_name);
-		};
-		int cnt = 0;
-		for(auto pos = matched_items.begin(); pos != matched_items.end(); ++pos) {
-			storage.modify(pos, renamer);
-			++cnt;
-			if(!all) break;
-		}
-		return cnt;
+	template<Key K, typename Container>
+	static auto keys(const Container& links) {
+		return keys<K>(links.begin(), links.end());
 	}
 
-	void on_rename(const Key_type<Key::ID>& key) {
-		links_locker_t my_turn(links_guard_);
-
-		// find target link by it's ID
-		auto& I = links_.get<Key_tag<Key::ID>>();
-		auto pos = I.find(key);
-		// invoke replace as most safe & easy choice
-		if(pos != I.end())
-			I.replace(pos, *pos);
+	template<Key K, Key Order = K>
+	auto keys() const {
+		static_assert(has_builtin_index_v<Order>);
+		if constexpr(K == Key::AnyOrder)
+			return ikeys(begin<Order>(), end<Order>());
+		else
+			return keys<K>(begin<Order>(), end<Order>());
 	}
+
+	auto keys(Key order) const -> lids_v;
+	auto ikeys(Key order) const -> std::vector<std::size_t>;
 
 	template<Key K>
-	auto project(iterator<K> pos) const {
-		return links_.project<Key_tag<Key::AnyOrder>>(std::move(pos));
+	auto values() const -> links_v {
+		auto res = links_v(links_.size());
+		std::copy(begin<K>(), end<K>(), res.begin());
+		return res;
 	}
 
-	bool accepts(const sp_link& what) const {
-		if(!allowed_otypes_.size()) return true;
-		const auto& what_type = what->obj_type_id();
-		for(const auto& otype : allowed_otypes_) {
-			if(what_type == otype) return true;
+	auto leafs(Key order) const -> links_v;
+
+	auto size() const -> std::size_t;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  insert & erase
+	//
+	using leaf_postproc_fn = function_view< void(const link&) >;
+
+	// insert to back of AnyOrder
+	auto insert(link L, InsertPolicy pol = InsertPolicy::AllowDupNames)
+	-> insert_status<Key::ID>;
+
+	template<Key K = Key::ID>
+	auto erase(const Key_type<K>& key, leaf_postproc_fn ppf = noop) -> size_t {
+		if constexpr(K == Key::ID || K == Key::AnyOrder) {
+			if(auto victim = find<K, Key::ID>(key); victim != end<Key::ID>())
+				return erase_impl(std::move(victim), std::move(ppf));
+			return 0;
 		}
-		return false;
+		else
+			return erase<K>(equal_range<K>(key), std::move(ppf));
 	}
 
-	// implement shallow links copy ctor
-	node_impl(const node_impl& src)
-		: allowed_otypes_(src.allowed_otypes_)
-	{
-		for(const auto& plink : src.links_.get<Key_tag<Key::AnyOrder>>()) {
-			// non-deep clone can result in unconditional moving nodes from source
-			insert(plink->clone(true), InsertPolicy::AllowDupNames);
+	auto erase(const std::string& key, Key key_meaning, leaf_postproc_fn ppf = noop) -> size_t;
+
+	auto erase(const lids_v& r, leaf_postproc_fn ppf = noop) -> std::size_t;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  rename
+	//
+	// [NOTE] don't check iterator validity, uses unsafe link API
+	auto rename(iterator<Key::Name> pos, std::string new_name) -> void;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  rearrange
+	//
+	template<Key K>
+	auto rearrange(const std::vector<Key_type<K>>& new_order) -> error {
+		if(new_order.size() != size()) return Error::WrongOrderSize;
+		// convert vector of keys into vector of iterators
+		std::vector<std::reference_wrapper<const link>> i_order;
+		i_order.reserve(size());
+		const auto p_end = end<Key::AnyOrder>();
+		for(const auto& k : new_order) {
+			if(auto p_elem = find<K>(k); p_elem != p_end)
+				i_order.push_back(std::ref(*p_elem));
+			else
+				return Error::KeyMismatch;
 		}
-		// [NOTE] links are in invalid state (no owner set) now
-		// correct this by manually calling `node::propagate_owner()` after copy is constructed
+		// apply order
+		links_.get<Key_tag<Key::AnyOrder>>().rearrange(i_order.begin());
+		return perfect;
 	}
 
-	void set_handle(const sp_link& new_handle) {
-		// remove node from existing owner if it differs from owner of new handle
-		if(const auto old_handle = handle_.lock()) {
-			const auto owner = old_handle->owner();
-			if(owner && (!new_handle || owner != new_handle->owner()))
-				owner->erase(old_handle->id());
-		}
+private:
+	// weak ref to parent link
+	link::weak_ptr handle_;
 
-		// set new handle link
-		handle_ = new_handle;
+	// returns index of removed element
+	// [NOTE] don't do range checking
+	auto erase_impl(iterator<Key::ID> key, leaf_postproc_fn ppf = noop) -> std::size_t;
+
+	// erase multiple elements given in valid (!) range
+	template<Key K = Key::ID>
+	auto erase(const range<K>& r, leaf_postproc_fn ppf = noop) -> size_t {
+		size_t res = 0;
+		for(auto x = r.begin(); x != r.end();)
+			res += erase_impl(project<K, Key::ID>(x++), ppf);
+		return res;
 	}
-
-	// postprocessing of just inserted link
-	// if link points to node, return it
-	static sp_node adjust_inserted_link(const sp_link& lnk, const sp_node& n) {
-		// sanity
-		if(!lnk) return nullptr;
-
-		// change link's owner
-		// [NOTE] for sym links it's important to set new owner early
-		// otherwise, `data()` will return null and statuses will become Error
-		auto prev_owner = lnk->owner();
-		if(prev_owner != n) {
-			if(prev_owner) prev_owner->erase(lnk->id());
-			lnk->reset_owner(n);
-		}
-
-		// if we're inserting a node, relink it to ensure a single hard link exists
-		return lnk->propagate_handle().value_or(nullptr);
-	}
-
-	node_impl() = default;
-
-	std::weak_ptr<link> handle_;
-	links_container links_;
-	std::vector<std::string> allowed_otypes_;
-	// temp guard until caf-based tree implementation is ready
-	std::mutex links_guard_;
-	using links_locker_t = std::lock_guard<std::mutex>;
 };
+using sp_nimpl = node_impl::sp_nimpl;
 
-NAMESPACE_END(tree)
-NAMESPACE_END(blue_sky)
-
+NAMESPACE_END(blue_sky::tree)

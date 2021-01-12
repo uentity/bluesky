@@ -13,6 +13,7 @@
 #include <bs/kernel/kernel.h>
 #include <bs/propdict.h>
 
+#include <bs/serialize/make_base_class.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/propdict.h>
 #include <bs/serialize/array.h>
@@ -27,7 +28,7 @@ using namespace blue_sky;
 
 BSS_FCN_BEGIN(serialize, bs_person)
 	ar(
-		cereal::make_nvp("objbase", cereal::base_class<objbase>(&t)),
+		cereal::make_nvp("objbase", make_base_class<objbase>(ar, &t)),
 		cereal::make_nvp("name", t.name_),
 		cereal::make_nvp("age", t.age_)
 	);
@@ -37,7 +38,7 @@ BSS_FCN_EXPORT(serialize, bs_person)
 
 BSS_FCN_BEGIN_T(serialize, my_strategy, 1)
 	ar(
-		cereal::make_nvp("objbase", cereal::base_class<objbase>(&t)),
+		cereal::make_nvp("objbase", make_base_class<objbase>(ar, &t)),
 		cereal::make_nvp("name", t.name_)
 	);
 BSS_FCN_END
@@ -49,7 +50,7 @@ BSS_FCN_EXPORT_T(serialize, my_strategy, double)
 
 BSS_FCN_BEGIN_T(serialize, uber_type, 2)
 	ar(
-		cereal::make_nvp("objbase", cereal::base_class<objbase>(&t)),
+		cereal::make_nvp("objbase", make_base_class<objbase>(ar, &t)),
 		cereal::make_nvp("value", t.value_),
 		cereal::make_nvp("storage", t.storage_),
 		cereal::make_nvp("name", t.name_)
@@ -133,7 +134,7 @@ BOOST_AUTO_TEST_CASE(test_serialization) {
 
 	// test properties serialization
 	using namespace blue_sky::prop;
-	propdict D = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", std::vector{2L, 3L, 4L}}};
+	propdict D = {{"A", "test2"}, {"B", 2L}, {"C", 42.}, {"D", {2L, 3L, 4L}}};
 	D.ss<integer>("E") = 142;
 	D.ss<timestamp>("now") = make_timestamp();
 	test_json(D["E"]);

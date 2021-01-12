@@ -7,17 +7,12 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/error.h>
-#include <bs/log.h>
-
+#include <bs/kernel/radio.h>
+#include <bs/serialize/base_types.h>
+#include <bs/serialize/tree.h>
 #include <bs/serialize/serialize.h>
-#ifdef BSPY_EXPORTING
-#include <bs/python/common.h>
-#include <bs/serialize/python.h>
-#endif
 
-#include <fmt/format.h>
-#include <sstream>
+#include <caf/group.hpp>
 
 using namespace cereal;
 
@@ -25,24 +20,32 @@ using namespace cereal;
  *  objbase
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, blue_sky::objbase)
-	// dump typeid for text archives
-	if constexpr(cereal::traits::is_text_archive<Archive>()) {
-		if constexpr(typename Archive::is_saving()) {
-			ar(make_nvp("typeid", const_cast<std::string&>(t.bs_resolve_type().name)));
-		}
-		else {
-			std::string stype;
-			ar(make_nvp("typeid", stype));
-		}
+	ar(make_nvp("id", t.id_));
+	if constexpr(Archive::is_saving::value) {
+		// emit empty home ID if it matches ID (saved on prev step)
+		auto hid = std::string(t.home_id());
+		ar(make_nvp("home_id", hid != t.id_ ? hid : ""));
 	}
-
-	ar(
-		make_nvp("id", t.id_),
-		make_nvp("is_node", t.is_node_)
-	);
+	else {
+		// reed home ID & reset home group
+		std::string hid;
+		ar(make_nvp("home_id", hid));
+		t.reset_home(hid.empty() ? t.id_ : std::move(hid), false);
+	}
 BSS_FCN_END
 
-BSS_REGISTER_TYPE(blue_sky::objbase)
 BSS_FCN_EXPORT(serialize, blue_sky::objbase)
+BSS_REGISTER_TYPE(blue_sky::objbase)
+
+/*-----------------------------------------------------------------------------
+ *  objnode
+ *-----------------------------------------------------------------------------*/
+BSS_FCN_BEGIN(serialize, blue_sky::objnode)
+	ar(make_nvp("objbase", cereal::base_class<objbase>(&t)));
+	ar(make_nvp("objnode", t.node_));
+BSS_FCN_END
+
+BSS_REGISTER_TYPE(blue_sky::objnode)
+BSS_FCN_EXPORT(serialize, blue_sky::objnode)
 
 BSS_REGISTER_DYNAMIC_INIT(base_types)

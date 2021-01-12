@@ -10,6 +10,7 @@
 #pragma once
 
 #include "../common.h"
+#include "../meta.h"
 #include <iterator>
 
 namespace blue_sky {
@@ -212,7 +213,7 @@ public:
 	using arrbase::front;
 
 	// arrbase doesn't need to be constructed, so make perfect forwarding ctor to array_t
-	template < typename... Args >
+	template < typename... Args, typename = meta::enable_pf_ctor_to<bs_arrbase_impl, array_t, Args...> >
 	bs_arrbase_impl(Args&&... args) : array_t(std::forward< Args >(args)...) {}
 
 	size_type size() const {

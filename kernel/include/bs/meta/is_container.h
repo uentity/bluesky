@@ -9,7 +9,8 @@
 
 #pragma once
 
-#include <type_traits>
+#include "../meta.h"
+
 #include <iterator>
 
 namespace blue_sky::meta {
@@ -22,11 +23,13 @@ struct is_container : std::false_type {};
 
 template<typename T>
 struct is_container<T, std::void_t<
-	decltype(std::begin(std::declval<std::decay_t<T>>())),
-	decltype(std::end(std::declval<std::decay_t<T>>()))
+	decltype(std::begin(std::declval<T>())),
+	decltype(std::end(std::declval<T>())),
+	decltype(std::size(std::declval<T>()))
 >> : public std::true_type {};
 
-template<typename T> inline constexpr auto is_container_v = is_container<T>::value;
+template<typename T> using is_container_t = is_container<remove_cvref_t<T>>;
+template<typename T> inline constexpr auto is_container_v = is_container_t<T>::value;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Test if given type is map-like (container that has `mapped_type`)
@@ -39,8 +42,9 @@ struct is_map<T, std::enable_if_t<is_container_v<T>, std::void_t<typename T::map
 	using mapped_type = typename T::mapped_type;
 };
 
-template<typename T> using mapped_type = typename is_map<std::decay_t<T>>::mapped_type;
-template<typename T> inline constexpr auto is_map_v = is_map<std::decay_t<T>>::value;
+template<typename T> using is_map_t = is_map<remove_cvref_t<T>>;
+template<typename T> using mapped_type = typename is_map_t<T>::mapped_type;
+template<typename T> inline constexpr auto is_map_v = is_map_t<T>::value;
 
 } // blue_sky
 

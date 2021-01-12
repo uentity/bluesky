@@ -10,15 +10,12 @@
 
 #include <bs/error.h>
 
-namespace blue_sky { namespace tree {
+NAMESPACE_BEGIN(blue_sky::tree)
 
 enum class Error {
 	OK = 0,
-	// special value that is not an error indicator (also means 'OK')
-	// intended to be used for ex. by `fusion_iface` to indicate that object is fully loaded
-	// in single call to `populate()` or `pull_data()`
-	OKOK,
 
+	// link errors
 	EmptyData,
 	EmptyInode,
 	NotANode,
@@ -26,12 +23,26 @@ enum class Error {
 	UnboundSymLink,
 	LinkBusy,
 	NoFusionBridge,
-	KeyMismatch
+
+	// node errors
+	KeyMismatch,
+	WrongOrderSize,
+
+	// Tree FS errors
+	EmptyPath,
+	PathNotExists,
+	PathNotDirectory,
+	CantReadFile,
+	CantWriteFile,
+	LinkWasntStarted,
+	NodeWasntStarted,
+	MissingFormatter,
+	CantMakeFilename
 };
 
 BS_API std::error_code make_error_code(Error);
 
-}} /* namespace blue_sky::tree */
+NAMESPACE_END(blue_sky::tree)
 
 BS_REGISTER_ERROR_ENUM(blue_sky::tree::Error)
 

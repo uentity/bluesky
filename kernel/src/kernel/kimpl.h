@@ -8,26 +8,33 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include <bs/error.h>
 #include <bs/any_array.h>
+#include <bs/uuid.h>
 #include "logging_subsyst.h"
 #include "plugins_subsyst.h"
-#include "instance_subsyst.h"
 #include "config_subsyst.h"
-#include "python_subsyst.h"
 
+#include <boost/uuid/random_generator.hpp>
 #include <caf/fwd.hpp>
 
 #include <mutex>
 
 NAMESPACE_BEGIN(blue_sky::kernel)
+// forward declare subsystems
+NAMESPACE_BEGIN(detail)
+
+struct python_subsyst;
+struct radio_subsyst;
+
+NAMESPACE_END(detail)
 /*-----------------------------------------------------------------------------
  *  kernel impl
  *-----------------------------------------------------------------------------*/
 class BS_HIDDEN_API kimpl :
 	public detail::logging_subsyst,
 	public detail::config_subsyst,
-	public detail::plugins_subsyst,
-	public detail::instance_subsyst
+	public detail::plugins_subsyst
 {
 public:
 	// kernel generic data storage
@@ -37,21 +44,19 @@ public:
 	using idx_any_map_t = std::map< std::string, idx_any_array, std::less<> >;
 	idx_any_map_t idx_key_storage_;
 
-	std::mutex sync_storage_;
-
-	// kernel's actor system
-	// delayed actor system initialization
-	std::unique_ptr<caf::actor_system> actor_sys_;
-
 	// indicator of kernel initialization state
 	enum class InitState { NonInitialized, Initialized, Down };
 	std::atomic<InitState> init_state_;
 
-	// Python support depends on compile flags and can be 'dumb' or 'real'
-	std::unique_ptr<detail::python_subsyst> pysupport_;
-
 	kimpl();
 	~kimpl();
+
+	// BS kernel init & shutdown impl
+	auto init() -> error;
+	auto shutdown() -> void;
+
+	auto get_radio() -> detail::radio_subsyst*;
+	auto pysupport() -> detail::python_subsyst*;
 
 	using type_tuple = tfactory::type_tuple;
 	auto find_type(const std::string& key) const -> type_tuple;
@@ -60,7 +65,22 @@ public:
 
 	auto idx_key_storage(const std::string& key) -> idx_any_array&;
 
-	auto actor_system() -> caf::actor_system&;
+	// UUIDs source
+	auto gen_uuid() -> uuid;
+
+private:
+	// [NOTE] `actor_system` inside `radio_subsyst` starts worker and other service threads in constructor.
+	// BS kernel singleton is constructed during initialization of kernel shared library.
+	// And on Windows it is PROHIBITED to start threads in `DllMain()`, because that cause a deadlock.
+	// Solution: delay construction of actor_system until first usage, don't use CAf in kernel ctor.
+	std::unique_ptr<detail::radio_subsyst> radio_ss_;
+	// Python support depends on compile flags and can be 'dumb' or 'real'
+	std::unique_ptr<detail::python_subsyst> pysupport_;
+	std::once_flag radio_up_, py_up_;
+
+	boost::uuids::random_generator uuid_gen_;
+
+	std::mutex sync_storage_, sync_uuid_;
 };
 
 /// Kernel internal singleton

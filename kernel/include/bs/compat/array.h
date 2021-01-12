@@ -65,10 +65,10 @@ public:
 
 	bs_array() = default;
 	bs_array(const bs_array&) = default;
-	//bs_array(bs_array&&) = default;
+	bs_array(bs_array&&) = default;
 
 	// perfect forwarding ctor
-	template < typename... Args >
+	template < typename... Args, typename = meta::enable_pf_ctor_to<bs_array, base_t, Args...> >
 	bs_array(Args&&... args)
 		: base_t(std::forward< Args >(args)...), objbase()
 	{}
@@ -142,7 +142,7 @@ protected:
 	}
 
 	BS_TYPE_DECL_INL_BEGIN(bs_array, objbase, "", \
-			"Array of values of the same type indexed by integral type", true, true)
+			"Array of values of the same type indexed by integral type")
 		td.add_constructor< bs_array, size_type >();
 		td.add_constructor< bs_array, size_type, const value_type& >();
 		// add the same ctors but with size specified as `int`

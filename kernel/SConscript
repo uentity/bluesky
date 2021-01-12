@@ -11,9 +11,6 @@ kboost_libs = ['regex', 'thread', 'serialization', 'locale'];
 
 # init stage
 if build_kind == "init" :
-	if ("unmanaged" not in list(custom_vars.keys ())) :
-		custom_vars.Add ("unmanaged", "Set to 1 to force kernel skip tracking of created objects", "1")
-		custom_vars.Update (custom_env)
 	# query for reuired boost libs
 	boost_require(kboost_libs);
 	includes["bs"] = os.path.join(tar_plugin_dir, "include");
@@ -24,9 +21,11 @@ if build_kind == "init" :
 #kernel_cpp_list = files(["src"], recursive = False).sources;
 kernel_cpp_list = [
 	"src/assert.cpp",
+	"src/defaults.cpp",
 	"src/type_info.cpp",
 	"src/plugin_descriptor.cpp",
 	"src/objbase.cpp",
+	"src/objbase_actor.cpp",
 	"src/misc.cpp",
 	"src/str_utils.cpp",
 	"src/error.cpp",
@@ -38,10 +37,10 @@ kernel_cpp_list = [
 	"src/propdict.cpp",
 
 	"src/kernel/config_subsyst.cpp",
-	"src/kernel/instance_subsyst.cpp",
 	"src/kernel/logging_subsyst.cpp",
 	"src/kernel/plugins_discover.cpp",
 	"src/kernel/plugins_subsyst.cpp",
+	"src/kernel/radio_subsyst.cpp",
 	"src/kernel/types_factory_subsyst.cpp",
 	"src/kernel/kimpl.cpp",
 
@@ -49,6 +48,7 @@ kernel_cpp_list = [
 	"src/kernel/tools.cpp",
 	"src/kernel/config.cpp",
 	"src/kernel/misc.cpp",
+	"src/kernel/radio.cpp",
 	"src/kernel/plugins.cpp",
 	"src/kernel/types_factory.cpp",
 
@@ -59,21 +59,42 @@ kernel_cpp_list = [
 	"src/serialize/base_types.cpp",
 	"src/serialize/array.cpp",
 	"src/serialize/link.cpp",
+	"src/serialize/node.cpp",
 	"src/serialize/python.cpp",
 	"src/serialize/tree.cpp",
 	"src/serialize/tree_fs_output.cpp",
 	"src/serialize/tree_fs_input.cpp",
 	"src/serialize/object_formatter.cpp",
+	"src/serialize/objfrm_manager.cpp",
 
+	"src/tree/engine.cpp",
+	"src/tree/engine_impl.cpp",
 	"src/tree/inode.cpp",
 	"src/tree/link.cpp",
+	"src/tree/bare_link.cpp",
+	"src/tree/link_actor.cpp",
+	"src/tree/link_ack_behavior.cpp",
+	"src/tree/link_events.cpp",
+	"src/tree/link_impl.cpp",
+	"src/tree/nil_link.cpp",
+	"src/tree/nil_node.cpp",
 	"src/tree/hard_link.cpp",
 	"src/tree/sym_link.cpp",
-	"src/tree/node.cpp",
-	"src/tree/tree.cpp",
-	"src/tree/tree_async.cpp",
+	"src/tree/map_link_impl.cpp",
+	"src/tree/map_link_actor.cpp",
+	"src/tree/map_link.cpp",
 	"src/tree/fusion_link.cpp",
-	"src/tree/errors.cpp"
+	"src/tree/fusion_link_actor.cpp",
+	"src/tree/node.cpp",
+	"src/tree/bare_node.cpp",
+	"src/tree/node_actor.cpp",
+	"src/tree/node_ack_behavior.cpp",
+	"src/tree/node_extraidx_actor.cpp",
+	"src/tree/node_events.cpp",
+	"src/tree/node_impl.cpp",
+	"src/tree/tree.cpp",
+	"src/tree/errors.cpp",
+	"src/tree/context.cpp"
 ];
 #print kernel_cpp_list;
 
@@ -101,9 +122,6 @@ base_env.AppendUnique(
 );
 if base_env['platform'].startswith('lin') :
 	base_env.Append(LIBS = ['dl']);
-
-if (base_env["unmanaged"] == "1") :
-	base_env.AppendUnique (CPPDEFINES = ["BS_CREATE_UNMANAGED_OBJECTS"])
 
 # are we building with python support?
 if base_env['py'] == '1' :

@@ -75,7 +75,7 @@ public:
 	using container::empty;
 
 	// vecbase doesn't need to be constructed, so make perfect forwarding ctor to bs_array_impl
-	template < typename... Args >
+	template < typename... Args, typename = meta::enable_pf_ctor_to<bs_vecbase_impl, vector_t, Args...> >
 	bs_vecbase_impl(Args&&... args) : base_t(std::forward< Args >(args)...) {}
 
 	bool insert(const key_type& key, const value_type& value) {

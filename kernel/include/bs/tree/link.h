@@ -6,258 +6,298 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
+
+#include "common.h"
+#include "bare_link.h"
+#include "engine.h"
+#include "../atoms.h"
 #include "../error.h"
-#include "../objbase.h"
-#include "../detail/enumops.h"
-#include "inode.h"
+#include "../propdict.h"
 
-#include <atomic>
-#include <chrono>
-#include <boost/uuid/uuid.hpp>
+#include <caf/actor.hpp>
+#include <caf/typed_actor.hpp>
+#include <caf/scoped_actor.hpp>
+#include <caf/group.hpp>
 
-NAMESPACE_BEGIN(blue_sky)
-NAMESPACE_BEGIN(tree)
-
+NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  base class of all links
  *-----------------------------------------------------------------------------*/
-class BS_API link  : public std::enable_shared_from_this<link> {
+class BS_API link : public engine {
 public:
-	using id_type = boost::uuids::uuid;
-	using sp_link = std::shared_ptr<link>;
-	using sp_clink = std::shared_ptr<const link>;
-	using link_ptr = object_ptr<link>;
-	using clink_ptr = object_ptr<const link>;
+	using bare_type = bare_link;
+	using engine_impl = link_impl;
+	using engine_actor = link_actor;
+	using weak_ptr = engine::weak_ptr<link>;
 
-	/// virtual dtor
-	virtual ~link();
+	/// Interface of link actor, you can only send messages matching it
+	using actor_type = caf::typed_actor<
+		// get home group
+		caf::replies_to<a_home>::with<caf::group>,
+		// get pointee node group ID
+		caf::replies_to<a_home_id>::with<std::string>,
+		// get link ID
+		caf::replies_to<a_lnk_id>::with<lid_type>,
+		// get pointee OID
+		caf::replies_to<a_lnk_oid>::with<std::string>,
+		// get pointee type ID
+		caf::replies_to<a_lnk_otid>::with<std::string>,
 
-	/// provide shared pointers casted to derived type
-	template< class Derived >
-	decltype(auto) bs_shared_this() const {
-		return std::static_pointer_cast< const Derived, const link >(this->shared_from_this());
+		// get link name
+		caf::replies_to<a_lnk_name>::with<std::string>,
+		// rename link, returns 1 on successfull rename
+		caf::replies_to<a_lnk_rename, std::string>::with<std::size_t>,
+
+		// get request status
+		caf::replies_to<a_lnk_status, Req>::with<ReqStatus>,
+		// reset request status
+		caf::replies_to<a_lnk_status, Req, ReqReset, ReqStatus, ReqStatus>::with<ReqStatus>,
+
+		// get link flags
+		caf::replies_to<a_lnk_flags>::with<Flags>,
+		// set link flags
+		caf::reacts_to<a_lnk_flags, Flags>,
+
+		// get inode
+		caf::replies_to<a_lnk_inode>::with<result_or_errbox<inodeptr>>,
+		// get data
+		caf::replies_to<a_data, bool>::with<obj_or_errbox>,
+		// get data node
+		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
+
+		// run transaction in message queue of data object
+		caf::replies_to<a_apply, a_data, transaction>::with<tr_result::box>,
+		caf::replies_to<a_apply, a_data, obj_transaction>::with<tr_result::box>
+	>;
+
+	/// empty ctor will construct nil link
+	link();
+	/// convert from bare link
+	explicit link(const bare_link& rhs);
+
+	/// makes hard link
+	link(std::string name, sp_obj data, Flags f = Plain);
+	link(std::string name, node folder, Flags f = Plain);
+
+	/// [NOTE] move sematics is doable but disabled (by explicit copy ctor)
+	/// reason: moved from object MUST be immediately reset into nil link to not break invariants
+	/// and that operation alone is equivalent to copy ctor/assignment call
+	/// so, there's just no worth in it
+	link(const link&) = default;
+	auto operator=(const link&) -> link& = default;
+	auto operator=(const bare_link&) -> link&;
+
+	/// obtain bare link that provides direct access to link internals (passing over actor)
+	/// [WANRING] main use case is for transactions and edge cases where yo now what you're doing
+	auto bare() const -> bare_link;
+
+	/// swap support
+	friend auto swap(link& lhs, link& rhs) noexcept -> void {
+		static_cast<engine&>(lhs).swap(rhs);
 	}
 
-	template< class Derived >
-	decltype(auto) bs_shared_this() {
-		return std::static_pointer_cast< Derived, link >(this->shared_from_this());
+	/// get typed actor of base link
+	using engine::actor;
+	auto actor() const -> actor_type {
+		return engine::actor(*this);
 	}
 
+	/// if `deep` flag is set, then clone pointed object as well
+	auto clone(bool deep = false) const -> link;
+
+	/// create root link + propagate handle
+	template<typename Link, typename... Args>
+	static auto make_root(Args&&... args) -> Link {
+		if(auto lnk = Link(std::forward<Args>(args)...))
+			return Link{ make_root_(std::move(lnk)) };
+		return link{};
+	}
+
+	/// test if link is nil
+	auto is_nil() const -> bool;
+	operator bool() const { return !is_nil(); }
+	/// makes link nil
+	auto reset() -> void;
+
+	/// get link's container
+	auto owner() const -> node;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  Fast link info requests
+	//
 	/// access link's unique ID
-	auto id() const -> const id_type&;
+	auto id() const -> lid_type;
 
 	/// obtain link's symbolic name
 	auto name() const -> std::string;
+	/// same as above, but returns name directly from stored member
+	/// required by node
+	auto name(unsafe_t) const -> std::string;
 
-	/// get link's container
-	auto owner() const -> sp_node;
-
-	/// flags reflect link properties and state
-	enum Flags {
-		Plain = 0,
-		Persistent = 1,
-		Disabled = 2,
-		LazyLoad = 4
-	};
 	auto flags() const -> Flags;
-	auto set_flags(Flags new_flags) -> void;
+	auto set_flags(Flags new_flags) const -> void;
 
 	/// rename link & notify owner node
-	auto rename(std::string new_name) -> void;
+	auto rename(std::string new_name) const -> bool;
+	auto rename(launch_async_t, std::string new_name) const -> void;
 
 	/// inspect object's inode
 	auto info() const -> result_or_err<inode>;
 
-	/// because we cannot make explicit copies of link
-	/// we need a dedicated function to make links clones
-	/// if `deep` flag is set, then clone pointed object as well
-	virtual auto clone(bool deep = false) const -> sp_link = 0;
+	/// get link's object ID -- can return empty string
+	auto oid() const -> std::string;
 
-	/// create root link to node with and set it as node's handle
-	template<typename Link, typename... Args>
-	static auto make_root(Args&&... args) -> std::shared_ptr<Link> {
-		if(auto lnk = std::make_shared<Link>(std::forward<Args>(args)...)) {
-			static_cast<link*>(lnk.get())->propagate_handle();
-			return lnk;
-		}
-		return nullptr;
-	}
+	/// get link's object type ID -- can return nil type ID
+	auto obj_type_id() const -> std::string;
 
-	/// query what kind of link is this
-	virtual auto type_id() const -> std::string = 0;
+	/// applies functor to link atomically (invoke in link's queue)
+	auto apply(simple_transaction tr) const -> error;
+	auto apply(link_transaction tr) const -> error;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  sync API
+	//  Pointee data API
 	//
-	/// get link's object ID -- fast, can return empty string
-	virtual auto oid() const -> std::string;
-
-	/// get link's object type ID -- fast, can return nil type ID
-	virtual auto obj_type_id() const -> std::string;
-
 	/// get pointer to object link is pointing to -- slow, never returns invalid (NULL) sp_obj
-	auto data_ex(bool wait_if_busy = true) const -> result_or_err<sp_obj>;
+	auto data_ex(bool wait_if_busy = true) const -> obj_or_err;
 	/// simple data accessor that returns nullptr on error
 	auto data() const -> sp_obj {
 		return data_ex().value_or(nullptr);
 	}
+	/// directly return cached value (if any)
+	auto data(unsafe_t) const -> sp_obj;
 
 	/// return tree::node if contained object is a node -- slow, never returns invalid (NULL) sp_obj
 	/// derived class can return cached node info
-	auto data_node_ex(bool wait_if_busy = true) const -> result_or_err<sp_node>;
+	auto data_node_ex(bool wait_if_busy = true) const -> node_or_err;
 	/// simple tree::node accessor that returns nullptr on error
-	auto data_node() const -> sp_node {
-		return data_node_ex().value_or(nullptr);
-	}
+	auto data_node() const -> node;
+	/// directly return cached value (if any)
+	auto data_node(unsafe_t) const -> node;
 
-	///////////////////////////////////////////////////////////////////////////////
-	//  async API
-	//
-	// enum slow requests
-	enum class Req { Data = 0, DataNode = 1 };
-	// states of single reuqest
-	enum class ReqStatus { Void, Busy, OK, Error };
-
-	// get/set request status
+	/// get request status
 	auto req_status(Req request) const -> ReqStatus;
-	// unconditional reset request status
+	/// unconditional reset request status
 	auto rs_reset(Req request, ReqStatus new_status = ReqStatus::Void) const -> ReqStatus;
+	/// conditional reset request status
 	auto rs_reset_if_eq(Req request , ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
 	auto rs_reset_if_neq(Req request, ReqStatus self_rs, ReqStatus new_rs = ReqStatus::Void) const -> ReqStatus;
 
+	/// methods below are efficient checks that won't call `data_node()` if possible
+	/// check if pointee is a node
+	auto is_node() const -> bool;
+
+	/// if pointee is a node, return node's actor group ID
+	auto data_node_hid() const -> result_or_err<std::string>;
+
+	/// make pointee data modification atomically
+	auto data_apply(transaction tr) const -> tr_result;
+	auto data_apply(obj_transaction tr) const -> tr_result;
+
+	/// sends empty transaction object to trigger `data modified` signal
+	auto data_touch(tr_result tres = {}) const -> void;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  Async API
+	//
 	/// obtain data in async manner passing it to callback
-	using process_data_cb = std::function<void(result_or_err<sp_obj>, sp_clink)>;
+	using process_data_cb = std::function<void(obj_or_err, link)>;
 	auto data(process_data_cb f, bool high_priority = false) const -> void;
 	/// ... and data node
-	auto data_node(process_data_cb f, bool high_priority = false) const -> void;
+	using process_dnode_cb = std::function<void(node_or_err, link)>;
+	auto data_node(process_dnode_cb f, bool high_priority = false) const -> void;
 
-protected:
-	// serialization support
-	friend class blue_sky::atomizer;
-	// full access for node
-	friend class node;
+	auto apply(launch_async_t, simple_transaction tr) const -> void;
+	auto apply(launch_async_t, link_transaction tr) const -> void;
 
-	/// ctor accept name of created link
-	link(std::string name, Flags f = Plain);
-
-	/// deby link copying
-	link(const link&) = delete;
-
-	// silent replace old name with new in link's internals
-	auto rename_silent(std::string new_name) -> void;
+	auto data_apply(launch_async_t, transaction tr) const -> void;
+	auto data_apply(launch_async_t, obj_transaction tr) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////
-	//  sync data API
-	//  Implementation need not to bother with reuqest status
-	//  Performance hint: you can check if status is OK
-	//  to omit useless repeating possibly long operation calls
+	//  Subscribe to link events
 	//
+	using event_handler = std::function< void(link, Event, prop::propdict) >;
 
-	/// switch link's owner
-	virtual auto reset_owner(const sp_node& new_owner) -> void;
+	/// returns ID of suscriber that is required for unsubscribe
+	auto subscribe(event_handler f, Event listen_to = Event::All) const -> std::uint64_t;
+	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
 
-	/// download pointee data
-	virtual auto data_impl() const -> result_or_err<sp_obj> = 0;
-
-	/// download pointee structure -- link provide default implementation via `data_ex()` call
-	virtual auto data_node_impl() const -> result_or_err<sp_node>;
-
-	///////////////////////////////////////////////////////////////////////////////
-	//  misc API for inherited links
-	//
-
-	// if pointee is a node - set node's handle to self and return pointee
-	// default implementation obtains node via `data_node_ex()` and sets it's handle to self
-	// but derived link can change default behaviour
-	virtual auto propagate_handle() -> result_or_err<sp_node>;
-	/// set handle of passed node to self
-	auto self_handle_node(const sp_node& N) -> void;
-
-	/// obtain inode pointer
-	/// default impl do it via `data_ex()` call
-	virtual auto get_inode() const -> result_or_err<inodeptr>;
-	/// create or set or create inode for given target object
-	/// [NOTE] if `new_info` is non-null, returned inode may be NOT EQUAL to `new_info`
-	static auto make_inode(const sp_obj& target, inodeptr new_info = nullptr) -> inodeptr;
-
-	// PIMPL
-	struct impl;
-	// some derived links may need to access base link's internals
-	auto pimpl() const -> impl*;
-
-private:
-	std::unique_ptr<impl> pimpl_;
-};
-using sp_link = link::sp_link;
-using sp_clink = link::sp_clink;
-using link_ptr = link::link_ptr;
-using clink_ptr = link::clink_ptr;
-
-///////////////////////////////////////////////////////////////////////////////
-//  link with bundled inode
-//
-class BS_API ilink : public link {
 protected:
-	/// ctor accept name of created link
-	ilink(std::string name, const sp_obj& data, Flags f = Plain);
+	using engine::operator=;
 
-	/// return stored inode pointer
-	auto get_inode() const -> result_or_err<inodeptr> override final;
+	/// accept link impl and optionally start internal actor
+	link(sp_engine_impl impl, bool start_actor = true);
+
+	/// ensure that rhs type id matches requested, otherwise link is nil
+	link(const link& rhs, std::string_view rhs_type_id);
+
+	auto pimpl() const -> link_impl*;
+
+	/// maually start internal actor (if not started already)
+	auto start_engine() -> bool;
 
 private:
-	inodeptr inode_;
+	friend atomizer;
+	friend weak_ptr;
+	friend link_impl;
+	friend link_actor;
+	friend node_impl;
 
-	// serialization support
-	friend class blue_sky::atomizer;
+	link(engine&&);
+
+	static auto make_root_(engine donor) -> link;
 };
+
+/// handy aliases
+using links_v = std::vector<link>;
+using lids_v = std::vector<lid_type>;
 
 /*-----------------------------------------------------------------------------
  *  hard link stores direct pointer to object
  *  multiple hard links can point to the same object
  *-----------------------------------------------------------------------------*/
-class BS_API hard_link : public ilink {
+class BS_API hard_link : public link {
 	friend class blue_sky::atomizer;
+	friend class cereal::access;
 
 public:
-	/// ctor -- additionaly accepts a pointer to object
+	using super = link;
+
+	/// take an object that link will point to
 	hard_link(std::string name, sp_obj data, Flags f = Plain);
+	/// construct `objnode` instance internally with passed folder
+	hard_link(std::string name, node folder, Flags f = Plain);
+	/// convert from base link
+	hard_link(const link& rhs);
 
-	/// implement link's API
-	auto clone(bool deep = false) const -> sp_link override;
-
-	auto type_id() const -> std::string override;
-
-protected:
-	sp_obj data_;
+	static auto type_id_() -> std::string_view;
 
 private:
-	auto data_impl() const -> result_or_err<sp_obj> override;
+	/// empty ctor won't start internal actor
+	hard_link();
 };
 
 /*-----------------------------------------------------------------------------
  *  weak link is same as hard link, but stores weak link to data
  *  intended to be used to add class memebers self tree structure
  *-----------------------------------------------------------------------------*/
-class BS_API weak_link : public ilink {
+class BS_API weak_link : public link {
 	friend class blue_sky::atomizer;
+	friend class cereal::access;
 
 public:
+	using super = link;
+
 	/// ctor -- additionaly accepts a pointer to object
 	weak_link(std::string name, const sp_obj& data, Flags f = Plain);
+	/// convert from base link
+	weak_link(const link& rhs);
 
-	/// implement link's API
-	auto clone(bool deep = false) const -> sp_link override;
-
-	auto type_id() const -> std::string override;
+	static auto type_id_() -> std::string_view;
 
 private:
-	std::weak_ptr<objbase> data_;
-
-	auto data_impl() const -> result_or_err<sp_obj> override;
-
-	auto propagate_handle() -> result_or_err<sp_node> override;
+	/// empty ctor won't start internal actor
+	weak_link();
 };
 
 /*-----------------------------------------------------------------------------
@@ -266,36 +306,38 @@ private:
  *-----------------------------------------------------------------------------*/
 class BS_API sym_link : public link {
 	friend class blue_sky::atomizer;
+	friend class cereal::access;
 
 public:
+	using super = link;
+
 	/// ctor -- pointee is specified by string path
 	sym_link(std::string name, std::string path, Flags f = Plain);
 	/// ctor -- pointee is specified directly - absolute path will be stored
-	sym_link(std::string name, const sp_link& src, Flags f = Plain);
+	sym_link(std::string name, const link& src, Flags f = Plain);
+	/// convert from base link
+	sym_link(const link& rhs);
 
-	/// implement link's API
-	auto clone(bool deep = false) const -> sp_link override;
-
-	auto type_id() const -> std::string override;
+	static auto type_id_() -> std::string_view;
 
 	/// additional sym link API
 	/// check is pointed link is alive, sets Data status to proper state
 	auto check_alive() -> bool;
 
-	/// return stored pointee path
-	auto src_path(bool human_readable = false) const -> std::string;
+	/// return pointee
+	auto target() const -> link_or_err;
+	/// return pointee path (if `human_readable` is true, return link names in path)
+	auto target_path(bool human_readable = false) const -> std::string;
 
 private:
-	std::string path_;
-
-	auto reset_owner(const sp_node& new_owner) -> void override;
-
-	auto data_impl() const -> result_or_err<sp_obj> override;
-
-	auto propagate_handle() -> result_or_err<sp_node> override;
+	/// empty ctor won't start internal actor
+	sym_link();
 };
 
+NAMESPACE_END(blue_sky::tree)
 
-NAMESPACE_END(tree)
-NAMESPACE_END(blue_sky)
-
+// support for hashed container of links
+STD_HASH_BS_LINK(link)
+STD_HASH_BS_LINK(hard_link)
+STD_HASH_BS_LINK(weak_link)
+STD_HASH_BS_LINK(sym_link)

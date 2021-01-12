@@ -8,54 +8,94 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/error.h>
+#include <bs/log.h>
 #include <bs/kernel/misc.h>
-#include "kimpl.h"
-#ifdef BSPY_EXPORTING
-#include "python_subsyst_impl.h"
-#endif
 
-#include <caf/actor_system.hpp>
+#include "kimpl.h"
+#include "radio_subsyst.h"
+#include "config_subsyst.h"
+
 #include <fmt/format.h>
 
-NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(kernel)
+#ifdef BSPY_EXPORTING
+#include "python_subsyst_impl.h"
+#else
+#include "python_subsyst.h"
+
 NAMESPACE_BEGIN()
 
-struct python_subsyt_dumb : public detail::python_subsyst {
-	auto py_init_kernel() -> error { return success(); }
-
+struct python_subsyt_dumb : public blue_sky::kernel::detail::python_subsyst {
 	auto py_init_plugin(
-		const blue_sky::detail::lib_descriptor&, plugin_descriptor&
-	) -> result_or_err<std::string> {
+		const blue_sky::detail::lib_descriptor&, blue_sky::plugin_descriptor&
+	) -> blue_sky::result_or_err<std::string> override {
 		return "";
 	}
 
-	// construct `error` from any int value -- call after all modules initialized
-	auto py_add_error_closure() -> void {}
-
-	auto setup_py_kmod(void*) -> void {};
+	auto py_add_error_closure() -> void override {}
+	auto setup_py_kmod(void*) -> void override {};
+	auto py_kmod() const -> void* override { return nullptr; }
 };
 
 NAMESPACE_END()
 
-kimpl::kimpl()
-	: init_state_(InitState::NonInitialized)
-{
-	// [NOTE] We can't create `caf::actor_system` here.
-	// `actor_system` starts worker and other service threads in constructor.
-	// At the same time kernel singleton is constructed most of the time during
-	// initialization of kernel shared library. And on Windows it is PROHIBITED to start threads
-	// in `DllMain()`, because that cause a deadlock.
-	// Solution: delay construction of actor_system until first usage, don't use CAf in kernel ctor.
-
-	// setup Python support
-#ifdef BSPY_EXPORTING
-	pysupport_ = std::make_unique<detail::python_subsyst_impl>();
-#else
-	pysupport_ = std::make_unique<python_subsyt_dumb>();
 #endif
+
+NAMESPACE_BEGIN(blue_sky) NAMESPACE_BEGIN(kernel)
+
+kimpl::kimpl() : init_state_(InitState::NonInitialized) {}
+
+kimpl::~kimpl() {
+	// [NOTE] shutdown is required to preperly terminate logs, etc
+	shutdown();
 }
 
-kimpl::~kimpl() = default;
+auto kimpl::get_radio() -> detail::radio_subsyst* {
+	std::call_once(radio_up_, [&] { radio_ss_ = std::make_unique<detail::radio_subsyst>(); });
+	return radio_ss_.get();
+}
+
+auto kimpl::pysupport() -> detail::python_subsyst* {
+	std::call_once(py_up_, [&] {
+		// setup Python support
+#ifdef BSPY_EXPORTING
+		pysupport_ = std::make_unique<detail::python_subsyst_impl>();
+#else
+		pysupport_ = std::make_unique<python_subsyt_dumb>();
+#endif
+	});
+	return pysupport_.get();
+}
+
+auto kimpl::init() -> error {
+	// do initialization only once from non-initialized state
+	auto expected_state = InitState::NonInitialized;
+	if(init_state_.compare_exchange_strong(expected_state, InitState::Initialized)) {
+		// if init wasn't finished - return kernel to non-initialized status
+		auto init_ok = false;
+		auto finally = scope_guard{ [&]{ if(!init_ok) init_state_ = InitState::NonInitialized; } };
+
+		// configure kernel
+		configure();
+		// switch to mt logs
+		logging_subsyst::toggle_async(true);
+		// init kernel radio subsystem
+		auto er = get_radio()->init();
+		init_ok = er.ok();
+		return er;
+	}
+	return perfect;
+}
+
+auto kimpl::shutdown() -> void {
+	// shut down if not already Down
+	auto expected_state = InitState::Initialized;
+	if(init_state_.compare_exchange_strong(expected_state, InitState::Down)) {
+		// turn off radio subsystem
+		if(radio_ss_) radio_ss_->shutdown();
+		// shutdown logging subsyst
+		logging_subsyst::shutdown();
+	}
+}
 
 auto kimpl::find_type(const std::string& key) const -> type_tuple {
 	using search_key = plugins_subsyst::type_name_key;
@@ -66,21 +106,18 @@ auto kimpl::find_type(const std::string& key) const -> type_tuple {
 }
 
 auto kimpl::str_key_storage(const std::string& key) -> str_any_array& {
+	auto solo = std::lock_guard{ sync_storage_ };
 	return str_key_storage_[key];
 }
 
 auto kimpl::idx_key_storage(const std::string& key) -> idx_any_array& {
+	auto solo = std::lock_guard{ sync_storage_ };
 	return idx_key_storage_[key];
 }
 
-auto kimpl::actor_system() -> caf::actor_system& {
-	// delayed actor system initialization
-	// [TODO] write safer code
-	static auto* actor_sys = [this]{
-		init();
-		return actor_sys_.get();
-	}();
-	return *actor_sys;
+auto kimpl::gen_uuid() -> boost::uuids::uuid {
+	auto guard = std::lock_guard{ sync_uuid_ };
+	return uuid_gen_();
 }
 
 NAMESPACE_END(kernel)
@@ -104,16 +141,16 @@ template<> auto singleton<plugins_subsyst>::Instance() -> plugins_subsyst& {
 	return static_cast<plugins_subsyst&>(KIMPL);
 }
 
-template<> auto singleton<instance_subsyst>::Instance() -> instance_subsyst& {
-	return static_cast<instance_subsyst&>(KIMPL);
-}
-
 template<> auto singleton<logging_subsyst>::Instance() -> logging_subsyst& {
 	return static_cast<logging_subsyst&>(KIMPL);
 }
 
-template<> auto singleton<python_subsyst>::Instance() -> python_subsyst& {
-	return static_cast<python_subsyst&>(*KIMPL.pysupport_);
+template<> auto singleton<radio_subsyst>::Instance() -> radio_subsyst& {
+	return *KIMPL.get_radio();
 }
 
-NAMESPACE_END(blue_sky)
+template<> auto singleton<python_subsyst>::Instance() -> python_subsyst& {
+	return *KIMPL.pysupport();
+}
+
+NAMESPACE_END(blue_sky::kernel)

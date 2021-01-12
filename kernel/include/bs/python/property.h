@@ -6,7 +6,6 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include <pybind11/pybind11.h>
@@ -15,8 +14,10 @@
 
 #include "../property.h"
 #include "../propdict.h"
+#include "../objbase.h"
 
-// propbooks are opaque
+// propdict & propbooks are opaque
+PYBIND11_MAKE_OPAQUE(blue_sky::prop::propdict);
 PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_s);
 PYBIND11_MAKE_OPAQUE(blue_sky::prop::propbook_i);
 
@@ -34,8 +35,8 @@ struct type_caster<blue_sky::prop::property> {
 			return true;
 		}
 		auto caster = make_caster<UType>();
-		if (caster.load(src, convert)) {
-			value = cast_op<UType>(caster);
+		if(caster.load(src, convert)) {
+			value = cast_op<UType>(std::move(caster));
 			return true;
 		}
 		return false;

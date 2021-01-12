@@ -10,6 +10,7 @@
 #pragma once
 
 #include <bs/objbase.h>
+#include <bs/tree/link.h>
 #include <bs/serialize/serialize.h>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -45,6 +46,8 @@ using sp_person = std::shared_ptr< bs_person >;
 
 BSS_FCN_DECL(serialize, bs_person)
 
+auto make_persons_tree() -> tree::link;
+
 /*-----------------------------------------------------------------------------
  * templated class
  *-----------------------------------------------------------------------------*/
@@ -57,6 +60,8 @@ struct my_strategy : public objbase {
 	my_strategy(my_strategy&&) = default;
 	my_strategy(const std::string& name) : name_(name) {}
 
+	auto operator=(const my_strategy&) -> my_strategy& = default;
+
 	std::string name_;
 
 	//template< class Ostream >
@@ -65,7 +70,7 @@ struct my_strategy : public objbase {
 	}
 
 	// expect that only one strategy can exist
-	BS_TYPE_DECL_INL(my_strategy, objbase, "", "Strategy", true, true)
+	BS_TYPE_DECL_INL(my_strategy, objbase, "", "Strategy")
 };
 template< class T >
 using sp_strat = std::shared_ptr< my_strategy< T > >;
@@ -103,7 +108,7 @@ public:
 	cont_T storage_;
 	std::string name_;
 
-	BS_TYPE_DECL_INL_BEGIN(uber_type, objbase, "", "Uber complex type", true, false)
+	BS_TYPE_DECL_INL_BEGIN(uber_type, objbase, "", "Uber complex type")
 		td.add_constructor< uber_type, const char* >();
 		td.add_copy_constructor< uber_type >();
 	BS_TYPE_DECL_INL_END

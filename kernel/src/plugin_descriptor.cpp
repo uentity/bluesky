@@ -8,18 +8,16 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/common.h>
+#include <bs/defaults.h>
 #include <bs/type_descriptor.h>
 #include <bs/plugin_descriptor.h>
 
-using namespace std;
-
-inline constexpr auto BS_NIL_PLUGIN_TAG = "__blue_sky_nil_plugin__";
-
 namespace blue_sky {
+using defaults::kernel::nil_plugin_tag;
 
 //------------------------------plugin_descriptor-----------------------------------------------------------
 plugin_descriptor::plugin_descriptor()
-	: name(BS_NIL_PLUGIN_TAG),
+	: name(nil_plugin_tag),
 	serial_input_bindings(nullptr), serial_output_bindings(nullptr), serial_polycasters(nullptr),
 	tag_(nil_type_info())
 {}
@@ -49,7 +47,7 @@ bool plugin_descriptor::operator ==(const plugin_descriptor& pd) const {
 }
 
 const plugin_descriptor& plugin_descriptor::nil() {
-	static plugin_descriptor nil_pd(nil_type_info(), BS_NIL_PLUGIN_TAG, "");
+	static plugin_descriptor nil_pd(nil_type_info(), nil_plugin_tag, "");
 	return nil_pd;
 }
 

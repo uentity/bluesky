@@ -8,17 +8,20 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/error.h>
+#include <bs/actor_common.h>
 #include <bs/tree/errors.h>
 #include <bs/misc.h>
 #include <bs/log.h>
+#include <bs/uuid.h>
 #include <bs/kernel/tools.h>
 #include <bs/kernel/misc.h>
+#include <bs/kernel/radio.h>
 
 #include <fmt/format.h>
-#include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
+#include <fmt/compile.h>
 
-#include <cstring>
+#include <ostream>
+#include <string_view>
 #include <unordered_map>
 #include <mutex>
 
@@ -41,7 +44,7 @@ struct cat_registry {
 	static auto self() -> cat_registry& {
 		static cat_registry& self = []() -> cat_registry& {
 			// generate random key
-			auto& kstorage = kernel::idx_key_storage(to_string( boost::uuids::random_generator()() ));
+			auto& kstorage = kernel::idx_key_storage(to_string(gen_uuid()));
 			auto r = kstorage.insert_element(0, cat_registry{});
 			if(!r.first) throw error("Failed to instantiate error categories registry in kernel storage!");
 			return *r.first;
@@ -80,6 +83,16 @@ struct cat_registry {
 	}
 };
 
+const auto& ok_err_code() {
+	static const auto v = make_error_code(Error::OK);
+	return v;
+};
+
+const auto& fail_err_code() {
+   static const auto v = make_error_code(Error::Happened);
+   return v;
+}
+
 #define ECR cat_registry::self()
 
 NAMESPACE_END()
@@ -105,49 +118,62 @@ std::error_code make_error_code(Error e) {
 /*-----------------------------------------------------------------------------
  *  error implementation
  *-----------------------------------------------------------------------------*/
-error::error(IsQuiet quiet, std::string message, std::error_code ec)
-	: runtime_error([ec_msg = ec.message(), msg = std::move(message)]() mutable {
-		auto res = std::move(ec_msg);
-		if(!msg.empty()) {
-			res += res.empty() ? "|> " : " |> ";
-			res += std::move(msg);
-		}
-		return res;
-	}()),
-	code(ec == Error::Undefined ? (quiet == IsQuiet::Yes ? Error::OK : Error::Happened) : std::move(ec))
-{
-	if(quiet == IsQuiet::No) dump();
-}
-
-error::error(IsQuiet quiet, std::error_code ec) : error(quiet, "", std::move(ec)) {}
-
-error::error(IsQuiet quiet, std::string message, int ec, std::string_view cat_name)
-	: error(quiet, std::move(message), ECR.make_error_code(ec, cat_name))
-{}
-
-error::error(IsQuiet quiet, int ec, std::string_view cat_name)
-	: error(quiet,
-		ECR.lookup_category(cat_name) ? "" : fmt::format("Unknown error from category '{}'", cat_name),
-		ECR.make_error_code(ec, cat_name)
+error::error(IsQuiet quiet, const char* message, std::error_code ec) noexcept :
+	code(ec == Error::Undefined ?
+		(quiet == IsQuiet::Yes ? ok_err_code() : fail_err_code()) :
+		std::move(ec)
 	)
+{
+	if(message) if(auto msg_v = std::string_view{message}; !msg_v.empty())
+		info.emplace(message);
+	try {
+		if(quiet == IsQuiet::No) dump();
+	} catch(...) {}
+}
+error::error(IsQuiet quiet, const std::string& message, std::error_code ec) noexcept :
+	error(quiet, message.c_str(), ec)
 {}
 
-error::error(IsQuiet quiet, const std::system_error& er)
-	: runtime_error(er.what()), code(er.code())
+error::error(IsQuiet quiet, const char* message, int ec, std::string_view cat_name) noexcept
+	: error(quiet, message, ECR.make_error_code(ec, cat_name))
 {}
 
-// [NOTE] unpacking is always quiet
-error::error(IsQuiet quiet, box b) : error(IsQuiet::Yes, std::move(b.message), b.ec, b.domain) {}
+error::error(IsQuiet quiet, const std::string& message, int ec, std::string_view cat_name) noexcept
+	: error(quiet, message.c_str(), ECR.make_error_code(ec, cat_name))
+{}
 
-error::error(success_tag) : error(IsQuiet::Yes, Error::OK) {}
+error::error(IsQuiet quiet, std::error_code ec) noexcept
+	: error(quiet, nullptr, std::move(ec))
+{}
 
-// copy & move ctors are default
-error::error(const error& rhs) noexcept = default;
-error::error(error&& rhs) noexcept = default;
+error::error(IsQuiet quiet, const std::system_error& er) noexcept
+	: error(quiet, er.what(), er.code())
+{}
+
+error::error(IsQuiet quiet, raw_code ec, std::string_view cat_name) noexcept
+	: error(quiet, nullptr, ECR.make_error_code(ec.value, cat_name))
+{}
+
+// [NOTE] unpacking is quiet
+error::error(IsQuiet, box b) noexcept
+	: error(IsQuiet::Yes, b.message, ECR.make_error_code(b.ec, b.domain))
+{}
+
+error::error(IsQuiet, quiet_flag f) noexcept : code(f.value ? ok_err_code() : fail_err_code())
+{}
 
 // put passed error_category into registry
 auto error::register_category(std::error_category const* cat) -> void {
 	ECR.register_category(cat);
+}
+
+auto error::what() const -> std::string {
+	std::string res = code.message();
+	if(info) {
+		res += res.empty() ? "|> " : " |> ";
+		res += info->what();
+	}
+	return res;
 }
 
 const char* error::domain() const noexcept {
@@ -155,22 +181,15 @@ const char* error::domain() const noexcept {
 }
 
 const char* error::message() const noexcept {
-	if(ECR.lookup_sys_category(domain()))
-		return what();
-	// custom message is tail part delimited by semicolon and space
-	else if(auto pos = strstr(what(), "|>"); pos)
-		return pos + 3;
-	return "";
+	return info ? info->what() : "";
 }
 
-bool error::ok() const {
-	static const auto tree_extra_ok = tree::make_error_code(tree::Error::OKOK);
-
-	return !(bool)code || (code == tree_extra_ok);
+bool error::ok() const noexcept {
+	return !(bool)code;
 }
 
 BS_API std::string to_string(const error& er) {
-	std::string s = fmt::format("[{}] [{}] {}", er.domain(), er.code.value(), er.what());
+	std::string s = fmt::format(FMT_COMPILE("[{}] [{}] {}"), er.domain(), er.code.value(), er.what());
 #if defined(_DEBUG) && !defined(_MSC_VER)
 	if(!er.ok()) s += kernel::tools::get_backtrace(16, 4);
 #endif
@@ -178,10 +197,10 @@ BS_API std::string to_string(const error& er) {
 }
 
 auto error::pack() const -> box {
-	return { code.value(), message(), domain() };
+	return *this;
 }
 
-auto error::unpack(box b) -> error {
+auto error::unpack(box b) noexcept -> error {
 	return error{ IsQuiet::Yes, std::move(b) };
 }
 
@@ -201,12 +220,37 @@ BS_API std::ostream& operator <<(std::ostream& os, const error& ec) {
 //  error::box
 //
 
-error::box::box(const error& er) {
-	*this = er.pack();
+error::box::box(const error& er)
+	: ec(er.code.value()), domain(er.domain())
+{
+	if(er.info) message = er.info->what();
 }
 
-error::box::box(int ec_, std::string message_, std::string domain_)
-	: ec(ec_), message(std::move(message_)), domain(std::move(domain_))
+error::box::box(int ec_, std::string domain_, std::string message_) noexcept
+	: ec(ec_), domain(std::move(domain_)), message(std::move(message_))
 {}
+
+///////////////////////////////////////////////////////////////////////////////
+//  CAF errors passthrough
+//
+auto forward_caf_error(const caf::error& er, std::string_view msg) -> error {
+	// produce std::error_code from CAF error
+	static const auto caf_error_code = [](const caf::error& er) -> std::error_code {
+		struct caf_category : error::category<caf_category> {
+			const char* name() const noexcept override { return "CAF"; }
+
+			std::string message(int ec) const override { return ""; }
+		};
+
+		return { er.code(), caf_category::self() };
+	};
+
+	auto ermsg = kernel::radio::system().render(er);
+	if(!msg.empty()) {
+		ermsg += " |> ";
+		ermsg += msg;
+	}
+	return { std::move(ermsg), caf_error_code(er) };
+}
 
 NAMESPACE_END(blue_sky)

@@ -6,12 +6,16 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include "common.h"
+#include "error.h"
 #include "type_macro.h"
+#include "propdict.h"
+#include "detail/function_view.h"
+#include "kernel/errors.h"
 
+#include <type_traits>
 #include <unordered_map>
 
 NAMESPACE_BEGIN(blue_sky)
@@ -21,34 +25,114 @@ using bs_type_copy_param = const std::shared_ptr<const objbase>&;
 
 using BS_TYPE_COPY_FUN = bs_type_ctor_result (*)(bs_type_copy_param);
 using BS_GET_TD_FUN = const blue_sky::type_descriptor& (*)();
+using BS_TYPE_ASSIGN_FUN = error (*)(sp_obj /*target*/, sp_obj /*source*/, prop::propdict /*params*/);
+
+/*-----------------------------------------------------------------------------
+ *  every BS type must be assignable - provide assing(target, source) definition
+ *-----------------------------------------------------------------------------*/
+
+/// Povide explicit specialization of this struct to disable assign (enabled by default for all types)
+/// Also can be controlled by adding `T::bs_disable_assign` static bool constant
+template<typename T, typename sfinae = void> struct has_disabled_assign : std::false_type {};
+
+template<typename T> struct has_disabled_assign<T, std::void_t<decltype( T::bs_disable_assign )>> :
+	std::bool_constant<T::bs_disable_assign> {};
 
 NAMESPACE_BEGIN(detail)
 
-/// Convert lambda::operator() to bs type construct function pointer
-template <typename L> struct mfn2bsctor {};
-template <typename C, typename R, typename... A>
-struct mfn2bsctor<R (C::*)(A...)> { typedef bs_type_ctor_result type(A...); };
-template <typename C, typename R, typename... A>
-struct mfn2bsctor<R (C::*)(A...) const> { typedef bs_type_ctor_result type(A...); };
-template<typename... T> using mfn2bsctor_t = typename mfn2bsctor<T...>::type;
-/// correct leafs owner in cloned node object
-BS_API void adjust_cloned_node(const sp_obj&);
+template<typename T, typename = void>
+struct assign_traits {
+	// detect if type provide T::assign() member
+	template<typename U, typename = void> struct has_member_assign : std::false_type {};
+	template<typename U, typename = void> struct has_member_assign_wparams : std::false_type {};
+	template<typename U> struct has_member_assign<U, std::void_t<decltype(
+		std::declval<U&>().assign(std::declval<U&>())
+	)>> : std::true_type {};
+	template<typename U> struct has_member_assign_wparams<U, std::void_t<decltype(
+		std::declval<U&>().assign(std::declval<U&>(), std::declval<prop::propdict>())
+	)>> : std::true_type {};
+
+	// if > 1 use `assign(source, params)`, otherwise `assign(source)`
+	static constexpr char member = 2 * has_member_assign_wparams<T>::value + has_member_assign<T>::value;
+	static constexpr auto noop = has_disabled_assign<T>::value && member == 0;
+	static constexpr auto generic = !(member > 0 || noop);
+};
+
+inline auto noop_assigner(sp_obj, sp_obj, prop::propdict) -> error { return perfect; };
+
+template<typename T>
+auto make_assigner() {
+	// [NOTE] strange if clause with extra constexpr if just to compile under VS
+	if constexpr (assign_traits<T>::noop)
+		return noop_assigner;
+	else
+		return [](sp_obj target, sp_obj source, prop::propdict params) -> error {
+			// sanity
+			if(!target) return error{"assign target", kernel::Error::BadObject};
+			if(!source) return error{"assign source", kernel::Error::BadObject};
+			auto& td = T::bs_type();
+			if(!isinstance(target, td) || !isinstance(source, td))
+				return error{"assign source or target", kernel::Error::UnexpectedObjectType};
+			// invoke overload for type T
+			return assign(static_cast<T&>(*target), static_cast<T&>(*source), std::move(params));
+		};
+}
 
 NAMESPACE_END(detail)
 
-/*!
-\struct type_descriptor
-\ingroup blue_sky
-\brief BlueSky type descriptor
-*/
+/// Generic definition of assign() that works via operator=()
+template<typename T>
+auto assign(T& target, T& source, prop::propdict)
+-> std::enable_if_t<detail::assign_traits<T>::generic, error> {
+	static_assert(
+		std::is_assignable_v<T&, T>,
+		"Seems that type lacks default assignemnt operator. "
+		"Either define it or provide overload of assign(T&, T&, prop::propdict) -> error"
+	);
+	if constexpr(std::is_nothrow_assignable_v<T, T>)
+		target = source;
+	else if constexpr(std::is_assignable_v<T, T>)
+		return error::eval_safe([&] { target = source; });
+	return perfect;
+}
+
+/// overload appears for types that have defined T::assign(const T&) method
+template<typename T>
+auto assign(T& target, T& source, prop::propdict params)
+-> std::enable_if_t<detail::assign_traits<T>::member, error> {
+	const auto invoke_assign = [&](auto&&... args) -> error {
+		using R = std::remove_reference_t<decltype( target.assign(std::forward<decltype(args)>(args)...) )>;
+		if constexpr(std::is_same_v<R, error>)
+			return target.assign(std::forward<decltype(args)>(args)...);
+		else
+			return error::eval_safe([&] { target.assign(std::forward<decltype(args)>(args)...); });
+	};
+
+	if constexpr(detail::assign_traits<T>::member > 1)
+		return invoke_assign(source, std::move(params));
+	else
+		return invoke_assign(source);
+}
+
+/// noop for types defined corresponding constant
+template<typename T>
+auto assign(T& target, T& source, prop::propdict)
+-> std::enable_if_t<detail::assign_traits<T>::noop, error> {
+	return perfect;
+}
+
+/*-----------------------------------------------------------------------------
+ *  describes BS type and provides create/copy/assign facilities
+ *-----------------------------------------------------------------------------*/
 class BS_API type_descriptor {
 private:
 	const BS_GET_TD_FUN parent_td_fun_;
+	const function_view<detail::deduce_callable_t<BS_TYPE_ASSIGN_FUN>> assign_fun_;
 	mutable BS_TYPE_COPY_FUN copy_fun_;
 
 	// map type of params tuple -> typeless creation function
-	using ctor_handle = std::pair< void(*)(), void*>;
-	mutable std::unordered_map< std::type_index, ctor_handle > creators_;
+	using erased_ctor = function_view<void()>;
+	mutable std::unordered_map< std::type_index, erased_ctor > creators_;
 
 	// `decay_helper` extends `std::decay` such that pointed type (for pointers) is also decayed
 	template<typename T, typename = void>
@@ -56,14 +140,12 @@ private:
 		using type = std::decay_t<T>; //-> can give a pointer, that's why 2nd pass is needed
 	};
 	template<typename T>
-	struct decay_helper<T, std::enable_if_t<std::is_pointer<T>::value>> {
+	struct decay_helper<T, std::enable_if_t<std::is_pointer_v<T>>> {
 		using type = std::decay_t<decltype(*std::declval<T>())>*;
 	};
 	// need to double-pass through `decay_helper` to strip `const` from inline strings
 	// and other const arrays
 	template<typename T> using decay_arg = typename decay_helper< typename decay_helper<T>::type >::type;
-	// decayed ctor parameters tuple is the key to find corresponding creator function
-	template< typename... Args > using args_pack = std::tuple<decay_arg<Args>...>;
 
 	// generate BS type creator signature with consistent results
 	// if param is pointer (const or not) to type `T` -> result is `const T*`
@@ -73,59 +155,30 @@ private:
 		using type = std::add_lvalue_reference_t< std::add_const_t<decay_arg<T>> >;
 	};
 	template<typename T>
-	struct pass_helper<T, std::enable_if_t<std::is_pointer<decay_arg<T>>::value>> {
+	struct pass_helper<T, std::enable_if_t<std::is_pointer_v<decay_arg<T>>>> {
 		using dT = std::remove_reference_t<decltype(*std::declval<decay_arg<T>>())>;
 		using type = std::add_const_t<dT>*;
 	};
 	template<typename T> using pass_arg = typename pass_helper<T>::type;
-	// final signature of object creator function callback
-	template< typename... Args >
-	using creator_callback = bs_type_ctor_result (*)(void*, pass_arg<Args>...);
 
-	template< class T, class unused = void >
-	struct extract_tdfun {
-		static BS_GET_TD_FUN go() {
-			return T::bs_type;
-		}
-	};
-	template < class unused >
-	struct extract_tdfun< nil, unused > {
-		static BS_GET_TD_FUN go() {
-			return nullptr;
-		}
+	// normalized signature of object constructor
+	template<typename... Args>
+	struct normalized_ctor {
+		using type = function_view< bs_type_ctor_result (pass_arg<Args>...) >;
 	};
 
-	template< class T>
-	struct extract_typename {
-		template< class str_type >
-		static std::string go(str_type val) {
-			return val;
-		}
-
-		static std::string go(std::nullptr_t) {
-			return bs_type_name< T >();
-		}
+	template<typename R, typename... Args>
+	struct normalized_ctor<R (Args...)> {
+		using type = typename normalized_ctor<Args...>::type;
 	};
 
-	// should we add default ctor?
-	template< typename T, bool Enable >
-	void add_def_constructor(std::enable_if_t< !Enable >* = nullptr) {}
-	template< typename T, bool Enable >
-	void add_def_constructor(std::enable_if_t< Enable >* = nullptr) {
-		add_constructor< T >();
-	}
-
-	// should we add default copy?
-	template< typename T, bool Enable >
-	void add_def_copy_constructor(std::enable_if_t< !Enable >* = nullptr) {}
-	template< typename T, bool Enable >
-	void add_def_copy_constructor(std::enable_if_t< Enable >* = nullptr) {
-		add_copy_constructor< T >();
-	}
+	template<typename... Args> using normalized_ctor_t = typename normalized_ctor<Args...>::type;
 
 public:
-	const std::string name; //!< string type name
-	const std::string description; //!< arbitrary type description
+	/// string type name
+	const std::string name;
+	/// arbitrary type description
+	const std::string description;
 
 	// std::shared_ptr support casting only using explicit call to std::static_pointer_cast
 	// this helper allows to avoid lengthy typing and auto-cast pointer from objbase
@@ -140,9 +193,9 @@ public:
 		shared_ptr_cast(std::shared_ptr< objbase>&& rhs) : ptr_(std::move(rhs)) {}
 
 		// only allow imlicit conversion of rvalue shared_ptr_cast (&&)
-		template< typename T >
-		operator std::shared_ptr< T >() const && {
-			return std::static_pointer_cast< T, objbase >(ptr_);
+		template<typename T>
+		operator std::shared_ptr<T>() const && {
+			return std::static_pointer_cast<T>(std::move(ptr_));
 		}
 
 		bs_type_ctor_result ptr_;
@@ -153,126 +206,102 @@ public:
 
 	// standard constructor
 	type_descriptor(
-		std::string type_name, const BS_TYPE_COPY_FUN& cp_fn,
-		const BS_GET_TD_FUN& parent_td_fn, std::string description = ""
+		std::string type_name, BS_GET_TD_FUN parent_td_fn, BS_TYPE_ASSIGN_FUN assign_fn,
+		BS_TYPE_COPY_FUN cp_fn = nullptr, std::string description = ""
 	);
 
 	// templated ctor for BlueSky types
-	// if add_def_construct is set -- add default (empty) type's constructor
-	// if add_def_copy is set -- add copy constructor
-	template<
-		class T, class base = nil, class typename_t = std::nullptr_t,
-		bool add_def_ctor = false, bool add_def_copy = false
-	>
+	template<class T, class base, class typename_t = std::nullptr_t>
 	type_descriptor(
 		identity< T >, identity< base >,
-		typename_t type_name = nullptr, const char* description = nullptr,
-		std::integral_constant< bool, add_def_ctor > = std::false_type(),
-		std::integral_constant< bool, add_def_copy > = std::false_type()
+		typename_t type_name = nullptr, std::string description = {}
 	) :
-		parent_td_fun_(extract_tdfun< base >::go()), copy_fun_(nullptr),
-		name(extract_typename< T >::go(type_name)), description(description)
+		parent_td_fun_(&base::bs_type),
+		assign_fun_(blue_sky::detail::make_assigner<T>()),
+		copy_fun_(nullptr),
+		name([&] {
+			if constexpr(std::is_same_v<typename_t, std::nullptr_t>)
+				return bs_type_name<T>();
+			else
+				return std::move(type_name);
+		}()),
+		description(std::move(description))
 	{
-		add_def_constructor< T, add_def_ctor >();
-		add_def_copy_constructor< T, add_def_copy >();
+		// auto-add default ctor, from single string arg (typically ID), and copy ctor
+		if constexpr(std::is_default_constructible_v<T>)
+			add_constructor<T>();
+		if constexpr(std::is_copy_constructible_v<T>)
+			add_copy_constructor<T>();
 	}
 
-	// obtain Nil type_descriptor
-	static const type_descriptor& nil();
-	bool is_nil() const;
-
-	/*-----------------------------------------------------------------
-	 * create new instance
-	 *----------------------------------------------------------------*/
-	// vanilla fucntion pointer as type constructor
-	// NOTE: if Args&& used as function params then args types auto-deduction fails
-	// for templated functions
-	template< typename... Args >
-	void add_constructor(bs_type_ctor_result (*f)(Args...)) const {
-		creators_[typeid(args_pack< Args... >)] = ctor_handle(
-			reinterpret_cast< void(*)() >((creator_callback< Args... >)
-				[](void* ff, pass_arg< Args >... args) {
-					return (*reinterpret_cast< decltype(f) >(ff))(args...);
-				}
-			),
-			reinterpret_cast< void* >(f)
+	///////////////////////////////////////////////////////////////////////////////
+	// register constructors & construct new instance from ctor agruments 
+	//
+	template<typename F>
+	auto add_constructor(F&& f) const -> void {
+		using Finfo = blue_sky::detail::deduce_callable<std::remove_reference_t<F>>;
+		using Fsign = typename Finfo::type;
+		static_assert(
+			std::is_same_v<typename Finfo::result, bs_type_ctor_result>,
+			"Type constructor must return sp_obj"
 		);
-	}
-
-	// add stateless lambda as type constructor
-	template< typename Lambda >
-	void add_constructor(Lambda&& f) const {
-		using func_t = detail::mfn2bsctor_t< decltype(&std::remove_reference_t<Lambda>::operator()) >;
-		add_constructor((func_t*)f);
-	}
-
-	// std type construction
-	// explicit constructor arguments types
-	template< typename T, typename... Args >
-	void add_constructor() const {
-		creators_[typeid(args_pack< Args... >)] = ctor_handle(
-			reinterpret_cast< void(*)() >((creator_callback< Args... >)
-				[](void* ff, pass_arg< Args >... args) {
-					return std::static_pointer_cast<objbase, T>(std::make_shared<T>(args...));
-				}
-			),
-			nullptr
+		static_assert(
+			std::is_convertible_v<F, std::add_pointer_t<Fsign>>,
+			"Only stateless functor that can be registered as constructor"
 		);
+		// store type-erased constructor
+		using Fnorm = normalized_ctor_t<Fsign>;
+		auto creator = Fnorm{f};
+		creators_.insert_or_assign( typeid(Fnorm), std::move(reinterpret_cast<erased_ctor&>(creator)) );
 	}
 
-	// std type's constructor
-	// deduce constructor arguments types from passed tuple
-	template< typename T, typename... Args >
-	void add_constructor(std::tuple< Args... >*) const {
-		add_constructor< T, Args... >();
+	template<typename T, typename... Args>
+	auto add_constructor() const -> void {
+		add_constructor([](pass_arg<Args>... args) {
+			return std::static_pointer_cast<objbase>(std::make_shared<T>(args...));
+		});
 	}
 
 	// make new instance
-	template< typename... Args >
-	shared_ptr_cast construct(Args&&... args) const {
-		auto creator = creators_.find(typeid(args_pack< Args... >));
-		if(creator != creators_.end()) {
-			auto callback = reinterpret_cast< creator_callback<Args...> >(creator->second.first);
-			return callback(creator->second.second, std::forward<Args>(args)...);
+	template<typename... Args>
+	auto construct(Args&&... args) const -> shared_ptr_cast {
+		using Fnorm = normalized_ctor_t<Args...>;
+		if(auto creator = creators_.find(typeid(Fnorm)); creator != creators_.end()) {
+			auto* f = reinterpret_cast<Fnorm*>(&creator->second);
+			return (*f)(std::forward<Args>(args)...);
 		}
 		return {};
 	}
 
-	/*-----------------------------------------------------------------
-	 * create copy of instance
-	 *----------------------------------------------------------------*/
+	///////////////////////////////////////////////////////////////////////////////
+	// make copy of instance 
+	//
 	// register type's copy constructor
 	template< typename T >
-	void add_copy_constructor() const {
+	auto add_copy_constructor() const -> void {
 		copy_fun_ = [](bs_type_copy_param src) {
-			return std::static_pointer_cast< objbase, T >(
+			return src ? std::static_pointer_cast< objbase, T >(
 				std::make_shared< T >(static_cast< const T& >(*src))
-			);
+			) : nullptr;
 		};
 	}
 
 	// construct copy using vanilla function
-	void add_copy_constructor(BS_TYPE_COPY_FUN f) const {
+	auto add_copy_constructor(BS_TYPE_COPY_FUN f) const -> void {
 		copy_fun_ = f;
 	}
 
 	// make a copy of object instance
-	shared_ptr_cast clone(bs_type_copy_param src) const {
-		if(copy_fun_) {
-			auto res = (*copy_fun_)(src);
-			// nodes need special adjustment
-			detail::adjust_cloned_node(res);
-			return res;
-		}
-		return {};
-	}
+	auto clone(bs_type_copy_param src) const -> shared_ptr_cast;
 
-	/// tests
-	bool is_copyable() const {
-		return (copy_fun_ != nullptr);
-	}
+	// assign content from source -> target
+	auto assign(sp_obj target, sp_obj source, prop::propdict params = {}) const -> error;
 
-	/// conversions
+	auto is_copyable() const -> bool;
+
+	static auto nil() -> const type_descriptor&;
+	auto is_nil() const -> bool;
+
 	operator std::string() const {
 		return name;
 	}
@@ -280,33 +309,37 @@ public:
 		return name.c_str();
 	}
 
-	/// type_descriptors are comparable by string type name
-	bool operator <(const type_descriptor& td) const;
-
+	/// check that object's type descriptor mathes self
+	auto isinstance(const sp_cobj& obj) const -> bool;
+	
 	/// retrieve type_descriptor of parent class
-	const type_descriptor& parent_td() const {
-		return parent_td_fun_ ? (*parent_td_fun_)() : nil();
+	auto parent_td() const -> const type_descriptor&;
+
+	/// type_descriptors are comparable by string type name
+	auto operator <(const type_descriptor& td) const -> bool;
+
+	/// comparison with string type ID
+	friend auto operator ==(const type_descriptor& td, std::string_view type_id) -> bool {
+		return (td.name == type_id);
+	}
+	friend auto operator ==(std::string_view type_id, const type_descriptor& td) -> bool {
+		return (td.name == type_id);
+	}
+
+	friend auto operator !=(const type_descriptor& td, std::string_view type_id) -> bool {
+		return td.name != type_id;
+	}
+	friend auto operator !=(std::string_view type_id, const type_descriptor& td) -> bool {
+		return td.name != type_id;
+	}
+
+	friend auto operator <(const type_descriptor& td, std::string_view type_id) -> bool {
+		return td.name < type_id;
 	}
 };
 
-/// comparison with string type ID
-inline bool operator ==(const type_descriptor& td, std::string_view type_id) {
-	return (td.name == type_id);
-}
-inline bool operator ==(std::string_view type_id, const type_descriptor& td) {
-	return (td.name == type_id);
-}
-
-inline bool operator !=(const type_descriptor& td, std::string_view type_id) {
-	return td.name != type_id;
-}
-inline bool operator !=(std::string_view type_id, const type_descriptor& td) {
-	return td.name != type_id;
-}
-
-inline bool operator <(const type_descriptor& td, std::string_view type_id) {
-	return td.name < type_id;
-}
+inline auto isinstance(const sp_cobj& obj, const type_descriptor& td) -> bool { return td.isinstance(obj); }
+BS_API auto isinstance(const sp_cobj& obj, std::string_view obj_type_id) -> bool;
 
 // upcastable_eq(td1, td2) will return true if td1 == td2
 // or td1 can be casted up to td2 (i.e. td2 is inherited from td1)

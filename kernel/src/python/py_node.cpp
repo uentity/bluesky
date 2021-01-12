@@ -7,17 +7,16 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/python/common.h>
-#include <bs/tree/node.h>
+#include <bs/python/tree.h>
+#include <bs/python/container_iterator.h>
 
-#include <boost/uuid/uuid_io.hpp>
+#include "../tree/node_leafs_storage.h"
+
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
 using namespace tree;
-using Key = node::Key;
-using InsertPolicy = node::InsertPolicy;
 
 /*-----------------------------------------------------------------------------
  *  hidden details
@@ -26,288 +25,363 @@ NAMESPACE_BEGIN()
 
 // helpers to omit code duplication
 // ------- contains
-template<Key K>
-bool contains(const node& N, const std::string& key) {
-	return N.find(key, K) != N.end<>();
+template<typename Node>
+bool contains_lid(const Node& N, lid_type key) {
+	return N.index(std::move(key)).has_value();
 }
-bool contains_link(const node& N, const sp_link& l) {
-	return N.find(l->id()) != N.end<>();
+
+template<typename Node>
+bool contains_link(const Node& N, const link& l) {
+	return N.index(l.id()).has_value();
 }
+
 bool contains_obj(const node& N, const sp_obj& obj) {
-	return N.find(obj->id(), Key::OID) != N.end<>();
+	return obj ? N.index(obj->id(), Key::OID).has_value() : false;
+}
+
+bool contains_key(const node& N, std::string key, Key meaning) {
+	const auto check_index = [&](Key meaning) {
+		return N.index(std::move(key), meaning).has_value();
+	};
+	switch(meaning) {
+	default:
+	case Key::ID:
+		return check_index(Key::ID);
+	case Key::OID:
+		return check_index(Key::OID);
+	case Key::Name:
+		return check_index(Key::Name);
+	case Key::Type:
+		return check_index(Key::Type);
+	}
 }
 
 // ------- find
-template<Key K, bool Throw = true>
-auto find(const node& N, const std::string& key) -> sp_link {
-	auto r = N.find(key, K);
-	if(r != N.end<>()) return *r;
-	if(Throw) {
-		std::string msg = "Node doesn't contain link ";
-		switch(K) {
-		default:
-		case Key::ID:
-			msg += "with ID = "; break;
-		case Key::OID:
-			msg += "to object with ID = "; break;
-		case Key::Name:
-			msg += "with name = "; break;
-		case Key::Type:
-			msg += "with type = "; break;
-		}
-		throw py::key_error(msg + key);
+auto throw_find_err(const std::string& key, Key meaning) {
+	std::string msg = "Node doesn't contain link ";
+	switch(meaning) {
+	default:
+	case Key::ID:
+		msg += "with ID = "; break;
+	case Key::OID:
+		msg += "to object with ID = "; break;
+	case Key::Name:
+		msg += "with name = "; break;
+	case Key::Type:
+		msg += "with type = "; break;
 	}
-	return nullptr;
+	throw py::key_error(msg + key);
+}
+
+template<bool Throw = true, typename Node>
+auto find_lid(const Node& N, lid_type key) -> link {
+	if(auto r = N.find(std::move(key)))
+		return r;
+
+	if constexpr(Throw)
+		throw_find_err(to_string(key), Key::ID);
+	return {};
 }
 
 template<bool Throw = true>
-sp_link find_obj(const node& N, const sp_obj& obj) {
-	return find<Key::OID, Throw>(N, obj->id());
+auto find_obj(const node& N, const sp_obj& obj) -> link {
+	// sanity
+	if(obj) {
+		if(auto r = N.find(obj->id(), Key::OID))
+			return r;
+	}
+
+	if constexpr(Throw) {
+		if(obj) throw_find_err(obj->id(), Key::OID);
+		else throw py::key_error("Nil object");
+	}
+	return {};
 }
 
-auto find_by_idx(const node& N, const long idx, bool allow_end = false) {
+template<typename Node>
+auto find_idx(const Node& N, long idx) -> link {
 	// support for Pythonish indexing from both ends
-	const std::size_t positive_idx = idx < 0 ? N.size() + std::size_t(allow_end) + idx : std::size_t(idx);
-	if(positive_idx > N.size() - std::size_t(!allow_end))
+	std::size_t positive_idx = [&] {
+		if(idx < 0) {
+			idx += N.size();
+			if(idx < 0) throw py::key_error("Index out of bounds");
+		}
+		return static_cast<std::size_t>(idx);
+	}();
+
+	if(auto res = N.find(positive_idx))
+		return res;
+	else
 		throw py::key_error("Index out of bounds");
-	return std::next(N.begin(), positive_idx);
 }
 
 // ------- index
-template<Key K>
-auto index(const node& N, const std::string& key) -> std::size_t {
-	return N.index(key, K);
+auto index_obj(const node& N, const sp_obj& obj) -> py::int_ {
+	if(obj) {
+		if(auto i = N.index(obj->id(), Key::OID))
+			return *i;
+	}
+	return py::none();
 }
-auto index_link(const node& N, const sp_link& l) {
-	return N.index(l->id());
+
+template<typename Node>
+auto index_lid(const Node& N, const lid_type& lid) -> typename Node::existing_index {
+	return N.index(lid);
 }
-auto index_obj(const node& N, const sp_obj& obj) {
-	return N.index(obj->id(), Key::OID);
+
+template<typename Node>
+auto index_link(const Node& N, const link& l) -> typename Node::existing_index {
+	return N.index(l.id());
 }
 
 // ------- deep search
-template<Key K>
-auto deep_search(const node& N, const std::string& key) -> sp_link {
-	return N.deep_search(key, K);
+auto deep_search_lid(const node& N, const lid_type& key) -> link {
+	return N.deep_search(key);
 }
+
 auto deep_search_obj(const node& N, const sp_obj& obj) {
-	return N.deep_search(obj->id(), Key::OID);
+	return obj ? N.deep_search(obj->id(), Key::OID) : link{};
 }
 
 // ------- erase
-template<Key K>
-void erase(node& N, const std::string& key) {
-	N.erase(key, K);
+template<typename Node>
+void erase_lid(Node& N, const lid_type& key) {
+	N.erase(key);
 }
-void erase_link(node& N, const sp_link& l) {
-	N.erase(l->id());
+
+template<typename Node>
+void erase_link(Node& N, const link& l) {
+	N.erase(l.id());
 }
+
 void erase_obj(node& N, const sp_obj& obj) {
-	N.erase(obj->id(), Key::OID);
+	if(obj)
+		N.erase(obj->id(), Key::OID);
 }
-void erase_idx(node& N, const long idx) {
+
+template<typename Node>
+void erase_idx(Node& N, const long idx) {
 	// support for Pythonish indexing from both ends
 	if(std::size_t(std::abs(idx)) > N.size())
 		throw py::key_error("Index out of bounds");
 	N.erase(idx < 0 ? N.size() + idx : idx);
 }
 
-NAMESPACE_END() // hidden ns
+NAMESPACE_END()
 
 void py_bind_node(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
-	//  Node
+	// minimal link API present in both bare & normal link
 	//
-	py::class_<node, objbase, std::shared_ptr<node>> node_pyface(m, "node");
+	const auto add_common_api = [](auto& pyn, const auto&... gil) {
+		using py_node_type = std::remove_reference_t<decltype(pyn)>;
+		using node_type = typename py_node_type::type;
 
-	// export node's Key enum
-	py::enum_<Key>(node_pyface, "Key")
-		.value("ID", Key::ID)
-		.value("OID", Key::OID)
-		.value("Name", Key::Name)
-		.value("Type", Key::Type)
-		.value("AnyOrder", Key::AnyOrder)
-	;
-	// export node's insert policy
-	py::enum_<InsertPolicy>(node_pyface, "InsertPolicy", py::arithmetic())
-		.value("AllowDupNames", InsertPolicy::AllowDupNames)
-		.value("DenyDupNames", InsertPolicy::DenyDupNames)
-		.value("RenameDup", InsertPolicy::RenameDup)
-		.value("DenyDupOID", InsertPolicy::DenyDupOID)
-		.value("Merge", InsertPolicy::Merge)
-		//.export_values();
-	;
-	//py::implicitly_convertible<int, InsertPolicy>();
-	//py::implicitly_convertible<long, InsertPolicy>();
+		return pyn
+		.def(hash(py::self))
+		.def("__bool__", [](const node_type& self) { return (bool)self; }, py::is_operator())
 
-	node_pyface
-		BSPY_EXPORT_DEF(node)
-		.def(py::init<>())
-		.def("__len__", &node::size)
-		.def("__iter__",
-			[](const node& N) { return py::make_iterator(N.begin(), N.end()); },
-			py::keep_alive<0, 1>()
+		.def_property_readonly("handle", &node_type::handle, "Returns a single link that owns this node")
+		.def_property_readonly("is_nil", &node_type::is_nil)
+
+		.def("__len__", &node_type::size, gil...)
+		.def("size", &node_type::size, gil...)
+		.def("empty", &node_type::empty, gil...)
+
+		.def("leafs", &node_type::leafs,
+			"Key"_a = Key::AnyOrder, "Return snapshot of node content", gil...)
+
+		.def("keys", [](const node& N, Key key_meaning, Key ordering) {
+				if(key_meaning == Key::ID)
+					return py::cast(N.keys(ordering));
+				else if(key_meaning == Key::AnyOrder)
+					return py::cast(N.ikeys(ordering));
+				else
+				   return py::cast(N.skeys(key_meaning, ordering));
+			}, "key_meaning"_a = Key::ID, "ordering"_a = Key::AnyOrder,
+			"Return keys of `key_meaning` type sorted according to `ordering`"
 		)
 
-		// check by link ID
-		.def("__contains__", &contains_link, "link"_a)
-		.def("contains",     &contains_link, "link"_a, "Check if node contains given link")
-		.def("__contains__", &contains<Key::ID>, "lid"_a)
-		.def("contains",     &contains<Key::ID>, "lid"_a, "Check if node contains link with given ID")
+		// check if node contains key
+		// [NOTE] it's essential to register UUID overload first, because Python native UUID has a
+		// convertion operator to `int` (deprecated, but...). Hence, conversion from UUID -> int is
+		// tried, warning is printed, ...
+		.def("__contains__", &contains_lid<node_type>, "lid"_a, gil...)
+		.def("contains",     &contains_lid<node_type>, "lid"_a, "Check if node contains link with given ID")
+		// by link instance
+		.def("__contains__", &contains_link<node_type>, "link"_a, gil...)
+		.def("contains",     &contains_link<node_type>, "link"_a, "Check if node contains given link")
+
+		// search by link ID
+		.def("__getitem__", &find_lid<true, node_type>, "lid"_a)
+		.def("find",        &find_lid<false, node_type>, "lid"_a, "Find link with given ID")
+		// get item by int index
+		.def("__getitem__", &find_idx<node_type>, "link_idx"_a)
+
+		// obtain index in custom order from link ID
+		.def("index", &index_lid<node_type>, "lid"_a, "Find index of link with given ID", gil...)
+		// ...from link itself
+		.def("index", &index_link<node_type>, "link"_a, "Find index of given link", gil...)
+
+		// insert given link
+		.def("insert", [](node_type& N, link l, InsertPolicy pol) {
+			return N.insert(std::move(l), pol);
+		}, "link"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert given link", gil...)
+		// insert bunch of links
+		.def("insert", [](node_type& N, links_v ls, InsertPolicy pol) {
+			return N.insert(std::move(ls), pol);
+		}, "links"_a, "pol"_a = InsertPolicy::AllowDupNames, "insert bunch of links at once", gil...)
+		// insert hard link to given object
+		.def("insert", [](node_type& N, std::string name, sp_obj obj, InsertPolicy pol) {
+			return N.insert(std::move(name), std::move(obj), pol);
+		}, "name"_a, "obj"_a, "pol"_a = InsertPolicy::AllowDupNames,
+		"Insert hard link to given object", gil...)
+		// insert hard link to given node
+		.def("insert", [](node_type& N, std::string name, node n, InsertPolicy pol) {
+			return N.insert(std::move(name), std::move(n), pol);
+		}, "name"_a, "folder"_a, "pol"_a = InsertPolicy::AllowDupNames,
+		"Insert hard link to given node (objnode is created internally)", gil...)
+
+		// erase by given link ID
+		.def("__delitem__", &erase_lid<node_type>, "lid"_a, gil...)
+		.def("erase",       &erase_lid<node_type>, "lid"_a, "Erase link with given ID", gil...)
+		// erase by given index
+		.def("__delitem__", &erase_idx<node_type>, "idx"_a)
+		.def("erase",       &erase_idx<node_type>, "idx"_a, "Erase link with given index")
+		// erase given link
+		.def("__delitem__", &erase_link<node_type>, "link"_a, gil...)
+		.def("erase",       &erase_link<node_type>, "link"_a, "Erase given link", gil...)
+		;
+	};
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  bare_node
+	//
+	auto bare_node_pyface = py::class_<bare_node>(m, "bare_node")
+		.def(py::init<const node&>())
+
+		.def("__iter__", [](const bare_node& N) {
+			return make_container_iterator(N.leafs());
+		})
+
+		// convert to node
+		.def("armed", &bare_node::armed, "Convert to safe node")
+
+		// unsafe insert link
+		.def("insert", py::overload_cast<unsafe_t, link, InsertPolicy>(&bare_node::insert),
+			"unsafe"_a, "link"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert given link (unsafe for link)")
+		// unsafe insert bunch of links
+		.def("insert", py::overload_cast<unsafe_t, links_v, InsertPolicy>(&bare_node::insert),
+			"unsafe"_a, "link"_a, "pol"_a = InsertPolicy::AllowDupNames,
+			"Insert bunch of links (unsafe for links)")
+
+		.def("clear", &bare_node::clear, "Clears all node contents")
+
+		.def("rearrange", py::overload_cast<lids_v>(&bare_node::rearrange),
+			"new_order"_a, "Apply custom order to node")
+		.def("rearrange", py::overload_cast<std::vector<std::size_t>>(&bare_node::rearrange),
+			"new_order"_a, "Apply custom order to node")
+	;
+
+	add_common_api(bare_node_pyface);
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  node
+	//
+	// [NOTE] overloads binding order is essential, so bind common API first
+	auto node_pyface = py::class_<node, engine>(m, "node")
+		.def(py::init<>())
+		.def(py::init<const bare_node&>())
+	;
+	add_common_api(node_pyface);
+
+	// append node-specific API
+	node_pyface
+		.def("__iter__", [](const node& N) {
+			py::gil_scoped_release();
+			return make_container_iterator(N.leafs());
+		})
+
+		.def_property_readonly_static("nil", [](const py::object&) { return node::nil(); })
+
+		.def("bare", &node::bare, "Get bare (unsafe) node")
+
+		.def("skeys", &node::skeys, "key_meaning"_a, "ordering"_a = Key::AnyOrder, nogil)
+
+		// check if node contains key
 		// ... by object
 		.def("__contains__", &contains_obj, "obj"_a)
 		.def("contains",     &contains_obj, "obj"_a, "Check if node contains link to given object")
-		// check by link name
-		.def("contains_name", &contains<Key::Name>,
-			"link_name"_a, "Check if node contains link with given name")
-		// check by object ID
-		.def("contains_oid",  &contains<Key::OID>,
-			"oid"_a, "Check if node contains link to object with given ID")
-		// check by object type
-		.def("contains_type", &contains<Key::Type>,
-			"obj_type_id"_a, "Check if node contain links to objects of given type")
+		// ... generic version
+		.def("contains", &contains_key, "key"_a, "key_meaning"_a, "Check if node contains link with given key")
 
-		// get item by int index
-		.def("__getitem__", [](const node& N, const long idx) {
-			return *find_by_idx(N, idx);
-		}, "link_idx"_a)
-		// search by link ID
-		.def("__getitem__", &find<Key::ID>, "lid"_a)
-		.def("find",        &find<Key::ID, false>, "lid"_a, "Find link with given ID")
 		// search by object instance
-		.def("__getitem__", &find_obj<>, "obj"_a)
+		.def("__getitem__", &find_obj<true>, "obj"_a)
 		.def("find",        &find_obj<false>, "obj"_a, "Find link to given object")
-		// search by object ID
-		.def("find_oid",    &find<Key::OID, false>, "oid"_a, "Find link to object with given ID")
-		// search by link name
-		.def("find_name",   &find<Key::Name, false>, "link_name"_a, "Find link with given name")
+		// search by string key & key treatment
+		.def("find", py::overload_cast<std::string, Key>(&node::find, py::const_),
+			"key"_a, "key_meaning"_a, "Find link by key with specified treatment", nogil)
 
-		// obtain index in custom order from link ID
-		.def("index", &index<Key::ID>, "lid"_a, "Find index of link with given ID")
-		// ...from link itself
-		.def("index", &index_link, "link"_a, "Find index of given link")
-		// ... from object
+		// obtain index in custom order from object
 		.def("index", &index_obj, "obj"_a, "Find index of link to given object")
-		// ... from OID
-		.def("index_oid",  &index<Key::OID>, "oid"_a, "Find index of link to object with given ID")
-		// ... from link name
-		.def("index_name", &index<Key::Name>, "name"_a, "Find index of link with given name")
+		// ... from string key with specified treatment
+		.def("index", py::overload_cast<std::string, Key>(&node::index, py::const_),
+			"key"_a, "key_meaning"_a, "Find index of link with specified key and treatment", nogil)
 
-		// deep search by object
-		.def("deep_search", &deep_search_obj, "obj"_a, "Deep search for link to given object")
 		// deep search by link ID
-		.def("deep_search", &deep_search<Key::ID>, "lid"_a, "Deep search for link with given ID")
-		// deep search by link name
-		.def("deep_search_name", &deep_search<Key::Name>, "link_name"_a, "Deep search for link with given name")
-		// deep search by object ID
-		.def("deep_search_oid", &deep_search<Key::OID>, "oid"_a, "Deep search for link to object with given ID")
+		.def("deep_search", &deep_search_lid, "lid"_a, "Deep search for link with given ID", nogil)
+		// deep search by object
+		.def("deep_search",&deep_search_obj, "obj"_a, "Deep search for link to given object", nogil)
+		// deep serach by specified key type
+		.def("deep_search", py::overload_cast<std::string, Key>(&node::deep_search, py::const_),
+			"key"_a, "key_meaning"_a, "Deep search by key with specified treatment", nogil)
 
-		.def("equal_range", [](const node& N, const std::string& link_name) {
-			auto r = N.equal_range(link_name);
-			return py::make_iterator(r.first, r.second);
-		}, py::keep_alive<0, 1>(), "link_name"_a)
-		.def("equal_range_oid", [](const node& N, const std::string& oid) {
-			auto r = N.equal_range_oid(oid);
-			return py::make_iterator(r.first, r.second);
-		}, py::keep_alive<0, 1>(), "OID"_a)
-		.def("equal_type", [](const node& N, const std::string& type_id) {
-			auto r = N.equal_type(type_id);
-			return py::make_iterator(r.first, r.second);
-		}, py::keep_alive<0, 1>(), "obj_type_id"_a)
+		// equal range
+		.def("equal_range", &node::equal_range,
+			"key"_a, "key_meaning"_a = Key::Name, "Find all leafs with given key", nogil)
 
-		// insert given link
-		.def("insert", [](node& N, const sp_link& l, InsertPolicy pol = InsertPolicy::AllowDupNames) {
-			return N.insert(l, uint(pol)).second;
-		}, "link"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert given link")
+		.def("deep_equal_range", &node::deep_equal_range,
+			"key"_a, "key_meaning"_a, "Deep search all links with given key & treatment", nogil)
+
 		// insert link at given index
-		.def("insert", [](node& N, const sp_link& l, const long idx, InsertPolicy pol = InsertPolicy::AllowDupNames) {
-			return N.insert(l, find_by_idx(N, idx, true), pol).second;
+		.def("insert", [](node& N, link l, const long idx, InsertPolicy pol) {
+			return N.insert(std::move(l), idx, pol);
 		}, "link"_a, "idx"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert link at given index")
-		// insert hard link to given object
-		.def("insert", [](node& N, std::string name, sp_obj obj, InsertPolicy pol = InsertPolicy::AllowDupNames) {
-			return N.insert(std::move(name), std::move(obj), pol).second;
-		}, "name"_a, "obj"_a, "pol"_a = InsertPolicy::AllowDupNames, "Insert hard link to given object")
 
-		// erase by given index
-		.def("__delitem__", &erase_idx, "idx"_a)
-		.def("erase",       &erase_idx, "idx"_a, "Erase link with given index")
-		// erase given link
-		.def("__delitem__", &erase_link, "link"_a)
-		.def("erase",       &erase_link, "link"_a, "Erase given link")
-		// erase by given link ID
-		.def("__delitem__", &erase<Key::ID>, "lid"_a)
-		.def("erase",       &erase<Key::ID>, "lid"_a, "Erase link with given ID")
 		// erase by object instance
 		.def("__delitem__", &erase_obj, "obj"_a)
 		.def("erase",       &erase_obj, "obj"_a, "Erase links to given object")
-		// erase by link name
-		.def("erase_name", &erase<Key::Name>, "link_name"_a, "Erase links with given name")
-		// erase by OID
-		.def("erase_oid",  &erase<Key::OID>, "oid"_a, "Erase links to object with given ID")
-		// erase by obj type
-		.def("erase_type", &erase<Key::Type>, "obj_type_id"_a, "Erase all links pointing to objects of given type")
+		// generic erase by key & meaning
+		.def("erase", py::overload_cast<std::string, Key>(&node::erase, py::const_),
+			"key"_a, "key_meaning"_a = Key::Name, "Erase all leafs with given key", nogil)
 
 		// misc container-related functions
-		.def_property_readonly("size", &node::size)
-		.def_property_readonly("empty", &node::empty)
-		.def("clear", &node::clear, "Clears all node contents")
-		.def("keys", [](const node& N, Key ktype = Key::ID) {
-			if(ktype == Key::ID) {
-				// convert UUIDs to string representation
-				auto keys = N.keys<>();
-				std::vector<std::string> res;
-				res.reserve(keys.size());
-				for(const auto& k : keys)
-					res.emplace_back(boost::uuids::to_string(k));
-				return res;
-			}
-			else {
-				switch(ktype) {
-				default:
-				case Key::Name :
-					return N.keys<Key::Name>();
-				case Key::OID :
-					return N.keys<Key::OID>();
-				case Key::Type :
-					return N.keys<Key::Type>();
-				};
-			}
-		}, "key_type"_a = Key::ID)
+		.def("clear", py::overload_cast<>(&node::clear, py::const_), "Clears all node contents")
+		.def("clear", py::overload_cast<launch_async_t>(&node::clear, py::const_),
+			"Async clear all node contents")
 
 		// link rename
-		// by ID or OID or name
-		.def("rename", py::overload_cast<const std::string&, std::string, Key, bool>(&node::rename),
-			"key"_a, "new_name"_a, "key_meaning"_a = Key::ID, "all"_a = false,
-			"Rename link with given key (ID, OID or link name)")
-		// by link instance (extracts ID)
-		.def("rename", [](node& N, const sp_link& l, std::string new_name) {
-			return N.rename(l->id(), std::move(new_name));
-		}, "link"_a, "new_name"_a, "Rename given link")
+		.def("rename", py::overload_cast<std::string, std::string>(&node::rename, py::const_),
+			"old_name"_a, "new_name"_a, "Rename all links with given old_name")
 		// by index offset
-		.def("rename", [](node& N, const long idx, std::string new_name) {
-			return N.rename(find_by_idx(N, idx), std::move(new_name));
-		}, "idx"_a, "new_name"_a, "Rename link with given index")
-		// by object instance
-		.def("rename", [](node& N, const sp_obj& obj, std::string new_name, bool all = false) {
-			return N.rename(obj->id(), std::move(new_name), Key::OID, all);
-		}, "obj"_a, "new_name"_a, "all"_a = false, "Rename link(s) to given object")
+		.def("rename", py::overload_cast<std::size_t, std::string>(&node::rename, py::const_),
+			"idx"_a, "new_name"_a, "Rename link with given index")
+		// by ID
+		.def("rename", py::overload_cast<lid_type, std::string>(&node::rename, py::const_),
+			"lid"_a, "new_name"_a, "Rename link with given ID")
 
-		// misc API
-		.def("accepts", &node::accepts, "Check if node accepts given link")
-		.def("accept_object_types", &node::accept_object_types,
-			"Set white list of object types that node will accept"
-		)
-		.def_property_readonly("allowed_object_types", &node::allowed_object_types,
-			"Returns white list of object types that node will accept"
-		)
+		.def("rearrange", py::overload_cast<lids_v>(&node::rearrange, py::const_),
+			"new_order"_a, "Apply custom order to node")
+		.def("rearrange", py::overload_cast<std::vector<std::size_t>>(&node::rearrange, py::const_),
+			"new_order"_a, "Apply custom order to node")
 
-		.def_property_readonly("handle", &node::handle,
-			"Returns a single link that owns this node in overall tree"
-		)
-		.def("propagate_owner", &node::propagate_owner, "deep"_a = false,
-			"Set owner of all contained links to this node (if deep, fix owner in entire subtree)"
-		)
+		// events subscrition
+		.def("subscribe", &node::subscribe, "event_cb"_a, "events"_a = Event::All)
+		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
 	;
+
+	// node::weak_ptr
+	bind_weak_ptr(node_pyface);
 }
 
 NAMESPACE_END(blue_sky::python)

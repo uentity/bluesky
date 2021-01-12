@@ -31,7 +31,5 @@ BS_API auto config() -> const caf::settings&;
 BS_API auto config_section(std::string_view name) -> caf::config_option_adder;
 /// access global CAF actor_system_config
 BS_API auto actor_config() -> caf::actor_system_config&;
-/// ... and to actors system
-BS_API auto actor_system() -> caf::actor_system&;
 
 NAMESPACE_END(blue_sky::kernel::config)

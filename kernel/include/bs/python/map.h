@@ -178,6 +178,13 @@ auto make_rich_map(PyMap& cl) -> PyMap& {
 		return pval != m.end() ? py::cast(pval->second) : std::move(def_value);
 	}, "key"_a, "default"_a = py::none());
 
+	cl.def(py::self == py::self);
+	cl.def(py::self != py::self);
+	cl.def(py::self < py::self);
+	cl.def(py::self <= py::self);
+	cl.def(py::self > py::self);
+	cl.def(py::self >= py::self);
+
 	// make Python dictionary implicitly convertible to Map
 	py::implicitly_convertible<py::dict, Map>();
 	return cl;

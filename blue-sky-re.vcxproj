@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="kernel\include\bs\actor_common.h" />
     <ClInclude Include="kernel\include\bs\any_array.h" />
     <ClInclude Include="kernel\include\bs\assert.h" />
     <ClInclude Include="kernel\include\bs\atoms.h" />
@@ -43,9 +44,9 @@
     <ClInclude Include="kernel\include\bs\compat\serialize\text.h" />
     <ClInclude Include="kernel\include\bs\compat\vecbase.h" />
     <ClInclude Include="kernel\include\bs\compat\vecbase_shared.h" />
+    <ClInclude Include="kernel\include\bs\defaults.h" />
     <ClInclude Include="kernel\include\bs\detail\apply.h" />
     <ClInclude Include="kernel\include\bs\detail\args.h" />
-    <ClInclude Include="kernel\include\bs\detail\async_api_mixin.h" />
     <ClInclude Include="kernel\include\bs\detail\enumops.h" />
     <ClInclude Include="kernel\include\bs\detail\function_view.h" />
     <ClInclude Include="kernel\include\bs\detail\is_container.h" />
@@ -53,8 +54,8 @@
     <ClInclude Include="kernel\include\bs\detail\object_ptr.h" />
     <ClInclude Include="kernel\include\bs\detail\part.h" />
     <ClInclude Include="kernel\include\bs\detail\scope_guard.h" />
+    <ClInclude Include="kernel\include\bs\detail\sharded_mutex.h" />
     <ClInclude Include="kernel\include\bs\detail\str_utils.h" />
-    <ClInclude Include="kernel\include\bs\detail\tensor_meta.h" />
     <ClInclude Include="kernel\include\bs\detail\tuple_utils.h" />
     <ClInclude Include="kernel\include\bs\detail\typestring.h" />
     <ClInclude Include="kernel\include\bs\error.h" />
@@ -65,27 +66,38 @@
     <ClInclude Include="kernel\include\bs\kernel\kernel.h" />
     <ClInclude Include="kernel\include\bs\kernel\misc.h" />
     <ClInclude Include="kernel\include\bs\kernel\plugins.h" />
+    <ClInclude Include="kernel\include\bs\kernel\radio.h" />
     <ClInclude Include="kernel\include\bs\kernel\tools.h" />
     <ClInclude Include="kernel\include\bs\kernel\types_factory.h" />
     <ClInclude Include="kernel\include\bs\kernel\type_tuple.h" />
     <ClInclude Include="kernel\include\bs\log.h" />
     <ClInclude Include="kernel\include\bs\meta.h" />
+    <ClInclude Include="kernel\include\bs\meta\is_container.h" />
+    <ClInclude Include="kernel\include\bs\meta\is_shared_ptr.h" />
+    <ClInclude Include="kernel\include\bs\meta\tensor.h" />
+    <ClInclude Include="kernel\include\bs\meta\variant.h" />
     <ClInclude Include="kernel\include\bs\misc.h" />
     <ClInclude Include="kernel\include\bs\objbase.h" />
     <ClInclude Include="kernel\include\bs\plugin_descriptor.h" />
     <ClInclude Include="kernel\include\bs\propdict.h" />
     <ClInclude Include="kernel\include\bs\property.h" />
     <ClInclude Include="kernel\include\bs\python\any.h" />
+    <ClInclude Include="kernel\include\bs\python\any_array.h" />
     <ClInclude Include="kernel\include\bs\python\common.h" />
+    <ClInclude Include="kernel\include\bs\python\container_iterator.h" />
     <ClInclude Include="kernel\include\bs\python\expected.h" />
     <ClInclude Include="kernel\include\bs\python\kernel.h" />
     <ClInclude Include="kernel\include\bs\python\list.h" />
+    <ClInclude Include="kernel\include\bs\python\map.h" />
     <ClInclude Include="kernel\include\bs\python\nparray.h" />
     <ClInclude Include="kernel\include\bs\python\nparray_serialize.h" />
     <ClInclude Include="kernel\include\bs\python\object_ptr.h" />
     <ClInclude Include="kernel\include\bs\python\property.h" />
+    <ClInclude Include="kernel\include\bs\python\result_converter.h" />
     <ClInclude Include="kernel\include\bs\python\tensor.h" />
+    <ClInclude Include="kernel\include\bs\python\timetypes.h" />
     <ClInclude Include="kernel\include\bs\python\tree.h" />
+    <ClInclude Include="kernel\include\bs\python\vector.h" />
     <ClInclude Include="kernel\include\bs\serialize\archives.h" />
     <ClInclude Include="kernel\include\bs\serialize\array.h" />
     <ClInclude Include="kernel\include\bs\serialize\atomizer.h" />
@@ -96,6 +108,7 @@
     <ClInclude Include="kernel\include\bs\serialize\carray.h" />
     <ClInclude Include="kernel\include\bs\serialize\eigen.h" />
     <ClInclude Include="kernel\include\bs\serialize\formatter_tools.h" />
+    <ClInclude Include="kernel\include\bs\serialize\inspectable.h" />
     <ClInclude Include="kernel\include\bs\serialize\macro.h" />
     <ClInclude Include="kernel\include\bs\serialize\make_base_class.h" />
     <ClInclude Include="kernel\include\bs\serialize\object_formatter.h" />
@@ -114,6 +127,11 @@
     <ClInclude Include="kernel\include\bs\stop_plugin_import.h" />
     <ClInclude Include="kernel\include\bs\throw_exception.h" />
     <ClInclude Include="kernel\include\bs\timetypes.h" />
+    <ClInclude Include="kernel\include\bs\tree\bare_link.h" />
+    <ClInclude Include="kernel\include\bs\tree\bare_node.h" />
+    <ClInclude Include="kernel\include\bs\tree\common.h" />
+    <ClInclude Include="kernel\include\bs\tree\context.h" />
+    <ClInclude Include="kernel\include\bs\tree\engine.h" />
     <ClInclude Include="kernel\include\bs\tree\errors.h" />
     <ClInclude Include="kernel\include\bs\tree\fusion.h" />
     <ClInclude Include="kernel\include\bs\tree\inode.h" />
@@ -123,19 +141,34 @@
     <ClInclude Include="kernel\include\bs\type_descriptor.h" />
     <ClInclude Include="kernel\include\bs\type_info.h" />
     <ClInclude Include="kernel\include\bs\type_macro.h" />
+    <ClInclude Include="kernel\src\objbase_actor.h" />
     <ClInclude Include="kernel\src\kernel\backtrace_tools_unix.h" />
     <ClInclude Include="kernel\src\kernel\backtrace_tools_win.h" />
     <ClInclude Include="kernel\src\kernel\config_subsyst.h" />
-    <ClInclude Include="kernel\src\kernel\instance_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\kimpl.h" />
     <ClInclude Include="kernel\src\kernel\logging_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\plugins_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\python_subsyst.h" />
     <ClInclude Include="kernel\src\kernel\python_subsyst_impl.h" />
+    <ClInclude Include="kernel\src\kernel\radio_subsyst.h" />
+    <ClInclude Include="kernel\src\serialize\tree_impl.h" />
+    <ClInclude Include="kernel\src\serialize\tree_fs_impl.h" />
+    <ClInclude Include="kernel\src\tree\actor_debug.h" />
+    <ClInclude Include="kernel\src\tree\engine_actor.h" />
+    <ClInclude Include="kernel\src\tree\engine_impl.h" />
+    <ClInclude Include="kernel\src\tree\ev_listener_actor.h" />
+    <ClInclude Include="kernel\src\tree\fusion_link_actor.h" />
     <ClInclude Include="kernel\src\tree\fusion_link_impl.h" />
+    <ClInclude Include="kernel\src\tree\link_actor.h" />
     <ClInclude Include="kernel\src\tree\link_impl.h" />
-    <ClInclude Include="kernel\src\tree\link_invoke.h" />
+    <ClInclude Include="kernel\src\tree\map_engine.h" />
+    <ClInclude Include="kernel\src\tree\nil_engine.h" />
+    <ClInclude Include="kernel\src\tree\nil_engine_impl.h" />
+    <ClInclude Include="kernel\src\tree\node_actor.h" />
+    <ClInclude Include="kernel\src\tree\node_extraidx_actor.h" />
     <ClInclude Include="kernel\src\tree\node_impl.h" />
+    <ClInclude Include="kernel\src\tree\node_leafs_storage.h" />
+    <ClInclude Include="kernel\src\tree\request_impl.h" />
     <ClInclude Include="kernel\src\tree\tree_impl.h" />
   </ItemGroup>
   <ItemGroup>
@@ -143,11 +176,11 @@
     <ClCompile Include="kernel\src\compat\array.cpp" />
     <ClCompile Include="kernel\src\compat\array_serialize.cpp" />
     <ClCompile Include="kernel\src\compat\messaging.cpp" />
+    <ClCompile Include="kernel\src\defaults.cpp" />
     <ClCompile Include="kernel\src\error.cpp" />
     <ClCompile Include="kernel\src\kernel\config.cpp" />
     <ClCompile Include="kernel\src\kernel\config_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\errors.cpp" />
-    <ClCompile Include="kernel\src\kernel\instance_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\kimpl.cpp" />
     <ClCompile Include="kernel\src\kernel\logging_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\misc.cpp" />
@@ -155,6 +188,8 @@
     <ClCompile Include="kernel\src\kernel\plugins_discover.cpp" />
     <ClCompile Include="kernel\src\kernel\plugins_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\python_subsyst.cpp" />
+    <ClCompile Include="kernel\src\kernel\radio.cpp" />
+    <ClCompile Include="kernel\src\kernel\radio_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\tools.cpp" />
     <ClCompile Include="kernel\src\kernel\types_factory.cpp" />
     <ClCompile Include="kernel\src\kernel\types_factory_subsyst.cpp" />
@@ -163,6 +198,7 @@
     <ClCompile Include="kernel\src\main.cpp" />
     <ClCompile Include="kernel\src\misc.cpp" />
     <ClCompile Include="kernel\src\objbase.cpp" />
+    <ClCompile Include="kernel\src\objbase_actor.cpp" />
     <ClCompile Include="kernel\src\plugin_descriptor.cpp" />
     <ClCompile Include="kernel\src\propdict.cpp" />
     <ClCompile Include="kernel\src\property.cpp" />
@@ -178,57 +214,78 @@
     <ClCompile Include="kernel\src\python\py_node.cpp" />
     <ClCompile Include="kernel\src\python\py_objbase.cpp" />
     <ClCompile Include="kernel\src\python\py_tree.cpp" />
-    <ClCompile Include="kernel\src\serialize\array.cpp" />
     <ClCompile Include="kernel\src\serialize\base_types.cpp" />
     <ClCompile Include="kernel\src\serialize\link.cpp" />
+    <ClCompile Include="kernel\src\serialize\node.cpp" />
     <ClCompile Include="kernel\src\serialize\object_formatter.cpp" />
+    <ClCompile Include="kernel\src\serialize\objfrm_manager.cpp" />
     <ClCompile Include="kernel\src\serialize\python.cpp" />
     <ClCompile Include="kernel\src\serialize\tree.cpp" />
     <ClCompile Include="kernel\src\serialize\tree_fs_input.cpp" />
     <ClCompile Include="kernel\src\serialize\tree_fs_output.cpp" />
     <ClCompile Include="kernel\src\str_utils.cpp" />
     <ClCompile Include="kernel\src\timetypes.cpp" />
+    <ClCompile Include="kernel\src\tree\bare_link.cpp" />
+    <ClCompile Include="kernel\src\tree\bare_node.cpp" />
+    <ClCompile Include="kernel\src\tree\context.cpp" />
+    <ClCompile Include="kernel\src\tree\engine.cpp" />
+    <ClCompile Include="kernel\src\tree\engine_impl.cpp" />
     <ClCompile Include="kernel\src\tree\errors.cpp" />
     <ClCompile Include="kernel\src\tree\fusion_link.cpp" />
+    <ClCompile Include="kernel\src\tree\fusion_link_actor.cpp" />
     <ClCompile Include="kernel\src\tree\hard_link.cpp" />
     <ClCompile Include="kernel\src\tree\inode.cpp" />
     <ClCompile Include="kernel\src\tree\link.cpp" />
+    <ClCompile Include="kernel\src\tree\link_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\link_ack_behavior.cpp" />
+    <ClCompile Include="kernel\src\tree\link_events.cpp" />
+    <ClCompile Include="kernel\src\tree\link_impl.cpp" />
+    <ClCompile Include="kernel\src\tree\map_link.cpp" />
+    <ClCompile Include="kernel\src\tree\map_link_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\map_link_impl.cpp" />
+    <ClCompile Include="kernel\src\tree\nil_link.cpp" />
+    <ClCompile Include="kernel\src\tree\nil_node.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
+    <ClCompile Include="kernel\src\tree\node_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\node_ack_behavior.cpp" />
+    <ClCompile Include="kernel\src\tree\node_extraidx_actor.cpp" />
+    <ClCompile Include="kernel\src\tree\node_events.cpp" />
+    <ClCompile Include="kernel\src\tree\node_impl.cpp" />
     <ClCompile Include="kernel\src\tree\sym_link.cpp" />
     <ClCompile Include="kernel\src\tree\tree.cpp" />
-    <ClCompile Include="kernel\src\tree\tree_async.cpp" />
     <ClCompile Include="kernel\src\type_info.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{D269D8FA-A040-4E02-BB3C-61F3B9B4C1A9}</ProjectGuid>
     <RootNamespace>blueskyre</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <UseNativeEnvironment>true</UseNativeEnvironment>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -281,10 +338,12 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)third_party\fmt\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\actor-framework\libcaf_io;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(ProjectDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(ProjectDir)kernel\include;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;NOMINMAX;FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON_PATH)\libs</AdditionalLibraryDirectories>
@@ -298,14 +357,16 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)third_party\fmt\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\actor-framework\libcaf_io;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(ProjectDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(ProjectDir)kernel\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;NOMINMAX;FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;NOMINMAX;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs;$(BLUE_SKY_WINDEPS)\caf\lib64\debug</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Shlwapi.lib;Ws2_32.lib;Iphlpapi.lib;caf_core.lib;caf_io.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs;$(BLUE_SKY_WINDEPS)\caf\lib\debug</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Shlwapi.lib;caf_core.lib;caf_io.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -317,9 +378,11 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)third_party\fmt\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\actor-framework\libcaf_io;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(ProjectDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(ProjectDir)kernel\include;$(PYTHON_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;NOMINMAX;FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -337,15 +400,17 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)third_party\fmt\include;$(ProjectDir)third_party\pybind11\include;$(ProjectDir)third_party\actor-framework\libcaf_core;$(ProjectDir)third_party\actor-framework\libcaf_io;$(ProjectDir)third_party\cereal\include;$(ProjectDir)third_party\eigen;$(ProjectDir)third_party\spdlog\include;$(ProjectDir)third_party\expected\include;$(BLUE_SKY_WINDEPS)\boost;$(ProjectDir)kernel\include;$(PYTHON64_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;NOMINMAX;FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BS_EXPORTING;BSPY_EXPORTING;BS_EXPORTING_PLUGIN;BSPY_EXPORTING_PLUGIN;_SCL_SECURE_NO_WARNINGS;NOMINMAX;BOOST_ALL_DYN_LINK;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions);FMT_HEADER_ONLY;SPDLOG_FMT_EXTERNAL</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs;$(BLUE_SKY_WINDEPS)\caf\lib64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Shlwapi.lib;Ws2_32.lib;Iphlpapi.lib;caf_core.lib;caf_io.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(BLUE_SKY_WINDEPS)\boost\lib;$(PYTHON64_PATH)\libs;$(BLUE_SKY_WINDEPS)\caf\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Shlwapi.lib;caf_core.lib;caf_io.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

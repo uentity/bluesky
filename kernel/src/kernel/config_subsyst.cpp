@@ -7,8 +7,12 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/defaults.h>
 #include <bs/log.h>
+#include <bs/kernel/radio.h>
+
 #include "config_subsyst.h"
+#include "radio_subsyst.h"
 
 #include <caf/config_option_adder.hpp>
 #include <caf/parser_state.hpp>
@@ -16,8 +20,10 @@
 #include <caf/detail/parser/read_ini.hpp>
 #include <caf/detail/parser/read_string.hpp>
 #include <caf/io/middleman.hpp>
+
 #include <fmt/ostream.h>
 
+#include <atomic>
 #include <sstream>
 #include <fstream>
 #include <stdlib.h>
@@ -85,7 +91,20 @@ auto extract_config_file_path(caf::config_option_set& opts, caf::settings& S, st
 	}
 	return "";
 	//return std::move(evalue.error());
-	//return none;
+}
+
+// separetely store configured timeouts for faster access
+// returns { normal timeout, long op timeout }
+using timeouts_pair = std::pair<std::atomic<timespan>, std::atomic<timespan>>;
+inline auto timeouts() -> timeouts_pair& {
+	static auto ts_ = timeouts_pair{};
+	return ts_;
+}
+
+auto reset_timeouts(timespan typical, timespan slow) -> void {
+	auto& [normal_to, long_to] = timeouts();
+	normal_to.store(typical, std::memory_order_relaxed);
+	long_to.store(slow, std::memory_order_relaxed);
 }
 
 NAMESPACE_END() // eof hidden ns
@@ -120,6 +139,14 @@ config_subsyst::config_subsyst() {
 		.add<std::uint8_t>("out-flush-level", "Minimum message level that triggers out log flush")
 		.add<std::uint8_t>("err-flush-level", "Minimum message level that triggers err log flush")
 		.add<std::uint32_t>("flush-interval", "Multithreaded logs background flush interval")
+	;
+	opt_group(confopt_, "radio")
+		.add<std::uint16_t>("port", "Port number for main BS network interface")
+		.add<std::uint16_t>("groups-port", "Port number for publishing actor groups")
+		.add<timespan>("timeout", "Generic default timeout for actor operations")
+		.add<timespan>("long-timeout", "Timeout for long resource-consuming tasks")
+		.add<bool>("await_actors_before_shutdown",
+			"Do we have to wait until all actors terminate on kernel shutdown?")
 	;
 
 	/*-----------------------------------------------------------------------------
@@ -197,6 +224,7 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 				<< to_string(res.first) << log::end;
 		}
 	};
+
 	// Generate help text if needed.
 	// These options are one-shot
 	if(get_or(confdata_, "help", false) || get_or(confdata_, "long-help", false)) {
@@ -221,7 +249,13 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 		put(confdata_, "dump-config", false);
 	}
 
-	// load middleman module only once
+	// update timeout values
+	reset_timeouts(
+		get_or( confdata_, "radio.timeout", defaults::radio::timeout ),
+		get_or( confdata_, "radio.long-timeout", defaults::radio::long_timeout )
+	);
+
+	// [NOTE] load networking module after kernel & CAF are configured (do it only once!)
 	if(!kernel_configured)
 		actor_cfg_.load<caf::io::middleman>();
 
@@ -239,4 +273,19 @@ auto config_subsyst::is_configured() -> bool {
 
 bool config_subsyst::kernel_configured = false;
 
+auto radio_subsyst::reset_timeouts(timespan typical, timespan slow) -> void {
+	kernel::detail::reset_timeouts(typical, slow);
+}
+
 NAMESPACE_END(blue_sky::kernel::detail)
+
+NAMESPACE_BEGIN(blue_sky::kernel::radio)
+
+auto timeout(bool for_long_task) -> caf::duration {
+	auto& [normal_to, long_to] = kernel::detail::timeouts();
+	return caf::duration{
+		for_long_task ? long_to.load(std::memory_order_relaxed) : normal_to.load(std::memory_order_relaxed)
+	};
+}
+
+NAMESPACE_END(blue_sky::kernel::radio)

@@ -9,6 +9,11 @@
 
 #pragma once
 
+// Python-related dclarations
+#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
+#include "python/common.h"
+#endif
+
 #include "log.h"
 #include "assert.h"
 #include "timetypes.h"
@@ -21,9 +26,4 @@
 #include "kernel/kernel.h"
 // other things
 #include "misc.h"
-
-// Python-related dclarations
-#if defined(BSPY_EXPORTING) || defined(BSPY_EXPORTING_PLUGIN)
-#include "python/common.h"
-#endif
 

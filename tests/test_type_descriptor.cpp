@@ -21,7 +21,7 @@ namespace blue_sky {
 ///////////////////////////////////////////////////////////////////////////////
 //  Declarations of classes below are in `test_objects.h`
 //
-BS_TYPE_IMPL(bs_person, objbase, "bs_person", "BS Person", false, false)
+BS_TYPE_IMPL(bs_person, objbase, "bs_person", "BS Person")
 BS_TYPE_IMPL_INL_T1(my_strategy, int)
 BS_TYPE_IMPL_INL_T1(my_strategy, double)
 BS_TYPE_IMPL_INL_T(uber_type, (int, my_strategy< int >))

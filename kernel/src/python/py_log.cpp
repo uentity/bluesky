@@ -108,8 +108,8 @@ auto bind_log_impl(py::module& m) -> void {
 		logging_subsyst::add_custom_sink(s, logger_name);
 
 		auto at_pyexit = py::module::import("atexit");
-		at_pyexit.attr("register")(std::function< void() >{[ws = std::weak_ptr{s}] {
-			// ensure we're switched to ST logging mode (all pending messages flushed
+		at_pyexit.attr("register")(py::cpp_function{[ws = std::weak_ptr{s}] {
+			// ensure we're switched to ST logging mode (all pending messages flushed)
 			{
 				auto _ = py::gil_scoped_release{};
 				logging_subsyst::toggle_async(false);

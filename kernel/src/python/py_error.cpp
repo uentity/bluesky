@@ -12,6 +12,7 @@
 #include <bs/kernel/errors.h>
 #include <bs/tree/errors.h>
 #include <bs/log.h>
+
 #include <fmt/format.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
@@ -27,14 +28,25 @@ void py_bind_error(py::module& m) {
 
 	py::enum_<tree::Error>(m, "TreeError")
 		.value("OK", tree::Error::OK)
-		.value("OKOK", tree::Error::OKOK)
 		.value("EmptyData", tree::Error::EmptyData)
 		.value("NotANode", tree::Error::NotANode)
 		.value("LinkExpired", tree::Error::LinkExpired)
 		.value("UnboundSymLink", tree::Error::UnboundSymLink)
 		.value("LinkBusy", tree::Error::LinkBusy)
 		.value("NoFusionBridge", tree::Error::NoFusionBridge)
+
 		.value("KeyMismatch", tree::Error::KeyMismatch)
+		.value("WrongOrderSize",    tree::Error::WrongOrderSize)
+
+		.value("EmptyPath",         tree::Error::EmptyPath)
+		.value("PathNotExists",     tree::Error::PathNotExists)
+		.value("PathNotDirectory",  tree::Error::PathNotDirectory)
+		.value("CantReadFile",      tree::Error::CantReadFile)
+		.value("CantWriteFile",     tree::Error::CantWriteFile)
+		.value("LinkWasntStarted",  tree::Error::LinkWasntStarted)
+		.value("NodeWasntStarted",  tree::Error::NodeWasntStarted)
+		.value("MissingFormatter",  tree::Error::MissingFormatter)
+		.value("CantMakeFilename",  tree::Error::CantMakeFilename)
 	;
 
 	/*-----------------------------------------------------------------------------
@@ -108,9 +120,18 @@ void py_bind_error(py::module& m) {
 		.def_property_readonly("message", &error::message, "Get custom part of message passed to constructor")
 	;
 	py::implicitly_convertible<Error, error>();
+	py::implicitly_convertible<tree::Error, error>();
 
-	// translate error -> BSError Python exception
-	py::register_exception<error>(m, "BSError");
+	// add 'perfect' constant
+	m.attr("perfect") = error{ perfect };
+	m.attr("quiet_fail") = error{ quiet_fail };
+
+	// register exception translator for `error`
+	static py::exception<error> py_error(m, "BSError");
+	py::register_exception_translator([](std::exception_ptr ex) {
+		try { if(ex) std::rethrow_exception(ex); }
+		catch(const error& er) { py_error(er.what().c_str()); }
+	});
 }
 
 NAMESPACE_END(blue_sky::python)

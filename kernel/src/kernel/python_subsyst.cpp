@@ -10,11 +10,16 @@
 #include <bs/python/common.h>
 #include <bs/log.h>
 #include <bs/kernel/errors.h>
+#include <bs/tree/node.h>
 
 #include "kimpl.h"
 #include "python_subsyst_impl.h"
 #include "plugins_subsyst.h"
+#include "radio_subsyst.h"
 
+#include <pybind11/functional.h>
+
+#include <iostream>
 #include <functional>
 
 #define WITH_KMOD \
@@ -58,8 +63,6 @@ std::string extract_root_name(const std::string& full_name) {
 	return pyl_name;
 }
 
-constexpr auto sp_obj_hash = std::hash<sp_obj>{};
-
 NAMESPACE_END()
 
 python_subsyst_impl::python_subsyst_impl(void* kmod_ptr)
@@ -71,14 +74,28 @@ python_subsyst_impl::python_subsyst_impl(void* kmod_ptr)
 auto python_subsyst_impl::py_kmod() const -> void* { return kmod_; }
 
 auto python_subsyst_impl::setup_py_kmod(void* kmod_ptr) -> void {
-	if(kmod_ptr) {
-		kmod_ = kmod_ptr;
-		auto& kmod = *static_cast<pybind11::module*>(kmod_);
+	if(!kmod_ptr) return;
 
-		auto& kpd = plugins_subsyst::kernel_pd();
-		kmod.doc() = kpd.description;
-		kpd.py_namespace = PyModule_GetName(kmod.ptr());
-	}
+	kmod_ = kmod_ptr;
+	auto& kmod = *static_cast<pybind11::module*>(kmod_);
+
+	auto& kpd = plugins_subsyst::kernel_pd();
+	kmod.doc() = kpd.description;
+	kpd.py_namespace = PyModule_GetName(kmod.ptr());
+
+	// [IMPORTANT] we must clean up adapters & cache right BEFORE interpreter termination
+	auto at_pyexit = py::module::import("atexit");
+	at_pyexit.attr("register")(py::cpp_function{[this] {
+		std::cout << "~~~ Python subsystem shutting down..." << std::endl;
+		drop_adapted_cache();
+		adapters_.clear();
+		def_adapter_ = nullptr;
+
+		// kick all event-based actors (normally wait until all actor handles wired into Python are released)
+		auto _ = py::gil_scoped_release{};
+		KIMPL.get_radio()->kick_citizens();
+		std::cout << "~~~ Python subsystem down" << std::endl;
+	}});
 }
 
 auto python_subsyst_impl::py_init_plugin(
@@ -111,6 +128,7 @@ END_WITH
 }
 
 auto python_subsyst_impl::register_adapter(std::string obj_type_id, adapter_fn f) -> void {
+	auto solo = std::lock_guard{ guard_ };
 	if(f)
 		adapters_.insert_or_assign(std::move(obj_type_id), std::move(f));
 	else {
@@ -121,10 +139,14 @@ auto python_subsyst_impl::register_adapter(std::string obj_type_id, adapter_fn f
 }
 
 auto python_subsyst_impl::register_default_adapter(adapter_fn f) -> void {
+	auto solo = std::lock_guard{ guard_ };
 	def_adapter_ = std::move(f);
 }
 
 auto python_subsyst_impl::clear_adapters() -> void {
+	drop_adapted_cache();
+
+	auto solo = std::lock_guard{ guard_ };
 	adapters_.clear();
 	def_adapter_ = nullptr;
 }
@@ -139,39 +161,92 @@ auto python_subsyst_impl::adapted_types() const -> std::vector<std::string> {
 	return res;
 }
 
-auto python_subsyst_impl::adapt(sp_obj source) -> py::object {
+auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::object {
 	if(!source) return py::none();
-	// check if adpater already created for given object
-	const auto source_key = sp_obj_hash(source);
-	auto cached_A = acache_.find(source_key);
-	if(cached_A != acache_.end())
-		return cached_A->second;
+	auto solo = std::lock_guard{ guard_ };
+
+	// registers link and returns whether link is met for the first time
+	const auto remember_link = [&](auto* data_ptr) {
+		// handler for link erased event responsible for deleting cached adapters
+		[[maybe_unused]] static auto on_link_delete = [](tree::link, tree::Event, prop::propdict params) {
+			const auto* lid = prop::get_if<std::string>(&params, "lid");
+			if(!lid) return;
+
+			auto& self = python_subsyst_impl::self();
+			auto solo = std::lock_guard{ self.guard_ };
+
+			auto cached_L = self.lnk2obj_.find(*lid);
+			if(cached_L == self.lnk2obj_.end()) return;
+
+			// kill cache entry if ref counter reaches zero
+			if(auto cached_A = self.acache_.find(cached_L->second); cached_A != self.acache_.end()) {
+				if(--cached_A->second.second == 0) {
+					auto py_guard = py::gil_scoped_acquire();
+					self.acache_.erase(cached_A);
+				}
+			}
+			self.lnk2obj_.erase(cached_L);
+		};
+
+		// inc ref counter for new link
+		if(lnk2obj_.try_emplace(to_string(L.id()), data_ptr).second) {
+			// install erased event handler
+			L.subscribe(on_link_delete, tree::Event::LinkDeleted);
+			return true;
+		}
+		return false;
+	};
+
+	// check if adapter already created for given object
+	auto* data_ptr = source.get();
+	if(auto cached_A = acache_.find(data_ptr); cached_A != acache_.end()) {
+		// inc ref counter for new link
+		auto& [pyobj, use_count] = cached_A->second;
+		if(remember_link(data_ptr))
+			++use_count;
+		return pyobj;
+	}
 
 	// adapt or passthrough
-	const auto adapt_and_cache = [this, source_key](auto&& obj, auto&& afn) {
+	const auto adapt_and_cache = [&](auto&& afn) {
+		// cache adapter with ref counter = 1
 		return acache_.try_emplace(
-			source_key, afn(std::move(obj))
-		).first->second;
+			data_ptr, afn(std::move(source)), size_t{ remember_link(data_ptr) }
+		).first->second.first;
 	};
+
 	auto pf = adapters_.find(source->type_id());
-	auto&& obj = std::move(source);
 	return pf != adapters_.end() ?
-		adapt_and_cache(obj, pf->second) :
-		( def_adapter_ ? adapt_and_cache(obj, def_adapter_) : py::cast(obj) );
+		adapt_and_cache(pf->second) :
+		( def_adapter_ ? adapt_and_cache(def_adapter_) : py::cast(source) );
+}
+
+auto python_subsyst_impl::get_cached_adapter(const sp_obj& obj) const -> pybind11::object {
+	if(auto cached_A = acache_.find(obj.get()); cached_A != acache_.end())
+		return cached_A->second.first;
+	return py::none();
 }
 
 auto python_subsyst_impl::drop_adapted_cache(const sp_obj& obj) -> std::size_t {
+	auto solo = std::lock_guard{ guard_ };
 	std::size_t res = 0;
 	if(!obj) {
 		res = acache_.size();
 		acache_.clear();
+		lnk2obj_.clear();
 	}
-	else {
-		auto cached_A = acache_.find(sp_obj_hash(obj));
-		if(cached_A != acache_.end()) {
-			acache_.erase(cached_A);
-			res = 1;
+	else if(auto cached_A = acache_.find(obj.get()); cached_A != acache_.end()) {
+		// clean link -> obj ptr resolver
+		auto* obj_ptr = cached_A->first;
+		for(auto p_lnk = lnk2obj_.begin(); p_lnk != lnk2obj_.end();) {
+			if(p_lnk->second == obj_ptr)
+				p_lnk = lnk2obj_.erase(p_lnk);
+			else
+				++p_lnk;
 		}
+		// clean cached adapter
+		acache_.erase(cached_A);
+		res = 1;
 	}
 	return res;
 }
@@ -182,3 +257,49 @@ auto python_subsyst_impl::self() -> python_subsyst_impl& {
 }
 
 NAMESPACE_END(blue_sky::kernel::detail)
+
+NAMESPACE_BEGIN(blue_sky::python)
+
+auto py_bind_adapters(py::module& m) -> void {
+	using namespace kernel::detail;
+	static auto py_kernel = &python_subsyst_impl::self;
+
+	// export adapters manip functions
+	using adapter_fn = kernel::detail::python_subsyst_impl::adapter_fn;
+
+	// called with GIL released
+	m.def("register_adapter", [](std::string obj_type_id, adapter_fn f) {
+			py_kernel().register_adapter(std::move(obj_type_id), std::move(f));
+		}, "obj_type_id"_a, "adapter_fn"_a, "Register adapter for specified BS type"
+	);
+	m.def("register_default_adapter", [](adapter_fn f) {
+			py_kernel().register_default_adapter(std::move(f));
+		}, "adapter_fn"_a, "Register default adapter for all BS types with no adapter registered"
+	);
+	m.def("adapted_types", []() { return py_kernel().adapted_types(); },
+		"Return list of types with registered adapters ('*' denotes default adapter)"
+	);
+	// [NOTE] containes fine-grained GIL acquire, so can be called w/o GIL
+	m.def("adapt", [](sp_obj source, const tree::link& L) {
+			return py_kernel().adapt(std::move(source), L);
+		}, "source"_a, "lnk"_a,
+		"Make adapter for given object"
+	);
+
+	// called normally with captured GIL
+	m.def("clear_adapters", []() { py_kernel().clear_adapters(); },
+		"Remove all adapters (including default) for BS types"
+	);
+	m.def("drop_adapted_cache", [](const sp_obj& obj) {
+			return py_kernel().drop_adapted_cache(obj);
+		}, "obj"_a = nullptr,
+		"Clear cached adapter for given object (or drop all cached adapters if object is None)"
+	);
+	m.def("get_cached_adapter", [](const sp_obj& obj) {
+			return py_kernel().get_cached_adapter(obj);
+		},
+		"obj"_a, "Get cached adapter for given object (if created before, otherwise None)"
+	);
+}
+
+NAMESPACE_END(blue_sky::python)

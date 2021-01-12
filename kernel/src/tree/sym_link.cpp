@@ -10,63 +10,167 @@
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/tree/errors.h>
-#include "tree_impl.h"
+#include <bs/kernel/config.h>
+#include <bs/kernel/tools.h>
+
+#include <bs/serialize/tree.h>
+#include <bs/serialize/cafbind.h>
+
+#include "link_actor.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
+///////////////////////////////////////////////////////////////////////////////
+//  sym_link actor
+//
+struct sym_link_actor : public link_actor {
+	using super = link_actor;
 
-/// ctor -- pointee is specified by string path
-sym_link::sym_link(std::string name, std::string path, Flags f)
-	: link(std::move(name), f), path_(std::move(path))
+	using super::super;
+
+	auto target() const -> link_or_err {
+		return static_cast<sym_link_impl&>(impl).target();
+	}
+
+	template<typename R, typename... Args>
+	auto delegate_target(Args&&... args)
+	-> std::enable_if_t<tl::detail::is_expected<R>::value, caf::result<R>> {
+		if(auto p = target())
+			return delegate(link::actor(p.value()), std::forward<Args>(args)...);
+		else
+			return R{ tl::unexpect, p.error() };
+	}
+
+	template<typename R, typename... Args>
+	auto delegate_target(R errval, Args&&... args)
+	-> std::enable_if_t<!tl::detail::is_expected<R>::value, caf::result<R>> {
+		if(auto p = target())
+			return delegate(link::actor(p.value()), std::forward<Args>(args)...);
+		else
+			return errval;
+	}
+
+	// delegate name, OID, etc requests to source link
+	auto make_behavior() -> caf::behavior override {
+		return caf::message_handler({
+
+			[this](a_lnk_oid) -> caf::result<std::string> {
+				return delegate_target<std::string>(nil_otid, a_lnk_oid());
+			},
+
+			[this](a_lnk_otid) -> caf::result<std::string> {
+				return delegate_target<std::string>(nil_otid, a_lnk_otid());
+			},
+
+			[this](a_home_id) -> caf::result< std::string > {
+				return delegate_target< std::string >(nil_oid, a_home_id());
+			},
+
+			[this](a_lnk_inode) -> caf::result< result_or_errbox<inodeptr> > {
+				return delegate_target< result_or_errbox<inodeptr> >(a_lnk_inode());
+			},
+
+		}).or_else(super::make_behavior());
+	}
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//  sym_link impl
+//
+sym_link_impl::sym_link_impl(std::string name, std::string path, Flags f)
+	: super(std::move(name), f), path_(std::move(path))
 {}
-/// ctor -- pointee is specified directly - absolute path will be stored
-sym_link::sym_link(std::string name, const sp_link& src, Flags f)
-	: sym_link(std::move(name), abspath(src), f)
+
+sym_link_impl::sym_link_impl()
+	: super()
 {}
 
-/// implement link's API
-sp_link sym_link::clone(bool deep) const {
-	// no deep copy support for symbolic link
-	return std::make_shared<sym_link>(name(), path_, flags());
-}
-
-std::string sym_link::type_id() const {
-	return "sym_link";
-}
-
-void sym_link::reset_owner(const sp_node& new_owner) {
-	link::reset_owner(new_owner);
-	// update link's status
-	check_alive();
-}
-
-result_or_err<sp_obj> sym_link::data_impl() const {
-	// cannot dereference dangling sym link
+auto sym_link_impl::target() const -> link_or_err {
 	const auto parent = owner();
-	if(!parent) return tl::make_unexpected(error::quiet(Error::UnboundSymLink));
-	const auto src_link = deref_path(path_, parent);
-	return src_link ?
-		result_or_err<sp_obj>(src_link->data_ex()) :
-		tl::make_unexpected(error::quiet(Error::LinkExpired));
+	if(!parent) return unexpected_err_quiet(Error::UnboundSymLink);
+
+	link src_link;
+	if(auto er = error::eval_safe([&] { src_link = deref_path(path_, parent); }); er)
+		return tl::make_unexpected(std::move(er));
+	else if(src_link)
+		return src_link;
+	return unexpected_err_quiet(Error::LinkExpired);
 }
 
-bool sym_link::check_alive() {
-	auto res = bool(deref_path(path_, owner()));
-	rs_reset(Req::Data, res ? ReqStatus::OK : ReqStatus::Error);
+auto sym_link_impl::data() -> obj_or_err {
+	auto res = target().and_then([](const link& src_link) {
+		return src_link.data_ex();
+	});
+#if defined(_DEBUG)
+	if(!res) {
+		auto& er = res.error();
+		std::cout << ">>> " << to_string(id_) << ' ' << er.what() << std::endl;
+		//std::cout << kernel::tools::get_backtrace(16) << std::endl;
+	}
+#endif
 	return res;
 }
 
-/// return stored pointee path
-std::string sym_link::src_path(bool human_readable) const {
-	if(!human_readable) return path_;
-	else if(const auto parent = owner())
-		return convert_path(path_, parent->handle());
-	return {};
+auto sym_link_impl::data(unsafe_t) const -> sp_obj {
+	return target().map([](const link& src_link) {
+		return src_link.data(unsafe);
+	}).value_or(nullptr);
 }
 
-result_or_err<sp_node> sym_link::propagate_handle() {
-	// sym link cannot be a node's handle
-	return data_node_ex();
+auto sym_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
+	return spawn_lactor<sym_link_actor>(std::move(limpl));
 }
+
+auto sym_link_impl::clone(bool deep) const -> sp_limpl {
+	// no deep copy support for symbolic link
+	return std::make_shared<sym_link_impl>(name_, path_, flags_);
+}
+
+auto sym_link_impl::propagate_handle() -> node_or_err {
+	// sym link cannot be a node's handle and also must make tree query here, so just return error
+	return unexpected_err_quiet(Error::EmptyData);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  class
+//
+
+#define SIMPL static_cast<sym_link_impl&>(*super::pimpl())
+
+/// ctor -- pointee is specified by string path
+sym_link::sym_link(std::string name, std::string path, Flags f)
+	: link(std::make_shared<sym_link_impl>(std::move(name), std::move(path), f))
+{}
+/// ctor -- pointee is specified directly - absolute path will be stored
+sym_link::sym_link(std::string name, const link& src, Flags f)
+	: sym_link(std::move(name), abspath(src), f)
+{}
+
+sym_link::sym_link()
+	: super(std::make_shared<sym_link_impl>(), false)
+{}
+
+bool sym_link::check_alive() {
+	auto res = bool(deref_path(SIMPL.path_, owner()));
+	auto S = res ? ReqStatus::OK : ReqStatus::Error;
+	rs_reset_if_neq(Req::Data, S, S);
+	return res;
+}
+
+auto sym_link::target() const -> link_or_err {
+	return SIMPL.target();
+}
+
+/// return stored pointee path
+std::string sym_link::target_path(bool human_readable) const {
+	auto res = std::string(SIMPL.path_);
+	if(human_readable) {
+		if(const auto parent = owner())
+			res = convert_path(res, parent.handle());
+	}
+	return res;
+}
+
+LINK_CONVERT_TO(sym_link)
+LINK_TYPE_DEF(sym_link, sym_link_impl, "sym_link")
 
 NAMESPACE_END(blue_sky::tree)
-

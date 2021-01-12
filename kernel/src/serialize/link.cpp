@@ -11,15 +11,18 @@
 #include <bs/serialize/tree.h>
 #include <bs/serialize/boost_uuid.h>
 
-#include "../tree/link_impl.h"
-#include "../tree/fusion_link_impl.h"
+#include "bs/serialize/carray.h"
+#include "tree_impl.h"
+#include "../tree/link_actor.h"
+#include "../tree/hard_link.h"
+#include "../tree/fusion_link_actor.h"
+#include "../tree/map_engine.h"
 
 #include <cereal/types/chrono.hpp>
+#include <cereal/types/unordered_map.hpp>
 
 using namespace cereal;
 using namespace blue_sky;
-using Req = blue_sky::tree::link::Req;
-using ReqStatus = blue_sky::tree::link::ReqStatus;
 
 /*-----------------------------------------------------------------------------
  *  inode
@@ -58,175 +61,217 @@ BSS_FCN_EXPORT(save, tree::inode)
 BSS_FCN_EXPORT(load, tree::inode)
 
 /*-----------------------------------------------------------------------------
+ *  link_impl
+ *-----------------------------------------------------------------------------*/
+BSS_FCN_BEGIN(serialize, tree::link_impl)
+	// [NOTE] intentionally do net serialize owner, it will be set up when parent node is loaded
+	ar(
+		make_nvp("id", t.id_),
+		make_nvp("name", t.name_),
+		make_nvp("flags", t.flags_)
+	);
+BSS_FCN_END
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::engine::impl, tree::link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::link_impl, "link")
+BSS_FCN_EXPORT(serialize, tree::link_impl)
+
+///////////////////////////////////////////////////////////////////////////////
+//  ilink_impl
+//
+BSS_FCN_INL_BEGIN(serialize, tree::ilink_impl)
+	// serialize inode
+	// [NOTE] disabled - inodes aren't actually used now
+	// [TODO] reenable later when conception will be more thought out
+	//ar(make_nvp("inode", t.inode_));
+
+	serialize<tree::link_impl>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::ilink_impl)
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link_impl, tree::ilink_impl)
+
+///////////////////////////////////////////////////////////////////////////////
+//  hard_link_impl
+//
+BSS_FCN_INL_BEGIN(serialize, tree::hard_link_impl)
+	if constexpr(Archive::is_saving::value) {
+		ar( make_nvp("data", t.data_) );
+	}
+	else {
+		// load data with deferred 2nd trial
+		ar(defer_failed(
+			t.data_,
+			[&t](auto obj) { t.set_data(std::move(obj)); },
+			PtrInitTrigger::SuccessAndRetry
+		));
+	}
+
+	serialize<tree::ilink_impl>::go(ar, t, version);
+	//ar( make_nvp("linkbase", base_class<tree::ilink_impl>(&t)) );
+BSS_FCN_INL_END(serialize, tree::hard_link_impl)
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::hard_link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::hard_link_impl, "hard_link")
+
+///////////////////////////////////////////////////////////////////////////////
+//  weak_link_impl
+//
+BSS_FCN_INL_BEGIN(serialize, tree::weak_link_impl)
+	if constexpr(Archive::is_saving::value) {
+		ar( make_nvp("data", t.data_.lock()) );
+	}
+	else {
+		auto unused = sp_obj{};
+		ar(defer_failed(
+			unused,
+			[&t](auto obj) { t.set_data(std::move(obj)); },
+			PtrInitTrigger::SuccessAndRetry
+		));
+	}
+
+	serialize<tree::ilink_impl>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::weak_link_impl)
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::weak_link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::weak_link_impl, "weak_link")
+
+///////////////////////////////////////////////////////////////////////////////
+//  sym_link_impl
+//
+BSS_FCN_INL_BEGIN(serialize, tree::sym_link_impl)
+	ar(make_nvp("path", t.path_));
+
+	serialize<tree::link_impl>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::sym_link_impl)
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link_impl, tree::sym_link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::sym_link_impl, "sym_link")
+
+///////////////////////////////////////////////////////////////////////////////
+//  fusion_link_impl
+//
+NAMESPACE_BEGIN()
+
+template<typename Archive>
+auto serialize_status(Archive& ar, tree::link_impl& t) {
+	using namespace blue_sky::tree;
+	using array_t = std::array<tree::ReqStatus, 2>;
+
+	auto stat = [&]() -> array_t {
+		if constexpr(Archive::is_saving::value)
+			return {t.req_status(Req::Data), t.req_status(Req::DataNode)};
+		else return {};
+	}();
+	serialize_carray(ar, stat, "status");
+
+	if constexpr(Archive::is_loading::value) {
+		t.rs_reset(Req::Data, ReqReset::Always, stat[0]);
+		t.rs_reset(Req::DataNode, ReqReset::Always, stat[1]);
+	}
+}
+
+NAMESPACE_END()
+
+BSS_FCN_INL_BEGIN(serialize, tree::fusion_link_impl)
+	using namespace blue_sky::tree;
+
+	if constexpr(Archive::is_saving::value) {
+		ar( make_nvp("bridge", t.bridge_) );
+		// save cached object
+		ar( make_nvp("data", t.data_) );
+	}
+	else {
+		// load bridge with deferred trial
+		ar(defer_failed(
+			t.bridge_,
+			[&t](auto B) { t.bridge_ = std::move(B); },
+			PtrInitTrigger::SuccessAndRetry
+		));
+		// load data with deferred 2nd trial
+		ar(defer_failed(
+			t.data_,
+			[&](auto obj) { t.data_ = std::move(obj); },
+			PtrInitTrigger::SuccessAndRetry
+		));
+	}
+
+	serialize_status(ar, t);
+	serialize<tree::ilink_impl>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::fusion_link_impl)
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::ilink_impl, tree::fusion_link_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::fusion_link_impl, "fusion_link")
+
+///////////////////////////////////////////////////////////////////////////////
+//  map_link
+//
+BSS_FCN_INL_BEGIN(serialize, tree::map_link_impl_base)
+	if constexpr(Archive::is_saving::value) {
+		// dump contained node only if map_link owns it
+		if(t.out_.handle().id() == t.id_ && t.req_status(tree::Req::DataNode) == tree::ReqStatus::OK)
+			ar(make_nvp( "out", t.out_ ));
+		else
+			ar(make_nvp( "out", tree::node::nil() ));
+	}
+	else {
+		// load out node
+		tree::node out_node;
+		ar(make_nvp( "out", out_node ));
+		if(t.out_ = out_node)
+			t.link_impl::propagate_handle(t.out_);
+	}
+	// dump settings
+	ar(make_nvp("tag", t.tag_));
+	ar(make_nvp("update_on", t.update_on_), make_nvp("opts", t.opts_));
+
+	serialize_status(ar, t);
+	serialize<tree::link_impl>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::map_link_impl_base)
+
+
+BSS_FCN_INL_BEGIN(serialize, tree::map_link_impl)
+	ar(make_nvp( "io_map", t.io_map_  ));
+	serialize<tree::map_link_impl_base>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::map_link_impl)
+
+
+BSS_FCN_INL_BEGIN(serialize, tree::map_node_impl)
+	serialize<tree::map_link_impl_base>::go(ar, t, version);
+BSS_FCN_INL_END(serialize, tree::map_node_impl)
+
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link_impl, tree::map_link_impl_base)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::map_link_impl_base, tree::map_link_impl)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::map_link_impl_base, tree::map_node_impl)
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::map_link_impl, "map_link")
+CEREAL_REGISTER_TYPE_WITH_NAME(tree::map_node_impl, "map_node")
+
+/*-----------------------------------------------------------------------------
  *  link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::link)
-	// [NOTE] intentionally DON'T save name,
-	// because name will be saved in derived classes to invoke minimal constructor
 	// [NOTE] intentionally do net serialize owner, it will be set up when parent node is loaded
-	ar(
-		make_nvp("id", t.pimpl_->id_),
-		make_nvp("flags", t.pimpl_->flags_)
-	);
-	// assume link is root by default -- it's safe when restoring link or tree from archive
-	if constexpr(Archive::is_loading::value)
-		t.propagate_handle();
+	if constexpr(Archive::is_saving::value) {
+		// for nil link save empty impl pointer
+		ar(make_nvp( "link", t ? t.pimpl_ : tree::sp_limpl{} ));
+	}
+	else {
+		ar(make_nvp("link", t.pimpl_));
+		if(t.pimpl_) {
+			// ID is ready, we can start internal actor
+			t.start_engine();
+			// if pointee is a node, correct it's handle
+			t.pimpl()->propagate_handle();
+			// for map linkss disable refresh behavior as there's no mapping function anyway
+			if(t.type_id() == tree::map_link::type_id_())
+				caf::anon_send<high_prio>(
+					caf::actor_cast<tree::map_link_impl::actor_type>(t.raw_actor()), a_mlnk_fresh{}
+				);
+		}
+		else
+			t = tree::link{};
+	}
 BSS_FCN_END
 
 BSS_FCN_EXPORT(serialize, tree::link)
 
-/*-----------------------------------------------------------------------------
- *  ilink
- *-----------------------------------------------------------------------------*/
-BSS_FCN_BEGIN(serialize, tree::ilink)
-	// serialize inode
-	ar(make_nvp("inode", t.inode_));
-	// serialize base link by direct call in order to omit creating inner JSON section
-	serialize<tree::link>::go(ar, t, version);
-BSS_FCN_END
-
-CEREAL_REGISTER_POLYMORPHIC_RELATION(tree::link, tree::ilink)
-BSS_FCN_EXPORT(serialize, tree::ilink)
-
-/*-----------------------------------------------------------------------------
- *  hard_link
- *-----------------------------------------------------------------------------*/
-// provide non-empty constructor
-BSS_FCN_BEGIN(load_and_construct, tree::hard_link)
-	// load name & construct instance
-	std::string name;
-	ar(name);
-	construct(std::move(name), sp_obj{});
-	auto plnk = construct.ptr();
-
-	// initializer that sets OK status on successfull object deserialization
-	auto data_init = [plnk](auto obj) {
-		if(( plnk->data_ = std::move(obj) )) {
-			plnk->rs_reset(Req::Data, ReqStatus::OK);
-			if(plnk->data_->is_node())
-				plnk->rs_reset(Req::DataNode, ReqStatus::OK);
-		}
-	};
-	// load data with deferred 2nd trial
-	ar( defer_failed(plnk->data_, std::move(data_init), PtrInitTrigger::SuccessAndRetry) );
-	// load base link
-	ar( base_class<tree::ilink>(plnk) );
-BSS_FCN_END
-
-BSS_FCN_BEGIN(serialize, tree::hard_link)
-	ar(
-		make_nvp("name", t.pimpl_->name_),
-		make_nvp("data", t.data_),
-		make_nvp("linkbase", base_class<tree::ilink>(&t))
-	);
-BSS_FCN_END
-
-BSS_FCN_EXPORT(serialize, tree::hard_link)
-BSS_FCN_EXPORT(load_and_construct, tree::hard_link)
-
-/*-----------------------------------------------------------------------------
- *  weak_link
- *-----------------------------------------------------------------------------*/
-// provide non-empty constructor
-BSS_FCN_BEGIN(load_and_construct, tree::weak_link)
-	// load name & construct instance
-	std::string name;
-	ar(name);
-	sp_obj data;
-	construct(std::move(name), data);
-	auto plnk = construct.ptr();
-
-	// helper that sets OK status on successfull object deserialization
-	auto data_init = [plnk](const sp_obj& obj) {
-		plnk->data_ = obj;
-		if(obj) {
-			plnk->rs_reset(Req::Data, ReqStatus::OK);
-			if(obj->is_node())
-				plnk->rs_reset(Req::DataNode, ReqStatus::OK);
-		}
-	};
-	// load data with deferred 2nd trial
-	ar( defer_failed(data, std::move(data_init), PtrInitTrigger::SuccessAndRetry) );
-	// load base link
-	ar( base_class<tree::ilink>(plnk) );
-BSS_FCN_END
-
-BSS_FCN_BEGIN(serialize, tree::weak_link)
-	ar(
-		make_nvp("name", t.pimpl_->name_),
-		make_nvp("data", t.data_.lock()),
-		make_nvp("linkbase", base_class<tree::ilink>(&t))
-	);
-BSS_FCN_END
-
-BSS_FCN_EXPORT(serialize, tree::weak_link)
-BSS_FCN_EXPORT(load_and_construct, tree::weak_link)
-
-/*-----------------------------------------------------------------------------
- *  sym_link
- *-----------------------------------------------------------------------------*/
-// provide non-empty constructor
-BSS_FCN_BEGIN(load_and_construct, tree::sym_link)
-	// load both name and path & construct instance
-	std::string name, path;
-	ar(name, path);
-	construct(std::move(name), std::move(path));
-	auto plnk = construct.ptr();
-
-	// load base link
-	ar( base_class<tree::link>(plnk) );
-	// defer update symlink Data status
-	ar( defer(Functor{ [plnk](auto&) { plnk->check_alive(); } }) );
-BSS_FCN_END
-
-BSS_FCN_BEGIN(serialize, tree::sym_link)
-	ar(
-		make_nvp("name", t.pimpl_->name_),
-		make_nvp("path", t.path_),
-		make_nvp("linkbase", base_class<tree::link>(&t))
-	);
-BSS_FCN_END
-
-BSS_FCN_EXPORT(serialize, tree::sym_link)
-BSS_FCN_EXPORT(load_and_construct, tree::sym_link)
-
-/*-----------------------------------------------------------------------------
- *  fusion_link
- *-----------------------------------------------------------------------------*/
-BSS_FCN_BEGIN(serialize, tree::fusion_link)
-	ar(
-		make_nvp("name", static_cast<tree::link&>(t).pimpl_->name_),
-		make_nvp("bridge", t.pimpl_->bridge_),
-		make_nvp("linkbase", base_class<tree::ilink>(&t))
-	);
-BSS_FCN_END
-
-BSS_FCN_BEGIN(load_and_construct, tree::fusion_link)
-	// load name & construct instance
-	std::string name;
-	ar(name);
-	construct(std::move(name), tree::sp_node{}, tree::sp_fusion{});
-	auto plnk = construct.ptr();
-
-	// load bridge with deferred trial
-	ar( defer_failed(plnk->pimpl_->bridge_) );
-
-	// base link
-	ar( base_class<tree::ilink>(plnk) );
-BSS_FCN_END
-
-BSS_FCN_EXPORT(serialize, tree::fusion_link)
-BSS_FCN_EXPORT(load_and_construct, tree::fusion_link)
-
-/*-----------------------------------------------------------------------------
- *  instantiate code for polymorphic types
- *-----------------------------------------------------------------------------*/
-using namespace blue_sky;
-//CEREAL_REGISTER_TYPE_WITH_NAME(tree::link, "link")
-CEREAL_REGISTER_TYPE_WITH_NAME(tree::hard_link, "hard_link")
-CEREAL_REGISTER_TYPE_WITH_NAME(tree::weak_link, "weak_link")
-CEREAL_REGISTER_TYPE_WITH_NAME(tree::sym_link, "sym_link")
-CEREAL_REGISTER_TYPE_WITH_NAME(tree::fusion_link, "fusion_link")
-
 BSS_REGISTER_DYNAMIC_INIT(link)
-

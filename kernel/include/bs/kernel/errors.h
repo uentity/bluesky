@@ -28,6 +28,9 @@ enum class Error {
 	PluginRegisterFail,
 	PythonDisabled,
 	BadPymod,
+
+	BadObject,
+	UnexpectedObjectType,
 };
 
 BS_API std::error_code make_error_code(Error);

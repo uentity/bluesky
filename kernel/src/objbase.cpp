@@ -8,61 +8,62 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/objbase.h>
+#include <bs/uuid.h>
 #include <bs/kernel/types_factory.h>
 #include <bs/tree/errors.h>
 #include <bs/tree/inode.h>
 
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-
-// -----------------------------------------------------
-// Implementation of class: object_base
-// -----------------------------------------------------
-
 NAMESPACE_BEGIN(blue_sky)
+/*-----------------------------------------------------------------------------
+ *  objbase
+ *-----------------------------------------------------------------------------*/
+objbase::objbase(std::string custom_oid, bool start_actor) {
+	if(custom_oid.empty()) {
+		id_ = to_string(gen_uuid());
+		if(start_actor) reset_home(id_, true);
+	}
+	else
+		id_ = std::move(custom_oid);
 
-namespace {
-
-// global random UUID generator for BS objects
-static boost::uuids::random_generator gen;
-
-} // eof hidden namespace
-
-objbase::objbase(std::string custom_oid)
-	: objbase(false, custom_oid)
-{}
-
-objbase::objbase(bool is_node, std::string custom_oid)
-	: id_(custom_oid.size() ? std::move(custom_oid) : boost::uuids::to_string(gen())),
-	is_node_(is_node)
-{}
-
-objbase::objbase(const objbase& obj)
-	: enable_shared_from_this(obj), id_(boost::uuids::to_string(gen())), is_node_(obj.is_node_)
-{}
-
-void objbase::swap(objbase& rhs) {
-	std::swap(is_node_, rhs.is_node_);
-	std::swap(id_, rhs.id_);
+	if(start_actor) start_engine();
 }
 
-objbase::~objbase() {}
+objbase::objbase(std::string custom_oid) :
+	objbase(std::move(custom_oid), true)
+{}
 
-objbase& objbase::operator=(const objbase& rhs) {
+objbase::objbase(const objbase& obj) :
+	enable_shared_from_this(obj), id_(obj.id_)
+{
+	start_engine();
+}
+
+auto objbase::swap(objbase& rhs) -> void {
+	using std::swap;
+
+	swap(id_, rhs.id_);
+	swap(inode_, rhs.inode_);
+	swap(actor_, rhs.actor_);
+	swap(home_, rhs.home_);
+}
+
+auto objbase::operator=(const objbase& rhs) -> objbase& {
 	objbase(rhs).swap(*this);
 	return *this;
 }
 
-const type_descriptor& objbase::bs_type() {
+auto objbase::bs_type() -> const type_descriptor& {
 	static auto td = [] {
 		auto td = type_descriptor(
-			identity< objbase >(), identity< nil >(),
-			"objbase", "Base class of all BlueSky types", std::true_type(), std::true_type()
+			"objbase", &type_descriptor::nil, detail::make_assigner<objbase>(), nullptr,
+			"Base class of all BS types"
 		);
 		// add constructor from custom OID
 		td.add_constructor([](const std::string& custom_oid) -> sp_obj {
 			return std::make_shared<objbase>(custom_oid);
 		});
+		// add default copy ctor
+		td.add_copy_constructor<objbase>();
 		return td;
 	}();
 
@@ -73,14 +74,6 @@ const type_descriptor& objbase::bs_resolve_type() const {
 	return bs_type();
 }
 
-int objbase::bs_register_this() const {
-	return kernel::tfactory::register_instance(shared_from_this());
-}
-
-int objbase::bs_free_this() const {
-	return kernel::tfactory::free_instance(shared_from_this());
-}
-
 std::string objbase::type_id() const {
 	return bs_resolve_type().name;
 }
@@ -89,8 +82,8 @@ std::string objbase::id() const {
 	return id_;
 }
 
-bool objbase::is_node() const {
-	return is_node_;
+auto objbase::raw_actor() const -> const caf::actor& {
+	return actor_;
 }
 
 auto objbase::info() const -> result_or_err<tree::inode> {
@@ -99,6 +92,43 @@ auto objbase::info() const -> result_or_err<tree::inode> {
 		result_or_err<tree::inode>(*I) :
 		tl::make_unexpected(error::quiet(tree::Error::EmptyInode));
 }
+
+auto objbase::data_node() const -> tree::node {
+	return tree::node::nil();
+}
+
+/*-----------------------------------------------------------------------------
+ *  objnode
+ *-----------------------------------------------------------------------------*/
+objnode::objnode(std::string custom_oid) :
+	objbase(std::move(custom_oid))
+{}
+
+objnode::objnode(tree::node N, std::string custom_oid) :
+	objbase(std::move(custom_oid)), node_(std::move(N))
+{}
+
+objnode::objnode(const objnode& rhs) :
+	objbase(rhs.id_), node_(rhs.node_.clone(true))
+{}
+
+auto objnode::operator=(const objnode& rhs) -> objnode& {
+	objnode(rhs).swap(*this);
+	return *this;
+}
+
+auto objnode::swap(objnode& rhs) -> void {
+	using std::swap;
+
+	objbase::swap(rhs);
+	swap(node_, rhs.node_);
+}
+
+auto objnode::data_node() const -> tree::node {
+	return node_;
+}
+
+BS_TYPE_IMPL(objnode, objbase, "objnode", "Object with internal node")
 
 NAMESPACE_END(blue_sky)
 

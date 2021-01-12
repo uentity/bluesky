@@ -8,7 +8,8 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "../tree/tree.h"
+#include "../tree/link.h"
+#include "../tree/node.h"
 #include "serialize_decl.h"
 
 // inode
@@ -18,28 +19,19 @@ BSS_FCN_DECL(load, blue_sky::tree::inode)
 // link
 BSS_FCN_DECL(serialize, blue_sky::tree::link)
 
-// ilink
-BSS_FCN_DECL(serialize, blue_sky::tree::ilink)
-
-// hard link
-BSS_FCN_DECL(serialize, blue_sky::tree::hard_link)
-BSS_FCN_DECL(load_and_construct, blue_sky::tree::hard_link)
-
-// weak link
-BSS_FCN_DECL(serialize, blue_sky::tree::weak_link)
-BSS_FCN_DECL(load_and_construct, blue_sky::tree::weak_link)
-
-// sym link
-BSS_FCN_DECL(serialize, blue_sky::tree::sym_link)
-BSS_FCN_DECL(load_and_construct, blue_sky::tree::sym_link)
-
-// fusion link
-BSS_FCN_DECL(serialize, blue_sky::tree::fusion_link)
-BSS_FCN_DECL(load_and_construct, blue_sky::tree::fusion_link)
-
 // node
 BSS_FCN_DECL(serialize, blue_sky::tree::node)
 
+NAMESPACE_BEGIN(blue_sky::tree)
+
+// derived links are serialized as base link
+template<typename Archive, typename T>
+auto serialize(Archive& ar, T& t, const std::uint32_t ver)
+-> std::enable_if_t<std::is_base_of_v<link, T> && !std::is_same_v<T, link>, void> {
+	serialize(ar, static_cast<link&>(t), ver);
+}
+
+NAMESPACE_END(blue_sky::tree)
+
 BSS_FORCE_DYNAMIC_INIT(link)
 BSS_FORCE_DYNAMIC_INIT(node)
-

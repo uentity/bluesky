@@ -7,7 +7,7 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/bs.h>
+#include <bs/python/common.h>
 #include <bs/propdict.h>
 #include <bs/python/property.h>
 #include <bs/python/map.h>
@@ -117,39 +117,7 @@ void py_bind_common(py::module& m) {
 	// enable implicit conversion from string -> plugin_descriptor
 	py::implicitly_convertible<std::string, plugin_descriptor>();
 
-	// type_desccriptor bind
-	py::class_< type_descriptor >(m, "type_descriptor")
-		.def(py::init<>())
-		.def(py::init<std::string_view>(), "type_name"_a)
-		.def(py::init<
-				std::string, const BS_TYPE_COPY_FUN&, const BS_GET_TD_FUN&, std::string
-			>(), "type_name"_a, "copy_fun"_a, "parent_td_fun"_a, "description"_a = ""
-		)
-		.def_property_readonly_static(
-			"nil", [](py::object){ return type_descriptor::nil(); }, py::return_value_policy::reference
-		)
-		.def_readonly("name", &type_descriptor::name)
-		.def_readonly("description", &type_descriptor::description)
-		.def("add_copy_constructor", (void (type_descriptor::*)(BS_TYPE_COPY_FUN) const)
-			&type_descriptor::add_copy_constructor, "copy_fun"_a
-		)
-		.def("clone", [](const type_descriptor& td, bs_type_copy_param src){
-			return (std::shared_ptr< objbase >)td.clone(src);
-		})
-		.def_property_readonly("is_nil", &type_descriptor::is_nil)
-		.def_property_readonly("is_copyable", &type_descriptor::is_copyable)
-		.def("parent_td", &type_descriptor::parent_td, py::return_value_policy::reference)
-		.def(py::self == py::self)
-		.def(py::self != py::self)
-		.def(py::self < py::self)
-		.def(py::self < std::string())
-		.def(py::self == std::string())
-		.def(py::self != std::string())
-		.def("__repr__", [](const type_descriptor& td) { return td.name; })
-	;
-	// enable implicit conversion from string -> type_descriptor
-	py::implicitly_convertible<std::string, type_descriptor>();
-
+	// [NOTE] important to bind *before* type_descriptor
 	// propdict binding
 	bind_rich_map<prop::propdict>(m, "propdict", py::module_local(false));
 	// allow passing compatible Python dict in place of `propdict` (and init propdict from that Py dict)
@@ -159,8 +127,61 @@ void py_bind_common(py::module& m) {
 	bind_rich_map<prop::propbook_s>(m, "propbook_s", py::module_local(false));
 	bind_rich_map<prop::propbook_i>(m, "propbook_i", py::module_local(false));
 
+	// type_desccriptor bind
+	py::class_< type_descriptor >(m, "type_descriptor")
+		.def(py::init<std::string_view>(), "type_name"_a)
+		.def_property_readonly_static(
+			"nil", [](py::object){ return type_descriptor::nil(); }, py::return_value_policy::reference
+		)
+		.def_readonly("name", &type_descriptor::name)
+		.def_readonly("description", &type_descriptor::description)
+		.def_property_readonly("is_nil", &type_descriptor::is_nil)
+		.def_property_readonly("is_copyable", &type_descriptor::is_copyable)
+	
+		.def("parent_td", &type_descriptor::parent_td, py::return_value_policy::reference)
+		.def("add_copy_constructor", (void (type_descriptor::*)(BS_TYPE_COPY_FUN) const)
+			&type_descriptor::add_copy_constructor, "copy_fun"_a
+		)
+
+		.def("construct", [](const type_descriptor& self){
+			return (std::shared_ptr< objbase >)self.construct();
+		}, "Default construct type")
+
+		.def("clone", [](const type_descriptor& td, bs_type_copy_param src){
+			return (std::shared_ptr< objbase >)td.clone(src);
+		})
+
+		.def("assign", &type_descriptor::assign,
+			"target"_a, "source"_a, "params"_a = prop::propdict{}, "Assign content from source to target")
+
+		.def(py::self == py::self)
+		.def(py::self != py::self)
+		.def(py::self < py::self)
+		.def(py::self < std::string())
+		.def(py::self == std::string())
+		.def(py::self != std::string())
+		.def("__repr__", [](const type_descriptor& td) -> std::string {
+			return "[" + td.name + "] [" + td.description + ']';
+		})
+	;
+	// enable implicit conversion from string -> type_descriptor
+	py::implicitly_convertible<std::string, type_descriptor>();
+
+	m.def("isinstance", py::overload_cast<const sp_cobj&, const type_descriptor&>(&isinstance),
+		"obj"_a, "td"_a, "Check if obj type match given type_descriptor");
+	m.def("isinstance", py::overload_cast<const sp_cobj&, std::string_view>(&isinstance),
+		"obj"_a, "obj_type_id"_a, "Check if obj is of given type name");
+
 	// add marker for infinite timespan
 	m.attr("infinite") = pyinfinte();
+
+	// async tag
+	py::class_<launch_async_t>(m, "launch_async_t");
+	m.attr("launch_async") = launch_async;
+
+	// unsafe tag
+	py::class_<unsafe_t>(m, "unsafe_t");
+	m.attr("unsafe") = unsafe;
 }
 
 NAMESPACE_END(python)

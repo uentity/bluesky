@@ -12,6 +12,8 @@
 #include <fmt/ostream.h>
 
 NAMESPACE_BEGIN(blue_sky::prop)
+template<typename T>
+auto& operator <<(std::ostream& os, const std::vector<T>& x);
 
 template<typename T>
 auto printv(std::ostream& os, const T& v) {
@@ -20,6 +22,8 @@ auto printv(std::ostream& os, const T& v) {
 	// specific processing of time types
 	if constexpr(std::is_same_v<T, timespan> || std::is_same_v<T, timestamp>)
 		os << blue_sky::to_string(v);
+	else if constexpr(std::is_same_v<T, boolean>)
+		os << (v ? std::string_view("true") : std::string_view("false"));
 	else os << v;
 	if constexpr(std::is_same_v<T, string>) os << '"';
 }
@@ -36,16 +40,14 @@ auto& operator <<(std::ostream& os, const std::vector<T>& x) {
 	return os << ']', os;
 }
 
-std::ostream& operator <<(std::ostream& os, const property& x) {
-	return visit([&os](auto&& v){
-		if(!is_none(v))
-			printv(os, v);
-		else
-			os << "None";
-	}, x), os;
+auto operator <<(std::ostream& os, const property& x) -> std::ostream& {
+	if(is_none(x))
+		return os << "None";
+	else
+		return visit([&os](auto&& v){ printv(os, v);}, x), os;
 }
 
-std::string to_string(const property& p) {
+auto to_string(const property& p) -> std::string {
 	return fmt::format("{}", p);
 }
 

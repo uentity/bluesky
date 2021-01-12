@@ -21,7 +21,7 @@ NAMESPACE_BEGIN(blue_sky)
 
 struct foo : public objbase { BS_TYPE_DECL };
 
-BS_TYPE_IMPL(foo, objbase, "test_any_foo", "Test foo type", true, true)
+BS_TYPE_IMPL(foo, objbase, "test_any_foo", "Test foo type")
 BS_REGISTER_RT_TYPE(foo)
 
 NAMESPACE_END(blue_sky)

@@ -10,6 +10,7 @@
 
 #include "../propdict.h"
 #include "base_types.h"
+#include "boost_uuid.h"
 
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>

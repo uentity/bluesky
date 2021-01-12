@@ -35,8 +35,4 @@ auto actor_config() -> caf::actor_system_config& {
 	return KIMPL.actor_cfg_;
 }
 
-auto actor_system() -> caf::actor_system& {
-	return KIMPL.actor_system();
-}
-
 NAMESPACE_END(blue_sky::kernel::config)

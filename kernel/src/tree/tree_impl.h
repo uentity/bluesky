@@ -6,25 +6,23 @@
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
-
 #pragma once
 
 #include <bs/tree/tree.h>
-#include <boost/algorithm/string.hpp>
+#include <bs/detail/enumops.h>
 
-#define CAN_CALL_DNODE(L) \
-( !((L).flags() & link::LazyLoad) || (L).req_status(link::Req::DataNode) == link::ReqStatus::OK )
+#include <boost/algorithm/string.hpp>
 
 NAMESPACE_BEGIN(blue_sky::tree::detail)
 
-sp_link walk_down_tree(
-	const std::string& next_lid, const sp_node& cur_level, node::Key path_unit = node::Key::ID
-);
+auto walk_down_tree(
+	const std::string& next_lid, const node& cur_level, Key path_unit = Key::ID
+) -> link;
 
 NAMESPACE_BEGIN()
 // put into hidden namespace to prevent equal multiple instantiations
-auto gen_walk_down_tree(node::Key path_unit = node::Key::ID) {
-	return [path_unit](const std::string& next_lid, const sp_node& cur_level) {
+auto gen_walk_down_tree(Key path_unit = Key::ID) {
+	return [path_unit](const std::string& next_lid, const node& cur_level) {
 		return walk_down_tree(next_lid, cur_level, path_unit);
 	};
 }
@@ -32,8 +30,11 @@ auto gen_walk_down_tree(node::Key path_unit = node::Key::ID) {
 NAMESPACE_END()
 
 // find out if we can call `data_node()` honoring LazyLoad flag
-inline auto can_call_dnode(const link& L) -> bool {
-	return !(L.flags() & link::LazyLoad) || L.req_status(link::Req::DataNode) == link::ReqStatus::OK;
+inline auto can_call_dnode(const link& L, TreeOpts opts) -> bool {
+	using namespace allow_enumops;
+	return enumval(opts & TreeOpts::FollowLazyLinks)
+		|| L.req_status(Req::DataNode) == ReqStatus::OK
+		|| !(L.flags() & LazyLoad);
 }
 
 // If `DerefControlElements` == true, processing function will be invoked for all path parts
@@ -43,11 +44,13 @@ template<
 	typename level_deref_f = decltype(gen_walk_down_tree())
 >
 auto deref_path_impl(
-	const std::string& path, sp_link L, sp_node root = nullptr, bool follow_lazy_links = true,
+	const std::string& path, link L, node root = node::nil(), TreeOpts opts = TreeOpts::Normal,
 	level_deref_f deref_f = gen_walk_down_tree()
-) -> sp_link {
+) -> link {
+	using namespace allow_enumops;
+
 	// split path into elements
-	if(path.empty()) return nullptr;
+	if(path.empty()) return {};
 	std::vector<std::string> path_parts;
 	boost::split(path_parts, path, boost::is_any_of("/"));
 
@@ -56,7 +59,7 @@ auto deref_path_impl(
 		// absolute path case
 		root = root ? find_root(root) : find_root(L);
 	}
-	if(root) L = root->handle();
+	if(root) L = root.handle();
 
 	// deref each element
 	for(const auto& part : path_parts) {
@@ -64,19 +67,18 @@ auto deref_path_impl(
 		if(part.empty() || part == ".")
 			is_control_elem = true;
 		else if(part == "..") {
-			root = L ? L->owner() : nullptr;
+			root = L ? L.owner() : node::nil();
 			is_control_elem = true;
 		}
 		else if(!root)
-			root = L && (follow_lazy_links || can_call_dnode(*L)) ?
-				L->data_node() : nullptr;
+			root = L && can_call_dnode(L, opts) ? L.data_node() : node::nil();
 
 		if constexpr(DerefControlElements) {
 			// intentional ignore of deref return value
 			if(is_control_elem) deref_f(part, root);
 		}
 		if(!is_control_elem) {
-			L = root ? deref_f(part, root) : nullptr;
+			L = root ? deref_f(part, root) : link{};
 			if(!L) break;
 			// force root recalc on next spin
 			root.reset();

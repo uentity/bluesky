@@ -16,13 +16,14 @@
 #include <pybind11/operators.h>
 
 #include <bs/error.h>
+#include <bs/objbase.h>
 #include <bs/kernel/misc.h>
-#include <bs/python/kernel.h>
 
-#include <bs/python/expected.h>
-#include <bs/python/object_ptr.h>
-
+#include "expected.h"
+#include "object_ptr.h"
 #include "timetypes.h"
+#include "uuid.h"
+#include "kernel.h"
 
 typedef void (*bs_init_py_fn)(void*);
 
@@ -60,6 +61,7 @@ BSPY_EXPORT_DEF_((T<T_spec_tup>))
         auto err_class = (pybind11::class_<std::error_code>)kmod->attr("error_code"); \
         err_ctor.execute(err_class);                                                  \
         pybind11::implicitly_convertible<E, std::error_code>();                       \
+        pybind11::implicitly_convertible<E, blue_sky::error>();                       \
     }                                                                                 \
 }();
 
@@ -75,5 +77,13 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 [[maybe_unused]] inline static const auto nogil = py::call_guard<py::gil_scoped_release>();
+
+template<typename PyClass>
+auto add_bs_type(PyClass& cl) -> PyClass& {
+	using Class = typename std::decay_t<decltype(cl)>::type;
+	return cl.def_property_readonly_static(
+		"bs_type", [](py::object){return Class::bs_type(); }, py::return_value_policy::reference
+	);
+}
 
 NAMESPACE_END(blue_sky::python)

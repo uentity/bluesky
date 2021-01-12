@@ -7,47 +7,41 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include "kimpl.h"
+#include "python_subsyst.h"
+
 #include <bs/error.h>
 #include <bs/kernel/misc.h>
 #include <bs/misc.h>
-#include "kimpl.h"
+#include <bs/uuid.h>
 
-#include <spdlog/spdlog.h>
+#include <boost/uuid/string_generator.hpp>
 
-NAMESPACE_BEGIN(blue_sky::kernel)
+NAMESPACE_BEGIN(blue_sky)
 
-auto init() -> void {
-	using InitState = kimpl::InitState;
+auto gen_uuid() -> uuid {
+	return KIMPL.gen_uuid();
+}
 
-	// do initialization only once from non-initialized state
-	auto expected_state = InitState::NonInitialized;
-	if(KIMPL.init_state_.compare_exchange_strong(expected_state, InitState::Initialized)) {
-		// configure kernel
-		KIMPL.configure();
-		// switch to mt logs
-		KIMPL.toggle_async(true);
-		// init actor system
-		auto& actor_sys = KIMPL.actor_sys_;
-		if(!actor_sys) {
-			actor_sys = std::make_unique<caf::actor_system>(KIMPL.actor_cfg_);
-			if(!actor_sys)
-				throw error("Can't create CAF actor_system!");
-		}
-	}
+auto to_uuid(std::string_view s) noexcept -> result_or_err<uuid> {
+	auto res = result_or_err<uuid>{};
+	auto er = error::eval_safe([&] {
+		res = boost::uuids::string_generator{}(s.begin(), s.end());
+	});
+	return er.ok() ? res : tl::make_unexpected(std::move(er));
+}
+
+auto to_uuid(unsafe_t, std::string_view s) -> uuid {
+	return boost::uuids::string_generator{}(s.begin(), s.end());
+}
+
+NAMESPACE_BEGIN(kernel)
+auto init() -> error {
+	return KIMPL.init();
 }
 
 auto shutdown() -> void {
-	using InitState = kimpl::InitState;
-
-	// shut down if not already Down
-	if(KIMPL.init_state_.exchange(InitState::Down) != InitState::Down) {
-		// destroy actor system
-		if(KIMPL.actor_sys_) {
-			KIMPL.actor_sys_.release();
-		}
-		// shutdown mt logs
-		detail::logging_subsyst::shutdown();
-	}
+	KIMPL.shutdown();
 }
 
 auto unify_serialization() -> void {
@@ -59,7 +53,7 @@ auto k_descriptor() -> const plugin_descriptor& {
 }
 
 auto k_pymod() -> void* {
-	return KIMPL.pysupport_->py_kmod();
+	return KIMPL.pysupport()->py_kmod();
 }
 
 auto last_error() -> std::string {
@@ -67,15 +61,12 @@ auto last_error() -> std::string {
 }
 
 auto str_key_storage(const std::string& key) -> str_any_array& {
-	auto& kimpl = KIMPL;
-	auto solo = std::lock_guard{ kimpl.sync_storage_ };
-	return kimpl.str_key_storage(key);
+	return KIMPL.str_key_storage(key);
 }
 
 auto idx_key_storage(const std::string& key) -> idx_any_array& {
-	auto& kimpl = KIMPL;
-	auto solo = std::lock_guard{ kimpl.sync_storage_ };
-	return kimpl.idx_key_storage(key);
+	return KIMPL.idx_key_storage(key);
 }
 
-NAMESPACE_END(blue_sky::kernel)
+NAMESPACE_END(kernel)
+NAMESPACE_END(blue_sky)

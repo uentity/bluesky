@@ -36,8 +36,9 @@ class BS_API bs_signal : public objbase {
 	friend class objbase;
 
 public:
-	//! type of blue-sky smart pointer of command
 	typedef std::shared_ptr< bs_signal > sp_signal;
+	// disable signals assignment
+	static constexpr auto bs_disable_assign = true;
 
 	bs_signal(int signal_code);
 	~bs_signal();
