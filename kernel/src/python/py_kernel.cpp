@@ -89,6 +89,9 @@ auto bind_tfactory_api(py::module& m) -> void {
 	m.def("create", [](std::string_view obj_type_id) -> sp_obj {
 		return kernel::tfactory::create(obj_type_id);
 	}, "obj_type_id"_a, "Default construct object of given type");
+	m.def("create", [](std::string_view obj_type_id, std::string oid) -> sp_obj {
+		return kernel::tfactory::create(obj_type_id, std::move(oid));
+	}, "obj_type_id"_a, "oid"_a, "Construct object of given type with given OID");
 
 	m.def("clone", [](bs_type_copy_param src) -> sp_obj {
 		return kernel::tfactory::clone(src);
