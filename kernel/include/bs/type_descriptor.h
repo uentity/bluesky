@@ -202,12 +202,12 @@ public:
 	};
 
 	// constructor from string type name for temporary tasks (searching etc)
-	type_descriptor(std::string_view type_name = "");
+	type_descriptor(std::string_view type_name = {});
 
 	// standard constructor
 	type_descriptor(
 		std::string type_name, BS_GET_TD_FUN parent_td_fn, BS_TYPE_ASSIGN_FUN assign_fn,
-		BS_TYPE_COPY_FUN cp_fn = nullptr, std::string description = ""
+		BS_TYPE_COPY_FUN cp_fn = nullptr, std::string description = {}
 	);
 
 	// templated ctor for BlueSky types
@@ -230,6 +230,8 @@ public:
 		// auto-add default ctor, from single string arg (typically ID), and copy ctor
 		if constexpr(std::is_default_constructible_v<T>)
 			add_constructor<T>();
+		if constexpr(std::is_constructible_v<T, std::string>)
+			add_constructor<T, std::string>();
 		if constexpr(std::is_copy_constructible_v<T>)
 			add_copy_constructor<T>();
 	}
