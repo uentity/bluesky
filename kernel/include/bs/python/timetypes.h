@@ -15,7 +15,7 @@
 NAMESPACE_BEGIN(blue_sky::python)
 namespace py = pybind11;
 
-BS_API auto pyinfinte() -> py::object;
+BS_API auto pyinfinite() -> py::object;
 
 NAMESPACE_END(blue_sky::python)
 
@@ -27,7 +27,7 @@ template<> struct type_caster<blue_sky::timespan> : duration_caster<blue_sky::ti
 	using Type = blue_sky::timespan;
 
 	bool load(handle src, bool convert) {
-		if(src.is(blue_sky::python::pyinfinte())) {
+		if(src.is(blue_sky::python::pyinfinite())) {
 			value = blue_sky::infinite;
 			return true;
 		}
@@ -35,7 +35,7 @@ template<> struct type_caster<blue_sky::timespan> : duration_caster<blue_sky::ti
 	}
 
 	static handle cast(const Type& t, return_value_policy rvp, handle parent) {
-		if(t == blue_sky::infinite) return blue_sky::python::pyinfinte().release();
+		if(t == blue_sky::infinite) return blue_sky::python::pyinfinite().release();
 		else return super::cast(t, rvp, parent);
 	}
 };

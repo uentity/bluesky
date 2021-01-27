@@ -47,18 +47,7 @@ BS_HIDDEN_API ostream& operator<<(ostream& os, const bs_type_info& ti) {
 
 NAMESPACE_BEGIN(python)
 
-// dumb function for testing type_d-tor <-> Py list
-typedef std::vector< type_descriptor > type_v;
-type_v test_type_v(const type_v& v) {
-	using namespace std;
-	cout << "Size of type_descriptor list = " << v.size() << endl;
-	for(ulong i = 0; i < v.size(); ++i)
-		cout << v[i].name << ' ';
-	cout << endl;
-	return v;
-}
-
-auto pyinfinte() -> py::object {
+auto pyinfinite() -> py::object {
 	static auto value = [] {
 		// return `datetime.timedelta.max` value
 		auto dtm = py::module::import("datetime");
@@ -173,7 +162,7 @@ void py_bind_common(py::module& m) {
 		"obj"_a, "obj_type_id"_a, "Check if obj is of given type name");
 
 	// add marker for infinite timespan
-	m.attr("infinite") = pyinfinte();
+	m.attr("infinite") = pyinfinite();
 
 	// async tag
 	py::class_<launch_async_t>(m, "launch_async_t");
