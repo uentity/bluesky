@@ -17,6 +17,14 @@ auto add_enumops(PyEnum& e) -> PyEnum& {
 	using U = std::underlying_type_t<E>;
 	constexpr bool is_convertible = std::is_convertible_v<E, U>;
 
+	#define PYBIND11_ENUM_OP_CONV_LHS(op, expr)          \
+		e.attr(op) = cpp_function(                       \
+			[](object a_, object b) {                    \
+				int_ a(a_);                              \
+				return expr;                             \
+			},                                           \
+			name(op), is_method(e), arg("other"))
+
 	#define BSPY_ENUM_OP_CONV(op, expr)                  \
 		e.attr(op) = cpp_function(                       \
 			[](object a_, object b_) {                   \
@@ -26,8 +34,10 @@ auto add_enumops(PyEnum& e) -> PyEnum& {
 			},                                           \
 			name(op), is_method(e))
 
-	// add missing bitwise ops that pybind11 doesn't add for enum classes
+	// add missing bitwise and non-strict equality ops that pybind11 doesn't add for enum classes
 	if constexpr(!is_convertible) {
+		PYBIND11_ENUM_OP_CONV_LHS("__eq__", !b.is_none() &&  a.equal(b));
+		PYBIND11_ENUM_OP_CONV_LHS("__ne__",  b.is_none() || !a.equal(b));
 		BSPY_ENUM_OP_CONV("__and__",  a & b);
 		BSPY_ENUM_OP_CONV("__rand__", a & b);
 		BSPY_ENUM_OP_CONV("__or__",   a | b);
@@ -50,6 +60,7 @@ auto add_enumops(PyEnum& e) -> PyEnum& {
 
 	return e;
 	#undef BSPY_ENUM_OP_CONV
+	#undef PYBIND11_ENUM_OP_CONV_LHS
 }
 
 template<typename E, typename... Extra>
