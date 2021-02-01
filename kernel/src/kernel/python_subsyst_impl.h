@@ -13,6 +13,9 @@
 #include <bs/objbase.h>
 #include <bs/tree/link.h>
 #include "python_subsyst.h"
+#include "radio_subsyst.h"
+
+#include <caf/scoped_actor.hpp>
 
 #include <unordered_map>
 #include <functional>
@@ -20,10 +23,15 @@
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
+using pyqueue_actor_type = caf::typed_actor<
+	caf::replies_to<simple_transaction>::with<error::box>
+>::extend_with<khome_actor_type>;
+
 struct BS_HIDDEN_API python_subsyst_impl : public python_subsyst {
 	using adapter_fn = std::function<pybind11::object(sp_obj)>;
 
 	python_subsyst_impl(void* kmod_ptr = nullptr);
+	~python_subsyst_impl();
 
 	auto py_init_plugin(
 		const blue_sky::detail::lib_descriptor& lib, plugin_descriptor& p_descr
@@ -51,6 +59,10 @@ struct BS_HIDDEN_API python_subsyst_impl : public python_subsyst {
 	// returns number of cleared instances
 	auto drop_adapted_cache(const sp_obj& source = nullptr) -> std::size_t;
 
+	// post transaction into Python's queue
+	auto enqueue(simple_transaction tr) -> error;
+	auto enqueue(launch_async_t, simple_transaction tr) -> void;
+
 	// access to instance of Python subsystem
 	static auto self() -> python_subsyst_impl&;
 
@@ -72,6 +84,10 @@ private:
 	std::unordered_map<std::string, const objbase*> lnk2obj_;
 
 	mutable std::mutex guard_;
+
+	// queue
+	pyqueue_actor_type queue_;
+	union { caf::scoped_actor queue_factor_; };
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)

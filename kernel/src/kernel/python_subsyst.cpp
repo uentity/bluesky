@@ -7,16 +7,20 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/actor_common.h>
 #include <bs/python/common.h>
 #include <bs/log.h>
 #include <bs/kernel/errors.h>
 #include <bs/tree/node.h>
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/base_types.h>
 
 #include "kimpl.h"
 #include "python_subsyst_impl.h"
 #include "plugins_subsyst.h"
 #include "radio_subsyst.h"
 
+#include <caf/typed_event_based_actor.hpp>
 #include <pybind11/functional.h>
 
 #include <iostream>
@@ -63,12 +67,47 @@ std::string extract_root_name(const std::string& full_name) {
 	return pyl_name;
 }
 
+// actor that does Python transactions processing
+auto pyqueue_processor(pyqueue_actor_type::pointer self) -> pyqueue_actor_type::behavior_type {
+	// never die on error
+	self->set_error_handler(tree::noop);
+	// completely ignore unexpected messages without error backpropagation
+	self->set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
+		return caf::none;
+	});
+
+	return {
+		// do job (run Python functor)
+		[=](const simple_transaction& tr) -> error::box {
+			return tr_eval(tr);
+		},
+		// can be terminated by kernel
+		[=](a_bye) { self->quit(); }
+	};
+}
+
 NAMESPACE_END()
 
-python_subsyst_impl::python_subsyst_impl(void* kmod_ptr)
-	: kmod_(nullptr)
+/*-----------------------------------------------------------------------------
+ *  python_subsyst_impl
+ *-----------------------------------------------------------------------------*/
+python_subsyst_impl::python_subsyst_impl(void* kmod_ptr) :
+	// [NOTE] essential to start detached actor
+	kmod_(nullptr),
+	// [TODO] make actor detached after switching to 0.18 (!)
+	// now there's a bug that actor system hangs on exit
+	queue_(KIMPL.get_radio()->system().spawn(pyqueue_processor)),
+	queue_factor_(KIMPL.get_radio()->system())
 {
 	setup_py_kmod(kmod_ptr);
+	KRADIO.register_citizen(queue_.address());
+}
+
+python_subsyst_impl::~python_subsyst_impl() {}
+
+auto python_subsyst_impl::self() -> python_subsyst_impl& {
+	// [NOTE] unconditional cast, because if self() is called, then instance MUST be self for sure
+	return static_cast<python_subsyst_impl&>(singleton<python_subsyst>::Instance());
 }
 
 auto python_subsyst_impl::py_kmod() const -> void* { return kmod_; }
@@ -94,6 +133,7 @@ auto python_subsyst_impl::setup_py_kmod(void* kmod_ptr) -> void {
 		// kick all event-based actors (normally wait until all actor handles wired into Python are released)
 		auto _ = py::gil_scoped_release{};
 		KIMPL.get_radio()->kick_citizens();
+		queue_factor_.~scoped_actor();
 		std::cout << "~~~ Python subsystem down" << std::endl;
 	}});
 }
@@ -251,9 +291,12 @@ auto python_subsyst_impl::drop_adapted_cache(const sp_obj& obj) -> std::size_t {
 	return res;
 }
 
-auto python_subsyst_impl::self() -> python_subsyst_impl& {
-	// [NOTE] unconditional cast, because if self() is called, then instance MUST be self for sure
-	return static_cast<python_subsyst_impl&>(singleton<python_subsyst>::Instance());
+auto python_subsyst_impl::enqueue(simple_transaction tr) -> error {
+	return actorf<error>(queue_factor_, queue_, caf::infinite, std::move(tr));
+}
+
+auto python_subsyst_impl::enqueue(launch_async_t, simple_transaction tr) -> void {
+	queue_factor_->send(queue_, std::move(tr));
 }
 
 NAMESPACE_END(blue_sky::kernel::detail)
@@ -300,6 +343,14 @@ auto py_bind_adapters(py::module& m) -> void {
 		},
 		"obj"_a, "Get cached adapter for given object (if created before, otherwise None)"
 	);
+
+	m.def("enqueue", [](py::function f) {
+		py_kernel().enqueue(launch_async, [f = std::move(f)] {
+			auto guard = py::gil_scoped_acquire();
+			f();
+			return perfect;
+		});
+	}, "f"_a, "Async run Python function in BS queue");
 }
 
 NAMESPACE_END(blue_sky::python)
