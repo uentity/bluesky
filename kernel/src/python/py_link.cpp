@@ -223,7 +223,17 @@ void py_bind_link(py::module& m) {
 			"If pointee is a node, return node's actor group ID", nogil)
 
 		// events subscrition
-		.def("subscribe", &link::subscribe, "event_cb"_a, "events"_a = Event::All)
+		.def("subscribe", [](const link& L, link::event_handler f, Event listen_to) {
+			return L.subscribe([f = std::move(f)](link L, Event ev, prop::propdict params) {
+				kernel::detail::python_subsyst_impl::self().enqueue(
+					launch_async, [=, params = std::move(params)]() mutable {
+						f(L, ev, std::move(params));
+						return perfect;
+					}
+				);
+			}, listen_to);
+		}, "event_cb"_a, "events"_a = Event::All)
+
 		.def_static("unsubscribe", &link::unsubscribe, "event_cb_id"_a)
 	;
 

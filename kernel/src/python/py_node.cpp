@@ -10,6 +10,7 @@
 #include <bs/python/tree.h>
 #include <bs/python/container_iterator.h>
 
+#include "../kernel/python_subsyst_impl.h"
 #include "../tree/node_leafs_storage.h"
 
 #include <pybind11/functional.h>
@@ -298,7 +299,7 @@ void py_bind_node(py::module& m) {
 	// append node-specific API
 	node_pyface
 		.def("__iter__", [](const node& N) {
-			py::gil_scoped_release();
+			const auto _ = py::gil_scoped_release();
 			return make_container_iterator(N.leafs());
 		})
 
@@ -376,7 +377,17 @@ void py_bind_node(py::module& m) {
 			"new_order"_a, "Apply custom order to node")
 
 		// events subscrition
-		.def("subscribe", &node::subscribe, "event_cb"_a, "events"_a = Event::All)
+		.def("subscribe", [](const node& N, node::event_handler f, Event listen_to) {
+			return N.subscribe([f = std::move(f)](node r, node origin, Event ev, prop::propdict params) {
+				kernel::detail::python_subsyst_impl::self().enqueue(
+					launch_async, [=, params = std::move(params)]() mutable {
+						f(r, origin, ev, std::move(params));
+						return perfect;
+					}
+				);
+			}, listen_to);
+		}, "event_cb"_a, "events"_a = Event::All)
+
 		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
 	;
 
