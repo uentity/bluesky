@@ -299,7 +299,6 @@ void py_bind_node(py::module& m) {
 	// append node-specific API
 	node_pyface
 		.def("__iter__", [](const node& N) {
-			const auto _ = py::gil_scoped_release();
 			return make_container_iterator(N.leafs());
 		})
 
