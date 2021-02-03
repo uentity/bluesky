@@ -13,7 +13,7 @@
 #include <bs/detail/enumops.h>
 
 #include <bs/tree/map_link.h>
-#include "../kernel/python_subsyst_impl.h"
+#include "kernel_queue.h"
 
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
@@ -224,14 +224,7 @@ void py_bind_link(py::module& m) {
 
 		// events subscrition
 		.def("subscribe", [](const link& L, link::event_handler f, Event listen_to) {
-			return L.subscribe([f = std::move(f)](link L, Event ev, prop::propdict params) {
-				kernel::detail::python_subsyst_impl::self().enqueue(
-					launch_async, [=, params = std::move(params)]() mutable {
-						f(L, ev, std::move(params));
-						return perfect;
-					}
-				);
-			}, listen_to);
+			return L.subscribe(pipe_through_queue(std::move(f), launch_async), listen_to);
 		}, "event_cb"_a, "events"_a = Event::All)
 
 		.def_static("unsubscribe", &link::unsubscribe, "event_cb_id"_a)

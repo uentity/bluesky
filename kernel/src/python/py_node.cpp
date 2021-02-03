@@ -10,7 +10,7 @@
 #include <bs/python/tree.h>
 #include <bs/python/container_iterator.h>
 
-#include "../kernel/python_subsyst_impl.h"
+#include "kernel_queue.h"
 #include "../tree/node_leafs_storage.h"
 
 #include <pybind11/functional.h>
@@ -377,14 +377,7 @@ void py_bind_node(py::module& m) {
 
 		// events subscrition
 		.def("subscribe", [](const node& N, node::event_handler f, Event listen_to) {
-			return N.subscribe([f = std::move(f)](node r, node origin, Event ev, prop::propdict params) {
-				kernel::detail::python_subsyst_impl::self().enqueue(
-					launch_async, [=, params = std::move(params)]() mutable {
-						f(r, origin, ev, std::move(params));
-						return perfect;
-					}
-				);
-			}, listen_to);
+			return N.subscribe(pipe_through_queue(std::move(f), launch_async), listen_to);
 		}, "event_cb"_a, "events"_a = Event::All)
 
 		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
