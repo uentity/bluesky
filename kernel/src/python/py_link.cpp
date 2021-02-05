@@ -13,6 +13,7 @@
 #include <bs/detail/enumops.h>
 
 #include <bs/tree/map_link.h>
+#include "../kernel/python_subsyst_impl.h"
 #include "kernel_queue.h"
 
 #include <pybind11/functional.h>

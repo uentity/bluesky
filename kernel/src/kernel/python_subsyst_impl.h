@@ -13,19 +13,12 @@
 #include <bs/objbase.h>
 #include <bs/tree/link.h>
 #include "python_subsyst.h"
-#include "radio_subsyst.h"
-
-#include <caf/scoped_actor.hpp>
 
 #include <unordered_map>
 #include <functional>
 #include <mutex>
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
-
-using pyqueue_actor_type = caf::typed_actor<
-	caf::replies_to<simple_transaction>::with<error::box>
->::extend_with<khome_actor_type>;
 
 struct BS_HIDDEN_API python_subsyst_impl : public python_subsyst {
 	using adapter_fn = std::function<pybind11::object(sp_obj)>;
@@ -84,10 +77,6 @@ private:
 	std::unordered_map<std::string, const objbase*> lnk2obj_;
 
 	mutable std::mutex guard_;
-
-	// queue
-	pyqueue_actor_type queue_;
-	union { caf::scoped_actor queue_factor_; };
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)

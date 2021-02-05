@@ -6,7 +6,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "../kernel/python_subsyst_impl.h"
+#include "../kernel/radio_subsyst.h"
 #include <bs/detail/function_view.h>
 
 #include <tuple>
@@ -16,7 +16,7 @@ NAMESPACE_BEGIN(blue_sky::python)
 template<typename F, typename R, typename... Args, typename... LaunchAsync>
 auto pipe_queue_impl(F f, const identity<R (Args...)> _, LaunchAsync... async_tag) {
 	return [f = std::move(f)](Args&&... args) {
-		kernel::detail::python_subsyst_impl::self().enqueue(
+		KRADIO.enqueue(
 			LaunchAsync{}..., [f, argtup = std::make_tuple(std::forward<Args>(args)...)]() mutable {
 				std::apply(f, std::move(argtup));
 				return perfect;

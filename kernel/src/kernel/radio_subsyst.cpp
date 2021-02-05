@@ -57,6 +57,25 @@ auto radio_station(radio_station_handle::pointer self)
 	}
 }; }
 
+// actor that implements kernel's queue
+auto kqueue_processor(kqueue_actor_type::pointer self) -> kqueue_actor_type::behavior_type {
+	// never die on error
+	self->set_error_handler(tree::noop);
+	// completely ignore unexpected messages without error backpropagation
+	self->set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
+		return caf::none;
+	});
+
+	return {
+		// do job (run Python functor)
+		[=](const simple_transaction& tr) -> error::box {
+			return tr_eval(tr);
+		},
+		// can be terminated by kernel
+		[=](a_bye) { self->quit(); }
+	};
+}
+
 NAMESPACE_END()
 
 /*-----------------------------------------------------------------------------
@@ -93,6 +112,8 @@ auto radio_subsyst::shutdown() -> void {
 		// force all pending requests to exit very quickly
 		reset_timeouts(1us, 1us);
 		kick_citizens();
+		// destroy queue factor
+		queue_.reset();
 
 		// explicitly kill nill link
 		tree::nil_node::stop();
@@ -181,6 +202,33 @@ auto radio_subsyst::toggle(bool on) -> error {
 	}
 
 	return perfect;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  queue management
+//
+radio_subsyst::queue_handle::queue_handle() :
+	actor(KRADIO.system().spawn(kqueue_processor)),
+	factor(KRADIO.system())
+{}
+
+auto radio_subsyst::queue() -> queue_handle& {
+	if(!queue_) {
+		kqueue_actor_type q = system().spawn(kqueue_processor);
+		queue_.emplace();
+		register_citizen(queue_->actor.address());
+	}
+	return *queue_;
+}
+
+auto radio_subsyst::enqueue(simple_transaction tr) -> error {
+	auto& [q, f] = queue();
+	return actorf<error>(f, q, caf::infinite, std::move(tr));
+}
+
+auto radio_subsyst::enqueue(launch_async_t, simple_transaction tr) -> void {
+	auto& [q, f] = queue();
+	f->send(q, std::move(tr));
 }
 
 auto radio_subsyst::start_server() -> void {

@@ -16,6 +16,7 @@
 #include <caf/typed_actor.hpp>
 #include <caf/actor_system.hpp>
 #include <caf/group.hpp>
+#include <caf/scoped_actor.hpp>
 #include <caf/detail/shared_spinlock.hpp>
 
 #include <optional>
@@ -29,6 +30,11 @@ NAMESPACE_BEGIN(blue_sky::kernel::detail)
 using khome_actor_type = caf::typed_actor<
 	caf::reacts_to<a_bye>
 >;
+
+// kernel's queue interface
+using kqueue_actor_type = caf::typed_actor<
+	caf::replies_to<simple_transaction>::with<error::box>
+>::extend_with<khome_actor_type>;
 
 struct BS_HIDDEN_API radio_subsyst {
 	// store links that will be visible to the world
@@ -58,6 +64,10 @@ struct BS_HIDDEN_API radio_subsyst {
 	// send exit message to all citizens & wait until they exit
 	auto kick_citizens() -> void;
 
+	// post transaction into Python's queue
+	auto enqueue(simple_transaction tr) -> error;
+	auto enqueue(launch_async_t, simple_transaction tr) -> void;
+
 	// server actor management
 	auto toggle(bool on) -> error;
 
@@ -83,6 +93,17 @@ private:
 	using citizens_registry_t = std::unordered_set<caf::actor_addr>;
 	citizens_registry_t citizens_;
 	caf::detail::shared_spinlock guard_;
+
+	// queue
+	struct queue_handle {
+		kqueue_actor_type actor;
+		caf::scoped_actor factor;
+
+		queue_handle();
+	};
+	std::optional<queue_handle> queue_;
+	// lazy start & access queue actor
+	auto queue() -> queue_handle&;
 
 	caf::actor radio_;
 
