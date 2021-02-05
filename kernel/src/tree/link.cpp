@@ -47,7 +47,12 @@ link::link(sp_engine_impl impl, bool start_actor) :
 link::link(const link& rhs, std::string_view rhs_type_id) :
 	link(rhs)
 {
-	if(type_id() != rhs_type_id) reset();
+	// [NOTE] throw exception, because resetiing to Nil will leave derived link in incorrect state:
+	// impl instances mismatch (derived link assumes it has correct impl set up)
+	// resetting + default-init impl in derived class is also wrong, because actor will be nil, but
+	// impl not nil
+	if(type_id() != rhs_type_id)
+		throw error(fmt::format("{} -> {}", type_id(), rhs_type_id), Error::WrongLinkCast);
 }
 
 link::link(std::string name, sp_obj data, Flags f) :

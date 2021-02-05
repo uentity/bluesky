@@ -252,6 +252,14 @@ private:
 using links_v = std::vector<link>;
 using lids_v = std::vector<lid_type>;
 
+/// checked link cast (without throwing `WrongLinkCast` exception)
+template<typename DestLink>
+auto link_cast(const link& rhs) -> std::optional<DestLink> {
+	if(DestLink::type_id_() == rhs.type_id())
+		return DestLink(rhs);
+	return {};
+}
+
 /*-----------------------------------------------------------------------------
  *  hard link stores direct pointer to object
  *  multiple hard links can point to the same object

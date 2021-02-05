@@ -74,6 +74,9 @@ BS_API std::error_code make_error_code(Error e) {
 			case Error::CantMakeFilename :
 				return "Couldn't generate unique filename";
 
+			case Error::WrongLinkCast :
+				return "Wrong link cast";
+
 			default:
 				return "";
 			}

@@ -23,6 +23,7 @@ enum class Error {
 	UnboundSymLink,
 	LinkBusy,
 	NoFusionBridge,
+	WrongLinkCast,
 
 	// node errors
 	KeyMismatch,

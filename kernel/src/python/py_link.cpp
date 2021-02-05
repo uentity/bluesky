@@ -357,7 +357,7 @@ void py_bind_link(py::module& m) {
 		)
 		// from mapper & existing map_link
 		.def(py::init([](
-				MappingLevel mlevel, py::function py_mf, const link& rhs,
+				MappingLevel mlevel, py::function py_mf, const map_link& rhs,
 				link_or_node src, link_or_node dst
 			) {
 				return make_map_link(
@@ -381,6 +381,20 @@ void py_bind_link(py::module& m) {
 		"dest_node"_a = link_or_node{}, "update_on"_a = Event::DataNodeModified | Event::LinkRenamed,
 		"opts"_a = TreeOpts::Deep | TreeOpts::DetachedWorkers, "flags"_a = Flags::Plain
 	);
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  link cast
+	//
+	#define LINK_CAST_IMPL(link_t) if(tgt_type == link_t::type_id_()) return link_cast<link_t>(rhs);
+
+	m.def("link_cast", [](const link& rhs, std::string_view tgt_type) -> std::optional<link> {
+		LINK_CAST_IMPL(hard_link)
+		LINK_CAST_IMPL(weak_link)
+		LINK_CAST_IMPL(sym_link)
+		LINK_CAST_IMPL(fusion_link)
+		LINK_CAST_IMPL(map_link)
+		return {};
+	}, "rhs"_a, "tgt_type"_a);
 }
 
 NAMESPACE_END(blue_sky::python)
