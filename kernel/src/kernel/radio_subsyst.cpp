@@ -221,6 +221,10 @@ auto radio_subsyst::queue() -> queue_handle& {
 	return *queue_;
 }
 
+auto radio_subsyst::queue_actor() -> kqueue_actor_type& {
+	return queue().actor;
+}
+
 auto radio_subsyst::enqueue(simple_transaction tr) -> error {
 	auto& [q, f] = queue();
 	return actorf<error>(f, q, caf::infinite, std::move(tr));

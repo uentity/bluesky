@@ -67,6 +67,7 @@ struct BS_HIDDEN_API radio_subsyst {
 	// post transaction into Python's queue
 	auto enqueue(simple_transaction tr) -> error;
 	auto enqueue(launch_async_t, simple_transaction tr) -> void;
+	auto queue_actor() -> kqueue_actor_type&;
 
 	// server actor management
 	auto toggle(bool on) -> error;
