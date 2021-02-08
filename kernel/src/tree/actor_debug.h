@@ -31,5 +31,9 @@ static inline constexpr auto adbg(...) { return blue_sky::log::D(); }
 		return adbg_impl(caf::aout(A), A->impl);
 	}
 
+	static auto adbg(caf::event_based_actor* A) {
+		return caf::actor_ostream(A);
+	}
+
 	NAMESPACE_END(blue_sky::tree)
 #endif
