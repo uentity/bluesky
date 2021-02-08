@@ -255,13 +255,10 @@ template<
 auto anon_request_result(Actor A, T timeout, bool high_priority, F f, Args&&... args) {
 	// we need state to share lazily created response promise between `f` and `a_ack` query
 	// seems that response promise must be created from message handler
+	using Fres = typename deduce_callable<F>::result;
 	struct rstate {
-		std::optional<caf::response_promise> res;
-
-		constexpr decltype(auto) get(caf::event_based_actor* self) {
-			if(!res) res = self->make_response_promise();
-			return *res;
-		}
+		using res_keeper_t = std::conditional_t<caf::is_result<Fres>::value, Fres, caf::result<Fres>>;
+		std::optional<res_keeper_t> res;
 	};
 
 	// spawn worker actor that will make request and invoke `f`
@@ -269,26 +266,27 @@ auto anon_request_result(Actor A, T timeout, bool high_priority, F f, Args&&... 
 		high_priority, A = std::move(A), t = detail::cast_timeout(timeout), f = std::move(f),
 		args = std::make_tuple(std::forward<Args>(args)...)
 	] (caf::stateful_actor<rstate>* self) mutable {
+		// send `a_ack` request to obtain callback invocation result
+		self->become(
+			[=](a_ack) { return *self->state.res; }
+		);
 		// make request
 		std::apply([self, high_priority, A = std::move(A), t = std::move(t)](auto&&... args) {
 			return high_priority ?
 				self->template request<high_prio>(A, t, std::forward<decltype(args)>(args)...) :
 				self->request(A, t, std::forward<decltype(args)>(args)...);
 		}, std::move(args))
-		.then(detail::closed_functor<F>::make(
+		// [NOTE] use `await` to prevent `a_ack` processing while query processing not finished
+		.await(detail::closed_functor<F>::make(
 			[self, f = std::move(f)](auto&&... xs) mutable {
-				using Fres = typename deduce_callable<F>::result;
 				if constexpr(!std::is_same_v<Fres, void>)
-					self->state.get(self).deliver(f(std::forward<decltype(xs)>(xs)...));
+					self->state.res = f(std::forward<decltype(xs)>(xs)...);
 				else {
 					f(std::forward<decltype(xs)>(xs)...);
-					self->state.get(self).deliver(caf::unit);
+					self->state.res = caf::unit;
 				}
 			}, self
 		));
-
-		// send `a_ack` request to obtain callback invocation result
-		self->become({ [=](a_ack) { return self->state.get(self); } });
 	});
 }
 
