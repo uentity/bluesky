@@ -51,8 +51,9 @@ struct engine_actor : public engine_actor_base {
 		return actor(this);
 	}
 
+	template<typename EImpl = engine_impl>
 	inline auto spimpl() const {
-		return std::static_pointer_cast<engine_impl>(pimpl_);
+		return std::static_pointer_cast<EImpl>(pimpl_);
 	}
 
 	// impl ref for simpler access
