@@ -83,7 +83,7 @@ auto link_impl::req_status_handle(Req request) -> status_handle& {
 	return status_[enumval(request) & 1];
 }
 
-auto link_impl::rs_apply(Req req, function_view< void() > f, ReqReset cond, ReqStatus cond_value)
+auto link_impl::rs_apply(Req req, function_view< void(status_handle&) > f, ReqReset cond, ReqStatus cond_value)
 -> ReqStatus {
 	const auto i = enumval<unsigned>(req);
 
@@ -110,7 +110,7 @@ auto link_impl::rs_apply(Req req, function_view< void() > f, ReqReset cond, ReqS
 		(cond == ReqReset::IfEq && self == cond_value) ||
 		(cond == ReqReset::IfNeq && self != cond_value)
 	) {
-		error::eval_safe([&] { f(); });
+		error::eval_safe([&] { f(req_status_handle(req)); });
 	}
 	return self;
 }
@@ -121,14 +121,13 @@ auto link_impl::rs_reset(
 	const auto i = enumval<unsigned>(request);
 	if(i > 1) return ReqStatus::Error;
 
-	return rs_apply(request, [&] {
+	return rs_apply(request, [&](status_handle& S) {
 		// update status value
-		auto& S = status_[i];
 		const auto self = S.value;
 		S.value = new_rs;
 
 		// if postcondition failed - rollback, otherwise broadcast if specified
-		if(!on_rs_reset(request, new_rs, self))
+		if(!on_rs_reset(request, new_rs, self, S))
 			S.value = self;
 		else if(enumval(cond & ReqReset::Broadcast))
 			status_[1 - i].value = new_rs;
@@ -137,7 +136,7 @@ auto link_impl::rs_reset(
 
 auto link_impl::rs_reset(Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs)
 -> ReqStatus {
-	return rs_reset(request, cond, new_rs, old_rs, [&](auto req, auto new_rs, auto prev_rs) {
+	return rs_reset(request, cond, new_rs, old_rs, [&](auto req, auto new_rs, auto prev_rs, status_handle&) {
 		// send notification to link's home group if status changed or new value is OK
 		if(new_rs != prev_rs || new_rs == ReqStatus::OK)
 			send_home<high_prio>(*this, a_ack(), a_lnk_status(), req, new_rs, prev_rs);
@@ -182,7 +181,7 @@ auto link_impl::rs_update_from_data(req_result rdata, bool broadcast) -> void {
 		};
 
 		// prepare transaction that will run after status is updated
-		const auto req_transaction = [&](Req, ReqStatus new_rs, ReqStatus old_rs) {
+		const auto req_transaction = [&](Req, ReqStatus new_rs, ReqStatus old_rs, status_handle&) {
 			// send notification strictly if status changes
 			if(new_rs != old_rs)
 				send_home<high_prio>(*this, a_ack(), a_lnk_status(), req, new_rs, old_rs);
@@ -211,10 +210,6 @@ auto link_impl::rs_update_from_data(req_result rdata, bool broadcast) -> void {
 			ReqStatus::Void, req_transaction
 		);
 	}, std::move(rdata));
-}
-
-auto link_impl::rs_add_waiter(Req req, caf::actor w) -> void {
-	rs_apply(req, [&] { req_status_handle(req).waiters.push_back(std::move(w)); });
 }
 
 auto link_impl::rename(std::string new_name)-> void {

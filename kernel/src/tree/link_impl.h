@@ -90,6 +90,14 @@ public:
 	// complete private actor type
 	using actor_type = primary_actor_type::extend_with<ack_actor_type>;
 
+	/// status of operations
+	struct status_handle {
+		ReqStatus value = ReqStatus::Void;
+		mutable engine_impl_mutex guard;
+		// list of waiters for request result (until value != Busy)
+		std::vector<caf::actor> waiters;
+	};
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  methods
 	//
@@ -129,10 +137,28 @@ public:
 	auto owner() const -> node;
 	auto reset_owner(const node& new_owner) -> void;
 
+	// rename and send notification to home group
+	auto rename(std::string new_name) -> void;
+
+	/// create or set or create inode for given target object
+	/// [NOTE] if `new_info` is non-null, returned inode may be NOT EQUAL to `new_info`
+	static auto make_inode(const sp_obj& target, inodeptr new_info = nullptr) -> inodeptr;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  request status management
+	//
 	auto req_status(Req request) const -> ReqStatus;
 
+	// run generic function while holding exclusive lock to status handles
+	// if ReqReset::Broadcast is on, lock both handles
+	// returns request status value before call
+	auto rs_apply(
+		Req req, function_view< void(status_handle&) > f,
+		ReqReset cond = ReqReset::Always, ReqStatus cond_value = ReqStatus::Void
+	) -> ReqStatus;
+
 	// can return `false` to indicate failed postcondition & revert status to original value
-	using on_rs_reset_fn = function_view< bool(Req, ReqStatus /*new*/, ReqStatus /*old*/) >;
+	using on_rs_reset_fn = function_view< bool(Req, ReqStatus /*new*/, ReqStatus /*old*/, status_handle&) >;
 	// [NOTE] `on_rs_reset` is invoked IF `cond` is met REGARDLESS of whether status changed or not
 	auto rs_reset(
 		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs, on_rs_reset_fn on_rs_reset
@@ -148,30 +174,12 @@ public:
 	using req_result = std::variant<obj_or_errbox, node_or_errbox>;
 	auto rs_update_from_data(req_result rdata, bool broadcast = false) -> void;
 
-	// add actor to list of waiters for request result
-	auto rs_add_waiter(Req req, caf::actor w) -> void;
-
-	// rename and send notification to home group
-	auto rename(std::string new_name) -> void;
-
-	/// create or set or create inode for given target object
-	/// [NOTE] if `new_info` is non-null, returned inode may be NOT EQUAL to `new_info`
-	static auto make_inode(const sp_obj& target, inodeptr new_info = nullptr) -> inodeptr;
-
 	///////////////////////////////////////////////////////////////////////////////
 	//  member variables
 	//
 	lid_type id_;
 	std::string name_;
 	Flags flags_;
-
-	/// status of operations
-	struct status_handle {
-		ReqStatus value = ReqStatus::Void;
-		mutable engine_impl_mutex guard;
-		// list of waiters for request result (until value != Busy)
-		std::vector<caf::actor> waiters;
-	};
 
 private:
 	friend node_impl;
@@ -183,14 +191,6 @@ private:
 
 	// direct access to status_handle
 	auto req_status_handle(Req request) -> status_handle&;
-
-	// run generic function while holding exclusive lock to status handles
-	// if ReqReset::Broadcast is on, lock both handles
-	// returns request status value before call
-	auto rs_apply(
-		Req req, function_view< void() > f,
-		ReqReset cond = ReqReset::Always, ReqStatus cond_value = ReqStatus::Void
-	) -> ReqStatus;
 };
 using sp_limpl = link_impl::sp_limpl;
 

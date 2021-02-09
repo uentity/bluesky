@@ -54,15 +54,12 @@ struct request_traits {
 	};
 };
 
-NAMESPACE_END(detail)
-
 // `f_request` must return `result_or_errbox<R>`, `R` can be specified explicitly or auto-deduced.
 // Otherwise matching is not guranteed if work is started in standalone actor.
 // If opts::Uniform is true, then both status values are changed at once.
 // Returns worker actor handle, result can be obtain in lazy manner by sending `a_ack` message to it
 template<typename R = void, typename F>
-auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts, F f_request)
--> typename detail::request_traits<R, F>::actor_type {
+auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts, F f_request) -> caf::actor {
 	using rtraits = detail::request_traits<R, F>;
 	using res_t = typename rtraits::res_t;
 	using worker_ret_t = typename rtraits::worker_ret_t;
@@ -98,8 +95,6 @@ auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts
 				}
 			);
 
-			// add self to waiting queue
-			Limpl->rs_add_waiter(req, caf::actor_cast<caf::actor>(self));
 			// install behavior
 			return {
 				// invoke result processor on delivered result
@@ -189,13 +184,13 @@ auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts
 		}
 	};
 
-	// spawn & return worker
-	return caf::actor_cast<typename rtraits::actor_type>(
-		enumval(opts & ReqOpts::Detached) ?
-			LA.spawn<caf::detached>(std::move(worker)) :
-			LA.spawn(std::move(worker))
-	);
+	// spawn worker actor
+	return enumval(opts & ReqOpts::Detached) ?
+		LA.spawn<caf::detached>(std::move(worker)) :
+		LA.spawn(std::move(worker));
 }
+
+NAMESPACE_END(detail)
 
 // Launch request actor or return error to indicate fail or inplace invoke (error == OK)
 template<typename R = void, typename F>
@@ -205,7 +200,7 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 	using res_t = result_or_err<typename rtraits::actor_type>;
 	auto res = std::optional<res_t>{};
 
-	const auto request_tr = [&](Req req, ReqStatus new_rs, ReqStatus prev_rs) {
+	const auto request_tr = [&](Req req, ReqStatus new_rs, ReqStatus prev_rs, link_impl::status_handle& S) {
 		// check if unable to perform request
 		if(enumval(opts & ReqOpts::ErrorIfNOK) && prev_rs != ReqStatus::OK)
 			res.emplace(unexpected_err_quiet(Error::EmptyData));
@@ -231,8 +226,14 @@ auto request_impl(link_actor& LA, Req req, ReqOpts opts, F f_request)
 			// don't start detached actor if status is OK or we start waiting
 			if(prev_rs == ReqStatus::OK || prev_rs == ReqStatus::Busy)
 				opts &= ~ReqOpts::Detached;
+
 			// spawn request worker actor
-			res.emplace(make_request_actor<R>(prev_rs, LA, req, opts, std::move(f_request)));
+			auto rworker = detail::make_request_actor<R>(prev_rs, LA, req, opts, std::move(f_request));
+			// add to waiting queue if needed
+			if(prev_rs == ReqStatus::Busy)
+				S.waiters.push_back(rworker);
+
+			res = caf::actor_cast<typename rtraits::actor_type>(std::move(rworker));
 			// if we do some non-waiting work, we must change to Busy
 			do_change_status = prev_rs != ReqStatus::Busy;
 		}
