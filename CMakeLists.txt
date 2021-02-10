@@ -35,5 +35,5 @@ if(NOT AUTO_FIND_PLUGINS)
     set(AUTO_FIND_PLUGINS 0)
 endif()
 
-set(AUTO_FIND_PLUGINS 1)
+#set(AUTO_FIND_PLUGINS 1)
 init_plugins(${AUTO_FIND_PLUGINS})
