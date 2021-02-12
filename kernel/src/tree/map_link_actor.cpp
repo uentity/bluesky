@@ -174,9 +174,10 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 
 		[=](a_data_node, bool) -> caf::result<node_or_errbox> {
 			adbg(this) << "<- a_data_node (casual)" << std::endl;
+			auto mama = spimpl<map_impl_base>();
 			return request_data_impl(
 				*this, Req::DataNode, ReqOpts::HasDataCache,
-				[mama = spimpl<map_impl_base>()]() -> node_or_errbox { return mama->out_; }
+				[mama = std::move(mama)]() -> node_or_errbox { return mama->out_; }
 			);
 		},
 
