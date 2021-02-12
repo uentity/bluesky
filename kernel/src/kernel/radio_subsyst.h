@@ -67,6 +67,7 @@ struct BS_HIDDEN_API radio_subsyst {
 	// post transaction into Python's queue
 	auto enqueue(simple_transaction tr) -> error;
 	auto enqueue(launch_async_t, simple_transaction tr) -> void;
+	// lazy start & access queue actor
 	auto queue_actor() -> kqueue_actor_type&;
 
 	// server actor management
@@ -96,15 +97,7 @@ private:
 	caf::detail::shared_spinlock guard_;
 
 	// queue
-	struct queue_handle {
-		kqueue_actor_type actor;
-		caf::scoped_actor factor;
-
-		queue_handle();
-	};
-	std::optional<queue_handle> queue_;
-	// lazy start & access queue actor
-	auto queue() -> queue_handle&;
+	kqueue_actor_type queue_;
 
 	caf::actor radio_;
 

@@ -112,8 +112,9 @@ auto radio_subsyst::shutdown() -> void {
 		// force all pending requests to exit very quickly
 		reset_timeouts(1us, 1us);
 		kick_citizens();
-		// destroy queue factor
-		queue_.reset();
+		// [NOTE} need to explicitly reset queue handle, otherwise exit hangs
+		// [TODO] check if this bug present in CAF 0.18
+		queue_ = nullptr;
 
 		// explicitly kill nill link
 		tree::nil_node::stop();
@@ -207,32 +208,20 @@ auto radio_subsyst::toggle(bool on) -> error {
 ///////////////////////////////////////////////////////////////////////////////
 //  queue management
 //
-radio_subsyst::queue_handle::queue_handle() :
-	actor(KRADIO.system().spawn(kqueue_processor)),
-	factor(KRADIO.system())
-{}
-
-auto radio_subsyst::queue() -> queue_handle& {
-	if(!queue_) {
-		kqueue_actor_type q = system().spawn(kqueue_processor);
-		queue_.emplace();
-		register_citizen(queue_->actor.address());
-	}
-	return *queue_;
-}
-
 auto radio_subsyst::queue_actor() -> kqueue_actor_type& {
-	return queue().actor;
+	if(!queue_) {
+		queue_ = system().spawn<caf::detached>(kqueue_processor);
+		register_citizen(queue_.address());
+	}
+	return queue_;
 }
 
 auto radio_subsyst::enqueue(simple_transaction tr) -> error {
-	auto& [q, f] = queue();
-	return actorf<error>(f, q, caf::infinite, std::move(tr));
+	return actorf<error>(queue_actor(), caf::infinite, std::move(tr));
 }
 
 auto radio_subsyst::enqueue(launch_async_t, simple_transaction tr) -> void {
-	auto& [q, f] = queue();
-	f->send(q, std::move(tr));
+	caf::anon_send(queue_actor(), std::move(tr));
 }
 
 auto radio_subsyst::start_server() -> void {
