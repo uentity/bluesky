@@ -73,6 +73,7 @@ using lid_type = uuid;
 
 /// can be passed as callback that does nothing
 inline constexpr auto noop = [](auto&&...) {};
+using noop_t = decltype(noop);
 
 template<bool Res = true>
 inline constexpr auto bool_noop = [](auto&&...) { return Res; };

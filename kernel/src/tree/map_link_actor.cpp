@@ -27,12 +27,12 @@ NAMESPACE_BEGIN()
 //  helper retranslator that forwards acks from input node to parent `map_link`
 //
 struct iar_state {
-	map_link_impl_base::map_actor_type parent;
+	map_impl_base::map_actor_type parent;
 	node::actor_type input;
 };
 
 auto input_ack_retranslator(
-	caf::stateful_actor<iar_state>* self, map_link_impl_base::map_actor_type parent, node::actor_type input,
+	caf::stateful_actor<iar_state>* self, map_impl_base::map_actor_type parent, node::actor_type input,
 	Event update_on, TreeOpts opts
 ) {
 	using namespace allow_enumops;
@@ -152,7 +152,7 @@ auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> voi
 	if(!simpl.in_) return;
 	inp_listener_ = spawn_in_group(
 		simpl.in_.home(), input_ack_retranslator,
-		caf::actor_cast<map_link_impl_base::map_actor_type>(this), simpl.in_.actor(), update_on, opts
+		caf::actor_cast<map_impl_base::map_actor_type>(this), simpl.in_.actor(), update_on, opts
 	);
 }
 
@@ -176,7 +176,7 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 			adbg(this) << "<- a_data_node (casual)" << std::endl;
 			return request_data_impl(
 				*this, Req::DataNode, ReqOpts::HasDataCache,
-				[=]() -> node_or_errbox { return mimpl().out_; }
+				[mama = spimpl<map_impl_base>()]() -> node_or_errbox { return mama->out_; }
 			);
 		},
 
@@ -209,32 +209,34 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 }
 
 auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
+	auto refresh_once = [this, casual_bhv = make_casual_behavior().unbox()]() {
+		adbg(this) << "<- a_data_node (refresh)" << std::endl;
+		// install casual behavior
+		become(casual_bhv);
+		// invoke refresh
+		return mimpl().refresh(this);
+	};
+
 	// invoke refresh once on DataNode request
 	return refresh_behavior_overload{
-		// if output node is filled after deserialization, just switcto casual bhv
+		// if output node is filled after deserialization, just switch to casual bhv
 		[=](a_mlnk_fresh) {
 			become(make_casual_behavior().unbox());
 		},
 
 		[=, casual_bhv = make_casual_behavior().unbox()](a_data_node, bool)
 		-> caf::result<node_or_errbox> {
-			adbg(this) << "<- a_data_node (refresh)" << std::endl;
-			// install casual behavior
-			become(casual_bhv);
-			// invoke refresh
-			return mimpl().refresh(this);
+			return refresh_once();
 		},
 
 		[=](a_ack, a_apply, const link&) {
 			adbg(this) << "<- update (refresh)" << std::endl;
-			request(caf::actor_cast<actor_type>(this), caf::infinite, a_data_node(), true)
-			.then([](const node_or_errbox&) {});
+			refresh_once();
 		},
 
 		[=](a_ack, a_node_erase, const lid_type& src_id) {
 			adbg(this) << "<- erase (refresh)" << std::endl;
-			request(caf::actor_cast<actor_type>(this), caf::infinite, a_data_node(), true)
-			.then([](const node_or_errbox&) {});
+			refresh_once();
 		}
 
 	};

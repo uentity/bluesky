@@ -8,31 +8,45 @@
 #include "link.h"
 #include "node.h"
 
+#include <caf/event_based_actor.hpp>
+#include <caf/result.hpp>
+
 #include <functional>
 #include <variant>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using link_or_node = std::variant<link, node>;
-class map_link_impl_base;
+class map_impl_base;
 
 class BS_API map_link : public link {
 public:
 	using super = link;
-	using engine_impl = map_link_impl_base;
-	using link_mapper_f = std::function< link(link /* source */, link /* existing dest */) >;
-	using node_mapper_f = std::function< void(node /* source */, node /* existing dest */) >;
+	using engine_impl = map_impl_base;
 
-	using mapper_f = std::variant<link_mapper_f, node_mapper_f>;
+	/// link -> link mapping functions
+	using link_mapper_f = std::function<
+		caf::result<link>(link /* source */, link /* existing dest */, caf::event_based_actor* /* worker */)
+	>;
+	using simple_link_mapper_f = std::function<link(link /* source */, link /* existing dest */)>;
+	/// node -> node mapping functions
+	using node_mapper_f = std::function<
+		caf::result<void>(node /* source */, node /* existing dest */, caf::event_based_actor* /* worker */)
+	>;
+	using simple_node_mapper_f = std::function<void(node /* source */, node /* existing dest */)>;
+
+	using mapper_f = std::variant<link_mapper_f, simple_link_mapper_f, node_mapper_f, simple_node_mapper_f>;
 
 	/// can pass `link` or `node` as source and destination
 	map_link(
-		mapper_f mf, std::string name, link_or_node src_node, link_or_node dest_node = {},
-		Event update_on = Event::DataModified, TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
+		mapper_f mf, std::string name, link_or_node src_node,
+		link_or_node dest_node = {}, Event update_on = Event::DataModified,
+		TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
 	);
 	/// with custom tag
 	map_link(
-		mapper_f mf, uuid tag, std::string name, link_or_node src_node, link_or_node dest_node = {},
-		Event update_on = Event::DataModified, TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
+		mapper_f mf, uuid tag, std::string name, link_or_node src_node,
+		link_or_node dest_node = {}, Event update_on = Event::DataModified,
+		TreeOpts opts = TreeOpts::Normal, Flags f = Flags::Plain
 	);
 	/// construct from existing copy of map_link but with another mapping
 	map_link(mapper_f mf, const map_link& rhs, link_or_node src_node, link_or_node dest_node = {});
@@ -51,8 +65,9 @@ public:
 
 /// returns map_link that filters objects from input node by object type ID(s)
 BS_API auto make_otid_filter(
-	std::vector<std::string> allowed_otids, std::string name, link_or_node src_node, link_or_node dest_node = {},
-	Event update_on = Event::DataNodeModified, TreeOpts opts = TreeOpts::Deep, Flags f = Flags::Plain
+	std::vector<std::string> allowed_otids, std::string name, link_or_node src_node,
+	link_or_node dest_node = {}, Event update_on = Event::DataNodeModified,
+	TreeOpts opts = TreeOpts::Deep, Flags f = Flags::Plain
 ) -> map_link;
 
 NAMESPACE_END(blue_sky::tree)

@@ -8,6 +8,9 @@
 #include <bs/meta.h>
 #include <bs/log.h>
 
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/tree.h>
+
 #include "map_engine.h"
 #include "nil_engine.h"
 
@@ -20,17 +23,36 @@ map_link::map_link(
 	mapper_f mf, uuid tag, std::string name, link_or_node src_node, link_or_node dest_node,
 	Event update_on, TreeOpts opts, Flags f
 ) : super([&] {
+		const auto make_lmapper_impl = [&](link_mapper_f lmf) -> sp_engine_impl {
+			return std::make_shared<map_link_impl>(
+				std::move(lmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
+			);
+		};
+		const auto make_nmapper_impl = [&](node_mapper_f nmf) -> sp_engine_impl {
+			return std::make_shared<map_node_impl>(
+				std::move(nmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
+			);
+		};
+
 		return visit(meta::overloaded{
-			[&](link_mapper_f lmf) -> sp_engine_impl {
-				return std::make_shared<map_link_impl>(
-					std::move(lmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
-				);
+
+			[&](link_mapper_f lmf) -> sp_engine_impl { return make_lmapper_impl(std::move(lmf)); },
+
+			[&](simple_link_mapper_f lmf) -> sp_engine_impl {
+				return make_lmapper_impl([lmf = std::move(lmf)](link src, link dest, caf::event_based_actor*) {
+					return caf::result<link>{ lmf(src, dest) };
+				});
 			},
-			[&](node_mapper_f nmf) -> sp_engine_impl {
-				return std::make_shared<map_node_impl>(
-					std::move(nmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
-				);
-			}
+
+			[&](node_mapper_f nmf) -> sp_engine_impl { return make_nmapper_impl(std::move(nmf)); },
+
+			[&](simple_node_mapper_f nmf) -> sp_engine_impl {
+				return make_nmapper_impl([nmf = std::move(nmf)](node src, node dest, caf::event_based_actor*) {
+					nmf(src, dest);
+					return caf::result<void>{};
+				});
+			},
+
 		}, std::move(mf));
 	}())
 {}
@@ -65,22 +87,22 @@ auto map_link::tag() const -> uuid {
 }
 
 auto map_link::input() const -> node {
-	return ei::pimpl<map_link_impl_base>(*this).in_;
+	return ei::pimpl<map_impl_base>(*this).in_;
 }
 
 auto map_link::output() const -> node {
-	return ei::pimpl<map_link_impl_base>(*this).out_;
+	return ei::pimpl<map_impl_base>(*this).out_;
 }
 
 auto map_link::l_target() const -> const link_mapper_f* {
-	auto& simpl = ei::pimpl<map_link_impl_base>(*this);
+	auto& simpl = ei::pimpl<map_impl_base>(*this);
 	if(simpl.is_link_mapper)
 		return &ei::pimpl<map_link_impl>(*this).mf_;
 	return nullptr;
 }
 
 auto map_link::n_target() const -> const node_mapper_f* {
-	auto& simpl = ei::pimpl<map_link_impl_base>(*this);
+	auto& simpl = ei::pimpl<map_impl_base>(*this);
 	if(!simpl.is_link_mapper)
 		return &ei::pimpl<map_node_impl>(*this).mf_;
 	return nullptr;
@@ -96,9 +118,21 @@ auto make_otid_filter(
 	std::sort(allowed_otids.begin(), allowed_otids.end());
 	// [NOTE] dest link is ignored
 	return map_link(
-		[otids = std::move(allowed_otids)](link src, link /* dest */) -> link {
-			if(std::binary_search(otids.begin(), otids.end(), src.obj_type_id()))
-				return link(src.name(), src.data(), Flags::Plain);
+		[otids = std::move(allowed_otids)](link src, link /* dest */, caf::event_based_actor* worker)
+		-> caf::result<link> {
+			if(std::binary_search(otids.begin(), otids.end(), src.obj_type_id())) {
+				//return src.clone();
+				//return link(src.name(), src.data(), Flags::Plain);
+				auto res = worker->make_response_promise<link>();
+				worker->request(
+					src.actor(), kernel::radio::timeout(true), a_data{}, true
+				).then(
+					[=, name = src.name()](obj_or_errbox maybe_obj) mutable {
+						res.deliver(maybe_obj ? link(name, std::move(*maybe_obj), Flags::Plain) : link{});
+					}
+				);
+				return res;
+			}
 			return link{};
 		}, std::move(name), std::move(src_node), std::move(dest_node), update_on, opts, f
 	);

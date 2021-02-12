@@ -7,10 +7,12 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
+#include <bs/detail/enumops.h>
 #include <bs/python/tree.h>
 #include <bs/python/tr_result.h>
 #include <bs/python/result_converter.h>
-#include <bs/detail/enumops.h>
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/tree.h>
 
 #include <bs/tree/map_link.h>
 #include "../kernel/python_subsyst_impl.h"
@@ -52,6 +54,40 @@ inline auto adapt(adapted_data_cb&& f) {
 		else
 			f(tl::make_unexpected(error{ "Nil link" }), L);
 	};
+}
+
+template<typename F, typename R, typename... Args>
+auto mapper2queue(F mf, identity<R (Args...)> _) {
+	return [mf = std::move(mf)](Args&&... args, caf::event_based_actor* worker) -> caf::result<R> {
+		// make response promise
+		auto rp = worker->make_response_promise();
+		KRADIO.enqueue(
+			launch_async,
+			[=, argstup = std::make_tuple(std::forward<Args>(args)...)]() mutable -> error {
+				if constexpr(std::is_same_v<R, void>) {
+					std::apply(mf, std::move(argstup));
+					rp.deliver( caf::unit );
+				}
+				else
+					rp.deliver( std::apply(mf, std::move(argstup)) );
+				return perfect;
+			}
+		);
+		return rp;
+	};
+};
+
+
+// there's no way in Python to select function overload based an arg types,
+// so need to introduce special enum
+enum class MappingLevel { Link, Node };
+
+template<MappingLevel L>
+auto py_mapper2queue(py::function py_mf) {
+	using signature = std::conditional_t<
+		L == MappingLevel::Link, map_link::simple_link_mapper_f, map_link::simple_node_mapper_f
+	>;
+	return mapper2queue(py::cast<signature>(std::move(py_mf)), identity< deduce_callable_t<signature> >{});
 }
 
 NAMESPACE_END()
@@ -309,7 +345,6 @@ void py_bind_link(py::module& m) {
 	//
 	// there's no way in Python to select function overload based an arg types, so need to introduce
 	// additional enum
-	enum class MappingLevel { Link, Node };
 	py::enum_<MappingLevel>(m, "MappingLevel")
 		.value("Link", MappingLevel::Link)
 		.value("Node", MappingLevel::Node)
@@ -319,9 +354,9 @@ void py_bind_link(py::module& m) {
 		return map_link(
 			[&]() -> map_link::mapper_f {
 				if(mlevel == MappingLevel::Link)
-					return py::cast<map_link::link_mapper_f>(std::move(py_mf));
+					return py_mapper2queue<MappingLevel::Link>(std::move(py_mf));
 				else
-					return py::cast<map_link::node_mapper_f>(std::move(py_mf));
+					return py_mapper2queue<MappingLevel::Node>(std::move(py_mf));
 			}(), std::forward<decltype(args)>(args)...
 		);
 	};
@@ -338,7 +373,7 @@ void py_bind_link(py::module& m) {
 				);
 			}),
 			"mlevel"_a, "mf"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
-			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::DetachedWorkers,
+			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal,
 			"flags"_a = Flags::Plain
 		)
 		// normal ctor with tag
@@ -352,7 +387,7 @@ void py_bind_link(py::module& m) {
 				);
 			}),
 			"mlevel"_a, "mf"_a, "tag"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
-			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::DetachedWorkers,
+			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal,
 			"flags"_a = Flags::Plain
 		)
 		// from mapper & existing map_link
@@ -379,7 +414,7 @@ void py_bind_link(py::module& m) {
 	m.def(
 		"make_otid_filter", &make_otid_filter, "allowed_otids"_a, "name"_a, "src_node"_a,
 		"dest_node"_a = link_or_node{}, "update_on"_a = Event::DataNodeModified | Event::LinkRenamed,
-		"opts"_a = TreeOpts::Deep | TreeOpts::DetachedWorkers, "flags"_a = Flags::Plain
+		"opts"_a = TreeOpts::Deep, "flags"_a = Flags::Plain
 	);
 
 	///////////////////////////////////////////////////////////////////////////////
