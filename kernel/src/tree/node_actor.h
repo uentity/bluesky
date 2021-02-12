@@ -70,9 +70,9 @@ public:
 		}), new_name);
 	}
 
-	auto insert(link L, InsertPolicy pol) -> caf::response_promise;
+	auto insert(link L, InsertPolicy pol) -> caf::result<node::insert_status>;
 
-	auto insert(link L, std::size_t idx, InsertPolicy pol) -> caf::response_promise;
+	auto insert(link L, std::size_t idx, InsertPolicy pol) -> caf::result<node::insert_status>;
 
 	auto insert(links_v Ls, InsertPolicy pol) -> caf::result<std::size_t>;
 

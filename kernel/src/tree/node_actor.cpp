@@ -99,9 +99,9 @@ const auto noop_await_insert = [](const error::box&) {};
 template<typename Postproc, typename OnAwait = decltype(noop_await_insert)>
 auto do_insert(
 	node_actor* self, link L, InsertPolicy pol, Postproc pp, OnAwait aw = noop_await_insert
-) -> caf::response_promise {
+) -> caf::result<node::insert_status> {
 	// insert atomically for both node & link
-	auto res = self->make_response_promise();
+	auto res = self->make_response_promise<node::insert_status>();
 	self->request(
 		link_impl::actor(L), kernel::radio::timeout(), a_apply(),
 		simple_transaction([=, pp = std::move(pp)]() mutable -> error {
@@ -120,6 +120,7 @@ auto do_insert(
 		aw,
 		// on error forward caf error to await handler
 		[=, Lid = L.id()](const caf::error& er) mutable {
+			res.deliver(node::insert_status{{}, false});
 			aw(forward_caf_error(
 				er, "in node["s + std::string(self->impl.home_id()) + "] insert link[" + to_string(Lid) + ']'
 			));
@@ -160,11 +161,11 @@ auto on_erase(const link& L, node_actor& self) {
 
 NAMESPACE_END()
 
-auto node_actor::insert(link L, InsertPolicy pol) -> caf::response_promise {
+auto node_actor::insert(link L, InsertPolicy pol) -> caf::result<node::insert_status> {
 	return do_insert(this, L, pol, notify_after_insert(this));
 }
 
-auto node_actor::insert(link L, std::size_t to_idx, InsertPolicy pol) -> caf::response_promise {
+auto node_actor::insert(link L, std::size_t to_idx, InsertPolicy pol) -> caf::result<node::insert_status> {
 	return do_insert(this, L, pol, [=](insert_status<Key::ID> res) mutable -> node::insert_status {
 		// 1. insert an element using ID index
 		auto [pchild, is_inserted] = res;
@@ -391,12 +392,12 @@ return {
 	},
 
 	// insert new link
-	[=](a_node_insert, link L, InsertPolicy pol) -> caf::result<node::insert_status> {
+	[=](a_node_insert, link L, InsertPolicy pol) {
 		return insert(std::move(L), pol);
 	},
 
 	// insert into specified position
-	[=](a_node_insert, link L, std::size_t idx, InsertPolicy pol) -> caf::result<node::insert_status> {
+	[=](a_node_insert, link L, std::size_t idx, InsertPolicy pol) {
 		return insert(std::move(L), idx, pol);
 	},
 
