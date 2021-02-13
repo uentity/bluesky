@@ -26,6 +26,9 @@ static inline constexpr auto adbg(...) { return blue_sky::log::D(); }
 	auto adbg_impl(caf::actor_ostream, const link_impl&) -> caf::actor_ostream;
 	auto adbg_impl(caf::actor_ostream, const node_impl&) -> caf::actor_ostream;
 
+	auto adbg_impl(engine_actor_base*) -> caf::actor_ostream;
+	static auto adbg(engine_actor_base* A) { return adbg_impl(A); }
+
 	template<typename Item>
 	static auto adbg(engine_actor<Item>* A) {
 		return adbg_impl(caf::aout(A), A->impl);

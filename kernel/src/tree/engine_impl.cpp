@@ -18,6 +18,15 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 namespace kradio = kernel::radio;
+
+[[maybe_unused]] auto adbg_impl(engine_actor_base* A) -> caf::actor_ostream {
+	auto os = caf::aout(A);
+	os << "[" << A->pimpl_->type_id();
+	if(const auto hid = A->pimpl_->home_id(); !hid.empty())
+		os << " " << hid;
+	return (os << "]: ");
+}
+
 /*-----------------------------------------------------------------------------
  *  engine_impl
  *-----------------------------------------------------------------------------*/
@@ -64,7 +73,7 @@ engine_actor_base::engine_actor_base(caf::actor_config& cfg, caf::group egrp, sp
 	// remember link's local group
 	pimpl_->home = std::move(egrp);
 	if(pimpl_->home)
-		adbg(this) << "joined self group " << std::endl;
+		adbg(this) << "joined self group" << std::endl;
 
 	// exit after kernel
 	KRADIO.register_citizen(this);
@@ -95,7 +104,7 @@ auto engine_actor_base::goodbye() -> void {
 		// say goodbye to self group
 		send(home, a_bye());
 		leave(home);
-		adbg(this) << "left self group " << pimpl_->home_id() << std::endl;
+		adbg(this) << "left self group" << std::endl;
 	}
 }
 
