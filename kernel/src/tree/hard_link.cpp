@@ -39,6 +39,11 @@ auto hard_link_actor::monitor_object() -> void {
 		obj_actor_addr_ = obj->actor().address();
 		join(obj->home());
 		obj_hid_ = obj->home_id();
+		// weak_link: enter home group of object's node to receive it's events
+		if(impl.type_id() == weak_link::type_id_()) {
+			if(const auto N = obj->data_node())
+				join(N.home());
+		}
 	}
 }
 
@@ -128,9 +133,9 @@ auto hard_link_impl::data(unsafe_t) const -> sp_obj { return data_; }
 
 auto hard_link_impl::set_data(sp_obj obj) -> void {
 	if(data_ = std::move(obj); data_) {
-		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK);
+		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::Void, noop_true);
 		if(data_->data_node())
-			rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::OK);
+			rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::Void, noop_true);
 	}
 	inode_ = make_inode(data_, inode_);
 }
@@ -196,9 +201,9 @@ auto weak_link_impl::data(unsafe_t) const -> sp_obj { return data_.lock(); }
 auto weak_link_impl::set_data(const sp_obj& obj) -> void {
 	if(data_ = obj; obj) {
 		// set status silently
-		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK);
+		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::Void, noop_true);
 		if(obj->data_node())
-			rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::OK);
+			rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::Void, noop_true);
 	}
 	inode_ = make_inode(obj, inode_);
 }

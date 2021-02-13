@@ -71,7 +71,6 @@ auto link_actor::name() const -> const char* {
 //
 auto link_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
-	// skip `bye` message (should always come from myself)
 	[=](a_bye) {
 		adbg(this) << "<- a_lnk_bye " << std::endl;
 		if(current_sender() != this) quit();
