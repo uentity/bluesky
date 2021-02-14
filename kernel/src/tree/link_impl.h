@@ -17,7 +17,6 @@
 
 #include "private_common.h"
 #include "engine_impl.h"
-#include "../kernel/radio_subsyst.h"
 
 #include <caf/actor.hpp>
 #include <caf/typed_actor.hpp>
@@ -53,7 +52,7 @@ public:
 		caf::reacts_to<a_lnk_status, Req, ReqStatus, ReqStatus>,
 		// delayed read for cached links
 		caf::replies_to<a_lazy, a_load, bool /* with_node */>::with<bool>
-	>::extend_with<kernel::detail::khome_actor_type>;
+	>;
 
 	// ack signals that this link send to home group
 	using self_ack_actor_type = caf::typed_actor<

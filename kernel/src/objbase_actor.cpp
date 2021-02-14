@@ -40,8 +40,6 @@ objbase_actor::objbase_actor(caf::actor_config& cfg, caf::group home) :
 
 auto objbase_actor::make_typed_behavior() -> typed_behavior {
 return typed_behavior {
-	[=](a_bye) { if(current_sender() != this) quit(); },
-
 	// get home group
 	[=](a_home) { return home_; },
 

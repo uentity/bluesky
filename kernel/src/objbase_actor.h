@@ -35,7 +35,6 @@ public:
 		// trigger lazy load
 		caf::replies_to<a_load, sp_obj /* obj */>::with<error::box>
 	>
-	::extend_with<kernel::detail::khome_actor_type>
 	::extend_with<home_actor_type>;
 
 	using typed_behavior = actor_type::behavior_type;

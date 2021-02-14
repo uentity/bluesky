@@ -48,8 +48,7 @@ public:
 		// deep search by key with active symlinks
 		caf::replies_to<a_node_deep_search, std::string, Key, bool /* return_first */, lids_v>::with<links_v>
 	>
-	::extend_with<engine_actor_type<node>>
-	::extend_with<kernel::detail::khome_actor_type>;
+	::extend_with<engine_actor_type<node>>;
 
 	// ack signals that this node send to home group
 	using self_ack_actor_type = caf::typed_actor<

@@ -259,8 +259,6 @@ return {
 	// unconditionally join home group - used after deserialization
 	[=](a_hi) { join(impl.home); },
 
-	[=](a_bye) { if(current_sender() != this) quit(); },
-
 	[=](a_home) { return impl.home; },
 
 	[=](a_home_id) { return std::string(impl.home_id()); },

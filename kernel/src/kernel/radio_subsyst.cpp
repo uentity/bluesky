@@ -70,9 +70,7 @@ auto kqueue_processor(kqueue_actor_type::pointer self) -> kqueue_actor_type::beh
 		// do job (run Python functor)
 		[=](const simple_transaction& tr) -> error::box {
 			return tr_eval(tr);
-		},
-		// can be terminated by kernel
-		[=](a_bye) { self->quit(); }
+		}
 	};
 }
 
@@ -101,6 +99,9 @@ auto radio_subsyst::init() -> error {
 		if(actor_sys_.emplace(actor_config()); !actor_sys_)
 			return error{ "Can't create CAF actor_system!" };
 		get_actor_sys_ = &radio_subsyst::normal_as_getter;
+		// start queue
+		queue_ = actor_sys_->spawn<caf::detached>(kqueue_processor);
+		register_citizen(queue_.address());
 	}
 	return perfect;
 }
@@ -162,7 +163,7 @@ auto radio_subsyst::kick_citizens() -> void {
 			alive.reserve(citizens_.size());
 			for(const auto& caddr : citizens_) {
 				if(auto A = caf::actor_cast<caf::actor>(caddr)) {
-					waiter->send_exit(A, caf::exit_reason::user_shutdown);
+					waiter->send_exit(A, caf::exit_reason::kill);
 					alive.push_back(std::move(A));
 				}
 			}
@@ -208,13 +209,7 @@ auto radio_subsyst::toggle(bool on) -> error {
 ///////////////////////////////////////////////////////////////////////////////
 //  queue management
 //
-auto radio_subsyst::queue_actor() -> kqueue_actor_type& {
-	if(!queue_) {
-		queue_ = system().spawn<caf::detached>(kqueue_processor);
-		register_citizen(queue_.address());
-	}
-	return queue_;
-}
+auto radio_subsyst::queue_actor() -> kqueue_actor_type& { return queue_; }
 
 auto radio_subsyst::enqueue(simple_transaction tr) -> error {
 	return actorf<error>(queue_actor(), caf::infinite, std::move(tr));
@@ -224,6 +219,9 @@ auto radio_subsyst::enqueue(launch_async_t, simple_transaction tr) -> void {
 	caf::anon_send(queue_actor(), std::move(tr));
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//  server management
+//
 auto radio_subsyst::start_server() -> void {
 	if(toggle(true)) return;
 	actor_config().add_message_type<tree::link>("link");

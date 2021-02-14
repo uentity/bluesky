@@ -26,15 +26,10 @@
 #define KRADIO ::blue_sky::singleton<::blue_sky::kernel::detail::radio_subsyst>::Instance()
 
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
-// interface of kernel's home group
-using khome_actor_type = caf::typed_actor<
-	caf::reacts_to<a_bye>
->;
-
 // kernel's queue interface
 using kqueue_actor_type = caf::typed_actor<
 	caf::replies_to<simple_transaction>::with<error::box>
->::extend_with<khome_actor_type>;
+>;
 
 struct BS_HIDDEN_API radio_subsyst {
 	// store links that will be visible to the world

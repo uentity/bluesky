@@ -71,10 +71,6 @@ auto link_actor::name() const -> const char* {
 //
 auto link_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
-	[=](a_bye) {
-		adbg(this) << "<- a_lnk_bye " << std::endl;
-		if(current_sender() != this) quit();
-	},
 
 	[=](a_home) { return impl.home; },
 
