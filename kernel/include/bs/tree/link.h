@@ -107,11 +107,11 @@ public:
 	auto clone(bool deep = false) const -> link;
 
 	/// create root link + propagate handle
-	template<typename Link, typename... Args>
+	template<typename Link = link, typename... Args>
 	static auto make_root(Args&&... args) -> Link {
-		if(auto lnk = Link(std::forward<Args>(args)...))
-			return Link{ make_root_(std::move(lnk)) };
-		return link{};
+		auto lnk = Link(std::forward<Args>(args)...);
+		make_root_(lnk);
+		return lnk;
 	}
 
 	/// test if link is nil
@@ -229,7 +229,7 @@ protected:
 	link(sp_engine_impl impl, bool start_actor = true);
 
 	/// ensure that rhs type id matches requested, otherwise link is nil
-	link(const link& rhs, std::string_view rhs_type_id);
+	link(const link& rhs, std::string_view tgt_type_id);
 
 	auto pimpl() const -> link_impl*;
 
@@ -245,7 +245,7 @@ private:
 
 	link(engine&&);
 
-	static auto make_root_(engine donor) -> link;
+	static auto make_root_(const link& donor) -> void;
 };
 
 /// handy aliases

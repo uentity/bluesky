@@ -44,15 +44,19 @@ link::link(sp_engine_impl impl, bool start_actor) :
 	if(start_actor) start_engine();
 }
 
-link::link(const link& rhs, std::string_view rhs_type_id) :
+link::link(const link& rhs, std::string_view tgt_type_id) :
 	link(rhs)
 {
 	// [NOTE] throw exception, because resetiing to Nil will leave derived link in incorrect state:
 	// impl instances mismatch (derived link assumes it has correct impl set up)
 	// resetting + default-init impl in derived class is also wrong, because actor will be nil, but
 	// impl not nil
-	if(type_id() != rhs_type_id)
-		throw error(fmt::format("{} -> {}", type_id(), rhs_type_id), Error::WrongLinkCast);
+	// [NOTE] one exception is to allow resetting hard or weak links, as they don't use PIMPL
+	// directly
+	if( type_id() != tgt_type_id
+		&& !(is_nil() && (tgt_type_id == hard_link::type_id_() || tgt_type_id == weak_link::type_id_()))
+	)
+		throw error(fmt::format("{} -> {}", type_id(), tgt_type_id), Error::WrongLinkCast);
 }
 
 link::link(std::string name, sp_obj data, Flags f) :
@@ -73,10 +77,8 @@ auto link::bare() const -> bare_link {
 	return bare_link(std::static_pointer_cast<link_impl>(pimpl_));
 }
 
-auto link::make_root_(engine donor) -> link {
-	auto res = link(std::move(donor));
-	if(res) res.pimpl()->propagate_handle();
-	return res;
+auto link::make_root_(const link& donor) -> void {
+	if(donor) donor.pimpl()->propagate_handle();
 }
 
 auto link::is_nil() const -> bool {
@@ -84,8 +86,9 @@ auto link::is_nil() const -> bool {
 }
 
 auto link::reset() -> void {
+	// [NOTE] works via casting constructor, can only reset hard or weak link
 	if(!is_nil())
-		*this = nil_link::nil_engine();
+		*this = link(link{}, type_id());
 }
 
 auto link::pimpl() const -> link_impl* {
