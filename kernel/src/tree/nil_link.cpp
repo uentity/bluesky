@@ -41,40 +41,41 @@ struct nil_link::self_actor : nil_engine_actor {
 
 	auto make_behavior() -> behavior_type override { return link::actor_type::behavior_type{
 	
-		[=](a_home) -> caf::group { return {}; },
-		[=](a_home_id) -> std::string { return nil_oid; },
-		[=](a_lnk_id) -> lid_type { return nil_uid; },
-		[=](a_lnk_oid) -> std::string { return nil_oid; },
-		[=](a_lnk_otid) -> std::string { return nil_otid; },
+		[](a_home) -> caf::group { return {}; },
+		[](a_home_id) -> std::string { return nil_oid; },
+		[](a_lnk_id) -> lid_type { return nil_uid; },
+		[](a_lnk_oid) -> std::string { return nil_oid; },
+		[](a_lnk_otid) -> std::string { return nil_otid; },
+		[](a_clone, bool) { return link{}; },
 
 		// deny rename
-		[=](a_lnk_name) -> std::string { return defaults::tree::nil_link_name; },
-		[=](a_lnk_rename, const std::string&) -> std::size_t { return 0; },
+		[](a_lnk_name) -> std::string { return defaults::tree::nil_link_name; },
+		[](a_lnk_rename, const std::string&) -> std::size_t { return 0; },
 
 		// status alwaye Void
-		[=](a_lnk_status, Req) -> ReqStatus { return ReqStatus::Void; },
-		[=](a_lnk_status, Req, ReqReset, ReqStatus, ReqStatus) -> ReqStatus {
+		[](a_lnk_status, Req) -> ReqStatus { return ReqStatus::Void; },
+		[](a_lnk_status, Req, ReqReset, ReqStatus, ReqStatus) -> ReqStatus {
 			return ReqStatus::Void;
 		},
 
-		[=](a_lnk_flags) { return Flags::Plain; },
-		[=](a_lnk_flags, Flags) {},
+		[](a_lnk_flags) { return Flags::Plain; },
+		[](a_lnk_flags, Flags) {},
 
 		// all data is null
-		[=](a_lnk_inode) -> result_or_errbox<inodeptr> {
+		[](a_lnk_inode) -> result_or_errbox<inodeptr> {
 			return unexpected_err(Error::EmptyInode);
 		},
-		[=](a_data, bool) -> obj_or_errbox {
+		[](a_data, bool) -> obj_or_errbox {
 			return unexpected_err(Error::EmptyData);
 		},
-		[=](a_data_node, bool) -> node_or_errbox {
+		[](a_data_node, bool) -> node_or_errbox {
 			return unexpected_err(Error::EmptyData);
 		},
 
-		[=](a_apply, a_data, const transaction&) -> tr_result::box {
+		[](a_apply, a_data, const transaction&) -> tr_result::box {
 			return pack(tr_result{Error::EmptyData});
 		},
-		[=](a_apply, a_data, const obj_transaction&) -> tr_result::box {
+		[](a_apply, a_data, const obj_transaction&) -> tr_result::box {
 			return pack(tr_result{Error::EmptyData});
 		}
 
@@ -97,7 +98,7 @@ struct nil_link::self_impl : nil_engine_impl<nil_link, link_impl> {
 		return internals().raw_actor();
 	}
 
-	auto clone(bool deep) const -> sp_limpl override {
+	auto clone(link_actor*, bool deep) const -> caf::result<sp_limpl> override {
 		return nullptr;
 	}
 

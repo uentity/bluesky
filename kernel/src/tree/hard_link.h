@@ -20,7 +20,7 @@ struct BS_HIDDEN_API hard_link_impl : ilink_impl {
 	hard_link_impl();
 	hard_link_impl(std::string name, sp_obj data, Flags f);
 
-	auto clone(bool deep = false) const -> sp_limpl override;
+	auto clone(link_actor* papa, bool deep = false) const -> caf::result<sp_limpl> override;
 
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 
@@ -39,7 +39,7 @@ struct BS_HIDDEN_API weak_link_impl : ilink_impl {
 	weak_link_impl();
 	weak_link_impl(std::string name, const sp_obj& data, Flags f);
 
-	auto clone(bool deep = false) const -> sp_limpl override;
+	auto clone(link_actor* papa, bool deep = false) const -> caf::result<sp_limpl> override;
 
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 

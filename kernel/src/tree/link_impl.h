@@ -19,6 +19,7 @@
 #include "engine_impl.h"
 
 #include <caf/actor.hpp>
+#include <caf/result.hpp>
 #include <caf/typed_actor.hpp>
 
 #include <variant>
@@ -109,7 +110,7 @@ public:
 	virtual auto spawn_actor(sp_limpl limpl) const -> caf::actor;
 
 	/// clone this impl
-	virtual auto clone(bool deep = false) const -> sp_limpl = 0;
+	virtual auto clone(link_actor* papa, bool deep = false) const -> caf::result<sp_limpl> = 0;
 
 	/// download pointee data
 	virtual auto data() -> obj_or_err = 0;
@@ -216,7 +217,7 @@ struct BS_HIDDEN_API sym_link_impl : link_impl {
 	sym_link_impl();
 	sym_link_impl(std::string name, std::string path, Flags f);
 
-	auto clone(bool deep = false) const -> sp_limpl override;
+	auto clone(link_actor* papa, bool deep = false) const -> caf::result<sp_limpl> override;
 
 	auto spawn_actor(sp_limpl limpl) const -> caf::actor override;
 

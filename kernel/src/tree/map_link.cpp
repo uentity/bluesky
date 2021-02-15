@@ -120,19 +120,16 @@ auto make_otid_filter(
 	return map_link(
 		[otids = std::move(allowed_otids)](link src, link /* dest */, caf::event_based_actor* worker)
 		-> caf::result<link> {
-			if(std::binary_search(otids.begin(), otids.end(), src.obj_type_id())) {
-				//return src.clone();
-				//return link(src.name(), src.data(), Flags::Plain);
-				auto res = worker->make_response_promise<link>();
-				worker->request(
-					src.actor(), kernel::radio::timeout(true), a_data{}, true
-				).then(
-					[=, name = src.name()](obj_or_errbox maybe_obj) mutable {
-						res.deliver(maybe_obj ? link(name, std::move(*maybe_obj), Flags::Plain) : link{});
-					}
-				);
-				return res;
-			}
+			auto res = worker->make_response_promise<link>();
+			auto src_actor = src.actor();
+
+			worker->request(src_actor, kernel::radio::timeout(), a_lnk_otid{})
+			.then([=](const std::string& otid) mutable {
+				if(std::binary_search(otids.begin(), otids.end(), otid))
+					res.delegate(src_actor, a_clone{}, false);
+				else
+					res.deliver(link{});
+			});
 			return link{};
 		}, std::move(name), std::move(src_node), std::move(dest_node), update_on, opts, f
 	);

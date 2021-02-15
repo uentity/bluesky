@@ -17,6 +17,7 @@
 #include <bs/serialize/propdict.h>
 
 #include "hard_link.h"
+#include "../serialize/tree_impl.h"
 
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
@@ -140,10 +141,21 @@ auto hard_link_impl::set_data(sp_obj obj) -> void {
 	inode_ = make_inode(data_, inode_);
 }
 
-auto hard_link_impl::clone(bool deep) const -> sp_limpl {
-	return std::make_shared<hard_link_impl>(
-		name_, deep ? kernel::tfactory::clone_object(data_) : data_, flags_
+auto hard_link_impl::clone(link_actor* papa, bool deep) const -> caf::result<sp_limpl> {
+	auto res = papa->make_response_promise<sp_limpl>();
+	papa->request(papa->actor(), kernel::radio::timeout(true), a_data{}, true)
+	.then(
+		[=](const obj_or_errbox& maybe_obj) mutable {
+			if(maybe_obj)
+				res.deliver(sp_limpl{std::make_shared<hard_link_impl>(
+					name_, deep ? kernel::tfactory::clone_object(*maybe_obj) : *maybe_obj, flags_
+				)});
+			else
+				res.deliver(sp_limpl{});
+		},
+		[=](const caf::error&) mutable { res.deliver(sp_limpl{}); }
 	);
+	return res;
 }
 
 auto hard_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
@@ -212,9 +224,20 @@ auto weak_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<hard_link_actor>(std::move(limpl));
 }
 
-auto weak_link_impl::clone(bool deep) const -> sp_limpl {
-	// cannot make deep copy of object pointee
-	return std::make_shared<weak_link_impl>(name_, data_.lock(), flags_);
+auto weak_link_impl::clone(link_actor* papa, bool deep) const -> caf::result<sp_limpl> {
+	auto res = papa->make_response_promise<sp_limpl>();
+	papa->request(papa->actor(), kernel::radio::timeout(true), a_data{}, true)
+	.then(
+		[=](const obj_or_errbox& maybe_obj) mutable {
+			if(maybe_obj)
+				// cannot make deep copy of object pointee
+				res.deliver(sp_limpl{ std::make_shared<weak_link_impl>(name_, *maybe_obj, flags_) });
+			else
+				res.deliver(sp_limpl{});
+		},
+		[=](const caf::error&) mutable { res.deliver(sp_limpl{}); }
+	);
+	return res;
 }
 
 auto weak_link_impl::propagate_handle() -> node_or_err {

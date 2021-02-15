@@ -78,6 +78,17 @@ return {
 
 	[=](a_impl) -> sp_limpl { return spimpl(); },
 
+	[=](a_clone, a_impl, bool deep) { return impl.clone(this, deep); },
+
+	[=](a_clone, bool deep) {
+		auto res = make_response_promise<link>();
+		request(actor(), caf::infinite, a_clone{}, a_impl{}, deep)
+		.then([=](sp_limpl Limpl) mutable {
+			res.deliver( link(std::move(Limpl)) );
+		});
+		return res;
+	},
+
 	// subscribe events listener
 	[=](a_subscribe, const caf::actor& baby) {
 		// remember baby & ensure it's alive

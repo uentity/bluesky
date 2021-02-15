@@ -31,6 +31,9 @@ template<typename Engine>
 using engine_actor_type = caf::typed_actor<
 	// obtain engine impl
 	caf::replies_to<a_impl>::with<std::shared_ptr<typename Engine::engine_impl>>,
+	// clone engine impl
+	typename caf::replies_to<a_clone, a_impl, bool /* deep */>
+	::template with<std::shared_ptr<typename Engine::engine_impl>>,
 	// run transaction in engine's queue
 	caf::replies_to<a_apply, simple_transaction>::with<error::box>,
 	typename caf::replies_to<a_apply, transaction_t<error, typename Engine::bare_type>>

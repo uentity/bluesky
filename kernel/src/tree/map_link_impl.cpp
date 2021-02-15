@@ -74,7 +74,7 @@ map_link_impl::map_link_impl() :
 	map_impl_base(true), mf_(noop_r<link>())
 {}
 
-auto map_link_impl::clone(bool deep) const -> sp_limpl {
+auto map_link_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl> {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
 	return std::make_shared<map_link_impl>(mf_, tag_, name_, in_, node::nil(), update_on_, opts_, flags_);
 }
@@ -405,7 +405,7 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa)
 
 NAMESPACE_END()
 
-auto map_node_impl::clone(bool deep) const -> sp_limpl {
+auto map_node_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl> {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
 	return std::make_shared<map_node_impl>(mf_, tag_, name_, in_, node::nil(), update_on_, opts_, flags_);
 }

@@ -36,6 +36,8 @@ public:
 		caf::replies_to<a_node_handle>::with<link>,
 		// get number of leafs
 		caf::replies_to<a_node_size>::with<std::size_t>,
+		// clone node
+		caf::replies_to<a_clone, bool /* deep */>::with<node>,
 
 		// obtain node's content sorted by given order
 		caf::replies_to<a_node_leafs, Key /* order */>::with<links_v>,

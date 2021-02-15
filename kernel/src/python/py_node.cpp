@@ -306,6 +306,8 @@ void py_bind_node(py::module& m) {
 
 		.def("bare", &node::bare, "Get bare (unsafe) node")
 
+		.def("clone", &node::clone, "deep"_a = false, "Make shallow or deep copy of node")
+
 		.def("skeys", &node::skeys, "key_meaning"_a, "ordering"_a = Key::AnyOrder, nogil)
 
 		// check if node contains key

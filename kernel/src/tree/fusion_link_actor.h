@@ -33,7 +33,7 @@ struct BS_HIDDEN_API fusion_link_impl : public ilink_impl {
 
 	auto spawn_actor(std::shared_ptr<link_impl> limpl) const -> caf::actor override;
 
-	auto clone(bool deep = false) const -> sp_limpl override;
+	auto clone(link_actor* papa, bool deep = false) const -> caf::result<sp_limpl> override;
 
 	// search for valid (non-null) bridge up the tree
 	// [NOTE] protected by mutex

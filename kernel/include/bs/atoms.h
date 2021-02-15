@@ -55,6 +55,8 @@ using a_load = caf::atom_constant<caf::atom("bs load")>;
 using a_save = caf::atom_constant<caf::atom("bs save")>;
 // subscription manage
 using a_subscribe = caf::atom_constant<caf::atom("bs subscrb")>;
+// ask to clone some object
+using a_clone = caf::atom_constant<caf::atom("bs clone")>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  link API

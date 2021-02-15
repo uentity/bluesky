@@ -65,6 +65,8 @@ public:
 		caf::replies_to<a_data, bool>::with<obj_or_errbox>,
 		// get data node
 		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
+		// clone link
+		caf::replies_to<a_clone, bool /* deep */>::with<link>,
 
 		// run transaction in message queue of data object
 		caf::replies_to<a_apply, a_data, transaction>::with<tr_result::box>,

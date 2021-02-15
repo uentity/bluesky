@@ -94,7 +94,7 @@ public:
 		map_impl_base(true, std::forward<Args>(args)...), mf_(std::move(mf))
 	{}
 
-	auto clone(bool deep) const -> sp_limpl override final;
+	auto clone(link_actor* papa, bool deep) const -> caf::result<sp_limpl> override final;
 
 	// update/erase single link
 	auto update(map_link_actor* papa, link src_link) -> void override final;
@@ -128,7 +128,7 @@ public:
 		map_impl_base(false, std::forward<Args>(args)...), mf_(std::move(mf))
 	{}
 
-	auto clone(bool deep) const -> sp_limpl override final;
+	auto clone(link_actor* papa, bool deep) const -> caf::result<sp_limpl> override final;
 
 	// implementation is identical in all cases - just spawn mapper job
 	auto update(map_link_actor* papa, link src_link) -> void override final;

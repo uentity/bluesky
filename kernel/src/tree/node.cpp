@@ -85,7 +85,9 @@ auto node::handle() const -> link {
 }
 
 auto node::clone(bool deep) const -> node {
-	return { pimpl()->clone(deep) };
+	return actorf<node>(
+		actor(), kernel::radio::timeout(true), a_clone{}, deep
+	).value_or(node{});
 }
 
 ///////////////////////////////////////////////////////////////////////////////

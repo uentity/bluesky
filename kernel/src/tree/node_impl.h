@@ -97,7 +97,7 @@ public:
 	auto propagate_owner(const node& super, bool deep) -> void;
 
 	/// clone this impl
-	auto clone(bool deep = false) const -> sp_nimpl;
+	auto clone(node_actor* papa, bool deep = false) const -> caf::result<sp_nimpl>;
 
 	static auto spawn_actor(sp_nimpl nimpl) -> caf::actor;
 

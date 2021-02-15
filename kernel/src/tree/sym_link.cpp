@@ -120,7 +120,7 @@ auto sym_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 	return spawn_lactor<sym_link_actor>(std::move(limpl));
 }
 
-auto sym_link_impl::clone(bool deep) const -> sp_limpl {
+auto sym_link_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl> {
 	// no deep copy support for symbolic link
 	return std::make_shared<sym_link_impl>(name_, path_, flags_);
 }

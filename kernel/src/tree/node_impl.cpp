@@ -17,15 +17,17 @@
 #include <bs/detail/tuple_utils.h>
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
+#include "../serialize/tree_impl.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using bs_detail::shared;
 	
 ENGINE_TYPE_DEF(node_impl, "node")
 
-auto node_impl::clone(bool deep) const -> sp_nimpl {
+auto node_impl::clone(node_actor*, bool deep) const -> caf::result<sp_nimpl> {
+	// [TODO] write async version of this
 	// [NOTE] can do this without transactions for each link, because cloned link is not shared
-	auto res = std::make_unique<node_impl>();
+	auto res = std::make_shared<node_impl>();
 	auto& res_leafs = res->links_.get<Key_tag<Key::AnyOrder>>();
 	for(const auto& leaf : links_.get<Key_tag<Key::AnyOrder>>())
 		res_leafs.insert(res_leafs.end(), leaf.clone(deep));

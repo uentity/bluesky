@@ -34,7 +34,8 @@ auto fusion_link_impl::spawn_actor(std::shared_ptr<link_impl> limpl) const -> ca
 	return spawn_lactor<fusion_link_actor>(std::move(limpl));
 }
 
-auto fusion_link_impl::clone(bool deep) const -> sp_limpl {
+auto fusion_link_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl> {
+	// [NOTE] do we need to populate data before cloning?
 	return std::make_shared<fusion_link_impl>(
 		name_,
 		deep ? kernel::tfactory::clone_object(data_) : data_,

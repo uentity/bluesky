@@ -242,6 +242,17 @@ auto node_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
 	[=](a_impl) -> sp_nimpl { return spimpl(); },
 
+	[=](a_clone, a_impl, bool deep) { return impl.clone(this, deep); },
+
+	[=](a_clone, bool deep) {
+		auto res = make_response_promise<tree::node>();
+		request(actor(), caf::infinite, a_clone{}, a_impl{}, deep)
+		.then([=](sp_nimpl Nimpl) mutable {
+			res.deliver( tree::node(std::move(Nimpl)) );
+		});
+		return res;
+	},
+
 	[=](a_apply, simple_transaction tr) -> error::box {
 		return tr_eval(std::move(tr));
 	},
