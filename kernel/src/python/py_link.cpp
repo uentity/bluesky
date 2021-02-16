@@ -27,7 +27,7 @@ using namespace tree;
 
 NAMESPACE_BEGIN()
 
-inline const auto py_kernel = &kernel::detail::python_subsyst_impl::self;
+const auto py_kernel = &kernel::detail::python_subsyst_impl::self;
 
 auto adapt(sp_obj&& source, const link& L) {
 	auto guard = py::gil_scoped_acquire();
@@ -47,12 +47,18 @@ auto adapt(result_or_err<T>&& source, const link& L) {
 
 using adapted_data_cb = std::function<void(result_or_err<py::object>, link)>;
 
-inline auto adapt(adapted_data_cb&& f) {
+auto adapt(adapted_data_cb&& f) {
 	return [f = std::move(f)](result_or_err<sp_obj> obj, link L) {
 		if(L)
-			f(adapt(std::move(obj), L), L);
+			KRADIO.enqueue(launch_async, [f = std::move(f), obj = std::move(obj), L]() mutable {
+				f(adapt(std::move(obj), L), L);
+				return perfect;
+			});
 		else
-			f(tl::make_unexpected(error{ "Nil link" }), L);
+			KRADIO.enqueue(launch_async, [f = std::move(f), L]() mutable {
+				f(tl::make_unexpected(error{ "Nil link" }), L);
+				return perfect;
+			});
 	};
 }
 
@@ -187,7 +193,7 @@ void py_bind_link(py::module& m) {
 
 		.def("set_flags", &link::set_flags)
 
-		// [NOTE] return adapted objects (and pass 'em to callbacks)
+		// [NOTE] return adapted objects
 		.def("data_ex",
 			[](const link& L, bool wait_if_busy) {
 				return adapt(L.data_ex(wait_if_busy), L);
@@ -195,28 +201,32 @@ void py_bind_link(py::module& m) {
 			"wait_if_busy"_a = true, nogil
 		)
 		.def("data", [](const link& L){ return adapt(L.data(), L); }, nogil)
+
+		// pass adapted object to callback
 		.def("data", [](const link& L, adapted_data_cb f, bool high_priority) {
 				return L.data(adapt(std::move(f)), high_priority);
 			}, "f"_a, "high_priority"_a = false, nogil
 		)
-		.def("data", py::overload_cast<unsafe_t>(&link::data, py::const_), "Direct access to link's data cache")
 
 		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = true, nogil)
 		.def("data_node", py::overload_cast<>(&link::data_node, py::const_), nogil)
-		.def("data_node", py::overload_cast<link::process_dnode_cb, bool>(&link::data_node, py::const_),
+
+		.def("data_node",
+			[](const link& self, link::process_dnode_cb f, bool hp) {
+				self.data_node(pipe_through_queue(std::move(f), launch_async), hp);
+			},
 			"f"_a, "high_priority"_a = false, nogil
 		)
-		.def("data_node", py::overload_cast<unsafe_t>(&link::data_node, py::const_), "Direct access to link's data node cache")
+
+		// unsafe access to data & data node
+		.def("data", py::overload_cast<unsafe_t>(&link::data, py::const_),
+				"Direct access to link's data cache")
+		.def("data_node", py::overload_cast<unsafe_t>(&link::data_node, py::const_),
+			"Direct access to link's data node cache")
 
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
-		// [TODO] figure out how to enable overloads based on transaction arguments
-		//.def("apply",
-		//	[](const link& L, py_transaction tr) {
-		//		L.apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
-		//	},
-		//	"tr"_a, "Send transaction `tr` to link's queue, return immediately"
-		//)
+		// [TODO] pipe through queue after async transactions suport will be in place
 		.def("apply",
 			[](const link& L, py_link_transaction tr) {
 				L.apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
@@ -224,12 +234,6 @@ void py_bind_link(py::module& m) {
 			"tr"_a, "Send transaction `tr` to link's queue, return immediately"
 		)
 
-		//.def("data_apply",
-		//	[](const link& L, py_transaction tr) {
-		//		L.data_apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
-		//	},
-		//	"tr"_a, "Send transaction `tr` to object's queue, return immediately"
-		//)
 		.def("data_apply",
 			[](const link& L, py_obj_transaction tr) {
 				L.data_apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
