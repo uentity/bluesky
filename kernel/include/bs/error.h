@@ -9,16 +9,14 @@
 #pragma once
 
 #include "common.h"
+#include "errors.h"
 #include "meta.h"
 #include "meta/variant.h"
+
 #include <tl/expected.hpp>
 
 #include <optional>
-#include <system_error>
 #include <iosfwd>
-
-#define BS_REGISTER_ERROR_ENUM(E) \
-namespace std { template<> struct is_error_code_enum< E > : true_type {}; }
 
 #define EVAL if(auto er = ::blue_sky::error::eval(
 #define EVAL_SAFE if(auto er = ::blue_sky::error::eval_safe(
@@ -30,28 +28,8 @@ namespace std { template<> struct is_error_code_enum< E > : true_type {}; }
 #define SCOPE_EVAL_SAFE_QUIET if(auto er = ::blue_sky::error::eval_safe_quiet([&] {
 #define RETURN_SCOPE_ERR })) return er;
 
-/*-----------------------------------------------------------------------------
- *  define default error codes: OK and not OK
- *-----------------------------------------------------------------------------*/
 NAMESPACE_BEGIN(blue_sky)
 
-/// error code that is assigned by default if not specified explicitly
-enum class Error {
-	OK = 0,
-	Happened = -1,
-	Undefined = -2 // will transform to OK or Happened depending on quiet status
-};
-BS_API std::error_code make_error_code(Error);
-
-NAMESPACE_END(blue_sky)
-
-// register default error code
-BS_REGISTER_ERROR_ENUM(blue_sky::Error)
-
-NAMESPACE_BEGIN(blue_sky)
-/*-----------------------------------------------------------------------------
- *  error class decalration
- *-----------------------------------------------------------------------------*/
 class BS_API error {
 public:
 	/// allows to make quiet error from boolean state: true means success, false - fail
@@ -168,6 +146,8 @@ public:
 
 	/// pack error to serializable box
 	auto pack() const -> box;
+	/// pack as friend function (to be consistent with `tr_result`)
+	friend auto pack(const error& er) { return er.pack(); }
 	/// unpack error from box
 	static auto unpack(box b) noexcept -> error;
 

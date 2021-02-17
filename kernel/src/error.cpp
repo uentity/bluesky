@@ -104,11 +104,20 @@ std::error_code make_error_code(Error e) {
 	// implement error categiry for default error code
 	struct default_category : error::category<default_category> {
 		const char* name() const noexcept override {
-			return "blue_sky";
+			return "BS";
 		}
 
 		std::string message(int ec) const override {
-			return "";
+			switch(static_cast<Error>(ec)) {
+			case Error::TrEmptyTarget:
+				return "Transaction target is empty";
+
+			case Error::Happened:
+				return "Undefined error";
+
+			default:
+				return {};
+			};
 		}
 	};
 
