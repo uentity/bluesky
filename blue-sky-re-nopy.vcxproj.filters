@@ -626,7 +626,13 @@
     <ClCompile Include="kernel\src\tree\map_link_actor.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
+    <ClCompile Include="kernel\src\tree\map_base_impl.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
     <ClCompile Include="kernel\src\tree\map_link_impl.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
+    <ClCompile Include="kernel\src\tree\map_node_impl.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
     <ClCompile Include="kernel\src\tree\nil_link.cpp">

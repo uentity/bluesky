@@ -5,90 +5,16 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include "map_engine.h"
+#include "request_impl.h"
 
-#include <bs/meta.h>
 #include <bs/tree/tree.h>
 #include <bs/serialize/tree.h>
 #include <bs/serialize/cafbind.h>
-#include <bs/log.h>
-
-#include "request_impl.h"
 
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
-/*-----------------------------------------------------------------------------
- *  map_impl_base
- *-----------------------------------------------------------------------------*/
-map_impl_base::map_impl_base(bool is_link_mapper) :
-	in_(node::nil()), out_(node::nil()), tag_(), update_on_(Event::None), opts_(TreeOpts::Normal),
-	is_link_mapper(is_link_mapper)
-{}
-
-map_impl_base::map_impl_base(
-	bool is_link_mapper_, uuid tag, std::string name, link_or_node input, link_or_node output,
-	Event update_on, TreeOpts opts, Flags f
-) : super(std::move(name), f | Flags::LazyLoad), tag_(tag), update_on_(update_on), opts_(opts),
-	is_link_mapper(is_link_mapper_)
-{
-	static const auto extract_node = [](node& lhs, auto&& rhs) {
-		visit(meta::overloaded{
-			[&](link L) { lhs = L ? L.data_node() : node::nil(); },
-			[&](node N) { lhs = N; }
-		}, std::move(rhs));
-	};
-
-	extract_node(in_, std::move(input));
-	extract_node(out_, std::move(output));
-	// ensure we have valid output node
-	if(!out_ || in_ == out_) out_ = node();
-
-	// set initial status values
-	rs_reset(Req::Data, ReqReset::Always, ReqStatus::Error);
-	rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::Void);
-}
-
-auto map_impl_base::spawn_actor(sp_limpl Limpl) const -> caf::actor {
-	return spawn_lactor<map_link_actor>(std::move(Limpl));
-}
-
-auto map_impl_base::propagate_handle() -> node_or_err {
-	// if output node doesn't have handle (for ex new node created in ctor) - set it to self
-	if(!out_.handle())
-		super::propagate_handle(out_);
-	return out_;
-}
-
-// Data request always return error
-auto map_impl_base::data() -> obj_or_err { return unexpected_err_quiet(Error::EmptyData); }
-auto map_impl_base::data(unsafe_t) const -> sp_obj { return nullptr; }
-
-auto map_impl_base::data_node(unsafe_t) const -> node { return out_; }
-
-/*-----------------------------------------------------------------------------
- *  map_link_impl
- *-----------------------------------------------------------------------------*/
-// default ctor installs noop mapping fn
-map_link_impl::map_link_impl() :
-	map_impl_base(true), mf_(noop_r<link>())
-{}
-
-auto map_link_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl> {
-	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
-	return std::make_shared<map_link_impl>(mf_, tag_, name_, in_, node::nil(), update_on_, opts_, flags_);
-}
-
-auto map_link_impl::erase(map_link_actor* self, lid_type src_lid) -> void {
-	if(auto pdest = io_map_.find(src_lid); pdest != io_map_.end()) {
-		self->send(out_.actor(), a_node_erase(), pdest->second);
-		io_map_.erase(pdest);
-	}
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//  update
-//
 NAMESPACE_BEGIN()
 
 // modify worker actor behavior s.t. it invokes link mapper on `a_ack` message
@@ -171,6 +97,9 @@ auto spawn_lmapper_actor(map_link_actor* papa, Args&&... args) {
 
 NAMESPACE_END()
 
+///////////////////////////////////////////////////////////////////////////////
+//  update
+//
 auto map_link_impl::update(map_link_actor* papa, link src_link) -> void {
 	adbg(papa) << "lmapper::update " << to_string(src_link.id()) << " " << to_string(id_) << std::endl;
 	// sanity - don't map self
@@ -348,82 +277,25 @@ auto map_link_impl::refresh(map_link_actor* papa) -> caf::result<node_or_errbox>
 	);
 }
 
-ENGINE_TYPE_DEF(map_link_impl, "map_link")
-
-/*-----------------------------------------------------------------------------
- *  map_node_impl
- *-----------------------------------------------------------------------------*/
 // default ctor installs noop mapping fn
-map_node_impl::map_node_impl() :
-	map_impl_base(false), mf_(noop_r<caf::result<void>>())
+map_link_impl::map_link_impl() :
+	map_impl_base(true), mf_(noop_r<link>())
 {}
 
-NAMESPACE_BEGIN()
-
-template<bool DiscardResult = false>
-auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa)
--> std::conditional_t<DiscardResult, void, caf::result<node_or_errbox>> {
-	// safely invoke mapper and return output node on success
-	auto invoke_mapper =
-		[mama = papa->spimpl<map_node_impl>()](caf::event_based_actor* worker)
-		-> caf::result<node_or_errbox> {
-			auto invoke_res = worker->make_response_promise<node_or_errbox>();
-
-			using res_t = caf::result<void>;
-			worker->become(
-				caf::message_handler{[=](a_mlnk_fresh) mutable -> res_t {
-					auto res = std::optional<res_t>{};
-					if(auto er = error::eval_safe([&] {
-						res = mama->mf_(mama->in_, mama->out_, worker);
-					})) {
-						invoke_res.deliver(node_or_errbox{tl::unexpect, er.pack()});
-					}
-					return res ? std::move(*res) : caf::error();
-				}}.or_else(worker->current_behavior())
-			);
-
-			worker->request(caf::actor_cast<caf::actor>(worker), caf::infinite, a_mlnk_fresh{})
-			.then([=]() mutable {
-				invoke_res.deliver(node_or_errbox{mama->out_});
-			});
-			return invoke_res;
-		};
-
-	const auto opts = enumval(mama->opts_ & TreeOpts::DetachedWorkers) ?
-		ReqOpts::Detached : ReqOpts::WaitIfBusy;
-
-	if constexpr(DiscardResult) {
-		// trigger async request by sending `a_ack` message to worker actor
-		request_impl<node>(*papa, Req::DataNode, opts, std::move(invoke_mapper))
-		.map([&](auto&& rworker) {
-			papa->send(rworker, a_ack());
-		});
-	}
-	else
-		return request_data_impl<node>(*papa, Req::DataNode, opts, std::move(invoke_mapper));
-}
-
-NAMESPACE_END()
-
-auto map_node_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl> {
+auto map_link_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl> {
 	// [NOTE] output node is always brand new, otherwise a lot of questions & issues rises
-	return std::make_shared<map_node_impl>(mf_, tag_, name_, in_, node::nil(), update_on_, opts_, flags_);
+	return std::make_shared<map_link_impl>(mf_, tag_, name_, in_, node::nil(), update_on_, opts_, flags_);
 }
 
-auto map_node_impl::erase(map_link_actor* papa, lid_type) -> void {
-	spawn_mapper_job<true>(this, papa);
-}
-
-auto map_node_impl::update(map_link_actor* papa, link) -> void {
-	spawn_mapper_job<true>(this, papa);
-}
-
-auto map_node_impl::refresh(map_link_actor* papa) -> caf::result<node_or_errbox> {
-	return spawn_mapper_job(this, papa);
+auto map_link_impl::erase(map_link_actor* self, lid_type src_lid) -> void {
+	if(auto pdest = io_map_.find(src_lid); pdest != io_map_.end()) {
+		self->send(out_.actor(), a_node_erase(), pdest->second);
+		io_map_.erase(pdest);
+	}
 }
 
 // [NOTE] both link -> link & node -> node impls have same type ID,
 // because it must match with `map_link::type_id_()`
-ENGINE_TYPE_DEF(map_node_impl, "map_link")
+ENGINE_TYPE_DEF(map_link_impl, "map_link")
 
 NAMESPACE_END(blue_sky::tree)

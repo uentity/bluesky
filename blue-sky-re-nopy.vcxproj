@@ -206,9 +206,11 @@
     <ClCompile Include="kernel\src\tree\link_ack_behavior.cpp" />
     <ClCompile Include="kernel\src\tree\link_events.cpp" />
     <ClCompile Include="kernel\src\tree\link_impl.cpp" />
+    <ClCompile Include="kernel\src\tree\map_base_impl.cpp" />
     <ClCompile Include="kernel\src\tree\map_link.cpp" />
     <ClCompile Include="kernel\src\tree\map_link_actor.cpp" />
     <ClCompile Include="kernel\src\tree\map_link_impl.cpp" />
+    <ClCompile Include="kernel\src\tree\map_node_impl.cpp" />
     <ClCompile Include="kernel\src\tree\nil_link.cpp" />
     <ClCompile Include="kernel\src\tree\nil_node.cpp" />
     <ClCompile Include="kernel\src\tree\node.cpp" />
