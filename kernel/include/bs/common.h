@@ -33,6 +33,8 @@
 
 NAMESPACE_BEGIN(blue_sky)
 
+using meta::identity;
+
 /// for kernel subsystems singletons
 template< class T >
 class singleton {
@@ -40,6 +42,20 @@ public:
 	static T& Instance();
 };
 
-using meta::identity;
+/// can be passed as callback that does nothing
+inline constexpr auto noop = [](auto&&...) {};
+using noop_t = decltype(noop);
+
+template<typename R>
+constexpr auto noop_r(R res = {}) {
+	return [res = std::move(res)](auto&&...) mutable -> R { return std::move(res); };
+}
+
+template<typename R> using noop_r_t = decltype( noop_r(std::declval<R>()) );
+
+template<bool Res = true>
+inline constexpr auto bool_noop = [](auto&&...) { return Res; };
+inline constexpr auto noop_true = bool_noop<true>;
+inline constexpr auto noop_false = bool_noop<false>;
 
 NAMESPACE_END(blue_sky)

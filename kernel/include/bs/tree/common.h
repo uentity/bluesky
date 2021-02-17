@@ -71,20 +71,6 @@ enum class TreeOpts : std::uint32_t {
 /// link's unique ID type
 using lid_type = uuid;
 
-/// can be passed as callback that does nothing
-inline constexpr auto noop = [](auto&&...) {};
-using noop_t = decltype(noop);
-
-template<bool Res = true>
-inline constexpr auto bool_noop = [](auto&&...) { return Res; };
-inline constexpr auto noop_true = bool_noop<true>;
-inline constexpr auto noop_false = bool_noop<false>;
-
-template<typename R>
-constexpr auto noop_r(R res = {}) {
-	return [res = std::move(res)](auto&&...) mutable -> R { return std::move(res); };
-}
-
 /// forward declare major types
 class link;
 class link_impl;

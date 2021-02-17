@@ -60,7 +60,7 @@ auto radio_station(radio_station_handle::pointer self)
 // actor that implements kernel's queue
 auto kqueue_processor(kqueue_actor_type::pointer self) -> kqueue_actor_type::behavior_type {
 	// never die on error
-	self->set_error_handler(tree::noop);
+	self->set_error_handler(noop);
 	// completely ignore unexpected messages without error backpropagation
 	self->set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
 		return caf::none;
