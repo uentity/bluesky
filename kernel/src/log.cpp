@@ -12,16 +12,25 @@
 
 NAMESPACE_BEGIN(blue_sky::log)
 using namespace spdlog;
+using klogging = kernel::detail::logging_subsyst;
 
 /*-----------------------------------------------------------------
  * bs_log implementation
  *----------------------------------------------------------------*/
 bs_log::bs_log(const char* name) : log_(get_logger(name)) {
-	if(!log_) log_ = kernel::detail::logging_subsyst::null_logger();
+	if(!log_) log_ = klogging::null_logger();
 }
 
 bs_log::bs_log(std::shared_ptr<spdlog::logger> L) : log_(std::move(L)) {
-	if(!log_) log_ = kernel::detail::logging_subsyst::null_logger();
+	if(!log_) log_ = klogging::null_logger();
+}
+
+auto add_custom_sink(spdlog::sink_ptr sink, const std::string& logger_name) -> void {
+	klogging::add_custom_sink(std::move(sink), logger_name);
+}
+
+auto remove_custom_sink(spdlog::sink_ptr sink, const std::string& logger_name) -> void {
+	klogging::remove_custom_sink(std::move(sink), logger_name);
 }
 
 /*-----------------------------------------------------------------

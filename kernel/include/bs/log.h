@@ -13,7 +13,8 @@
 
 #include <spdlog/logger.h>
 
-namespace blue_sky { namespace log {
+NAMESPACE_BEGIN(blue_sky)
+NAMESPACE_BEGIN(log)
 
 /// Create spdlog::logger backend with given name
 BS_API auto get_logger(const char* name) -> std::shared_ptr<spdlog::logger>;
@@ -360,10 +361,15 @@ constexpr auto O(Args&&... args) {
 /// set custom tag that will appear inside every printed message to any log
 BS_API auto set_custom_tag(std::string tag) -> void;
 
-} // eof blue_sky::log namespace
+/// add/remove custom sink that will receive log messages
+/// if `logger_name` isn't specified, add to all existing loggers
+BS_API auto add_custom_sink(spdlog::sink_ptr sink, const std::string& logger_name = {}) -> void;
+BS_API auto remove_custom_sink(spdlog::sink_ptr sink, const std::string& logger_name = {}) -> void;
+
+NAMESPACE_END(log)
 
 /*-----------------------------------------------------------------
- * Functions for quick access of main out & error logs
+ * Functions for quick access main out & error logs
  *----------------------------------------------------------------*/
 BS_API log::bs_log& bsout();
 BS_API log::bs_log& bserr();
@@ -374,12 +380,11 @@ BS_API log::bs_log& bserr();
 // import log::end as bs_end
 #define bs_end ::blue_sky::log::end
 
-} /* namespace blue_sky */
+NAMESPACE_END(blue_sky)
 
-namespace std {
+NAMESPACE_BEGIN(std)
 
 // provide convenience overlaods for aout; implemented in logging.cpp
 BS_API blue_sky::log::bs_log& endl(blue_sky::log::bs_log& o);
 
-} // namespace std
-
+NAMESPACE_END(std)
