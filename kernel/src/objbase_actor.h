@@ -26,6 +26,8 @@ public:
 	>;
 
 	using actor_type = objbase::actor_type::extend<
+		// runs async transaction
+		caf::replies_to<a_ack, a_apply, obj_transaction>::with<tr_result::box>,
 		// invoke object save
 		caf::replies_to<a_save, sp_obj, std::string /* fmt */, std::string /* fname */>::with<error::box>,
 		// invoke object load
@@ -39,18 +41,22 @@ public:
 
 	using typed_behavior = actor_type::behavior_type;
 
-	caf::group home_;
-
-	static auto actor(const objbase& obj) {
+	static auto actor(objbase& obj) {
 		return caf::actor_cast<actor_type>(obj.actor());
 	}
 
-	objbase_actor(caf::actor_config& cfg, caf::group home);
+	objbase_actor(caf::actor_config& cfg, caf::group home, sp_obj mama);
 
 	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;
 
 	auto on_exit() -> void override;
+
+	///////////////////////////////////////////////////////////////////////////////
+	//  member variables
+	//
+	caf::group home_;
+	std::weak_ptr<objbase> mama_;
 };
 
 NAMESPACE_END(blue_sky)

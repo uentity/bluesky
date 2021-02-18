@@ -142,7 +142,7 @@ auto map_link_impl::update(map_link_actor* papa, link src_link) -> void {
 		papa, src_link,
 		[papa_actor = papa->actor(), s2 = std::move(s2_process_res)]
 		(lmapper_res_t res, caf::event_based_actor* worker) mutable {
-			auto tr = simple_transaction{[s2 = std::move(s2), res = std::move(res)]() mutable {
+			auto tr = link_transaction{[s2 = std::move(s2), res = std::move(res)]() mutable {
 				s2(res);
 				return perfect;
 			}};
@@ -243,7 +243,7 @@ auto map_link_impl::refresh(map_link_actor* papa, caf::event_based_actor* rworke
 	// that, in turn, runs internal transaction in output node
 	rworker->request(
 		papa->actor(), caf::infinite, a_apply(),
-		simple_transaction{[=, io_map = std::move(io_map), out_leafs = std::move(out_leafs)]() mutable {
+		link_transaction{[=, io_map = std::move(io_map), out_leafs = std::move(out_leafs)]() mutable {
 			// update mappings
 			io_map_ = std::move(io_map);
 			// update output node

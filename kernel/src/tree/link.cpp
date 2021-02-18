@@ -221,16 +221,8 @@ auto link::is_node() const -> bool {
 ///////////////////////////////////////////////////////////////////////////////
 //  apply
 //
-auto link::apply(simple_transaction tr) const -> error {
-	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
-}
-
 auto link::apply(link_transaction tr) const -> error {
 	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
-}
-
-auto link::data_apply(transaction tr) const -> tr_result {
-	return pimpl()->actorf<tr_result>(*this, a_apply(), a_data(), std::move(tr));
 }
 
 auto link::data_apply(obj_transaction tr) const -> tr_result {
@@ -262,16 +254,8 @@ auto link::data_node(process_dnode_cb f, bool high_priority) const -> void {
 	);
 }
 
-auto link::apply(launch_async_t, simple_transaction tr) const -> void {
-	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
-}
-
 auto link::apply(launch_async_t, link_transaction tr) const -> void {
 	caf::anon_send(pimpl()->actor(*this), a_apply(), std::move(tr));
-}
-
-auto link::data_apply(launch_async_t, transaction tr) const -> void {
-	caf::anon_send(pimpl()->actor(*this), a_apply(), a_data(), std::move(tr));
 }
 
 auto link::data_apply(launch_async_t, obj_transaction tr) const -> void {
@@ -281,7 +265,7 @@ auto link::data_apply(launch_async_t, obj_transaction tr) const -> void {
 auto link::data_touch(tr_result tres) const -> void {
 	caf::anon_send(
 		pimpl()->actor(*this), a_apply(), a_data(),
-		transaction{[tres = std::move(tres)]() mutable { return std::move(tres); }}
+		obj_transaction{[tres = std::move(tres)]() mutable { return std::move(tres); }}
 	);
 }
 

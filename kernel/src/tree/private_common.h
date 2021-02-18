@@ -34,10 +34,6 @@ using engine_actor_type = caf::typed_actor<
 	// clone engine impl
 	typename caf::replies_to<a_clone, a_impl, bool /* deep */>
 	::template with<std::shared_ptr<typename Engine::engine_impl>>,
-	// run transaction in engine's queue
-	caf::replies_to<a_apply, simple_transaction>::with<error::box>,
-	typename caf::replies_to<a_apply, transaction_t<error, typename Engine::bare_type>>
-	::template with<error::box>,
 	// add listener actor to home group
 	caf::replies_to<a_subscribe, caf::actor /* ev listener */>::with<std::uint64_t>
 >;

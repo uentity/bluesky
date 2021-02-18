@@ -68,8 +68,9 @@ public:
 		// clone link
 		caf::replies_to<a_clone, bool /* deep */>::with<link>,
 
+		// run transaction in message queue of this link
+		caf::replies_to<a_apply, link_transaction>::with<error::box>,
 		// run transaction in message queue of data object
-		caf::replies_to<a_apply, a_data, transaction>::with<tr_result::box>,
 		caf::replies_to<a_apply, a_data, obj_transaction>::with<tr_result::box>
 	>;
 
@@ -154,7 +155,6 @@ public:
 	auto obj_type_id() const -> std::string;
 
 	/// applies functor to link atomically (invoke in link's queue)
-	auto apply(simple_transaction tr) const -> error;
 	auto apply(link_transaction tr) const -> error;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -193,7 +193,6 @@ public:
 	auto data_node_hid() const -> result_or_err<std::string>;
 
 	/// make pointee data modification atomically
-	auto data_apply(transaction tr) const -> tr_result;
 	auto data_apply(obj_transaction tr) const -> tr_result;
 
 	/// sends empty transaction object to trigger `data modified` signal
@@ -209,10 +208,7 @@ public:
 	using process_dnode_cb = std::function<void(node_or_err, link)>;
 	auto data_node(process_dnode_cb f, bool high_priority = false) const -> void;
 
-	auto apply(launch_async_t, simple_transaction tr) const -> void;
 	auto apply(launch_async_t, link_transaction tr) const -> void;
-
-	auto data_apply(launch_async_t, transaction tr) const -> void;
 	auto data_apply(launch_async_t, obj_transaction tr) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////

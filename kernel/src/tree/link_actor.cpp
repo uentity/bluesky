@@ -34,27 +34,6 @@ using namespace std::chrono_literals;
 	return out;
 }
 
-// helper to apply data transactions
-template<typename... Ts>
-static auto do_data_apply(link_actor* LA, transaction_t<tr_result, Ts...> tr) {
-	auto res = LA->make_response_promise<tr_result::box>();
-	LA->request(LA->actor(), caf::infinite, a_data(), true)
-	.then([=, tr = std::move(tr)](obj_or_errbox maybe_obj) mutable {
-		if(maybe_obj) {
-			// always send closed transaction
-			res.delegate((*maybe_obj)->actor(), a_apply(), [&] {
-				if constexpr(sizeof...(Ts) > 0)
-					return (*maybe_obj)->make_transaction(std::move(tr));
-				else
-					return std::move(tr);
-			}());
-		}
-		else
-			res.deliver(pack(tr_result{std::move(maybe_obj).error()}));
-	});
-	return res;
-}
-
 /*-----------------------------------------------------------------------------
  *  link
  *-----------------------------------------------------------------------------*/
@@ -96,21 +75,22 @@ return {
 	},
 
 	// apply link transaction
-	[=](a_apply, const simple_transaction& tr) -> error::box {
-		adbg(this) << "<- a_apply simple_transaction" << std::endl;
-		return tr_eval(tr);
-	},
-
-	[=](a_apply, const link_transaction& tr) -> error::box {
-		return tr_eval(tr, bare_link(spimpl()));
+	[=](a_apply, const link_transaction& tr) -> caf::result<error::box> {
+		adbg(this) << "<- a_apply transaction" << std::endl;
+		return tr_eval(this, tr, [&] { return impl.super_engine().bare(); });
 	},
 
 	// apply data transactions
-	[=](a_apply, a_data, transaction tr) -> caf::result<tr_result::box> {
-		return do_data_apply(this, std::move(tr));
-	},
 	[=](a_apply, a_data, obj_transaction tr) -> caf::result<tr_result::box> {
-		return do_data_apply(this, std::move(tr));
+		auto res = make_response_promise<tr_result::box>();
+		request(actor(), caf::infinite, a_data(), true)
+		.then([=, tr = std::move(tr)](obj_or_errbox maybe_obj) mutable {
+			if(maybe_obj)
+				res.delegate((*maybe_obj)->actor(), a_apply(), std::move(tr));
+			else
+				res.deliver(pack(tr_result{ blue_sky::Error::TrEmptyTarget }));
+		});
+		return res;
 	},
 
 	// get id

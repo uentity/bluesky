@@ -17,26 +17,18 @@ NAMESPACE_BEGIN(blue_sky)
 /*-----------------------------------------------------------------------------
  *  objbase
  *-----------------------------------------------------------------------------*/
-objbase::objbase(std::string custom_oid, bool start_actor) {
+objbase::objbase(std::string custom_oid) {
 	if(custom_oid.empty()) {
 		id_ = to_string(gen_uuid());
-		if(start_actor) reset_home(id_, true);
+		reset_home(id_, true);
 	}
 	else
 		id_ = std::move(custom_oid);
-
-	if(start_actor) start_engine();
 }
-
-objbase::objbase(std::string custom_oid) :
-	objbase(std::move(custom_oid), true)
-{}
 
 objbase::objbase(const objbase& obj) :
 	enable_shared_from_this(obj), id_(obj.id_)
-{
-	start_engine();
-}
+{}
 
 auto objbase::swap(objbase& rhs) -> void {
 	using std::swap;
@@ -80,10 +72,6 @@ std::string objbase::type_id() const {
 
 std::string objbase::id() const {
 	return id_;
-}
-
-auto objbase::raw_actor() const -> const caf::actor& {
-	return actor_;
 }
 
 auto objbase::info() const -> result_or_err<tree::inode> {

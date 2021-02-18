@@ -19,11 +19,11 @@
 #include <caf/typed_actor.hpp>
 #include <caf/group.hpp>
 
-// shortcut for quick declaration of shared ptr to BS object
+#include <mutex>
+
 #define BS_SP(T) std::shared_ptr<T>
 
 NAMESPACE_BEGIN(blue_sky)
-
 /*-----------------------------------------------------------------------------
  *  Base class of all BS objects
  *-----------------------------------------------------------------------------*/
@@ -34,7 +34,7 @@ public:
 		// get home group
 		caf::replies_to<a_home>::with<caf::group>,
 		// runs transaction in message queue of this object
-		caf::replies_to<a_apply, transaction>::with<tr_result::box>
+		caf::replies_to<a_apply, obj_transaction>::with<tr_result::box>
 	>;
 
 	/// default ctor that accepts custom ID string
@@ -72,37 +72,13 @@ public:
 	}
 
 	/// return objects's typed actor handle
-	auto actor() const {
+	auto actor() {
 		return caf::actor_cast<actor_type>(raw_actor());
 	}
 
 	template<typename T>
 	static auto actor(const T& obj) {
 		return caf::actor_cast<typename T::actor_type>(obj.raw_actor());
-	}
-
-	/// get object's home group
-	auto home() const -> const caf::group&;
-
-	/// get objects's home group ID (empty for invalid / not started home)
-	auto home_id() const -> std::string_view;
-
-	/// runs modificator in message queue of this object
-	auto apply(transaction tr) const -> tr_result;
-	auto apply(obj_transaction tr) const -> tr_result;
-
-	auto apply(launch_async_t, transaction tr) const -> void;
-	auto apply(launch_async_t, obj_transaction tr) const -> void;
-
-	/// sends empty transaction to trigger `data modified` signal
-	auto touch(tr_result tres = {}) const -> void;
-
-	template<typename F>
-	auto make_transaction(F f) const -> transaction {
-		return [f = std::move(f), self = const_cast<objbase*>(this)->shared_from_this()]() mutable
-		-> tr_result {
-			return f(std::move(self));
-		};
 	}
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -117,6 +93,19 @@ public:
 	/// access inode (if exists)
 	virtual auto info() const -> result_or_err<tree::inode> final;
 
+	/// get object's home group
+	virtual auto home() const -> const caf::group& final;
+
+	/// get objects's home group ID (empty for invalid / not started home)
+	virtual auto home_id() const -> std::string_view final;
+
+	/// runs modificator in message queue of this object
+	virtual auto apply(obj_transaction tr) -> tr_result final;
+	virtual auto apply(launch_async_t, obj_transaction tr) -> void final;
+
+	/// sends empty transaction to trigger `data modified` signal
+	virtual auto touch(tr_result tres = {}) -> void final;
+
 	///////////////////////////////////////////////////////////////////////////////
 	//  Customization points for derived types
 	//
@@ -129,14 +118,8 @@ public:
 protected:
 	std::string id_;
 
-	/// allow delay engine start
-	objbase(std::string custom_oid, bool start_actor);
-
-	/// start internal actor (if not started already)
-	auto start_engine() -> bool;
-
 	/// return object's raw (dynamic-typed) actor handle
-	auto raw_actor() const -> const caf::actor&;
+	auto raw_actor() -> const caf::actor&;
 
 private:
 	friend class ::cereal::access;
@@ -149,6 +132,7 @@ private:
 	caf::actor actor_;
 	/// internal home group
 	caf::group home_;
+	std::once_flag einit_flag_;
 
 	auto reset_home(std::string new_hid, bool silent) -> void;
 };

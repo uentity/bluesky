@@ -66,8 +66,8 @@ auto node_actor::rename(std::vector<iterator<Key::Name>> namesakes, const std::s
 		work.pop_back();
 		// [NOTE] use `await` to ensure node is not modified while link is renaming
 		request(
-			link_impl::actor(*pos), kernel::radio::timeout(), a_apply(),
-			simple_transaction{[=]() -> error {
+			pos->actor(), kernel::radio::timeout(), a_apply(),
+			link_transaction{[=]() -> error {
 				adbg(this) << "-> a_lnk_rename [" << to_string(pos->id()) <<
 					"][" << pos->name(unsafe) << "] -> [" << new_name << "]" << std::endl;
 
@@ -103,8 +103,8 @@ auto do_insert(
 	// insert atomically for both node & link
 	auto res = self->make_response_promise<node::insert_status>();
 	self->request(
-		link_impl::actor(L), kernel::radio::timeout(), a_apply(),
-		simple_transaction([=, pp = std::move(pp)]() mutable -> error {
+		L.actor(), kernel::radio::timeout(), a_apply(),
+		link_transaction([=, pp = std::move(pp)]() mutable -> error {
 			adbg(self) << "-> a_node_insert [L][" << to_string(L.id()) <<
 				"][" << L.name(unsafe) << "]" << std::endl;
 			// make insertion
@@ -253,12 +253,9 @@ return {
 		return res;
 	},
 
-	[=](a_apply, simple_transaction tr) -> error::box {
-		return tr_eval(std::move(tr));
-	},
-
-	[=](a_apply, node_transaction tr) -> error::box {
-		return tr_eval(std::move(tr), bare_node(spimpl()));
+	[=](a_apply, node_transaction tr) -> caf::result<error::box> {
+		adbg(this) << "<- a_apply transaction" << std::endl;
+		return tr_eval(this, tr, [&] { return impl.super_engine().bare(); });
 	},
 
 	// subscribe events listener

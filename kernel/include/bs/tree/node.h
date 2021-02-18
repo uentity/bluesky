@@ -96,7 +96,10 @@ public:
 
 		// apply custom order
 		caf::replies_to<a_node_rearrange, std::vector<std::size_t>>::with<error::box>,
-		caf::replies_to<a_node_rearrange, lids_v>::with<error::box>
+		caf::replies_to<a_node_rearrange, lids_v>::with<error::box>,
+
+		// run transaction in message queue of this node
+		caf::replies_to<a_apply, node_transaction>::with<error::box>
 	>;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -232,10 +235,7 @@ public:
 	auto rearrange(std::vector<std::size_t> new_order) const -> error;
 
 	/// applies functor to node atomically (invoke in node's queue)
-	auto apply(simple_transaction tr) const -> error;
 	auto apply(node_transaction tr) const -> error;
-
-	auto apply(launch_async_t, simple_transaction tr) const -> void;
 	auto apply(launch_async_t, node_transaction tr) const -> void;
 
 	///////////////////////////////////////////////////////////////////////////////

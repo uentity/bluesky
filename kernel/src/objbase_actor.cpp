@@ -7,20 +7,19 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/objbase.h>
-#include <bs/defaults.h>
+#include "objbase_actor.h"
+
 #include <bs/actor_common.h>
+#include <bs/defaults.h>
+#include <bs/objbase.h>
 #include <bs/uuid.h>
-#include <bs/tree/common.h>
+
 #include <bs/kernel/config.h>
 #include <bs/kernel/radio.h>
-#include <bs/detail/scope_guard.h>
 
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/object_formatter.h>
 #include <bs/serialize/propdict.h>
-
-#include "objbase_actor.h"
 
 #include <caf/actor_ostream.hpp>
 
@@ -31,8 +30,8 @@ using namespace std::chrono_literals;
 /*-----------------------------------------------------------------------------
  *  objbase_actor
  *-----------------------------------------------------------------------------*/
-objbase_actor::objbase_actor(caf::actor_config& cfg, caf::group home) :
-	super(cfg), home_(std::move(home))
+objbase_actor::objbase_actor(caf::actor_config& cfg, caf::group home, sp_obj mama) :
+	super(cfg), home_(std::move(home)), mama_(mama)
 {
 	// exit after kernel
 	KRADIO.register_citizen(this);
@@ -54,10 +53,37 @@ return typed_behavior {
 	},
 
 	// execute transaction
-	[=](a_apply, const transaction& m) -> tr_result::box {
-		auto tres = pack(tr_eval(m));
-		send(home_, a_ack(), a_data(), tres);
-		return tres;
+	[=](a_apply, const obj_transaction& otr) -> caf::result<tr_result::box> {
+		// if transaction is async, go through additional request,
+		// because we have to deliver notification
+		if(carry_async_transaction(otr)) {
+			auto tres = make_response_promise<tr_result::box>();
+			request(caf::actor_cast<actor_type>(this), caf::infinite, a_ack{}, a_apply{}, otr)
+			.then(
+				[=](tr_result::box res) mutable {
+					send(home_, a_ack(), a_data(), res);
+					tres.deliver(std::move(res));
+				},
+				[=](const caf::error& er) mutable {
+					auto res = pack(tr_result(forward_caf_error(er)));
+					send(home_, a_ack(), a_data(), res);
+					tres.deliver(std::move(res));
+				}
+			);
+			return tres;
+		}
+		// ohtherwise eval directly
+		else {
+			auto tres = tr_eval(this, otr, [&] { return mama_.lock(); });
+			tres.value.extract([&](const tr_result::box& rb) {
+				send(home_, a_ack(), a_data(), rb);
+			});
+			return tres;
+		}
+	},
+	// extra handler to exec async transaction
+	[=](a_ack, a_apply, const obj_transaction& tr) -> caf::result<tr_result::box> {
+		return tr_eval(this, tr, [&] { return mama_.lock(); });
 	},
 
 	// skip acks - sent by myself
@@ -156,24 +182,10 @@ auto objbase_actor::on_exit() -> void {
 /*-----------------------------------------------------------------------------
  *  objbase
  *-----------------------------------------------------------------------------*/
-auto objbase::start_engine() -> bool {
-	if(!actor_) {
-		if(!home_) reset_home({}, true);
-		actor_ = system().spawn_in_group<objbase_actor>(home_, home_);
-		return true;
-	}
-	return false;
-}
-
 objbase::~objbase() {
 	// explicitly stop engine
-	caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
-}
-
-auto objbase::home() const -> const caf::group& { return home_; }
-
-auto objbase::home_id() const -> std::string_view {
-	return home_ ? home_.get()->identifier() : std::string_view{};
+	if(actor_)
+		caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
 }
 
 auto objbase::reset_home(std::string new_hid, bool silent) -> void {
@@ -184,28 +196,33 @@ auto objbase::reset_home(std::string new_hid, bool silent) -> void {
 	home_ = system().groups().get_local(new_hid);
 }
 
-auto objbase::apply(transaction m) const -> tr_result {
+auto objbase::raw_actor() -> const caf::actor& {
+	// engine must be initialized only once
+	std::call_once(einit_flag_, [&] {
+		if(!home_) reset_home({}, true);
+		actor_ = system().spawn_in_group<objbase_actor>(home_, home_, shared_from_this());
+	});
+	return actor_;
+}
+
+auto objbase::home() const -> const caf::group& { return home_; }
+
+auto objbase::home_id() const -> std::string_view {
+	return home_ ? home_.get()->identifier() : std::string_view{};
+}
+
+auto objbase::apply(obj_transaction tr) -> tr_result {
 	return actorf<tr_result>(
-		actor(), kernel::radio::timeout(true), a_apply(), std::move(m)
+		actor(), kernel::radio::timeout(true), a_apply(), std::move(tr)
 	);
 }
 
-auto objbase::apply(obj_transaction tr) const -> tr_result {
-	return actorf<tr_result>(
-		actor(), kernel::radio::timeout(true), a_apply(), make_transaction(std::move(tr))
-	);
+auto objbase::apply(launch_async_t, obj_transaction tr) -> void {
+	caf::anon_send(actor(), a_apply(), std::move(tr));
 }
 
-auto objbase::apply(launch_async_t, transaction m) const -> void {
-	caf::anon_send(actor(), a_apply(), std::move(m));
-}
-
-auto objbase::apply(launch_async_t, obj_transaction tr) const -> void {
-	caf::anon_send(actor(), a_apply(), make_transaction(std::move(tr)));
-}
-
-auto objbase::touch(tr_result tres) const -> void {
-	caf::anon_send(actor(), a_apply(), transaction{
+auto objbase::touch(tr_result tres) -> void {
+	caf::anon_send(actor(), a_apply(), obj_transaction{
 		[tres = std::move(tres)]() mutable { return std::move(tres); }
 	});
 }
