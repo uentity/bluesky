@@ -7,16 +7,13 @@
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
-#include <bs/detail/enumops.h>
 #include <bs/python/tree.h>
 #include <bs/python/tr_result.h>
-#include <bs/python/result_converter.h>
-#include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
-
 #include <bs/tree/map_link.h>
-#include "../kernel/python_subsyst_impl.h"
+
 #include "kernel_queue.h"
+#include "../kernel/python_subsyst_impl.h"
 
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
@@ -49,23 +46,23 @@ using adapted_data_cb = std::function<void(result_or_err<py::object>, link)>;
 
 auto adapt(adapted_data_cb&& f) {
 	return [f = std::move(f)](result_or_err<sp_obj> obj, link L) {
-		if(L)
-			KRADIO.enqueue(launch_async, [f = std::move(f), obj = std::move(obj), L]() mutable {
-				f(adapt(std::move(obj), L), L);
-				return perfect;
-			});
-		else
-			KRADIO.enqueue(launch_async, [f = std::move(f), L]() mutable {
-				f(tl::make_unexpected(error{ "Nil link" }), L);
-				return perfect;
-			});
+		KRADIO.enqueue(launch_async, [&] {
+			return L ?
+				transaction{[f = std::move(f), obj = std::move(obj), L]() mutable {
+					f(adapt(std::move(obj), L), L);
+					return perfect;
+				}} :
+				transaction{[f = std::move(f), L]() mutable {
+					f(tl::make_unexpected(error{ "Nil link" }), L);
+					return perfect;
+				}};
+		}());
 	};
 }
 
 template<typename F, typename R, typename... Args>
 auto mapper2queue(F mf, identity<R (Args...)> _) {
 	return [mf = std::move(mf)](Args&&... args, caf::event_based_actor* worker) -> caf::result<R> {
-		// make response promise
 		auto rp = worker->make_response_promise();
 		KRADIO.enqueue(
 			launch_async,
@@ -171,7 +168,6 @@ void py_bind_link(py::module& m) {
 	///////////////////////////////////////////////////////////////////////////////
 	//  Base link
 	//
-	using py_transaction = std::function< py::object() >;
 	using py_obj_transaction = std::function< py::object(sp_obj) >;
 	using py_link_transaction = std::function< py::object(bare_link) >;
 
@@ -226,17 +222,16 @@ void py_bind_link(py::module& m) {
 
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
-		// [TODO] pipe through queue after async transactions suport will be in place
 		.def("apply",
 			[](const link& L, py_link_transaction tr) {
-				L.apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
+				L.apply(launch_async, pytr_through_queue(std::move(tr)));
 			},
 			"tr"_a, "Send transaction `tr` to link's queue, return immediately"
 		)
 
 		.def("data_apply",
 			[](const link& L, py_obj_transaction tr) {
-				L.data_apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
+				L.data_apply(launch_async, pytr_through_queue(std::move(tr)));
 			},
 			"tr"_a, "Send transaction `tr` to object's queue, return immediately"
 		)

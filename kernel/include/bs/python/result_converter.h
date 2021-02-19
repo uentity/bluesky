@@ -29,7 +29,7 @@ auto result_converter_impl(F&& f, TR if_none_v, identity<R (Args...)> _ = {}) {
 template<typename TR, typename F>
 auto make_result_converter(F&& f, TR if_none_v) {
 	return result_converter_impl(
-		std::forward<F>(f), std::move(if_none_v), identity< detail::deduce_callable_t<F> >{}
+		std::forward<F>(f), std::move(if_none_v), identity< blue_sky::detail::deduce_callable_t<F> >{}
 	);
 };
 

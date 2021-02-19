@@ -383,6 +383,13 @@ void py_bind_node(py::module& m) {
 		}, "event_cb"_a, "events"_a = Event::All)
 
 		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
+
+		.def("apply",
+			[](const node& N, std::function< py::object(bare_node) > tr) {
+				N.apply(launch_async, pytr_through_queue(std::move(tr)));
+			},
+			"tr"_a, "Send transaction `tr` to node's queue, return immediately"
+		)
 	;
 
 	// node::weak_ptr

@@ -10,17 +10,18 @@
 #include <bs/python/common.h>
 #include <bs/python/expected.h>
 #include <bs/python/tr_result.h>
-#include <bs/python/result_converter.h>
 
 #include <bs/objbase.h>
 #include <bs/tree/inode.h>
 #include <bs/serialize/object_formatter.h>
 
+#include "kernel_queue.h"
+
 #include <pybind11/functional.h>
 
 NAMESPACE_BEGIN(blue_sky::python)
 
-using py_modificator_f = std::function< py::object(sp_obj) >;
+using py_obj_transaction = std::function< py::object(sp_obj) >;
 
 void py_bind_objbase(py::module& m) {
 	// objebase binding
@@ -38,10 +39,10 @@ void py_bind_objbase(py::module& m) {
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor
 		.def("apply",
-			[](objbase& obj, py_modificator_f tr) {
-				obj.apply(launch_async, make_result_converter<tr_result>(std::move(tr), {}));
+			[](objbase& self, py_obj_transaction tr) {
+				self.apply(launch_async, pytr_through_queue(std::move(tr)));
 			},
-			"tr"_a, "Place given transaction into object's queue, return immediately", nogil
+			"tr"_a, "Send transaction `tr` to object's queue, return immediately"
 		)
 
 		.def("touch",
