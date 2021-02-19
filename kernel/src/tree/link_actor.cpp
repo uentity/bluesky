@@ -75,7 +75,7 @@ return {
 	},
 
 	// apply link transaction
-	[=](a_apply, const link_transaction& tr) -> caf::result<error::box> {
+	[=](a_apply, const link_transaction& tr) -> caf::result<tr_result::box> {
 		adbg(this) << "<- a_apply transaction" << std::endl;
 		return tr_eval(this, tr, [&] { return impl.super_engine().bare(); });
 	},

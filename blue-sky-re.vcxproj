@@ -189,6 +189,7 @@
     <ClCompile Include="kernel\src\kernel\plugins_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\python_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\radio.cpp" />
+    <ClCompile Include="kernel\src\kernel\radio_queue.cpp" />
     <ClCompile Include="kernel\src\kernel\radio_subsyst.cpp" />
     <ClCompile Include="kernel\src\kernel\tools.cpp" />
     <ClCompile Include="kernel\src\kernel\types_factory.cpp" />

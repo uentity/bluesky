@@ -222,7 +222,7 @@ auto link::is_node() const -> bool {
 //  apply
 //
 auto link::apply(link_transaction tr) const -> error {
-	return pimpl()->actorf<error>(*this, a_apply(), std::move(tr));
+	return pimpl()->actorf<tr_result>(*this, a_apply(), std::move(tr));
 }
 
 auto link::data_apply(obj_transaction tr) const -> tr_result {

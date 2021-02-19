@@ -69,7 +69,7 @@ public:
 		caf::replies_to<a_clone, bool /* deep */>::with<link>,
 
 		// run transaction in message queue of this link
-		caf::replies_to<a_apply, link_transaction>::with<error::box>,
+		caf::replies_to<a_apply, link_transaction>::with<tr_result::box>,
 		// run transaction in message queue of data object
 		caf::replies_to<a_apply, a_data, obj_transaction>::with<tr_result::box>
 	>;

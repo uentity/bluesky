@@ -31,5 +31,4 @@ auto pipe_through_queue(F f, LaunchAsync... async_tag) {
 	return pipe_queue_impl(std::move(f), identity< deduce_callable_t<F> >{}, async_tag...);
 };
 
-
 NAMESPACE_END(blue_sky::python)

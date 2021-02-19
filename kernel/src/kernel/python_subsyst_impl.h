@@ -52,10 +52,6 @@ struct BS_HIDDEN_API python_subsyst_impl : public python_subsyst {
 	// returns number of cleared instances
 	auto drop_adapted_cache(const sp_obj& source = nullptr) -> std::size_t;
 
-	// post transaction into Python's queue
-	auto enqueue(simple_transaction tr) -> error;
-	auto enqueue(launch_async_t, simple_transaction tr) -> void;
-
 	// access to instance of Python subsystem
 	static auto self() -> python_subsyst_impl&;
 

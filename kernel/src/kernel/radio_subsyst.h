@@ -28,7 +28,7 @@
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 // kernel's queue interface
 using kqueue_actor_type = caf::typed_actor<
-	caf::replies_to<simple_transaction>::with<error::box>
+	caf::replies_to<transaction>::with<tr_result::box>
 >;
 
 struct BS_HIDDEN_API radio_subsyst {
@@ -59,11 +59,10 @@ struct BS_HIDDEN_API radio_subsyst {
 	// send exit message to all citizens & wait until they exit
 	auto kick_citizens() -> void;
 
-	// post transaction into Python's queue
-	auto enqueue(simple_transaction tr) -> error;
-	auto enqueue(launch_async_t, simple_transaction tr) -> void;
-	// lazy start & access queue actor
+	// post transaction into kernel's queue
 	auto queue_actor() -> kqueue_actor_type&;
+	auto enqueue(transaction tr) -> tr_result;
+	auto enqueue(launch_async_t, transaction tr) -> void;
 
 	// server actor management
 	auto toggle(bool on) -> error;
@@ -97,6 +96,7 @@ private:
 	caf::actor radio_;
 
 	auto reset_timeouts(timespan typical, timespan slow) -> void;
+	auto spawn_queue() -> void;
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)

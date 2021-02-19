@@ -99,7 +99,7 @@ public:
 		caf::replies_to<a_node_rearrange, lids_v>::with<error::box>,
 
 		// run transaction in message queue of this node
-		caf::replies_to<a_apply, node_transaction>::with<error::box>
+		caf::replies_to<a_apply, node_transaction>::with<tr_result::box>
 	>;
 
 	///////////////////////////////////////////////////////////////////////////////

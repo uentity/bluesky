@@ -608,6 +608,9 @@
     <ClCompile Include="kernel\src\kernel\radio.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>
+    <ClCompile Include="kernel\src\kernel\radio_queue.cpp">
+      <Filter>Файлы исходного кода\tree</Filter>
+    </ClCompile>
     <ClCompile Include="kernel\src\kernel\radio_subsyst.cpp">
       <Filter>Файлы исходного кода\tree</Filter>
     </ClCompile>

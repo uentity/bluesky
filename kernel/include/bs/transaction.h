@@ -142,15 +142,12 @@ using sum_transaction_t = std::variant<
 
 /// transaction accepted by misc object/link/node
 using obj_transaction = sum_transaction_t<tr_result, sp_obj>;
-using link_transaction = sum_transaction_t<error, tree::bare_link>;
-using node_transaction = sum_transaction_t<error, tree::bare_node>;
+using link_transaction = sum_transaction_t<tr_result, tree::bare_link>;
+using node_transaction = sum_transaction_t<tr_result, tree::bare_node>;
 
 /// transaction with no arguments
 using transaction = transaction_t<tr_result>;
 using async_transaction = async_transaction_t<tr_result>;
-/// simple transaction returns error instead of extended transaction result
-using simple_transaction = transaction_t<error>;
-using async_simple_transaction = async_transaction_t<error>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  traits

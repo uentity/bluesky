@@ -14,6 +14,7 @@
 #include <bs/log.h>
 #include <bs/kernel/config.h>
 #include <bs/kernel/misc.h>
+
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
 
@@ -57,23 +58,6 @@ auto radio_station(radio_station_handle::pointer self)
 	}
 }; }
 
-// actor that implements kernel's queue
-auto kqueue_processor(kqueue_actor_type::pointer self) -> kqueue_actor_type::behavior_type {
-	// never die on error
-	self->set_error_handler(noop);
-	// completely ignore unexpected messages without error backpropagation
-	self->set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-		return caf::none;
-	});
-
-	return {
-		// do job (run Python functor)
-		[=](const simple_transaction& tr) -> error::box {
-			return tr_eval(tr);
-		}
-	};
-}
-
 NAMESPACE_END()
 
 /*-----------------------------------------------------------------------------
@@ -95,46 +79,52 @@ auto radio_subsyst::init() -> error {
 		// kernel must be configured (middleman module loaded)
 		if(!kernel::config::is_configured())
 			kernel::config::configure();
+
 		// start actor system
 		if(actor_sys_.emplace(actor_config()); !actor_sys_)
 			return error{ "Can't create CAF actor_system!" };
 		get_actor_sys_ = &radio_subsyst::normal_as_getter;
-		// start queue
-		queue_ = actor_sys_->spawn<caf::detached>(kqueue_processor);
-		register_citizen(queue_.address());
+
+		spawn_queue();
 	}
 	return perfect;
 }
 
 auto radio_subsyst::shutdown() -> void {
-	if(actor_sys_) {
-		std::cout << "~~~ radio shutdown start" << std::endl;
+	if(!actor_sys_) return;
+	std::cout << "~~~ radio shutdown start" << std::endl;
 
-		// force all pending requests to exit very quickly
-		reset_timeouts(1us, 1us);
-		kick_citizens();
-		// [NOTE} need to explicitly reset queue handle, otherwise exit hangs
-		// [TODO] check if this bug present in CAF 0.18
-		queue_ = nullptr;
+	// force all pending requests to exit very quickly
+	reset_timeouts(1us, 1us);
+	kick_citizens();
+	// [NOTE} need to explicitly reset queue handle, otherwise exit hangs
+	// [TODO] check if this bug present in CAF 0.18
+	queue_ = nullptr;
 
-		// explicitly kill nill link
-		tree::nil_node::stop();
-		tree::nil_link::stop();
+	// explicitly kill nill link
+	tree::nil_node::stop();
+	tree::nil_link::stop();
 
-		// explicit wait until all actors done if asked for
-		// because during termination some actor may need to access live actor_system
-		if(get_or(config::config(), "radio.await_actors_before_shutdown", true)) {
-			std::cout << "~~~ Waiting for " << actor_sys_->registry().running() << " actors" << std::endl;
-			actor_sys_->await_all_actors_done();
-			std::cout << "~~~ Waiting actors finished" << std::endl;
-		}
-
-		// destroy actor_system
-		actor_sys_->await_actors_before_shutdown(false);
-		get_actor_sys_ = &radio_subsyst::always_throw_as_getter;
-		actor_sys_.reset();
-		std::cout << "~~~ radio shutdown finished" << std::endl;
+	// explicit wait until all actors done if asked for
+	// because during termination some actor may need to access live actor_system
+	if(get_or(config::config(), "radio.await_actors_before_shutdown", true)) {
+		std::cout << "~~~ Waiting for " << actor_sys_->registry().running() << " actors" << std::endl;
+		actor_sys_->await_all_actors_done();
+		std::cout << "~~~ Waiting actors finished" << std::endl;
 	}
+
+	// destroy actor_system
+	actor_sys_->await_actors_before_shutdown(false);
+	get_actor_sys_ = &radio_subsyst::always_throw_as_getter;
+	actor_sys_.reset();
+	std::cout << "~~~ radio shutdown finished" << std::endl;
+}
+
+auto radio_subsyst::normal_as_getter() -> caf::actor_system& {
+	return *actor_sys_;
+}
+auto radio_subsyst::always_throw_as_getter() -> caf::actor_system& {
+	throw error{"Kernel's radio subsystem is down"};
 }
 
 auto radio_subsyst::register_citizen(caf::actor_addr citizen) -> void {
@@ -178,13 +168,6 @@ auto radio_subsyst::kick_citizens() -> void {
 	while(kick_out()) {};
 }
 
-auto radio_subsyst::normal_as_getter() -> caf::actor_system& {
-	return *actor_sys_;
-}
-auto radio_subsyst::always_throw_as_getter() -> caf::actor_system& {
-	throw error{"Kernel's radio subsystem is down"};
-}
-
 auto radio_subsyst::toggle(bool on) -> error {
 	auto& mm = actor_sys_->middleman();
 	auto port = get_or(BSCONFIG, "port", def_port);
@@ -204,19 +187,6 @@ auto radio_subsyst::toggle(bool on) -> error {
 	}
 
 	return perfect;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//  queue management
-//
-auto radio_subsyst::queue_actor() -> kqueue_actor_type& { return queue_; }
-
-auto radio_subsyst::enqueue(simple_transaction tr) -> error {
-	return actorf<error>(queue_actor(), caf::infinite, std::move(tr));
-}
-
-auto radio_subsyst::enqueue(launch_async_t, simple_transaction tr) -> void {
-	caf::anon_send(queue_actor(), std::move(tr));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

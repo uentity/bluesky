@@ -230,11 +230,11 @@ auto map_link_impl::refresh(map_link_actor* papa, caf::event_based_actor* rworke
 	using R = node_or_errbox;
 	auto res = rworker->make_response_promise<R>();
 	// deliver transaction error (for ex. exception inside transaction)
-	auto deliver_err_res = [=](const error::box& erb) mutable {
+	auto deliver_err_res = [=](tr_result::box trb) mutable {
 		// [WARN] formally, we must check OK by converting to `error`
 		// OK result is delivered from node transaction lower
-		if(erb.ec) {
-			res.deliver(R{ tl::unexpect, std::move(erb) });
+		if(auto tres = tr_result{std::move(trb)}; tres.err()) {
+			res.deliver(R{ tl::unexpect, pack(tres.err()) });
 			rworker->quit();
 		}
 	};

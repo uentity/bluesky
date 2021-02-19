@@ -13,6 +13,7 @@
 
 #include <bs/defaults.h>
 #include <bs/serialize/cafbind.h>
+#include <bs/serialize/propdict.h>
 #include <bs/serialize/tree.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
@@ -67,7 +68,7 @@ struct nil_node::self_actor : nil_engine_actor {
 		[](a_node_rearrange, const std::vector<std::size_t>&) -> error::box { return error{Error::EmptyData}; },
 		[](a_node_rearrange, const lids_v&) -> error::box { return error{Error::EmptyData}; },
 
-		[](a_apply, const node_transaction&) -> error::box { return error{blue_sky::Error::TrEmptyTarget}; }
+		[](a_apply, const node_transaction&) -> tr_result::box { return error{blue_sky::Error::TrEmptyTarget}; }
 
 	}.unbox(); }
 

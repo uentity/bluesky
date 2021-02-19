@@ -72,7 +72,7 @@ struct nil_link::self_actor : nil_engine_actor {
 			return unexpected_err(Error::EmptyData);
 		},
 
-		[](a_apply, const link_transaction&) -> error::box {
+		[](a_apply, const link_transaction&) -> tr_result::box {
 			return error{blue_sky::Error::TrEmptyTarget};
 		},
 		[](a_apply, a_data, const obj_transaction&) -> tr_result::box {

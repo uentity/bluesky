@@ -15,6 +15,7 @@
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/serialize/cafbind.h>
+#include <bs/serialize/propdict.h>
 #include <bs/serialize/tree.h>
 
 #include <caf/typed_event_based_actor.hpp>
@@ -76,8 +77,8 @@ auto node_actor::rename(std::vector<iterator<Key::Name>> namesakes, const std::s
 			}}
 		).await(
 			// on success rename next element
-			[=, work = std::move(work)](error::box r) mutable {
-				self(self, std::move(work), error(std::move(r)).ok() ? cur_res + 1 : cur_res);
+			[=, work = std::move(work)](tr_result::box r) mutable {
+				self(self, std::move(work), tr_result{r}.err().ok() ? cur_res + 1 : cur_res);
 			},
 			// on error deliver number of already renamed leafs
 			[=](const caf::error&) mutable { res.deliver(cur_res); }
@@ -94,7 +95,7 @@ auto node_actor::rename(std::vector<iterator<Key::Name>> namesakes, const std::s
 //
 NAMESPACE_BEGIN()
 
-const auto noop_await_insert = [](const error::box&) {};
+const auto noop_await_insert = [](const tr_result::box&) {};
 
 template<typename Postproc, typename OnAwait = decltype(noop_await_insert)>
 auto do_insert(
@@ -204,11 +205,11 @@ auto node_actor::insert(links_v Ls, InsertPolicy pol) -> caf::result<std::size_t
 		work.pop_back();
 		do_insert(
 			this, L, pol, notify_after_insert(this),
-			[=, work = std::move(work)](error::box erb) mutable {
-				if(auto er = error(std::move(erb))) {
+			[=, work = std::move(work)](tr_result::box trb) mutable {
+				if(auto tres = tr_result{std::move(trb)}; tres.err()) {
 					// if CAF error happens, stop insertion & deliver result
 					// otherwise just not increment inserted leafs counter
-					if(er.code.category().name() == "CAF"s) {
+					if(tres.err().code.category().name() == "CAF"s) {
 						res.deliver(cur_res);
 						return;
 					}
@@ -253,7 +254,7 @@ return {
 		return res;
 	},
 
-	[=](a_apply, node_transaction tr) -> caf::result<error::box> {
+	[=](a_apply, node_transaction tr) -> caf::result<tr_result::box> {
 		adbg(this) << "<- a_apply transaction" << std::endl;
 		return tr_eval(this, tr, [&] { return impl.super_engine().bare(); });
 	},
