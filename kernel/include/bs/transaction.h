@@ -50,14 +50,13 @@ struct tr_result : std::variant<prop::propdict, error> {
 	friend auto pack(T&& tres)
 	-> std::enable_if_t<std::is_same_v<meta::remove_cvref_t<T>, tr_result>, box> {
 		box res;
-		visit(meta::overloaded{[&](auto&& v) {
+		visit([&](auto&& v) {
 			using V = decltype(v);
-			using V_ = meta::remove_cvref_t<V>;
-			if constexpr(std::is_same_v<V_, prop::propdict>)
+			if constexpr(std::is_same_v<meta::remove_cvref_t<V>, prop::propdict>)
 				res.emplace<0>(std::forward<V>(v));
 			else
 				res.emplace<1>(std::forward<V>(v));
-		}}, meta::forward_as<T, underlying_type>(tres));
+		}, meta::forward_as<T, underlying_type>(tres));
 		return res;
 	}
 
@@ -74,7 +73,7 @@ struct tr_result : std::variant<prop::propdict, error> {
 	// check if transaction was successfull, i.e. error is OK or props passed
 	operator bool() const { return has_info() ? true : err().ok(); }
 
-	// checked info extractor: if rvalue passed in. then move error from it, otherwise copy
+	// checked info extractor: if rvalue passed in. then move props from it, otherwise copy
 	template<typename T>
 	friend auto extract_info(T&& tres)
 	-> std::enable_if_t<std::is_same_v<meta::remove_cvref_t<T>, tr_result>, prop::propdict> {
@@ -157,7 +156,12 @@ template<typename T>
 struct is_transaction : public std::false_type {};
 
 template<typename R, typename... Ts>
-struct is_transaction<transaction_t<R, Ts...>> : public std::true_type {};
+struct is_transaction<transaction_t<R, Ts...>> : public std::true_type {
+	// add some traits
+	using type = transaction_t<R, Ts...>;
+	using result = R;
+	static constexpr auto nargs = sizeof...(Ts);
+};
 
 template<typename T> using is_transaction_t = is_transaction<meta::remove_cvref_t<T>>;
 template<typename T> inline constexpr auto is_transaction_v = is_transaction_t<T>::value;
@@ -175,19 +179,12 @@ struct is_async_transaction<transaction_t<R, Ts...>> : public std::conditional_t
 template<typename T> using is_async_transaction_t = is_async_transaction<meta::remove_cvref_t<T>>;
 template<typename T> inline constexpr auto is_async_transaction_v = is_async_transaction_t<T>::value;
 
-/// detect sum transactions
-template<typename T>
-struct is_sum_transaction : public std::false_type {};
-
-template<typename R, typename T>
-struct is_sum_transaction<sum_transaction_t<R, T>> : public std::true_type {};
-
-template<typename T> using is_sum_transaction_t = is_sum_transaction<meta::remove_cvref_t<T>>;
-template<typename T> inline constexpr auto is_sum_transaction_v = is_sum_transaction_t<T>::value;
-
-template<typename Tr, typename = std::enable_if_t< is_sum_transaction_v<Tr> >>
-constexpr auto carry_async_transaction(const Tr& tr) -> bool {
-	return tr.index() > 1;
+template<typename Tr>
+constexpr auto carry_async_transaction(const Tr& sumtr) -> bool {
+	static_assert(meta::is_variant_v<Tr>);
+	return std::visit([](const auto& tr) {
+		return is_async_transaction_v<decltype(tr)>;
+	}, sumtr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -203,54 +200,58 @@ constexpr auto tr_eval(const transaction_t<R, Ts...>& tr, Targs&&... targs) {
 }
 
 /// evaluate sum transaction in actor context
-template<typename Actor, typename R, typename T, typename F = noop_r_t<T>>
-constexpr auto tr_eval(Actor* A, const sum_transaction_t<R, T>& tr, F&& target_getter = noop_r<T>()) {
-	static_assert(std::is_invocable_r_v<T, F>);
+template<typename S, typename F = noop_t>
+constexpr auto tr_eval(caf::event_based_actor* A, const S& sumtr, F&& target_getter = noop) {
+	static_assert(meta::is_variant_v<S>);
+	static_assert(std::is_invocable_v<F>);
 
-	// result is expected to be `error` or `tr_result` => return packed
-	using RB = typename R::box;
-	using res_t = caf::result<RB>;
+	return std::visit([&](const auto& tr) {
+		using Tr = decltype(tr);
+		using traits = is_transaction_t<Tr>;
+		using R = typename traits::result;
 
-	return std::visit(meta::overloaded{
-		[&](const transaction_t<R>& tr) -> res_t {
-			return pack(tr_eval(tr));
-		},
-
-		[&](const async_transaction_t<R>& tr) -> res_t {
-			return tr_eval(tr, A);
-		},
-
-		[&](const transaction_t<R, T>& tr) -> res_t {
-			if(auto tgt = target_getter())
-				return pack(tr_eval(tr, std::move(tgt)));
-			return pack(error::quiet(Error::TrEmptyTarget));
-		},
-
-		[&](const async_transaction_t<R, T>& tr) -> res_t {
-			if(auto tgt = target_getter())
-				return tr_eval(tr, A, std::move(tgt));
-			return pack(error::quiet(Error::TrEmptyTarget));
+		if constexpr(is_async_transaction_v<Tr>) {
+			using res_t = R;
+			if constexpr(traits::nargs > 1) {
+				if(auto tgt = target_getter())
+					return tr_eval(tr, A, std::move(tgt));
+				return res_t{ pack(error::quiet(Error::TrEmptyTarget)) };
+			}
+			else
+				return tr_eval(tr, A);
 		}
-	}, tr);
+		else {
+			using res_t = caf::result<typename R::box>;
+			if constexpr(traits::nargs > 0) {
+				if(auto tgt = target_getter())
+					return res_t{ pack(tr_eval(tr, std::move(tgt))) };
+				return res_t{ pack(error::quiet(Error::TrEmptyTarget)) };
+			}
+			else
+				return res_t{ pack(tr_eval(tr)) };
+		}
+	}, sumtr);
 }
 
 NAMESPACE_END(blue_sky)
 
-/// mark all transaction types as non-serializable
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::obj_transaction)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::link_transaction)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::node_transaction)
+
 NAMESPACE_BEGIN(caf)
 
+// mark all transaction types as non-serializable
 template<typename R, typename... Ts>
 struct allowed_unsafe_message_type<blue_sky::transaction_t<R, Ts...>> : std::true_type {};
-
-template<typename R, typename T>
-struct allowed_unsafe_message_type<blue_sky::sum_transaction_t<R, T>> : std::true_type {};
 
 // make stringificator inspector happy
 template<typename R, typename... Ts>
 constexpr auto to_string(const blue_sky::transaction_t<R, Ts...>&) { return "transaction"; }
 
-template<typename R, typename T>
-constexpr auto to_string(const blue_sky::sum_transaction_t<R, T>&) { return "sum_transaction"; }
+constexpr auto to_string(const blue_sky::obj_transaction&) { return "obj_transaction"; }
+constexpr auto to_string(const blue_sky::link_transaction&) { return "link_transaction"; }
+constexpr auto to_string(const blue_sky::node_transaction&) { return "node_transaction"; }
 
 NAMESPACE_END(caf)
 

@@ -46,17 +46,22 @@ using adapted_data_cb = std::function<void(result_or_err<py::object>, link)>;
 
 auto adapt(adapted_data_cb&& f) {
 	return [f = std::move(f)](result_or_err<sp_obj> obj, link L) {
-		KRADIO.enqueue(launch_async, [&] {
-			return L ?
+		if(L)
+			KRADIO.enqueue(
+				launch_async,
 				transaction{[f = std::move(f), obj = std::move(obj), L]() mutable {
 					f(adapt(std::move(obj), L), L);
 					return perfect;
-				}} :
+				}}
+			);
+		else
+			KRADIO.enqueue(
+				launch_async,
 				transaction{[f = std::move(f), L]() mutable {
 					f(tl::make_unexpected(error{ "Nil link" }), L);
 					return perfect;
-				}};
-		}());
+				}}
+			);
 	};
 }
 
