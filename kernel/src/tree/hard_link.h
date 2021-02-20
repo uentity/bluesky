@@ -68,7 +68,8 @@ public:
 		// reset home group
 		caf::reacts_to<a_home, std::string>,
 		// data altered ack from object
-		caf::reacts_to<a_ack, a_data, tr_result::box>
+		caf::reacts_to<a_ack, a_data, tr_result::box>,
+		caf::reacts_to<a_bye>
 	>;
 
 	using typed_behavior = actor_type::behavior_type;
@@ -84,7 +85,8 @@ public:
 		// reset object home group 
 		caf::reacts_to<a_home, std::string>,
 		// data altered ack from object
-		caf::reacts_to<a_ack, a_data, tr_result::box>
+		caf::reacts_to<a_ack, a_data, tr_result::box>,
+		caf::reacts_to<a_bye>
 	>;
 
 	// if object is already initialized, auto-join it's group
