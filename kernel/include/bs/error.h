@@ -218,11 +218,21 @@ private:
 	/// unpacking error from box is always quiet
 	error(IsQuiet, box b) noexcept;
 
+	// check if expected or variant contain error or error::box
+	template<typename V>
+	static constexpr auto can_construct_from() {
+		if constexpr(tl::detail::is_expected<V>::value) {
+			using E = typename meta::remove_cvref_t<V>::error_type;
+			return std::is_same_v<E, error> || std::is_same_v<E, error::box>;
+		}
+		else if constexpr(meta::is_variant_v<V>) {
+			return meta::alternative_index<V, error>() >= 0 || meta::alternative_index<V, error::box>() >= 0;
+		}
+		return false;
+	}
+
 	/// construct from variant type that can carry error/box or result_or_err/result_or_errbox
-	template<
-		typename V,
-		typename = std::enable_if_t<meta::is_variant_v<V> || tl::detail::is_expected<V>::value>
-	>
+	template<typename V, typename = std::enable_if_t<can_construct_from<V>()>>
 	error(IsQuiet, V&& v) noexcept : error([&]() -> error {
 		if constexpr(meta::is_variant_v<V>) {
 			constexpr auto ei = meta::alternative_index<V, error>();
@@ -234,24 +244,13 @@ private:
 			}
 			else {
 				constexpr auto eib = meta::alternative_index<V, box>();
-				if constexpr(eib >= 0) {
-					if(v.index() == std::size_t{eib})
-						return std::get<std::size_t{eib}>(std::forward<V>(v));
-					else
-						return {IsQuiet::Yes, true};
-				}
-				else {
-					static_assert(eib >= 0, "Passed variant is missing `error` or `error::box` alternative");
-					return {};
-				}
+				if(v.index() == std::size_t{eib})
+					return std::get<std::size_t{eib}>(std::forward<V>(v));
+				else
+					return {IsQuiet::Yes, true};
 			}
 		}
 		else {
-			using E = typename meta::remove_cvref_t<V>::error_type;
-			static_assert(
-				std::is_same_v<E, error> || std::is_same_v<E, error::box>,
-				"Passed expected must contain `error` or `error::box` as second type"
-			);
 			// if v is in expected state, replace it with unexpected quiet OK & return error
 			if(v)
 				return {IsQuiet::Yes, true};
