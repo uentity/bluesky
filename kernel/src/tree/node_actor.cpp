@@ -95,11 +95,9 @@ auto node_actor::rename(std::vector<iterator<Key::Name>> namesakes, const std::s
 //
 NAMESPACE_BEGIN()
 
-const auto noop_await_insert = [](const tr_result::box&) {};
-
-template<typename Postproc, typename OnAwait = decltype(noop_await_insert)>
+template<typename Postproc, typename OnAwait = noop_t>
 auto do_insert(
-	node_actor* self, link L, InsertPolicy pol, Postproc pp, OnAwait aw = noop_await_insert
+	node_actor* self, link L, InsertPolicy pol, Postproc pp, OnAwait aw = noop
 ) -> caf::result<node::insert_status> {
 	// insert atomically for both node & link
 	auto res = self->make_response_promise<node::insert_status>();
@@ -110,15 +108,21 @@ auto do_insert(
 				"][" << L.name(unsafe) << "]" << std::endl;
 			// make insertion
 			auto ir = insert_status<Key::ID>{};
-			if(auto er = error::eval_safe([&] { ir = self->impl.insert(L, pol); }))
+			if(auto er = error::eval_safe([&] {
+				ir = self->impl.insert(L, pol);
+				res.deliver(pp(ir));
+			}))
 				return er;
-			// invoke postprocessing & deliver result
-			res.deliver(pp(ir));
 			// report success if insertion happened
 			return ir.second ? perfect : quiet_fail;
 		})
 	).await(
-		aw,
+		[=, aw = std::move(aw)](tr_result::box trb) mutable {
+			auto tres = tr_result{std::move(trb)};
+			if(tres.err())
+				res.deliver(node::insert_status{{}, false});
+			aw(std::move(tres));
+		},
 		// on error forward caf error to await handler
 		[=, Lid = L.id()](const caf::error& er) mutable {
 			res.deliver(node::insert_status{{}, false});
@@ -205,8 +209,8 @@ auto node_actor::insert(links_v Ls, InsertPolicy pol) -> caf::result<std::size_t
 		work.pop_back();
 		do_insert(
 			this, L, pol, notify_after_insert(this),
-			[=, work = std::move(work)](tr_result::box trb) mutable {
-				if(auto tres = tr_result{std::move(trb)}; tres.err()) {
+			[=, work = std::move(work)](const tr_result& tres) mutable {
+				if(tres.err()) {
 					// if CAF error happens, stop insertion & deliver result
 					// otherwise just not increment inserted leafs counter
 					if(tres.err().code.category().name() == "CAF"s) {
