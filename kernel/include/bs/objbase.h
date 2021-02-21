@@ -46,10 +46,10 @@ public:
 
 	/// will make copy with new unique ID
 	objbase(const objbase&);
-	objbase& operator=(const objbase& rhs);
-	/// default move is fine
-	objbase(objbase&&) = default;
-	objbase& operator=(objbase&&) = default;
+	auto operator=(const objbase& rhs) -> objbase&;
+	/// move is actually `default`, nothing fancy
+	objbase(objbase&&);
+	auto operator=(objbase&&) -> objbase&;
 
 	auto swap(objbase& rhs) -> void;
 

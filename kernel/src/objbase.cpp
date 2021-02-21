@@ -30,6 +30,16 @@ objbase::objbase(const objbase& obj) :
 	enable_shared_from_this(obj), id_(obj.id_)
 {}
 
+objbase::objbase(objbase&& rhs) :
+	enable_shared_from_this(rhs), id_(std::move(rhs.id_)), inode_(std::move(rhs.inode_)),
+	actor_(std::move(rhs.actor_)), home_(std::move(rhs.home_))
+{}
+
+auto objbase::operator=(objbase&& rhs) -> objbase& {
+	swap(rhs);
+	return *this;
+}
+
 auto objbase::swap(objbase& rhs) -> void {
 	using std::swap;
 

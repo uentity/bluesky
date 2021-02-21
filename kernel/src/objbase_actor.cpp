@@ -199,8 +199,11 @@ auto objbase::reset_home(std::string new_hid, bool silent) -> void {
 auto objbase::raw_actor() -> const caf::actor& {
 	// engine must be initialized only once
 	std::call_once(einit_flag_, [&] {
-		if(!home_) reset_home({}, true);
-		actor_ = system().spawn_in_group<objbase_actor>(home_, home_, shared_from_this());
+		// [NOTE] init may be called after move constructor, hence check if actor is initialized
+		if(!actor_) {
+			if(!home_) reset_home({}, true);
+			actor_ = system().spawn_in_group<objbase_actor>(home_, home_, shared_from_this());
+		}
 	});
 	return actor_;
 }
