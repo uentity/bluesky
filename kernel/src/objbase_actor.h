@@ -33,7 +33,11 @@ public:
 		// invoke object load
 		caf::replies_to<a_load, std::string /* fmt */, std::string /* fname */>::with<error::box>,
 		// setup lazy read action
-		caf::replies_to<a_lazy, a_load, std::string /* fmt */, std::string /* fname */>::with<bool>,
+		caf::replies_to<
+			a_lazy, a_load, std::string /* fmt */, std::string /* fname */, bool /* read node from file? */
+		>::with<bool>,
+		// if lazy load was set up, tells whether node will be read from file
+		caf::replies_to<a_lazy, a_load, a_data_node>::with<bool>,
 		// trigger lazy load
 		caf::replies_to<a_load>::with<error::box>
 	>

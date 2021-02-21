@@ -265,10 +265,8 @@ struct file_heads_manager {
 		// setup link to trigger dealyed object load
 		if constexpr(!Saving) {
 			if(L) {
-				// [WARN] [TODO] refactor this, s.t. node lazy load flag is correctly passed from
-				// formatter instead of hardcoded `false`!
-				if(auto r = tree::link_impl::actorf<bool>(L, a_lazy(), a_load(), false); !r)
-					return std::move(r.error());
+				if(auto r = tree::link_impl::actorf<bool>(L, a_lazy(), a_load()); !r)
+					return r.error();
 			}
 		}
 		return perfect;

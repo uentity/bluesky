@@ -124,10 +124,15 @@ return typed_behavior {
 	// lazy load
 	[=](a_load) -> error::box { return success(); },
 
+	[=](a_lazy, a_load, a_data_node) { return false; },
+
 	// setup lazy load
-	[=](a_lazy, a_load, const std::string& fmt_name, const std::string& fname) {
+	[=](a_lazy, a_load, const std::string& fmt_name, const std::string& fname, bool with_node) {
 		auto orig_me = current_behavior();
 		become(caf::message_handler{
+			// return remembered flag whether to read node from file
+			[=](a_lazy, a_load, a_data_node) { return with_node; },
+
 			// 1. patch lazy load request to actually trigger reading from file
 			[=](a_load) mutable -> error::box {
 				// trigger only once

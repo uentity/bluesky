@@ -196,7 +196,7 @@ return {
 	},
 
 	// noop - implement in derived links
-	[=](a_lazy, a_load, bool) { return false; }
+	[=](a_lazy, a_load) { return false; }
 }; }
 
 auto link_actor::make_typed_behavior() -> typed_behavior {
@@ -233,11 +233,11 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 
 		// modifies beahvior s.t. next Data request will send `a_delay_load` to stored object first
 		// if `with_node` is true, then do the same for DataNode request
-		[=](a_lazy, a_load, bool with_node) {
+		[=](a_lazy, a_load) -> caf::result<bool> {
 			auto orig_me = current_behavior();
 
 			// setup request impl that invokes `a_delay_load` on object once
-			const auto load_then_answer = [&](auto req) {
+			auto load_then_answer = [=](auto req) mutable {
 				using req_t = decltype(req);
 				using R = std::conditional_t<std::is_same_v<req_t, a_data>, obj_or_errbox, node_or_errbox>;
 				constexpr auto req_id = [&] {
@@ -245,9 +245,9 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 					else return Req::DataNode;
 				}();
 
-				return [=](req_t, bool) mutable -> caf::result<R> {
+				return [=, orig_me = std::move(orig_me)](req_t, bool) mutable -> caf::result<R> {
 					// this handler triggered only once
-					become(orig_me);
+					become(std::move(orig_me));
 
 					impl.rs_reset(req_id, ReqReset::Always, ReqStatus::Busy);
 					// drop lazy load flag
@@ -282,15 +282,32 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 				};
 			};
 
-			auto lazy_me = caf::message_handler{ load_then_answer(a_data()) };
-			if(with_node) {
-				// raise lazy load flag
-				impl.flags_ |= Flags::LazyLoad;
-				lazy_me = lazy_me.or_else( load_then_answer(a_data_node()) );
-			}
-			// setup new behavior for Data & DataNode requests
-			become(lazy_me.or_else(orig_me));
-			return true;
+			// ask object whether node must also be read from file
+			const auto obj = impl.data(unsafe);
+			if(!obj) return false;
+			auto res = make_response_promise<bool>();
+			request(objbase_actor::actor(*obj), kernel::radio::timeout(), a_lazy{}, a_load{}, a_data_node{})
+			.then(
+				[=, orig_me = std::move(orig_me), load_then_answer = std::move(load_then_answer)]
+				(bool with_node) mutable {
+					// then install new
+					auto lazy_me = caf::message_handler{ load_then_answer(a_data()) };
+					if(with_node) {
+						// raise lazy load flag
+						impl.flags_ |= Flags::LazyLoad;
+						lazy_me = lazy_me.or_else( load_then_answer(a_data_node()) );
+					}
+					// setup new behavior for Data & DataNode requests
+					become(lazy_me.or_else(std::move(orig_me)));
+					res.deliver(true);
+				},
+
+				[=](const caf::error& er) mutable {
+					forward_caf_error(er);
+					res.deliver(false);
+				}
+			);
+			return res;
 		}
 	}, super::make_typed_behavior() );
 }

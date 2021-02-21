@@ -232,9 +232,10 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 
 		// 4. read object data
 		// instead of posting save job to manager, setup delayed read job
+		const auto read_node = has_node && F->stores_node;
 		if(auto r = actorf<bool>(
 			objbase_actor::actor(obj), kernel::radio::timeout(),
-			a_lazy(), a_load(), obj_frm, abs_obj_path.string()
+			a_lazy(), a_load(), obj_frm, abs_obj_path.string(), read_node
 		); !r)
 			return r.error();
 
