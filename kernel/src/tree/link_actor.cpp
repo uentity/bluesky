@@ -257,7 +257,7 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 					if(!obj) return unexpected_err_quiet(Error::EmptyData);
 
 					auto res = make_response_promise<R>();
-					request(objbase_actor::actor(*obj), caf::infinite, a_load(), std::move(obj))
+					request(objbase_actor::actor(*obj), caf::infinite, a_load())
 					.then(
 						[=](error::box er) mutable {
 							// if error happened - deliver it

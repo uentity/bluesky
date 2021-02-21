@@ -29,13 +29,13 @@ public:
 		// runs async transaction
 		caf::replies_to<a_ack, a_apply, obj_transaction>::with<tr_result::box>,
 		// invoke object save
-		caf::replies_to<a_save, sp_obj, std::string /* fmt */, std::string /* fname */>::with<error::box>,
+		caf::replies_to<a_save, std::string /* fmt */, std::string /* fname */>::with<error::box>,
 		// invoke object load
-		caf::replies_to<a_load, sp_obj, std::string /* fmt */, std::string /* fname */>::with<error::box>,
+		caf::replies_to<a_load, std::string /* fmt */, std::string /* fname */>::with<error::box>,
 		// setup lazy read action
 		caf::replies_to<a_lazy, a_load, std::string /* fmt */, std::string /* fname */>::with<bool>,
 		// trigger lazy load
-		caf::replies_to<a_load, sp_obj /* obj */>::with<error::box>
+		caf::replies_to<a_load>::with<error::box>
 	>
 	::extend_with<home_actor_type>;
 

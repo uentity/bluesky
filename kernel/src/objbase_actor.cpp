@@ -90,7 +90,9 @@ return typed_behavior {
 	[=](a_ack, a_data, const tr_result::box&) {},
 
 	// immediate save object
-	[=](a_save, sp_obj obj, const std::string& fmt_name, std::string fname) -> error::box {
+	[=](a_save, const std::string& fmt_name, std::string fname) -> error::box {
+		auto obj = mama_.lock();
+		if(!obj) return error::quiet(tree::Error::EmptyData);
 		// obtain formatter
 		auto F = get_formatter(obj->type_id(), fmt_name);
 		if(!F) return error{obj->type_id(), tree::Error::MissingFormatter};
@@ -104,7 +106,9 @@ return typed_behavior {
 	},
 
 	// immediate load
-	[=](a_load, sp_obj obj, const std::string& fmt_name, std::string fname) -> error::box {
+	[=](a_load, const std::string& fmt_name, std::string fname) -> error::box {
+		auto obj = mama_.lock();
+		if(!obj) return error::quiet(tree::Error::EmptyData);
 		// obtain formatter
 		auto F = get_formatter(obj->type_id(), fmt_name);
 		if(!F) return error{obj->type_id(), tree::Error::MissingFormatter};
@@ -118,34 +122,34 @@ return typed_behavior {
 	},
 
 	// lazy load
-	[=](a_load, const sp_obj&) -> error::box { return success(); },
+	[=](a_load) -> error::box { return success(); },
 
 	// setup lazy load
 	[=](a_lazy, a_load, const std::string& fmt_name, const std::string& fname) {
 		auto orig_me = current_behavior();
 		become(caf::message_handler{
 			// 1. patch lazy load request to actually trigger reading from file
-			[=](a_load, sp_obj obj) mutable -> error::box {
+			[=](a_load) mutable -> error::box {
 				// trigger only once
 				become(orig_me);
-				// apply load job inplace
+				// invoke load job inplace on `orig_me` behavior
 				return actorf<error::box>(
-					orig_me, a_load(), std::move(obj), std::move(fmt_name), std::move(fname)
+					orig_me, a_load(), std::move(fmt_name), std::move(fname)
 				);
 			},
 
 			// 2. patch 'normal load' to drop lazy load behavior
-			[=](a_load, sp_obj obj, std::string cur_fmt, std::string cur_fname)
+			[=](a_load, std::string cur_fmt, std::string cur_fname)
 			mutable -> error::box {
 				become(orig_me);
 				return actorf<error::box>(
-					orig_me, a_load(), std::move(obj), std::move(cur_fmt), std::move(cur_fname)
+					orig_me, a_load(), std::move(cur_fmt), std::move(cur_fname)
 				);
 			},
 
 			// 3. patch 'a_save' request to be noop - until object will be actually read
-			// this also means that if object is not yet loaded, then saving to same file is noop
-			[=](a_save, const sp_obj& obj, std::string cur_fmt, std::string cur_fname)
+			// => if object is not yet loaded, then saving to same file is noop
+			[=](a_save, std::string cur_fmt, std::string cur_fname)
 			mutable -> error::box {
 				// noop if saving to same file with same format
 				// otherwise invoke lazy load (read object) & then save it
@@ -153,12 +157,12 @@ return typed_behavior {
 					return success();
 				else {
 					// [NOTE] need `current_behavior()` because lazy load is noop in `orig_me`
-					if(auto er = actorf<error::box>(current_behavior(), a_load(), obj); er.ec)
+					if(auto er = actorf<error::box>(current_behavior(), a_load()); er.ec)
 						return er;
 					// apply save job inplace
 					// [NOTE] use `orig_me` here, because it have unpatched (normal) save
 					return actorf<error::box>(
-						orig_me, a_save(), std::move(obj), std::move(cur_fmt), std::move(cur_fname)
+						orig_me, a_save(), std::move(cur_fmt), std::move(cur_fname)
 					);
 				}
 			}

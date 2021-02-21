@@ -53,8 +53,8 @@ return {
 		++nstarted_;
 		auto objA = objbase_actor::actor(*obj);
 		auto frm_job = is_saving_ ?
-			request(objA, caf::infinite, a_save(), obj, std::move(fmt_name), std::move(fname)) :
-			request(objA, caf::infinite, a_load(), obj, std::move(fmt_name), std::move(fname))
+			request(objA, caf::infinite, a_save(), std::move(fmt_name), std::move(fname)) :
+			request(objA, caf::infinite, a_load(), std::move(fmt_name), std::move(fname))
 		;
 		// process result
 		frm_job.then([=](error::box er) {
