@@ -23,8 +23,6 @@
 #include <caf/io/middleman.hpp>
 
 #include <iostream>
-#include <mutex>
-#include <shared_mutex>
 
 #define BSCONFIG ::blue_sky::kernel::config::config()
 
@@ -128,11 +126,6 @@ auto radio_subsyst::always_throw_as_getter() -> caf::actor_system& {
 }
 
 auto radio_subsyst::register_citizen(caf::actor_addr citizen) -> void {
-	{
-		auto poly = std::shared_lock{guard_};
-		if(auto pos = citizens_.find(citizen); pos != citizens_.end())
-			return;
-	}
 	auto solo = std::lock_guard{guard_};
 	citizens_.insert(std::move(citizen));
 }
