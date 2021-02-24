@@ -13,6 +13,10 @@
 #include <bs/tree/tree.h>
 #include <bs/tree/context.h>
 
+#include <bs/serialize/tree.h>
+#include <cereal/archives/json.hpp>
+#include <sstream>
+
 #include <pybind11/functional.h>
 #include <pybind11/chrono.h>
 
@@ -212,6 +216,28 @@ void py_bind_tree(py::module& m) {
 		"filename"_a, "ar"_a = TreeArchive::FS, nogil);
 	m.def("load_tree", py::overload_cast<on_serialized_f, std::string, TreeArchive>(&load_tree),
 		"callback"_a, "filename"_a, "ar"_a = TreeArchive::FS, nogil);
+
+	// dump tree to/from string
+	m.def("to_string", [](link r) -> result_or_err<std::string> {
+		auto os = std::ostringstream{};
+		if(auto er = error::eval_safe([&] {
+			cereal::JSONOutputArchive ja(os);
+			ja(r);
+		}))
+			return tl::make_unexpected(er);
+		return os.str();
+	}, "root"_a, nogil);
+
+	m.def("from_string", [](const std::string& input) -> link_or_err {
+		link res;
+		if(auto er = error::eval_safe([&] {
+			auto os = std::istringstream{input};
+			cereal::JSONInputArchive ja(os);
+			ja(res);
+		}))
+			return tl::make_unexpected(er);
+		return res;
+	}, "root"_a, nogil);
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  Qt model helper
