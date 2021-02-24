@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 20.06.2019
 /// @brief Include this into header with declarations of your type serialization fucntions
@@ -17,12 +16,11 @@
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/types/string.hpp>
 
+NAMESPACE_BEGIN(blue_sky)
 /*-----------------------------------------------------------------------------
  *  inspector-like tag class for proper dispatching serialization of CAF types
  *  is_inspectable<archive_inspector, CAF type> is always true
  *-----------------------------------------------------------------------------*/
-NAMESPACE_BEGIN(blue_sky)
-
 template<typename Archive>
 struct archive_inspector {
 	using result_type = void;
@@ -50,6 +48,33 @@ enum class TFSOpts {
 	LoadNodeRecover = 2
 };
 
+// forward declare Tree FS archives
+class tree_fs_input;
+class tree_fs_output;
+
 NAMESPACE_END(blue_sky)
 
 BS_ALLOW_ENUMOPS(TFSOpts)
+
+/*-----------------------------------------------------------------------------
+ *  Define specific version tag for archives used
+ *-----------------------------------------------------------------------------*/
+NAMESPACE_BEGIN(cereal)
+// forward declare text Cereal archives
+class JSONInputArchive;
+class JSONOutputArchive;
+
+NAMESPACE_BEGIN(traits)
+
+template<typename Archive>
+struct class_version_tag<Archive, std::enable_if_t<
+	std::is_same_v<Archive, blue_sky::tree_fs_input>
+	|| std::is_same_v<Archive, blue_sky::tree_fs_output>
+	|| std::is_same_v<Archive, JSONInputArchive>
+	|| std::is_same_v<Archive, JSONOutputArchive>
+>> {
+	static constexpr auto value = "bs_class_version";
+};
+
+NAMESPACE_END(traits)
+NAMESPACE_END(cereal)
