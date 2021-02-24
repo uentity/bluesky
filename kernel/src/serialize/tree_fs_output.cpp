@@ -27,6 +27,9 @@
 NAMESPACE_BEGIN(blue_sky)
 namespace fs = std::filesystem;
 
+using detail::objects_dirname;
+using detail::links_dirname;
+
 ///////////////////////////////////////////////////////////////////////////////
 //  tree_fs_output::impl
 //
@@ -36,44 +39,41 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 	using Error = tree::Error;
 
 	impl(std::string root_fname, TFSOpts opts) :
-		heads_mgr_t{ opts, std::move(root_fname), ".objects" }
+		heads_mgr_t{opts, std::move(root_fname)}
 	{}
 
 	auto begin_link(const tree::link& L) -> error {
 		if(root_path_.empty()) {
 			// add root link head & write correct rel path to objects dir
 			auto res = head().map([&](auto* ar) { return error::eval_safe([&] {
-				auto objects_rel_path = fs::path{};
-				if(auto N = L.data_node())
-					objects_rel_path /= N.home_id();
-				objects_rel_path /= objects_dname_;
-				// write objects dir name in UTF-8
+				const auto links_rel_path = fs::path{ L.home_id() } / links_dirname;
+				const auto objects_rel_path = fs::path{ L.home_id() } / objects_dirname;
+				// can skip UTF-8 conversion as dirnames are guaranteed ASCII
 				(*ar)(
-					cereal::make_nvp("objects_dir", str2ustr(objects_rel_path.generic_string()))
+					cereal::make_nvp("links_dir", links_rel_path.generic_string()),
+					cereal::make_nvp("objects_dir", objects_rel_path.generic_string())
 				);
-				// construct full objects path (create nessessary dirs)
-				// [NOTE] eplicitly disable objects directory cleanup
-				enter_dir(root_path_ / objects_rel_path, objects_path_, TFSOpts::None);
+				// construct full links/objects path (create nessessary dirs)
+				enter_dir(root_path_ / links_rel_path, links_path_, opts_);
+				// [NOTE] need to set specific flag to force objects directory cleanup
+				enter_dir(
+					root_path_ / objects_rel_path, objects_path_,
+					enumval(opts_ & TFSOpts::ClearObjectsDir) ? TFSOpts::ClearDirs : TFSOpts::None
+				);
 			}); });
 			return res ? res.value() : res.error();
 		}
 
-		return add_head(cur_path_ / (to_string(L.id()) + link_file_ext));
+		return add_head(links_path_ / prehash_stem(to_string(L.id()) + link_file_ext));
 	}
 
 	auto begin_node(const tree::node& N) -> error {
 		return error::eval_safe(
-			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); },
-			// skip empty nodes
-			[&]{ return enter_root(); },
-			// [NOTE] delay enter node's dir until first head is added
-			// this prevents creation of empty dirs (for nodes without leafs)
-			[&]{ if(N) cur_path_ /= N.home_id(); }
+			[&]{ return head().map( [&](auto* ar) { prologue(*ar, N); }); }
 		);
 	}
 
 	auto end_node(const tree::node& N) -> error {
-		if(cur_path_.empty() || cur_path_ == root_path_) return Error::NodeWasntStarted;
 		return error::eval_safe(
 			// write down node's metadata nessessary to load it later
 			[&]{ return head().map( [&](auto* ar) {
@@ -84,9 +84,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 				}
 				// and finish
 				epilogue(*ar, N);
-			}); },
-			// enter parent dir
-			[&] { return N ? enter_dir(cur_path_.parent_path(), cur_path_) : perfect; }
+			}); }
 		);
 	}
 
@@ -119,22 +117,17 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		// 3. if object is pure node - we're done and can skip data processing
 		if(obj.bs_resolve_type() == objnode::bs_type()) return perfect;
 
-		// 4. ensure we  objects directory
-		EVAL
-			[&] { return enter_root(); },
-			[&] {
-				// in fallback case assume that projects dir is located in root path
-				return objects_path_.empty() ?
-					enter_dir(root_path_ / objects_dname_, objects_path_, TFSOpts::None) : perfect;
-			}
-		RETURN_EVAL_ERR
-
-		// 5. save object data to file
-		auto obj_path = objects_path_ / (std::string(obj.home_id()) + '.' + obj_fmt);
+		// 4. save object data to file
 		auto abs_obj_path = fs::path{};
-		SCOPE_EVAL_SAFE
-			abs_obj_path = fs::absolute(obj_path);
-		RETURN_SCOPE_ERR
+		EVAL_SAFE
+			[&] {
+				abs_obj_path = fs::absolute(
+					objects_path_ / prehash_stem(std::string(obj.home_id()) + '.' + obj_fmt)
+				);
+			},
+			// ensure intermediate dirs are created
+			[&] { return enter_dir(abs_obj_path.parent_path()); }
+		RETURN_EVAL_ERR
 
 		caf::anon_send(
 			manager_, const_cast<objbase&>(obj).shared_from_this(), obj_fmt, abs_obj_path.string()

@@ -79,6 +79,17 @@ private:
 	size_t nstarted_ = 0, nfinished_ = 0;
 };
 
+
+/// current version of TreeFS archive format
+inline constexpr std::uint32_t tree_fs_version = 0;
+
+/// extension of link files
+inline constexpr auto link_file_ext = ".bsl";
+
+/// objects/links directory name
+inline constexpr auto objects_dirname = ".objects";
+inline constexpr auto links_dirname = ".links";
+
 /*-----------------------------------------------------------------------------
  *  Manage link file streams and dirs during tree save/load
  *-----------------------------------------------------------------------------*/
@@ -116,10 +127,10 @@ struct file_heads_manager {
 
 	// ctor
 	// [NOTE] assume that paths come in UTF-8
-	file_heads_manager(TFSOpts opts, const std::string& root_fname, const std::string& objects_dirname = {})
-		: opts_(opts), root_fname_(ustr2str(root_fname)), objects_dname_(ustr2str(objects_dirname))
+	file_heads_manager(TFSOpts opts, const std::string& root_fname) :
+		opts_(opts), root_fname_(ustr2str(root_fname))
 	{
-		// [NOTE] `root_fname_`, `root_dname_` & `objects_dname_` will be converted to native encoding
+		// [NOTE] `root_fname_`, `root_dname_` are converted to native encoding
 #ifdef _WIN32
 		// for Windows add '\\?\' prefix for long names support
 		static constexpr auto magic_prefix = std::string_view{ "\\\\?\\" };
@@ -149,7 +160,7 @@ struct file_heads_manager {
 
 	// if entering `src_path` is successfull, set `tar_path` to src_path
 	template<typename Path>
-	auto enter_dir(Path src_path, fs::path& tar_path, TFSOpts opts) -> error {
+	auto enter_dir(Path src_path, fs::path& tar_path, TFSOpts opts = TFSOpts::None) -> error {
 		auto path = fs::path(std::move(src_path));
 		if(path.empty()) return { path.u8string(), Error::EmptyPath };
 
@@ -159,13 +170,8 @@ struct file_heads_manager {
 				if(!fs::exists(path)) {
 					if constexpr(Saving) {
 						// clear directory when saving if TFSOpts::SaveClearDirs is set
-						// and directory wasn't seen earlier
-						if(enumval(opts & TFSOpts::SaveClearDirs)) {
-							if(auto p = seen_dirs_.find(path); p == seen_dirs_.end()) {
-								seen_dirs_.emplace(path);
-								fs::remove_all(path);
-							}
-						}
+						if(enumval(opts & TFSOpts::ClearDirs))
+							fs::remove_all(path);
 						fs::create_directories(path);
 					}
 					else
@@ -185,22 +191,32 @@ struct file_heads_manager {
 	}
 
 	template<typename Path>
-	auto enter_dir(Path src_path, fs::path& tar_path) -> error {
-		return enter_dir(src_path, tar_path, opts_);
+	auto enter_dir(Path src_path, TFSOpts opts) {
+		auto unused = fs::path{};
+		return enter_dir(std::move(src_path), unused, opts);
+	}
+
+	template<typename Path>
+	auto enter_dir(Path src_path) {
+		return enter_dir(std::move(src_path), TFSOpts::None);
 	}
 
 	auto enter_root() -> error {
 		if(root_path_.empty()) {
 			if(auto er = enter_dir(root_dname_, root_path_)) return er;
-			if constexpr(Saving) {
-				seen_dirs_.clear();
-			}
 		}
 		if(cur_path_.empty()) cur_path_ = root_path_;
 		return perfect;
 	}
 
-	auto add_head(const fs::path& head_path) -> error {
+	// `fname` must not contain any dirs!
+	static auto prehash_stem(const fs::path& fname) {
+		if(auto stem = fname.stem().string(); !stem.empty())
+			return stem.substr(0, 1) / fname;
+		return fname;
+	}
+
+	auto add_head(fs::path head_path) -> error {
 	return error::eval_safe(
 		// enter parent dir
 		// [NOTE] explicit capture `head_path` because VS doesn't capture it with simple '&'
@@ -210,10 +226,11 @@ struct file_heads_manager {
 			// 1. we already antered parent dir in all usage conditions
 			// 2. resetting `cur_path_` is an error, because there's an optimization for not creating
 			// empty dirs for empty nodes
-			if constexpr(Saving)
-				return enter_dir(head_path.parent_path(), cur_path_);
+			if constexpr(Saving) {
+				return enter_dir(head_path.parent_path());
+			}
 		},
-		// open head file
+
 		[&] {
 			if(auto neck = neck_t(head_path, neck_mode)) {
 				necks_.push_back(std::move(neck));
@@ -242,12 +259,14 @@ struct file_heads_manager {
 					// read/write format version
 					auto& rhead = heads_.back();
 					rhead(make_nvp("format_version", version_));
-					// read objects directory path
+					// read links/objects directory path
 					if constexpr(!Saving) {
-						// read in UTF-8 & conver to to native
-						auto objects_dname = std::string{};
-						rhead( make_nvp("objects_dir", objects_dname) );
-						objects_dname_ = ustr2str(objects_dname);
+						// can skip UTF-8 to native conversion as dirnames are guaranteed ASCII
+						auto buf = std::string{};
+						rhead( make_nvp("links_dir", buf) );
+						links_path_ = root_path_ / fs::path(buf, fs::path::format::generic_format);
+						rhead( make_nvp("objects_dir", buf) );
+						objects_path_ = root_path_ / fs::path(buf, fs::path::format::generic_format);
 					}
 				}
 			)) return tl::make_unexpected(std::move(er));
@@ -274,8 +293,8 @@ struct file_heads_manager {
 
 	TFSOpts opts_;
 
-	std::string root_fname_, objects_dname_, root_dname_;
-	fs::path root_path_, cur_path_, objects_path_;
+	std::string root_fname_, root_dname_;
+	fs::path root_path_, cur_path_, links_path_, objects_path_;
 
 	objfrm_manager_t manager_;
 
@@ -283,12 +302,6 @@ struct file_heads_manager {
 	std::list<head_t> heads_;
 
 	std::uint32_t version_ = tree_fs_version;
-
-	// needed only when saving
-	using seen_dirs_cache = std::conditional_t<
-		Saving, std::unordered_set<fs::path>, identity<void>
-	>;
-	seen_dirs_cache seen_dirs_;
 };
 
 NAMESPACE_END(blue_sky::detail)

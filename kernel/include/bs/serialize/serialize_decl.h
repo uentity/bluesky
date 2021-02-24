@@ -39,13 +39,12 @@ template<typename T>
 inline constexpr auto is_archive_inspector_v = is_archive_inspector<T>::value;
 
 /// options for using with Tree FS archives
-enum class TFSOpts {
+enum class TFSOpts : std::uint8_t {
 	None = 0,
-	// clear dirs when entering 'em
-	SaveClearDirs = 1,
-	// if not set - node is reconstructed exactly from leafs stored with it's handle link.
-	// if set - for any node N all link files found inside N's directory will be loaded into N.
-	LoadNodeRecover = 2
+	// clear dirs when entering 'em (on saving)
+	ClearDirs = 1,
+	// force clear objects dir (on saving)
+	ClearObjectsDir = 2
 };
 
 // forward declare Tree FS archives

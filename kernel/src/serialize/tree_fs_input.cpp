@@ -45,19 +45,11 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		const auto sentinel = std::optional<tree::node>{};
 		return error::eval_safe(
 			// sentinel is ONLY used for template matching
-			[&] { return head().map([&](auto* ar) { prologue(*ar, *sentinel); }); },
-			[&] { return enter_root(); }
+			[&] { return head().map([&](auto* ar) { prologue(*ar, *sentinel); }); }
 		);
 	}
 
 	auto end_node(tree_fs_input& ar, tree::node& N) -> error {
-		if(cur_path_.empty()) return Error::NodeWasntStarted;
-
-		// always return to parent dir after node is loaded
-		auto finally = scope_guard{[=, p = cur_path_] {
-			if(auto er = enter_dir(p, cur_path_)) throw er;
-		}};
-
 		std::vector<std::string> leafs_order;
 		return error::eval_safe(
 			// read node's metadata
@@ -81,9 +73,9 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		using Options = fs::directory_options;
 
 		// skip empty dirs in normal mode
-		if(!enumval(opts_ & TFSOpts::LoadNodeRecover) && leafs_order.empty()) return perfect;
+		if(leafs_order.empty()) return perfect;
 		// enter node's dir
-		if(auto er = enter_dir(cur_path_ / N.home_id(), cur_path_)) return er;
+		if(auto er = enter_dir(links_path_, cur_path_)) return er;
 
 		std::string united_err_msg;
 		auto push_error = [&](auto er) {
@@ -97,44 +89,11 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		babies.reserve(leafs_order.size());
 
 		// fill leafs by scanning directory and loading link files
-		const auto normal_load = [&] {
-			std::for_each(
-				leafs_order.begin(), leafs_order.end(),
-				[&](auto& f) {
-					push_error(error::eval_safe(
-						[&] { return add_head(cur_path_ / (std::move(f) + link_file_ext)); },
-						[&] { // head is removed later by epilogue()
-							tree::link L;
-							ar(L);
-							babies.push_back(std::move(L));
-						}
-					));
-				}
-			);
-		};
-
-		const auto recover_load = [&] {
-			// setup node iterator
-			auto Niter = fs::directory_iterator{};
-			if(auto er = error::eval_safe([&] {
-				Niter = fs::directory_iterator(cur_path_, Options::skip_permission_denied);
-			})) {
-				push_error(std::move(er));
-				return;
-			}
-
-			// read links
-			for(auto& f : Niter) {
-				// skip directories
-				if(error::eval_safe([&]{ return !fs::is_directory(f); })) continue;
-
-				// try load file as a link
+		std::for_each(
+			leafs_order.begin(), leafs_order.end(),
+			[&](auto& f) {
 				push_error(error::eval_safe(
-					[&]{
-						auto link_path = f.path();
-						link_path += link_file_ext;
-						return add_head(std::move(link_file_ext));
-					},
+					[&] { return add_head(cur_path_ / prehash_stem(std::move(f) + link_file_ext)); },
 					[&] { // head is removed later by epilogue()
 						tree::link L;
 						ar(L);
@@ -142,53 +101,7 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 					}
 				));
 			}
-
-			// [NOTE] implementation with parallel STL
-			//std::for_each(
-			//	std::execution::par, begin(Niter), end(Niter),
-			//	[&](auto& f) {
-			//		// skip directories
-			//		if(error::eval_safe([&]{ return !fs::is_directory(f); })) return;
-
-			//		// try load file as a link
-			//		push_error(error::eval_safe(
-			//			[&] { return add_head(f); },
-			//			[&] {
-			//				tree::link L;
-			//				ar(L);
-			//				babies.push_back(std::move(L));
-			//			}
-			//		));
-			//	}
-			//);
-
-			// sanity
-			if(babies.size() < 2) return;
-
-			// restore links order
-			// idea is to step over leafs order and over babies simultaneousely
-			// if baby with current leaf ID is found, swap with baby in cur pos and take next baby
-			using std::swap;
-			auto cur_baby = babies.begin();
-			const auto babies_end = babies.end();
-			for(auto leaf = leafs_order.cbegin(), lo_end = leafs_order.cend(); leaf != lo_end; ++leaf) {
-				if(
-					auto pos = std::find_if(cur_baby, babies_end, [&](const auto& baby) {
-						return to_string(baby.id()) == *leaf;
-					});
-					pos != babies_end
-				) {
-					if(pos != cur_baby) swap(*cur_baby, *pos);
-					if(++cur_baby == babies_end) break;
-				}
-			}
-		};
-
-		// invoke laod
-		if(!enumval(opts_ & TFSOpts::LoadNodeRecover))
-			normal_load();
-		else
-			recover_load();
+		);
 
 		// insert loaded leafs in one transaction
 		push_error(N.apply([&](bare_node N) {
@@ -224,10 +137,9 @@ struct tree_fs_input::impl : detail::file_heads_manager<false> {
 		auto abs_obj_path = fs::path{};
 		SCOPE_EVAL_SAFE
 			// [NOTE] assume objects dir is stored in generic format
-			if(objects_path_.empty())
-				objects_path_ = root_path_ / fs::path(objects_dname_, fs::path::format::generic_format);
-			auto obj_path = objects_path_ / (std::string(obj.home_id()) + '.' + obj_frm);
-			abs_obj_path = fs::absolute(obj_path);
+			abs_obj_path = fs::absolute(
+				objects_path_ / prehash_stem(std::string(obj.home_id()) + '.' + obj_frm)
+			);
 		RETURN_SCOPE_ERR
 
 		// 4. read object data

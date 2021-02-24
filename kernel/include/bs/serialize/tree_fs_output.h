@@ -31,7 +31,7 @@ public:
 	static constexpr auto always_emit_polymorphic_name = true;
 	static constexpr auto always_emit_class_version = true;
 	static constexpr auto custom_node_serialization = true;
-	static constexpr auto default_opts = TFSOpts::SaveClearDirs;
+	static constexpr auto default_opts = TFSOpts::ClearDirs;
 
 	tree_fs_output(std::string root_fname, TFSOpts opts = default_opts);
 	~tree_fs_output();
