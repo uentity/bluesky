@@ -162,8 +162,6 @@ auto map_link_actor::on_exit() -> void {
 	send_exit(inp_listener_, caf::exit_reason::user_shutdown);
 }
 
-auto map_link_actor::name() const -> const char* { return "map_link_actor"; }
-
 auto map_link_actor::make_casual_behavior() -> typed_behavior {
 	return first_then_second(typed_behavior_overload{
 

@@ -37,6 +37,8 @@ objbase_actor::objbase_actor(caf::actor_config& cfg, caf::group home, sp_obj mam
 	KRADIO.register_citizen(this);
 }
 
+auto objbase_actor::name() const -> const char* { return "objbase actor"; }
+
 auto objbase_actor::make_typed_behavior() -> typed_behavior {
 return typed_behavior {
 	// get home group

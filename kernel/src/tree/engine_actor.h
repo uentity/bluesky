@@ -56,6 +56,11 @@ struct engine_actor : public engine_actor_base {
 		return std::static_pointer_cast<EImpl>(pimpl_);
 	}
 
+	auto name() const -> const char* override {
+		static const auto name_ = std::string{spimpl()->type_id()} + " actor";
+		return name_.c_str();
+	}
+
 	// impl ref for simpler access
 	engine_impl& impl;
 };

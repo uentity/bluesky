@@ -39,6 +39,8 @@ struct nil_link::self_actor : nil_engine_actor {
 	using super = nil_engine_actor;
 	using super::super;
 
+	auto name() const -> const char* override { return "nil_link actor"; }
+
 	auto make_behavior() -> behavior_type override { return link::actor_type::behavior_type{
 	
 		[](a_home) -> caf::group { return {}; },

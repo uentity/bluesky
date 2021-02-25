@@ -27,8 +27,6 @@ public:
 
 	link_actor(caf::actor_config& cfg, caf::group home, sp_limpl Limpl);
 
-	auto name() const -> const char* override;
-
 	// pass message to upper (owner) level of tree structure
 	template<typename... Args>
 	auto forward_up(Args&&... args) -> void {

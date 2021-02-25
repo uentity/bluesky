@@ -41,10 +41,6 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group home, sp_limpl Limpl) 
 	super(cfg, std::move(home), std::move(Limpl)), ropts_{ReqOpts::WaitIfBusy, ReqOpts::WaitIfBusy}
 {}
 
-auto link_actor::name() const -> const char* {
-	return "link_actor";
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 //  behavior
 //

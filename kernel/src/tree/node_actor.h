@@ -27,8 +27,6 @@ public:
 
 	using super::super;
 
-	auto name() const -> const char* override;
-
 	// pass message to upper (owner) level of tree structure
 	template<typename... Args>
 	auto forward_up(Args&&... args) -> void {

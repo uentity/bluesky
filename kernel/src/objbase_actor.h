@@ -51,6 +51,8 @@ public:
 
 	objbase_actor(caf::actor_config& cfg, caf::group home, sp_obj mama);
 
+	auto name() const -> const char* override;
+
 	auto make_typed_behavior() -> typed_behavior;
 	auto make_behavior() -> behavior_type override;
 

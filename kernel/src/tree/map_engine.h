@@ -168,7 +168,6 @@ public:
 
 	decltype(auto) mimpl() const { return static_cast<map_impl_base&>(impl); }
 
-	auto name() const -> const char* override;
 	auto on_exit() -> void override;
 
 	auto make_casual_behavior() -> typed_behavior;

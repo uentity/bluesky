@@ -26,6 +26,8 @@ struct nil_node::self_actor : nil_engine_actor {
 
 	using super::super;
 
+	auto name() const -> const char* override { return "nil_node actor"; }
+
 	auto make_behavior() -> behavior_type override { return node::actor_type::behavior_type{
 	
 		[](a_home) -> caf::group { return {}; },

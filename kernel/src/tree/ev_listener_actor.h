@@ -71,6 +71,8 @@ struct ev_listener_actor : caf::event_based_actor {
 		}.unbox());
 	}
 
+	auto name() const -> const char* override { return "ev_listener_actor"; }
+
 	auto make_behavior() -> behavior_type override {
 		return std::move(character);
 	}
