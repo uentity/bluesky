@@ -261,12 +261,13 @@ struct file_heads_manager {
 					rhead(make_nvp("format_version", version_));
 					// read links/objects directory path
 					if constexpr(!Saving) {
+						static constexpr auto gf = fs::path::format::generic_format;
 						// can skip UTF-8 to native conversion as dirnames are guaranteed ASCII
 						auto buf = std::string{};
 						rhead( make_nvp("links_dir", buf) );
-						links_path_ = root_path_ / fs::path(buf, fs::path::format::generic_format);
+						links_path_ = root_path_ / fs::path(buf, gf).make_preferred();
 						rhead( make_nvp("objects_dir", buf) );
-						objects_path_ = root_path_ / fs::path(buf, fs::path::format::generic_format);
+						objects_path_ = root_path_ / fs::path(buf, gf).make_preferred();
 					}
 				}
 			)) return tl::make_unexpected(std::move(er));
