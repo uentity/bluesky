@@ -48,6 +48,7 @@ public:
 	//
 	using primary_actor_type = link::actor_type
 	::extend_with<engine_actor_type<link>>
+	::extend_with<engine_home_actor_type>
 	::extend<
 		// ask link's actor to send status changed ack AFTER it has been already changed by handle
 		caf::reacts_to<a_lnk_status, Req, ReqStatus, ReqStatus>,
@@ -67,7 +68,7 @@ public:
 	using home_actor_type = self_ack_actor_type::extend<
 		// data altered ack from object
 		caf::reacts_to<a_ack, a_data, tr_result::box>
-	>;
+	>::extend_with<engine_home_actor_type>;
 
 	// leaf acks coming from subtree
 	using deep_ack_actor_type = caf::typed_actor<

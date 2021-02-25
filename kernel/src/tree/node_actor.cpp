@@ -238,6 +238,9 @@ auto node_actor::erase(const lid_type& victim, EraseOpts opts) -> size_t {
 //
 auto node_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
+	// ignore `a_bye` signal - comes from self
+	[=](a_bye) {},
+
 	[=](a_impl) -> sp_nimpl { return spimpl(); },
 
 	[=](a_clone, a_impl, bool deep) { return impl.clone(this, deep); },

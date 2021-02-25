@@ -104,10 +104,7 @@ auto hard_link_actor::make_typed_behavior() -> typed_behavior {
 			impl.send_home(this, a_ack(), a_data(), tres);
 			// retranslate to upper level
 			ack_up(a_data(), std::move(tres));
-		},
-
-		// ignore `a_bye` message that object send to it's group
-		[=](a_bye) {}
+		}
 
 	}, super::make_typed_behavior());
 }

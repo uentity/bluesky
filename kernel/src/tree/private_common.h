@@ -38,6 +38,12 @@ using engine_actor_type = caf::typed_actor<
 	caf::replies_to<a_subscribe, caf::actor /* ev listener */>::with<std::uint64_t>
 >;
 
+/// common interface of engine home group
+using engine_home_actor_type = caf::typed_actor<
+	// sent by home owner on exit
+	caf::reacts_to<a_bye>
+>;
+
 using ev_listener_actor_type = caf::typed_actor<
 	// returns ev listener actor ID
 	caf::replies_to<a_hi, caf::group /* source home */>::with<std::uint64_t>,

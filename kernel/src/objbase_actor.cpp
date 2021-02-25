@@ -41,6 +41,9 @@ auto objbase_actor::name() const -> const char* { return "objbase actor"; }
 
 auto objbase_actor::make_typed_behavior() -> typed_behavior {
 return typed_behavior {
+	// ignore `a_bye` signal - comes from self
+	[=](a_bye) {},
+
 	// get home group
 	[=](a_home) { return home_; },
 

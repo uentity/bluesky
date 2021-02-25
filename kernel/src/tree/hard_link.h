@@ -58,7 +58,7 @@ struct BS_HIDDEN_API weak_link_impl : ilink_impl {
  * 2) access to object's data & node is always fast, s.t. we don't need to manage req status
  * 3) joins object's home group & react on transactions
  *-----------------------------------------------------------------------------*/
-class hard_link_actor : public cached_link_actor {
+class BS_HIDDEN_API hard_link_actor : public cached_link_actor {
 public:
 	using super = cached_link_actor;
 	using super::super;
@@ -68,8 +68,7 @@ public:
 		// reset home group
 		caf::reacts_to<a_home, std::string>,
 		// data altered ack from object
-		caf::reacts_to<a_ack, a_data, tr_result::box>,
-		caf::reacts_to<a_bye>
+		caf::reacts_to<a_ack, a_data, tr_result::box>
 	>;
 
 	using typed_behavior = actor_type::behavior_type;
@@ -85,8 +84,7 @@ public:
 		// reset object home group 
 		caf::reacts_to<a_home, std::string>,
 		// data altered ack from object
-		caf::reacts_to<a_ack, a_data, tr_result::box>,
-		caf::reacts_to<a_bye>
+		caf::reacts_to<a_ack, a_data, tr_result::box>
 	>;
 
 	// if object is already initialized, auto-join it's group

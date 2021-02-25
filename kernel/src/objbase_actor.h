@@ -19,6 +19,8 @@ public:
 	using behavior_type = super::behavior_type;
 
 	using home_actor_type = caf::typed_actor<
+		// sent to home when owner exists
+		caf::reacts_to<a_bye>,
 		// reset home group
 		caf::reacts_to<a_home, std::string>,
 		// modification ack

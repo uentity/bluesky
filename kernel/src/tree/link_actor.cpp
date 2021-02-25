@@ -46,6 +46,8 @@ link_actor::link_actor(caf::actor_config& cfg, caf::group home, sp_limpl Limpl) 
 //
 auto link_actor::make_primary_behavior() -> primary_actor_type::behavior_type {
 return {
+	// ignore `a_bye` signal - comes from self
+	[=](a_bye) {},
 
 	[=](a_home) { return impl.home; },
 

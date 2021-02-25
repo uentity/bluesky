@@ -48,7 +48,8 @@ public:
 		// deep search by key with active symlinks
 		caf::replies_to<a_node_deep_search, std::string, Key, bool /* return_first */, lids_v>::with<links_v>
 	>
-	::extend_with<engine_actor_type<node>>;
+	::extend_with<engine_actor_type<node>>
+	::extend_with<engine_home_actor_type>;
 
 	// ack signals that this node send to home group
 	using self_ack_actor_type = caf::typed_actor<
@@ -74,7 +75,7 @@ public:
 	using ack_actor_type = link_impl::subtree_ack_actor_type::extend_with<leafs_ack_actor_type>;
 
 	// all acks are pumped via node's home group
-	using home_actor_type = ack_actor_type;
+	using home_actor_type = ack_actor_type::extend_with<engine_home_actor_type>;
 
 	// append private behavior to public iface
 	using actor_type = primary_actor_type::extend_with<ack_actor_type>;
