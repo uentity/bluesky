@@ -134,7 +134,8 @@ struct file_heads_manager {
 #ifdef _WIN32
 		// for Windows add '\\?\' prefix for long names support
 		static constexpr auto magic_prefix = std::string_view{ "\\\\?\\" };
-		if(magic_prefix.compare(0, magic_prefix.size(), root_fname_.data()) != 0)
+		// don't add prefix if path starts with slash
+		if(!root_fname_.empty() && root_fname_[0] != '\\')
 			root_fname_.insert(0, magic_prefix);
 #endif
 		// try convert root filename to absolute
