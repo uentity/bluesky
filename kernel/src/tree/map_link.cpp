@@ -15,22 +15,28 @@
 #include "nil_engine.h"
 
 #include <algorithm>
+#include <memory_resource>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using ei = engine::impl;
+
+// setup synchronized pool allocator for link impls
+static auto impl_pool = std::pmr::synchronized_pool_resource{};
+static auto map_link_alloc = std::pmr::polymorphic_allocator<map_link_impl>(&impl_pool);
+static auto map_node_alloc = std::pmr::polymorphic_allocator<map_node_impl>(&impl_pool);
 
 map_link::map_link(
 	mapper_f mf, uuid tag, std::string name, link_or_node src_node, link_or_node dest_node,
 	Event update_on, TreeOpts opts, Flags f
 ) : super([&] {
 		const auto make_lmapper_impl = [&](link_mapper_f lmf) -> sp_engine_impl {
-			return std::make_shared<map_link_impl>(
-				std::move(lmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
+			return std::allocate_shared<map_link_impl>(
+				map_link_alloc, std::move(lmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
 			);
 		};
 		const auto make_nmapper_impl = [&](node_mapper_f nmf) -> sp_engine_impl {
-			return std::make_shared<map_node_impl>(
-				std::move(nmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
+			return std::allocate_shared<map_node_impl>(
+				map_node_alloc, std::move(nmf), tag, std::move(name), src_node, dest_node, update_on, opts, f
 			);
 		};
 

@@ -17,10 +17,13 @@
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/tree.h>
 
+#include <memory_resource>
+
 NAMESPACE_BEGIN(blue_sky::tree)
-/*-----------------------------------------------------------------------------
- *  node
- *-----------------------------------------------------------------------------*/
+// setup synchronized pool allocator for node impls
+static auto impl_pool = std::pmr::synchronized_pool_resource{};
+static auto node_impl_alloc = std::pmr::polymorphic_allocator<node_impl>(&impl_pool);
+
 node::node(engine&& e) :
 	engine(std::move(e))
 {
@@ -35,7 +38,7 @@ node::node(sp_engine_impl impl) :
 }
 
 node::node(links_v leafs) :
-	node(std::make_shared<node_impl>())
+	node(std::allocate_shared<node_impl>(node_impl_alloc))
 {
 	// insert each link with proper locking
 	insert(std::move(leafs));

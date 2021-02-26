@@ -19,11 +19,18 @@
 #include "hard_link.h"
 #include "../serialize/tree_impl.h"
 
+#include <memory_resource>
+
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
+
+// setup synchronized pool allocator for link impls
+static auto impl_pool = std::pmr::synchronized_pool_resource{};
+static auto hard_impl_alloc = std::pmr::polymorphic_allocator<hard_link_impl>(&impl_pool);
+static auto weak_impl_alloc = std::pmr::polymorphic_allocator<weak_link_impl>(&impl_pool);
 
 /*-----------------------------------------------------------------------------
  *  hard_link_actor
@@ -148,8 +155,9 @@ auto hard_link_impl::clone(link_actor* papa, bool deep) const -> caf::result<sp_
 	.then(
 		[=](const obj_or_errbox& maybe_obj) mutable {
 			if(maybe_obj)
-				res.deliver(sp_limpl{std::make_shared<hard_link_impl>(
-					name_, deep ? kernel::tfactory::clone_object(*maybe_obj) : *maybe_obj, flags_
+				res.deliver(sp_limpl{std::allocate_shared<hard_link_impl>(
+					hard_impl_alloc, name_,
+					deep ? kernel::tfactory::clone_object(*maybe_obj) : *maybe_obj, flags_
 				)});
 			else
 				res.deliver(sp_limpl{});
@@ -167,19 +175,19 @@ auto hard_link_impl::spawn_actor(sp_limpl limpl) const -> caf::actor {
 //  class
 //
 hard_link::hard_link(std::string name, sp_obj data, Flags f) :
-	super(std::make_shared<hard_link_impl>(
-		std::move(name), std::move(data), f
+	super(std::allocate_shared<hard_link_impl>(
+		hard_impl_alloc, std::move(name), std::move(data), f
 	))
 {}
 
 hard_link::hard_link(std::string name, node folder, Flags f) :
-	super(std::make_shared<hard_link_impl>(
-		std::move(name), std::make_shared<objnode>(std::move(folder)), f
+	super(std::allocate_shared<hard_link_impl>(
+		hard_impl_alloc, std::move(name), std::make_shared<objnode>(std::move(folder)), f
 	))
 {}
 
 hard_link::hard_link() :
-	super(std::make_shared<hard_link_impl>(), false)
+	super(std::allocate_shared<hard_link_impl>(hard_impl_alloc), false)
 {}
 
 LINK_CONVERT_TO(hard_link)
@@ -232,7 +240,9 @@ auto weak_link_impl::clone(link_actor* papa, bool deep) const -> caf::result<sp_
 		[=](const obj_or_errbox& maybe_obj) mutable {
 			if(maybe_obj)
 				// cannot make deep copy of object pointee
-				res.deliver(sp_limpl{ std::make_shared<weak_link_impl>(name_, *maybe_obj, flags_) });
+				res.deliver(sp_limpl{
+					std::allocate_shared<weak_link_impl>(weak_impl_alloc, name_, *maybe_obj, flags_)
+				});
 			else
 				res.deliver(sp_limpl{});
 		},
@@ -255,11 +265,11 @@ auto weak_link_impl::propagate_handle() -> node_or_err {
 //  class
 //
 weak_link::weak_link(std::string name, const sp_obj& data, Flags f) :
-	super(std::make_shared<weak_link_impl>(std::move(name), data, f))
+	super(std::allocate_shared<weak_link_impl>(weak_impl_alloc, std::move(name), data, f))
 {}
 
 weak_link::weak_link() :
-	super(std::make_shared<weak_link_impl>(), false)
+	super(std::allocate_shared<weak_link_impl>(weak_impl_alloc), false)
 {}
 
 LINK_CONVERT_TO(weak_link)

@@ -186,7 +186,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	auto baby = system().spawn<baby_t>(raw_actor().address(), std::move(f), std::move(make_ev_character));
 	// ensure it has started & properly initialized
 	if(auto res = actorf<std::uint64_t>(
-		*factor(), pimpl()->actor(*this), infinite, a_subscribe(), std::move(baby)
+		pimpl()->actor(*this), infinite, a_subscribe(), std::move(baby)
 	))
 		return *res;
 	else

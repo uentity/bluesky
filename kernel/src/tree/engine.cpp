@@ -12,6 +12,8 @@
 
 #include <caf/send.hpp>
 
+#include <memory_resource>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 /*-----------------------------------------------------------------------------
  *  weak_ptr
@@ -77,12 +79,16 @@ struct engine::actor_handle {
 	}
 };
 
+// setup synchronized pool allocator for link impls
+static auto impl_pool = std::pmr::synchronized_pool_resource{};
+static auto ahdl_alloc = std::pmr::polymorphic_allocator<engine::actor_handle>(&impl_pool);
+
 engine::engine(sp_ahandle ah, sp_engine_impl pimpl) :
 	actor_(std::move(ah)), pimpl_(std::move(pimpl))
 {}
 
 engine::engine(caf::actor engine_actor, sp_engine_impl pimpl) :
-	engine(std::make_shared<actor_handle>(std::move(engine_actor)), std::move(pimpl))
+	engine(std::allocate_shared<actor_handle>(ahdl_alloc, std::move(engine_actor)), std::move(pimpl))
 {}
 
 engine::engine(engine&& rhs)

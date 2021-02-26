@@ -13,6 +13,8 @@
 
 #include <bs/kernel/radio.h>
 
+#include <memory_resource>
+
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 
@@ -30,6 +32,9 @@ namespace kradio = kernel::radio;
 /*-----------------------------------------------------------------------------
  *  engine_impl
  *-----------------------------------------------------------------------------*/
+static auto factor_pool = std::pmr::synchronized_pool_resource{};
+static auto factor_alloc = std::pmr::polymorphic_allocator<caf::scoped_actor>(&factor_pool);
+
 auto engine::impl::factor(const engine* L) -> sp_scoped_actor {
 	// check if elem is already inserted and find insertion position
 	{
@@ -39,7 +44,9 @@ auto engine::impl::factor(const engine* L) -> sp_scoped_actor {
 	}
 	// make insertion
 	auto mguard = guard_.lock();
-	return rpool_.try_emplace( L, std::make_shared<caf::scoped_actor>(kradio::system()) ).first->second;
+	return rpool_.try_emplace(
+		L, std::allocate_shared<caf::scoped_actor>(factor_alloc, kradio::system())
+	).first->second;
 }
 
 auto engine::impl::release_factor(const engine* L) -> void {

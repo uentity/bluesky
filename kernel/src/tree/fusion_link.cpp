@@ -15,9 +15,17 @@
 #include <bs/serialize/cafbind.h>
 #include <bs/serialize/propdict.h>
 
+#include <memory_resource>
+
 #define FIMPL static_cast<fusion_link_impl&>(*pimpl())
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using ei = engine::impl;
+
+// setup synchronized pool allocator for link impls
+static auto impl_pool = std::pmr::synchronized_pool_resource{};
+static auto fusion_impl_alloc = std::pmr::polymorphic_allocator<fusion_link_impl>(&impl_pool);
+
 /*-----------------------------------------------------------------------------
  *  fusion_iface
  *-----------------------------------------------------------------------------*/
@@ -48,8 +56,8 @@ auto fusion_iface::populate(sp_obj root, link root_link, prop::propdict params) 
 fusion_link::fusion_link(
 	std::string name, sp_obj data, sp_fusion bridge, Flags f
 ) : // set LazyLoad flag by default
-	super(std::make_shared<fusion_link_impl>(
-		std::move(name), std::move(data), std::move(bridge), Flags(f | LazyLoad)
+	super(std::allocate_shared<fusion_link_impl>(
+		fusion_impl_alloc, std::move(name), std::move(data), std::move(bridge), Flags(f | LazyLoad)
 	))
 {}
 
@@ -74,7 +82,7 @@ fusion_link::fusion_link(
 }
 
 fusion_link::fusion_link()
-	: super(std::make_shared<fusion_link_impl>(), false)
+	: super(std::allocate_shared<fusion_link_impl>(fusion_impl_alloc), false)
 {}
 
 auto fusion_link::pull_data(prop::propdict params, bool wait_if_busy) const -> obj_or_err {
