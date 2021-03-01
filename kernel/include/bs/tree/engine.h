@@ -90,7 +90,7 @@ public:
 	~engine();
 
 	engine(const engine&) = default;
-	auto operator=(const engine&) -> engine&;
+	auto operator=(const engine&) -> engine& = default;
 
 	engine(engine&&);
 	auto operator=(engine&&) -> engine&;

@@ -79,7 +79,7 @@ struct engine::actor_handle {
 	}
 };
 
-// setup synchronized pool allocator for link impls
+// setup synchronized pool allocator for actor handles
 static auto impl_pool = std::pmr::synchronized_pool_resource{};
 static auto ahdl_alloc = std::pmr::polymorphic_allocator<engine::actor_handle>(&impl_pool);
 
@@ -100,11 +100,6 @@ engine::engine(engine&& rhs)
 engine::~engine() {
 	// can be NULL for moved from object
 	if(pimpl_) pimpl_->release_factor(this);
-}
-
-auto engine::operator=(const engine& rhs) -> engine& {
-	engine(rhs).swap(*this);
-	return *this;
 }
 
 auto engine::operator=(engine&& rhs) -> engine& {
