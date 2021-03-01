@@ -91,22 +91,6 @@ engine::engine(caf::actor engine_actor, sp_engine_impl pimpl) :
 	engine(std::allocate_shared<actor_handle>(ahdl_alloc, std::move(engine_actor)), std::move(pimpl))
 {}
 
-engine::engine(engine&& rhs)
-	: actor_(std::move(rhs.actor_)), pimpl_(std::move(rhs.pimpl_))
-{
-	if(pimpl_) pimpl_->release_factor(&rhs);
-}
-
-engine::~engine() {
-	// can be NULL for moved from object
-	if(pimpl_) pimpl_->release_factor(this);
-}
-
-auto engine::operator=(engine&& rhs) -> engine& {
-	engine(std::move(rhs)).swap(*this);
-	return *this;
-}
-
 auto engine::operator==(const engine& rhs) const -> bool {
 	return pimpl_ == rhs.pimpl_;
 }
@@ -139,10 +123,6 @@ auto engine::swap(engine& rhs) noexcept -> void {
 	using std::swap;
 	swap(actor_, rhs.actor_);
 	swap(pimpl_, rhs.pimpl_);
-}
-
-auto engine::factor() const -> sp_scoped_actor {
-	return pimpl_->factor(this);
 }
 
 auto engine::type_id() const -> std::string_view {

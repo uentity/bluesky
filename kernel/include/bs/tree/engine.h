@@ -86,14 +86,11 @@ public:
 	/// special members
 	engine(caf::actor engine_actor, sp_engine_impl pimpl);
 	engine(sp_ahandle ah, sp_engine_impl pimpl);
-	// [NOTE] engine is NOT designed for polymorphic usage!
-	~engine();
 
 	engine(const engine&) = default;
 	auto operator=(const engine&) -> engine& = default;
-
-	engine(engine&&);
-	auto operator=(engine&&) -> engine&;
+	engine(engine&&) = default;
+	auto operator=(engine&&) -> engine& = default;
 
 	/// compare & sort support
 	auto operator==(const engine& rhs) const -> bool;
@@ -128,11 +125,6 @@ public:
 
 	/// get engine's home group ID (empty for invalid / not started home)
 	auto home_id() const -> std::string_view;
-
-	/// get managed requester that can be used to talk with engine actor
-	/// [NOTE] shared_ptr is used because `scoped_actor` cannot be copied or moved
-	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
-	auto factor() const -> sp_scoped_actor;
 
 	/// unsubscribe event handler with known ID
 	static auto unsubscribe(std::uint64_t event_cb_id) -> void;

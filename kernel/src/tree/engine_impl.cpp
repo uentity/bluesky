@@ -13,13 +13,10 @@
 
 #include <bs/kernel/radio.h>
 
-#include <memory_resource>
-
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
-namespace kradio = kernel::radio;
 
 [[maybe_unused]] auto adbg_impl(engine_actor_base* A) -> caf::actor_ostream {
 	auto os = caf::aout(A);
@@ -32,33 +29,6 @@ namespace kradio = kernel::radio;
 /*-----------------------------------------------------------------------------
  *  engine_impl
  *-----------------------------------------------------------------------------*/
-static auto factor_pool = std::pmr::synchronized_pool_resource{};
-static auto factor_alloc = std::pmr::polymorphic_allocator<caf::scoped_actor>(&factor_pool);
-
-auto engine::impl::factor(const engine* L) -> sp_scoped_actor {
-	// check if elem is already inserted and find insertion position
-	{
-		auto guard = guard_.lock(detail::shared);
-		if(auto pf = rpool_.find(L); pf != rpool_.end())
-			return pf->second;
-	}
-	// make insertion
-	auto mguard = guard_.lock();
-	return rpool_.try_emplace(
-		L, std::allocate_shared<caf::scoped_actor>(factor_alloc, kradio::system())
-	).first->second;
-}
-
-auto engine::impl::release_factor(const engine* L) -> void {
-	auto guard = guard_.lock();
-	rpool_.erase(L);
-}
-
-auto engine::impl::release_factors() -> void {
-	auto guard = guard_.lock();
-	rpool_.clear();
-}
-
 auto engine::impl::home_id() const -> std::string_view {
 	return home ? home.get()->identifier() : std::string_view{};
 }
@@ -66,7 +36,6 @@ auto engine::impl::home_id() const -> std::string_view {
 auto engine::impl::swap(impl& rhs) -> void {
 	using std::swap;
 	swap(home, rhs.home);
-	swap(rpool_, rhs.rpool_);
 }
 
 /*-----------------------------------------------------------------------------
@@ -120,7 +89,6 @@ auto engine_actor_base::on_exit() -> void {
 	// be polite with everyone
 	goodbye();
 	// force release strong ref to engine's impl
-	pimpl_->release_factors();
 	pimpl_.reset();
 
 	KRADIO.release_citizen(this);

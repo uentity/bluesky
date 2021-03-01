@@ -90,11 +90,6 @@ public:
 	/// return engine's type ID
 	virtual auto type_id() const -> std::string_view = 0;
 
-	/// requesters (scoped_actor instances) management
-	auto factor(const engine* L) -> sp_scoped_actor;
-	auto release_factor(const engine* L) -> void;
-	auto release_factors() -> void;
-
 	/// can be shadowed in derived handle impl class to further customize timeouts
 	inline auto timeout(bool for_long_task) const {
 		return kernel::radio::timeout(for_long_task);
@@ -111,7 +106,7 @@ public:
 	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
 	static auto actorf(const Handle& H, caf::duration timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
-			*pimpl(H).factor(&H), Handle::engine_impl::actor(H), timeout, std::forward<Args>(args)...
+			Handle::engine_impl::actor(H), timeout, std::forward<Args>(args)...
 		);
 	}
 
@@ -143,13 +138,6 @@ public:
 		using home_actor_t = typename engine_impl_t<Handle>::home_actor_type;
 		checked_send<home_actor_t, P>(pimpl(H).home, std::forward<Ts>(xs)...);
 	}
-
-private:
-	// requesters pool { link addr -> `scoped_actor` instance }
-	using rpool_t = std::unordered_map<const engine*, sp_scoped_actor>;
-	rpool_t rpool_;
-
-	blue_sky::detail::sharded_mutex<engine_impl_mutex> guard_;
 };
 
 NAMESPACE_END(blue_sky::tree)

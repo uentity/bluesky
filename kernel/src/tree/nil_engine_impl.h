@@ -34,7 +34,6 @@ struct nil_engine_impl : ItemImpl {
 
 		auto reset() -> void {
 			online_ = false;
-			static_cast<ItemImpl&>(*pimpl_).release_factors();
 		}
 
 		auto stop(bool wait_exit) -> void {
