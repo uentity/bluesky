@@ -288,13 +288,30 @@ template<class T> using result_or_errbox = tl::expected<T, error::box>;
 
 /// denote unexpected error
 template<typename... Args>
-inline auto unexpected_err(Args&&... args) noexcept {
+constexpr auto unexpected_err(Args&&... args) noexcept {
 	return tl::make_unexpected(error(std::forward<Args>(args)...));
 }
 
 template<typename... Args>
-inline auto unexpected_err_quiet(Args&&... args) noexcept {
+constexpr auto unexpected_err_quiet(Args&&... args) noexcept {
 	return tl::make_unexpected(error::quiet(std::forward<Args>(args)...));
+}
+
+/// traits to detect result_or_err/result_or_errbox
+template<typename T, typename E = error>
+constexpr auto is_unexpected_err() -> bool {
+	if constexpr(tl::detail::is_expected<T>::value)
+		return std::is_same_v<typename T::error_type, E>;
+	else
+		return false;
+}
+
+/// convert `result_or_errbox` -> `result_or_err`
+template< typename T, typename = std::enable_if_t<is_unexpected_err<T, error::box>()> >
+constexpr auto unpack(T&& x) {
+	return std::forward<T>(x).map_error([](auto&& erb) {
+		return error(std::forward<decltype(erb)>(erb));
+	});
 }
 
 NAMESPACE_END(blue_sky)
