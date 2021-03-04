@@ -93,6 +93,7 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 }
 
 auto link::unsubscribe(deep_t) const -> void {
+	if(is_nil()) return;
 	unsubscribe();
 	apply(launch_async, [](bare_link self) {
 		if(auto N = self.data_node())

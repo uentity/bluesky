@@ -194,6 +194,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 }
 
 auto node::unsubscribe(deep_t) const -> void {
+	if(is_nil()) return;
 	unsubscribe();
 	apply(launch_async, [](bare_node self) {
 		for(const auto& L : self.leafs())
