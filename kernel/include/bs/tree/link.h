@@ -218,7 +218,9 @@ public:
 
 	/// returns ID of suscriber that is required for unsubscribe
 	auto subscribe(event_handler f, Event listen_to = Event::All) const -> std::uint64_t;
-	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
+	/// unsubscribe handlers from self & whole subtree
+	auto unsubscribe(deep_t) const -> void;
+	using engine::unsubscribe;
 
 protected:
 	using engine::operator=;

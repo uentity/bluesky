@@ -193,8 +193,13 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 		throw res.error();
 }
 
-auto node::unsubscribe(std::uint64_t event_cb_id) -> void {
-	kernel::radio::bye_actor(event_cb_id);
+auto node::unsubscribe(deep_t) const -> void {
+	unsubscribe();
+	apply(launch_async, [](bare_node self) {
+		for(const auto& L : self.leafs())
+			L.unsubscribe(deep);
+		return perfect;
+	});
 }
 
 NAMESPACE_END(blue_sky::tree)

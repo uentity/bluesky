@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 15.08.2018
 /// @brief All atoms that are used in BS are declared here
@@ -25,6 +24,10 @@ inline constexpr auto unsafe = unsafe_t{};
 /// denote operation that can take long time
 using long_op_t = caf::atom_constant<caf::atom("bs long op")>;
 inline constexpr auto long_op = long_op_t{};
+
+/// denote some operation that spans to whole subtree
+using deep_t = caf::atom_constant<caf::atom("bs deep")>;
+inline constexpr auto deep = deep_t{};
 
 ///////////////////////////////////////////////////////////////////////////////
 //  generic BS API
@@ -100,4 +103,3 @@ using a_node_handle = caf::atom_constant<caf::atom("tn handle")>;
 using a_node_rearrange = caf::atom_constant<caf::atom("tn rearng")>;
 
 } /* namespace blue_sky */
-

@@ -382,7 +382,12 @@ void py_bind_node(py::module& m) {
 			return N.subscribe(pipe_through_queue(std::move(f), launch_async), listen_to);
 		}, "event_cb"_a, "events"_a = Event::All)
 
-		.def_static("unsubscribe", &node::unsubscribe, "event_cb_id"_a)
+		.def("unsubscribe", py::overload_cast<deep_t>(&node::unsubscribe, py::const_))
+		.def("unsubscribe", py::overload_cast<>(&engine::unsubscribe, py::const_))
+		// [NOTE] need to define non-static method for overloading
+		.def("unsubscribe", [](const py::object&, std::uint64_t handler_id) {
+			engine::unsubscribe(handler_id);
+		}, "handler_id"_a)
 
 		.def("apply",
 			[](const node& N, std::function< py::object(bare_node) > tr) {

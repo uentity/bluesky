@@ -157,4 +157,12 @@ auto engine::home_id() const -> std::string_view {
 	return pimpl_->home_id();
 }
 
+auto engine::unsubscribe(std::uint64_t event_cb_id) -> void {
+	kernel::radio::bye_actor(event_cb_id);
+}
+
+auto engine::unsubscribe() const -> void {
+	caf::anon_send(home(), a_bye{});
+}
+
 NAMESPACE_END(blue_sky::tree)

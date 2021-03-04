@@ -171,6 +171,10 @@ void py_bind_common(py::module& m) {
 	// unsafe tag
 	py::class_<unsafe_t>(m, "unsafe_t");
 	m.attr("unsafe") = unsafe;
+
+	// deep tag
+	py::class_<deep_t>(m, "deep_t");
+	m.attr("deep") = deep;
 }
 
 NAMESPACE_END(python)

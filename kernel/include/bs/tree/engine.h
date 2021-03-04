@@ -134,6 +134,11 @@ public:
 	using sp_scoped_actor = std::shared_ptr<caf::scoped_actor>;
 	auto factor() const -> sp_scoped_actor;
 
+	/// unsubscribe event handler with known ID
+	static auto unsubscribe(std::uint64_t event_cb_id) -> void;
+	/// unsubscribe all self event handlers
+	auto unsubscribe() const -> void;
+
 protected:
 	/// return engine's raw (dynamic-typed) actor handle
 	// [NOTE] uncheked access
