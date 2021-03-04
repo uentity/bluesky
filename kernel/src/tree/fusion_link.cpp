@@ -104,9 +104,9 @@ auto fusion_link::pull_data(link::process_data_cb f, prop::propdict params) cons
 }
 
 auto fusion_link::populate(prop::propdict params, bool wait_if_busy) const -> node_or_err {
-	return pimpl()->actorf<node_or_errbox>(
+	return unpack(pimpl()->actorf<node_or_errbox>(
 		*this, a_flnk_populate(), std::move(params), wait_if_busy
-	);
+	));
 }
 
 auto fusion_link::populate(link::process_dnode_cb f, prop::propdict params) const -> void {
@@ -115,7 +115,7 @@ auto fusion_link::populate(link::process_dnode_cb f, prop::propdict params) cons
 	anon_request<caf::detached>(
 		actor(*this), kernel::radio::timeout(true), false,
 		[f = std::move(f), self = *this](result_t data) mutable {
-			f( std::move(data), std::move(self) );
+			f( unpack(std::move(data)), std::move(self) );
 		},
 		a_flnk_populate(), std::move(params), true
 	);

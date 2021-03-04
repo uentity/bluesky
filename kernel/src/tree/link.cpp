@@ -195,9 +195,9 @@ auto link::data(unsafe_t) const -> sp_obj {
 }
 
 auto link::data_node_ex(bool wait_if_busy) const -> node_or_err {
-	return pimpl()->actorf<node_or_errbox>(
+	return unpack(pimpl()->actorf<node_or_errbox>(
 		long_op, *this, a_data_node(), wait_if_busy
-	);
+	));
 }
 
 auto link::data_node() const -> node {
@@ -248,7 +248,7 @@ auto link::data_node(process_dnode_cb f, bool high_priority) const -> void {
 		actor(), kernel::radio::timeout(true), high_priority,
 		[f = std::move(f), wself = weak_ptr(*this)](node_or_errbox enode) {
 			if(auto self = wself.lock())
-				f(std::move(enode), std::move(self));
+				f(unpack(std::move(enode)), std::move(self));
 		},
 		a_data_node(), true
 	);
