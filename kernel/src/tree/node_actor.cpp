@@ -256,7 +256,9 @@ return {
 
 	[=](a_apply, node_transaction tr) -> caf::result<tr_result::box> {
 		adbg(this) << "<- a_apply transaction" << std::endl;
-		return tr_eval(this, tr, [&] { return impl.super_engine().bare(); });
+		if(const auto self = impl.super_engine())
+			return tr_eval(this, tr, [&] { return self.bare(); });
+		return error::quiet(blue_sky::Error::TrEmptyTarget);
 	},
 
 	// subscribe events listener
