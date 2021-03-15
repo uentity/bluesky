@@ -165,6 +165,7 @@ void py_bind_link(py::module& m) {
 		.def("name", &bare_link::name)
 
 		.def("data", [](bare_link& L){ return adapt(L.data(), L.armed()); }, "Get pointee Data")
+		.def("data_raw", py::overload_cast<>(&bare_link::data), "Returns non-adapted object")
 		.def("data_node", &bare_link::data_node, "Get pointee DataNode")
 	;
 
@@ -202,6 +203,7 @@ void py_bind_link(py::module& m) {
 			"wait_if_busy"_a = true, nogil
 		)
 		.def("data", [](const link& L){ return adapt(L.data(), L); }, nogil)
+		.def("data_raw", py::overload_cast<>(&link::data, py::const_), nogil, "Returns non-adapted object")
 
 		// pass adapted object to callback
 		.def("data", [](const link& L, adapted_data_cb f, bool high_priority) {
