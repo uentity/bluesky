@@ -69,8 +69,7 @@ private:
 	std::unordered_map<const objbase*, acache_value> acache_;
 	// used to resolve link ID -> object pointer when link is erased
 	// by keeping this map we can omit (expensive) call to `link::data()`
-	// [NOTE] link ID is stored as string for convinience
-	std::unordered_map<std::string, const objbase*> lnk2obj_;
+	std::unordered_map<uuid, const objbase*> lnk2obj_;
 
 	mutable std::mutex guard_;
 };

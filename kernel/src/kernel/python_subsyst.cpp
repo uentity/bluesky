@@ -175,11 +175,12 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 	if(!source) return py::none();
 	auto solo = std::lock_guard{ guard_ };
 
-	// registers link and returns whether link is met for the first time
+	// register link and return whether link is met for the first time
 	const auto remember_link = [&](auto* data_ptr) {
-		// handler for link erased event responsible for deleting cached adapters
-		[[maybe_unused]] static auto on_link_delete = [](tree::link, tree::Event, prop::propdict params) {
-			const auto* lid = prop::get_if<std::string>(&params, "lid");
+		if(!lnk2obj_.try_emplace(L.id(), data_ptr).second) return false;
+		// erase adapter on link delete
+		L.subscribe([](const auto&, auto, auto params) {
+			const auto* lid = prop::get_if<uuid>(&params, "link_id");
 			if(!lid) return;
 
 			auto& self = python_subsyst_impl::self();
@@ -196,15 +197,8 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 				}
 			}
 			self.lnk2obj_.erase(cached_L);
-		};
-
-		// inc ref counter for new link
-		if(lnk2obj_.try_emplace(to_string(L.id()), data_ptr).second) {
-			// install erased event handler
-			L.subscribe(on_link_delete, tree::Event::LinkDeleted);
-			return true;
-		}
-		return false;
+		}, tree::Event::LinkDeleted);
+		return true;
 	};
 
 	// check if adapter already created for given object
@@ -272,7 +266,6 @@ auto py_bind_adapters(py::module& m) -> void {
 	// export adapters manip functions
 	using adapter_fn = kernel::detail::python_subsyst_impl::adapter_fn;
 
-	// called with GIL released
 	m.def("register_adapter", [](std::string obj_type_id, adapter_fn f) {
 			py_kernel().register_adapter(std::move(obj_type_id), std::move(f));
 		}, "obj_type_id"_a, "adapter_fn"_a, "Register adapter for specified BS type"
@@ -284,14 +277,12 @@ auto py_bind_adapters(py::module& m) -> void {
 	m.def("adapted_types", []() { return py_kernel().adapted_types(); },
 		"Return list of types with registered adapters ('*' denotes default adapter)"
 	);
-	// [NOTE] containes fine-grained GIL acquire, so can be called w/o GIL
 	m.def("adapt", [](sp_obj source, const tree::link& L) {
 			return py_kernel().adapt(std::move(source), L);
 		}, "source"_a, "lnk"_a,
 		"Make adapter for given object"
 	);
 
-	// called normally with captured GIL
 	m.def("clear_adapters", []() { py_kernel().clear_adapters(); },
 		"Remove all adapters (including default) for BS types"
 	);
@@ -308,7 +299,6 @@ auto py_bind_adapters(py::module& m) -> void {
 
 	m.def("enqueue", [](py::function f) {
 		KRADIO.enqueue(launch_async, [f = std::move(f)] {
-			auto guard = py::gil_scoped_acquire();
 			f();
 			return perfect;
 		});
