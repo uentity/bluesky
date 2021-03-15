@@ -27,14 +27,12 @@ NAMESPACE_BEGIN()
 const auto py_kernel = &kernel::detail::python_subsyst_impl::self;
 
 auto adapt(sp_obj&& source, const link& L) {
-	auto guard = py::gil_scoped_acquire();
 	return py_kernel().adapt(std::move(source), L);
 }
 
 template<typename T>
 auto adapt(result_or_err<T>&& source, const link& L) {
 	return std::move(source).map([&](T&& obj) {
-		auto guard = py::gil_scoped_acquire();
 		if constexpr(std::is_same_v<T, sp_obj>)
 			return py_kernel().adapt( std::move(obj), L );
 		else
@@ -186,7 +184,7 @@ void py_bind_link(py::module& m) {
 
 		.def("bare", &link::bare, "Convert to bare (unsafe) link")
 
-		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link")
+		.def("clone", &link::clone, "deep"_a = false, "Make shallow or deep copy of link", nogil)
 
 		.def("name", py::overload_cast<>(&link::name, py::const_))
 		.def_property_readonly("name_unsafe", [](const link& L) { return L.name(unsafe); })
@@ -203,7 +201,7 @@ void py_bind_link(py::module& m) {
 			"wait_if_busy"_a = true, nogil
 		)
 		.def("data", [](const link& L){ return adapt(L.data(), L); }, nogil)
-		.def("data_raw", py::overload_cast<>(&link::data, py::const_), nogil, "Returns non-adapted object")
+		.def("data_raw", py::overload_cast<>(&link::data, py::const_), "Returns non-adapted object", nogil)
 
 		// pass adapted object to callback
 		.def("data", [](const link& L, adapted_data_cb f, bool high_priority) {
@@ -223,7 +221,7 @@ void py_bind_link(py::module& m) {
 
 		// unsafe access to data & data node
 		.def("data", py::overload_cast<unsafe_t>(&link::data, py::const_),
-				"Direct access to link's data cache")
+			"Direct access to link's data cache")
 		.def("data_node", py::overload_cast<unsafe_t>(&link::data_node, py::const_),
 			"Direct access to link's data node cache")
 
