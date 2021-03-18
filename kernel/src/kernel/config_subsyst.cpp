@@ -153,21 +153,21 @@ config_subsyst::config_subsyst() {
 	*  Logic here is the following
 	*  1. Conf file from the latter path override previous one
 	*  2. For UNIX order is the following:
-	*  	/etc/blue-sky/blue-sky.conf
-	*  	/home/$USER/.blue-sky/blue-sky.conf
+	*  	/etc/bs/bs.conf
+	*  	/home/$USER/.bs/bs.conf
 	*  3. For Windows order is the following:
-	*  	%ALLUSERSPROFILE%\blue-sky\blue-sky.conf (C:\ProgramData\...)
-	*  	%APPDATA%\blue-sky\blue-sky.conf (C:\Users\%USER%\AppData\Roaming\...)
-	*  4. blue-sky.conf from . dir is the last one
+	*  	%ALLUSERSPROFILE%\bs\bs.conf (C:\ProgramData\...)
+	*  	%APPDATA%\bs\bs.conf (C:\Users\%USER%\AppData\Roaming\...)
+	*  4. bs.conf from . dir is the last one
 	*-----------------------------------------------------------------------------*/
 	// as fallback add possibility to read config from current path
-	conf_path_.push_back("blue-sky.ini");
+	conf_path_.push_back("bs.conf");
 #ifdef UNIX
-	conf_path_.emplace_back("/etc/blue-sky/blue-sky.ini");
-	conf_path_.push_back( fs::path(::getenv("HOME")) / ".blue-sky/blue-sky.ini" );
+	conf_path_.emplace_back("/etc/bs/bs.conf");
+	conf_path_.push_back( fs::path(::getenv("HOME")) / ".bs/bs.conf" );
 #else // WINDOWS
-	conf_path_.push_back( fs::path(::getenv("ALLUSERSPROFILE")) / "blue-sky" / "blue-sky.ini" );
-	conf_path_.push_back( fs::path(::getenv("USERPROFILE")) / "blue-sky" / "blue-sky.ini" );
+	conf_path_.push_back( fs::path(::getenv("ALLUSERSPROFILE")) / "bs" / "bs.conf" );
+	conf_path_.push_back( fs::path(::getenv("USERPROFILE")) / "bs" / "bs.conf" );
 #endif // UNIX
 }
 
@@ -207,7 +207,7 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 			}
 			bsout() << "{} - {}" << ini_path.string() << (status ? "OK" : "Fail") << log::end;
 			// try to read CAF config from the same dir as BS config
-			const auto caf_ini_path = ini_path.parent_path() / "caf.ini";
+			const auto caf_ini_path = ini_path.parent_path() / "caf.conf";
 			if(( ini = std::ifstream(caf_ini_path) )) {
 				actor_cfg_.parse({}, ini);
 				bsout() << "{} - {}" << caf_ini_path.string() << "CAF" << log::end;
