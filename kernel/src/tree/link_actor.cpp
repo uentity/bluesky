@@ -245,7 +245,8 @@ auto cached_link_actor::make_typed_behavior() -> typed_behavior {
 					else return Req::DataNode;
 				}();
 
-				return [=, orig_me = std::move(orig_me)](req_t, bool) mutable -> caf::result<R> {
+				return [=](req_t, bool) mutable -> caf::result<R> {
+					adbg(this) << "<- a_lazy_load " << std::size_t(this) << std::endl;
 					// this handler triggered only once
 					become(std::move(orig_me));
 
