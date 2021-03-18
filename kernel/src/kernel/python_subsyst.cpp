@@ -138,7 +138,6 @@ END_WITH
 }
 
 auto python_subsyst_impl::register_adapter(std::string obj_type_id, adapter_fn f) -> void {
-	auto solo = std::lock_guard{ guard_ };
 	if(f)
 		adapters_.insert_or_assign(std::move(obj_type_id), std::move(f));
 	else {
@@ -149,14 +148,11 @@ auto python_subsyst_impl::register_adapter(std::string obj_type_id, adapter_fn f
 }
 
 auto python_subsyst_impl::register_default_adapter(adapter_fn f) -> void {
-	auto solo = std::lock_guard{ guard_ };
 	def_adapter_ = std::move(f);
 }
 
 auto python_subsyst_impl::clear_adapters() -> void {
 	drop_adapted_cache();
-
-	auto solo = std::lock_guard{ guard_ };
 	adapters_.clear();
 	def_adapter_ = nullptr;
 }
@@ -173,7 +169,6 @@ auto python_subsyst_impl::adapted_types() const -> std::vector<std::string> {
 
 auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::object {
 	if(!source) return py::none();
-	auto solo = std::lock_guard{ guard_ };
 
 	// register link and return whether link is met for the first time
 	const auto remember_link = [&](auto* data_ptr) {
@@ -184,8 +179,6 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 			if(!lid) return;
 
 			auto& self = python_subsyst_impl::self();
-			auto solo = std::lock_guard{ self.guard_ };
-
 			auto cached_L = self.lnk2obj_.find(*lid);
 			if(cached_L == self.lnk2obj_.end()) return;
 
@@ -232,7 +225,6 @@ auto python_subsyst_impl::get_cached_adapter(const sp_obj& obj) const -> pybind1
 }
 
 auto python_subsyst_impl::drop_adapted_cache(const sp_obj& obj) -> std::size_t {
-	auto solo = std::lock_guard{ guard_ };
 	std::size_t res = 0;
 	if(!obj) {
 		res = acache_.size();

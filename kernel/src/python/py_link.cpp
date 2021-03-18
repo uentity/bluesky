@@ -27,41 +27,28 @@ NAMESPACE_BEGIN()
 const auto py_kernel = &kernel::detail::python_subsyst_impl::self;
 
 auto adapt(sp_obj&& source, const link& L) {
-	auto guard = py::gil_scoped_acquire();
 	return py_kernel().adapt(std::move(source), L);
 }
 
-template<typename T>
-auto adapt(result_or_err<T>&& source, const link& L) {
-	return std::move(source).map([&](T&& obj) {
-		auto guard = py::gil_scoped_acquire();
-		if constexpr(std::is_same_v<T, sp_obj>)
-			return py_kernel().adapt( std::move(obj), L );
-		else
-			return py_kernel().adapt( std::static_pointer_cast<objbase>(std::move(obj)), L );
+auto adapt(obj_or_err&& source, const link& L) {
+	return std::move(source).map([&](sp_obj&& obj) {
+		return py_kernel().adapt(std::move(obj), L);
 	});
 }
 
 using adapted_data_cb = std::function<void(result_or_err<py::object>, link)>;
-
+// pipe callback through kernel's queue
 auto adapt(adapted_data_cb&& f) {
-	return [f = std::move(f)](result_or_err<sp_obj> obj, link L) {
-		if(L)
-			KRADIO.enqueue(
-				launch_async,
-				transaction{[f = std::move(f), obj = std::move(obj), L]() mutable {
-					f(adapt(std::move(obj), L), L);
-					return perfect;
-				}}
-			);
-		else
-			KRADIO.enqueue(
-				launch_async,
-				transaction{[f = std::move(f), L]() mutable {
-					f(tl::make_unexpected(error{ "Nil link" }), L);
-					return perfect;
-				}}
-			);
+	return [f = std::move(f)](result_or_err<sp_obj> obj, link L) mutable {
+		KRADIO.enqueue(
+			launch_async,
+			transaction{[f = std::move(f), obj = std::move(obj), L]() mutable {
+				// capture GIL to call `adapt()`
+				auto guard = py::gil_scoped_acquire();
+				f(adapt(std::move(obj), L), L);
+				return perfect;
+			}}
+		);
 	};
 }
 
@@ -198,17 +185,31 @@ void py_bind_link(py::module& m) {
 		// [NOTE] return adapted objects
 		.def("data_ex",
 			[](const link& L, bool wait_if_busy) {
-				return adapt(L.data_ex(wait_if_busy), L);
+				// release GIL while obtaining data
+				const auto call_data_ex = [&] {
+					auto _ = py::gil_scoped_release();
+					return L.data_ex(wait_if_busy);
+				};
+				return adapt(call_data_ex(), L);
 			},
-			"wait_if_busy"_a = true, nogil
+			"wait_if_busy"_a = true
 		)
-		.def("data", [](const link& L){ return adapt(L.data(), L); }, nogil)
+
+		.def("data", [](const link& L) {
+			// release GIL while obtaining data
+			const auto call_data = [&] {
+				auto _ = py::gil_scoped_release();
+				return L.data();
+			};
+			return adapt(call_data(), L);
+		})
 		.def("data_raw", py::overload_cast<>(&link::data, py::const_), nogil, "Returns non-adapted object")
 
-		// pass adapted object to callback
-		.def("data", [](const link& L, adapted_data_cb f, bool high_priority) {
+		.def("data",
+			[](const link& L, adapted_data_cb f, bool high_priority) {
 				return L.data(adapt(std::move(f)), high_priority);
-			}, "f"_a, "high_priority"_a = false, nogil
+			},
+			"f"_a, "high_priority"_a = false
 		)
 
 		.def("data_node_ex", &link::data_node_ex, "wait_if_busy"_a = true, nogil)
@@ -218,14 +219,14 @@ void py_bind_link(py::module& m) {
 			[](const link& self, link::process_dnode_cb f, bool hp) {
 				self.data_node(pipe_through_queue(std::move(f), launch_async), hp);
 			},
-			"f"_a, "high_priority"_a = false, nogil
+			"f"_a, "high_priority"_a = false
 		)
 
 		// unsafe access to data & data node
 		.def("data", py::overload_cast<unsafe_t>(&link::data, py::const_),
-				"Direct access to link's data cache")
+			"Direct access to link's data cache", nogil)
 		.def("data_node", py::overload_cast<unsafe_t>(&link::data_node, py::const_),
-			"Direct access to link's data node cache")
+			"Direct access to link's data node cache", nogil)
 
 		// [NOTE] export only async overload, because otherwise Python will hang when moving
 		// callback into actor

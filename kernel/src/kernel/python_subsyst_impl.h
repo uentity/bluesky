@@ -70,8 +70,6 @@ private:
 	// used to resolve link ID -> object pointer when link is erased
 	// by keeping this map we can omit (expensive) call to `link::data()`
 	std::unordered_map<uuid, const objbase*> lnk2obj_;
-
-	mutable std::mutex guard_;
 };
 
 NAMESPACE_END(blue_sky::kernel::detail)
