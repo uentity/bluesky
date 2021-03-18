@@ -214,21 +214,15 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 	// adapt or passthrough
 	const auto adapt_and_cache = [&](auto&& afn) {
 		// cache adapter with ref counter = 1
-		auto py_guard = py::gil_scoped_acquire();
 		return acache_.try_emplace(
 			data_ptr, afn(std::move(source)), size_t{ remember_link(data_ptr) }
 		).first->second.first;
 	};
 
-	const auto raw_cast = [&] {
-		auto py_guard = py::gil_scoped_acquire();
-		return py::cast(std::move(source));
-	};
-
 	auto pf = adapters_.find(source->type_id());
 	return pf != adapters_.end() ?
 		adapt_and_cache(pf->second) :
-		( def_adapter_ ? adapt_and_cache(def_adapter_) : raw_cast() );
+		( def_adapter_ ? adapt_and_cache(def_adapter_) : py::cast(source) );
 }
 
 auto python_subsyst_impl::get_cached_adapter(const sp_obj& obj) const -> pybind11::object {
