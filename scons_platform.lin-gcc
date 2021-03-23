@@ -51,7 +51,7 @@ elif build_kind == 'release-debug' :
 	custom_env.AppendUnique(CCFLAGS = ['-Og']);
 elif build_kind.startswith('release') :
 	custom_env.AppendUnique(
-		CCFLAGS = ['-O3', '-mtune=native', '-ftree-vectorize'],
+		CCFLAGS = ['-O3', '-march=native', '-mtune=native', '-ftree-vectorize'],
 		CPPDEFINES = ['NDEBUG']
 	);
 # add debug info
