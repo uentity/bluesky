@@ -18,20 +18,20 @@ NAMESPACE_BEGIN(blue_sky::tree)
 NAMESPACE_BEGIN()
 
 template<bool DiscardResult = false>
-auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa)
+auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 -> std::conditional_t<DiscardResult, void, caf::result<node_or_errbox>> {
 	// safely invoke mapper and return output node on success
 	auto invoke_mapper =
-		[mama = papa->spimpl<map_node_impl>()](caf::event_based_actor* worker)
+		[mama = papa->spimpl<map_node_impl>(), ev = std::move(ev)](caf::event_based_actor* worker) mutable
 		-> caf::result<node_or_errbox> {
 			auto invoke_res = worker->make_response_promise<node_or_errbox>();
 
 			using res_t = caf::result<void>;
 			worker->become(
-				caf::message_handler{[=](a_mlnk_fresh) mutable -> res_t {
+				caf::message_handler{[=, ev = std::move(ev)](a_mlnk_fresh) mutable -> res_t {
 					auto res = std::optional<res_t>{};
 					if(auto er = error::eval_safe([&] {
-						res = mama->mf_(mama->in_, mama->out_, worker);
+						res = mama->mf_(mama->in_, mama->out_, std::move(ev), worker);
 					})) {
 						invoke_res.deliver(node_or_errbox{tl::unexpect, er.pack()});
 					}
@@ -72,16 +72,16 @@ auto map_node_impl::clone(link_actor*, bool deep) const -> caf::result<sp_limpl>
 	return std::make_shared<map_node_impl>(mf_, tag_, name_, in_, node::nil(), update_on_, opts_, flags_);
 }
 
-auto map_node_impl::erase(map_link_actor* papa, lid_type) -> void {
-	spawn_mapper_job<true>(this, papa);
+auto map_node_impl::erase(map_link_actor* papa, lid_type, event ev) -> void {
+	spawn_mapper_job<true>(this, papa, std::move(ev));
 }
 
-auto map_node_impl::update(map_link_actor* papa, link) -> void {
-	spawn_mapper_job<true>(this, papa);
+auto map_node_impl::update(map_link_actor* papa, link, event ev) -> void {
+	spawn_mapper_job<true>(this, papa, std::move(ev));
 }
 
 auto map_node_impl::refresh(map_link_actor* papa) -> caf::result<node_or_errbox> {
-	return spawn_mapper_job(this, papa);
+	return spawn_mapper_job(this, papa, event{caf::actor_cast<caf::actor>(papa), {}, Event::None});
 }
 
 // [NOTE] both link -> link & node -> node impls have same type ID,

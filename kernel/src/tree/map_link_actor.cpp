@@ -51,24 +51,32 @@ auto input_ack_retranslator(
 
 		const auto& [parent, input] = self->state;
 		const auto& src_node = origin ? caf::actor_cast<node::actor_type>(origin) : input;
+		auto raw_src_node = caf::actor_cast<caf::actor>(src_node);
 
 		// on erase event we don't search for source link
 		if(src_ev == Event::LinkErased && (enumval(opts & TreeOpts::Deep) || src_node == input)) {
-			self->send(parent, a_ack(), a_node_erase(), src_id);
+			self->send(
+				parent, a_ack(), a_node_erase(), src_id,
+				event{std::move(raw_src_node), {{"link_id", src_id}}, src_ev}
+			);
 			return;
 		}
 
 		// find source link (depending on deep flag)
-		auto notify_parent = [self, &parent = self->state.parent](const link& src_link) {
+		auto notify_parent = [=, rsn = std::move(raw_src_node), &parent = self->state.parent]
+		(const link& src_link) mutable {
 			if(src_link)
-				self->send(parent, a_ack(), a_apply(), src_link);
+				self->send(
+					parent, a_ack(), a_apply(), src_link,
+					event{std::move(rsn), {{"link_id", src_link.id()}}, src_ev}
+				);
 		};
 
 		if(src_node == input)
 			self->request(src_node, caf::infinite, a_node_find(), src_id).then(std::move(notify_parent));
 		else if(enumval(opts & TreeOpts::Deep))
 			self->request(src_node, caf::infinite, a_node_deep_search(), src_id)
-			.then([notify_parent = std::move(notify_parent)](links_v ls) {
+			.then([notify_parent = std::move(notify_parent)](links_v ls) mutable {
 				if(!ls.empty()) notify_parent(ls.front());
 			});
 	};
@@ -192,14 +200,14 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 			return delegate(caf::actor_cast<actor_type>(this), a_data_node(), true);
 		},
 
-		[=](a_ack, a_apply, const link& inp_lnk) {
+		[=](a_ack, a_apply, const link& inp_lnk, event ev) {
 			adbg(this) << "<- update (casual)" << std::endl;
-			mimpl().update(this, inp_lnk);
+			mimpl().update(this, inp_lnk, std::move(ev));
 		},
 
-		[=](a_ack, a_node_erase, const lid_type& src_id) {
+		[=](a_ack, a_node_erase, const lid_type& src_id, event ev) {
 			adbg(this) << "<- erase (casual)" << std::endl;
-			mimpl().erase(this, src_id);
+			mimpl().erase(this, src_id, std::move(ev));
 		},
 
 		[](a_mlnk_fresh) {}
@@ -228,12 +236,12 @@ auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
 			return refresh_once();
 		},
 
-		[=](a_ack, a_apply, const link&) {
+		[=](a_ack, a_apply, const link&, const event&) {
 			adbg(this) << "<- update (refresh)" << std::endl;
 			refresh_once();
 		},
 
-		[=](a_ack, a_node_erase, const lid_type& src_id) {
+		[=](a_ack, a_node_erase, const lid_type&, const event&) {
 			adbg(this) << "<- erase (refresh)" << std::endl;
 			refresh_once();
 		}

@@ -45,16 +45,16 @@ map_link::map_link(
 			[&](link_mapper_f lmf) -> sp_engine_impl { return make_lmapper_impl(std::move(lmf)); },
 
 			[&](simple_link_mapper_f lmf) -> sp_engine_impl {
-				return make_lmapper_impl([lmf = std::move(lmf)](link src, link dest, caf::event_based_actor*) {
-					return caf::result<link>{ lmf(src, dest) };
+				return make_lmapper_impl([lmf = std::move(lmf)](auto src, auto dest, auto ev, auto*) {
+					return caf::result<link>{ lmf(src, dest, std::move(ev)) };
 				});
 			},
 
 			[&](node_mapper_f nmf) -> sp_engine_impl { return make_nmapper_impl(std::move(nmf)); },
 
 			[&](simple_node_mapper_f nmf) -> sp_engine_impl {
-				return make_nmapper_impl([nmf = std::move(nmf)](node src, node dest, caf::event_based_actor*) {
-					nmf(src, dest);
+				return make_nmapper_impl([nmf = std::move(nmf)](auto src, auto dest, auto ev, auto*) {
+					nmf(src, dest, std::move(ev));
 					return caf::result<void>{};
 				});
 			},
@@ -124,8 +124,8 @@ auto make_otid_filter(
 	std::sort(allowed_otids.begin(), allowed_otids.end());
 	// [NOTE] dest link is ignored
 	return map_link(
-		[otids = std::move(allowed_otids)](link src, link /* dest */, caf::event_based_actor* worker)
-		-> caf::result<link> {
+		[otids = std::move(allowed_otids)]
+		(link src, link /* dest */, event /* ev */, caf::event_based_actor* worker) -> caf::result<link> {
 			auto res = worker->make_response_promise<link>();
 			auto src_actor = src.actor();
 

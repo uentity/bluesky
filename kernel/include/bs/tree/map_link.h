@@ -24,15 +24,15 @@ public:
 	using engine_impl = map_impl_base;
 
 	/// link -> link mapping functions
-	using link_mapper_f = std::function<
-		caf::result<link>(link /* source */, link /* existing dest */, caf::event_based_actor* /* worker */)
-	>;
-	using simple_link_mapper_f = std::function<link(link /* source */, link /* existing dest */)>;
+	using link_mapper_f = std::function<caf::result<link>(
+		link /* source */, link /* existing dest */, event ev, caf::event_based_actor* /* worker */
+	)>;
+	using simple_link_mapper_f = std::function<link(link /* source */, link /* existing dest */, event ev)>;
 	/// node -> node mapping functions
-	using node_mapper_f = std::function<
-		caf::result<void>(node /* source */, node /* existing dest */, caf::event_based_actor* /* worker */)
-	>;
-	using simple_node_mapper_f = std::function<void(node /* source */, node /* existing dest */)>;
+	using node_mapper_f = std::function<caf::result<void>(
+		node /* source */, node /* existing dest */, event ev, caf::event_based_actor* /* worker */
+	)>;
+	using simple_node_mapper_f = std::function<void(node /* source */, node /* existing dest */, event ev)>;
 
 	using mapper_f = std::variant<link_mapper_f, simple_link_mapper_f, node_mapper_f, simple_node_mapper_f>;
 

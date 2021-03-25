@@ -12,6 +12,8 @@
 
 #include <unordered_map>
 
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::event)
+
 NAMESPACE_BEGIN(blue_sky::tree)
 class map_link_actor;
 
@@ -35,9 +37,9 @@ public:
 		// immediately refresh output node & return it
 		caf::replies_to<a_node_clear>::with<node_or_errbox>,
 		// invoke mapper on given link from given origin node (sent by retranslator)
-		caf::reacts_to<a_ack, a_apply, link /* src */>,
+		caf::reacts_to<a_ack, a_apply, link /* src */, event>,
 		// link erased from input (sub)node
-		caf::reacts_to<a_ack, a_node_erase, lid_type /* ID of erased link */>
+		caf::reacts_to<a_ack, a_node_erase, lid_type /* ID of erased link */, event>
 	>;
 	// complete behavior
 	using actor_type = super::actor_type::extend_with<map_actor_type>;
@@ -66,8 +68,8 @@ public:
 	//  map-specific API
 	//
 	// update/erase single link
-	virtual auto update(map_link_actor* papa, link src_link) -> void = 0;
-	virtual auto erase(map_link_actor* papa, lid_type src_lid) -> void = 0;
+	virtual auto update(map_link_actor* papa, link src_link, event ev) -> void = 0;
+	virtual auto erase(map_link_actor* papa, lid_type src_lid, event ev) -> void = 0;
 	// reset all mappings from scratch, started in separate `worker` actor
 	virtual auto refresh(map_link_actor* papa) -> caf::result<node_or_errbox> = 0;
 
@@ -97,8 +99,8 @@ public:
 	auto clone(link_actor* papa, bool deep) const -> caf::result<sp_limpl> override final;
 
 	// update/erase single link
-	auto update(map_link_actor* papa, link src_link) -> void override final;
-	auto erase(map_link_actor* papa, lid_type src_lid) -> void override final;
+	auto update(map_link_actor* papa, link src_link, event ev) -> void override final;
+	auto erase(map_link_actor* papa, lid_type src_lid, event ev) -> void override final;
 	// reset all mappings from scratch, started in separate `worker` actor
 	auto refresh(map_link_actor* papa) -> caf::result<node_or_errbox> override final;
 	// refresh impl inside worker actor
@@ -131,8 +133,8 @@ public:
 	auto clone(link_actor* papa, bool deep) const -> caf::result<sp_limpl> override final;
 
 	// implementation is identical in all cases - just spawn mapper job
-	auto update(map_link_actor* papa, link src_link) -> void override final;
-	auto erase(map_link_actor* papa, lid_type src_lid) -> void override final;
+	auto update(map_link_actor* papa, link src_link, event ev) -> void override final;
+	auto erase(map_link_actor* papa, lid_type src_lid, event ev) -> void override final;
 	auto refresh(map_link_actor* papa) -> caf::result<node_or_errbox> override final;
 
 	node_mapper_f mf_;
@@ -160,8 +162,8 @@ public:
 		caf::reacts_to<a_mlnk_fresh>,
 		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
 		// override update to trigger refresh first
-		caf::reacts_to<a_ack, a_apply, link /* src */>,
-		caf::reacts_to<a_ack, a_node_erase, lid_type /* ID of erased link */>
+		caf::reacts_to<a_ack, a_apply, link /* src */, event>,
+		caf::reacts_to<a_ack, a_node_erase, lid_type /* ID of erased link */, event>
 	>;
 
 	map_link_actor(caf::actor_config& cfg, caf::group self_grp, sp_limpl Limpl);
