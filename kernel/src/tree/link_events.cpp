@@ -22,11 +22,13 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	using namespace allow_enumops;
 	using baby_t = ev_listener_actor<link>;
 
+	// [TODO] refactor later to avoid capturing weak ref to origin link
+	// we can construct `event` object from currect_sender()
 	static const auto handler_impl = [](
 		baby_t* self, auto& weak_root, Event ev, prop::propdict params
 	) {
 		if(auto r = weak_root.lock())
-			self->f(std::move(r), ev, std::move(params));
+			self->f({r.raw_actor(), std::move(params), ev});
 		else
 			self->quit();
 	};
@@ -72,9 +74,11 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 				[=](a_bye) {
 					self->quit();
 					// distinguish link's bye signal from kernel kill all
-					if(self->current_sender() == self->origin)
+					if(self->current_sender() == self->origin) {
 						// [NOTE] week_root can possibly be already expired but callback needs to be called
-						self->f(weak_root.lock(), Event::LinkDeleted, {{"link_id", src_id}});
+						auto r = weak_root.lock();
+						self->f({r.raw_actor(), {{"link_id", src_id}}, Event::LinkDeleted});
+					}
 				}
 			);
 

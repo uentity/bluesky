@@ -62,7 +62,6 @@ struct ev_listener_actor : caf::event_based_actor {
 		character = make_event_behavior(this).or_else(actor_type::behavior_type{
 			// ping-pong check that actor started
 			[=](a_hi, const caf::group& src_home) {
-				//join(KRADIO.system().groups().get_local(src_home));
 				join(src_home);
 				return id();
 			},

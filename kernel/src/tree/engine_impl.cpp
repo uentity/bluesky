@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 01.07.2020
 /// @brief engine::impl
@@ -9,6 +8,8 @@
 
 #include "engine_impl.h"
 #include "engine_actor.h"
+#include "link_impl.h"
+#include "node_impl.h"
 #include "../kernel/radio_subsyst.h"
 
 #include <bs/kernel/radio.h>
@@ -17,6 +18,7 @@
 #include "actor_debug.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
+namespace kradio = kernel::radio;
 
 [[maybe_unused]] auto adbg_impl(engine_actor_base* A) -> caf::actor_ostream {
 	auto os = caf::aout(A);
@@ -24,6 +26,27 @@ NAMESPACE_BEGIN(blue_sky::tree)
 	if(const auto hid = A->pimpl_->home_id(); !hid.empty())
 		os << " " << hid;
 	return (os << "]: ");
+}
+
+/*-----------------------------------------------------------------------------
+ *  event
+ *-----------------------------------------------------------------------------*/
+auto event::origin_link() const -> link {
+	return actorf<engine::sp_engine_impl>(origin, kradio::timeout(), a_impl{})
+	.map([](auto&& eimpl) {
+		if(eimpl->type_id() != node_impl::type_id_())
+			return std::static_pointer_cast<link_impl>(eimpl)->super_engine();
+		else return link{};
+	}).value_or(link{});
+}
+
+auto event::origin_node() const -> node {
+	return actorf<engine::sp_engine_impl>(origin, kradio::timeout(), a_impl{})
+	.map([](auto&& eimpl) {
+		if(eimpl->type_id() == node_impl::type_id_())
+			return std::static_pointer_cast<node_impl>(eimpl)->super_engine();
+		else return node::nil();
+	}).value_or(node::nil());
 }
 
 /*-----------------------------------------------------------------------------

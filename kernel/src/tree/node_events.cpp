@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 30.03.2020
 /// @brief BS tree node events handling
@@ -24,17 +23,11 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	using baby_t = ev_listener_actor<node>;
 
 	static const auto handler_impl = [](
-		baby_t* self, auto& weak_root, const caf::actor& subn_actor, Event ev, prop::propdict params
+		baby_t* self, auto& weak_root, caf::actor origin, Event ev, prop::propdict params
 	) {
 		if(auto r = weak_root.lock()) {
-			// reconstruct subnode via node impl
-			auto subnode = node::nil();
-			if(subn_actor) {
-				actorf<sp_nimpl>(subn_actor, kernel::radio::timeout(), a_impl())
-				.map([&](const sp_nimpl& subn_impl) { subnode = subn_impl->super_engine(); });
-			}
-			// invoke callback
-			self->f(std::move(r), std::move(subnode), ev, std::move(params));
+			if(!origin) origin = r.raw_actor();
+			self->f(std::move(r), {std::move(origin), std::move(params), ev});
 		}
 		else // if root source is dead, quit
 			self->quit();
@@ -44,10 +37,10 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 		auto res = caf::message_handler{};
 		if(enumval(listen_to & Event::LinkRenamed)) {
 			const auto renamed_impl = [=](
-				const caf::actor& subn_actor, auto& lid, auto& new_name, auto& old_name
+				caf::actor origin, auto& lid, auto& new_name, auto& old_name
 			) {
 				//bsout() << "*-* node: fired LinkRenamed event" << bs_end;
-				handler_impl(self, weak_root, subn_actor, Event::LinkRenamed, {
+				handler_impl(self, weak_root, std::move(origin), Event::LinkRenamed, {
 					{"link_id", lid},
 					{"new_name", std::move(new_name)},
 					{"prev_name", std::move(old_name)}
@@ -65,10 +58,10 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			// deeper subtree leaf was renamed
 			res = res.or_else(
 				[=] (
-					a_ack, const caf::actor& src, const lid_type& lid,
+					a_ack, caf::actor src, const lid_type& lid,
 					a_lnk_rename, std::string new_name, std::string old_name
 				) {
-					renamed_impl(src, lid, new_name, old_name);
+					renamed_impl(std::move(src), lid, new_name, old_name);
 				}
 			);
 			//bsout() << "*-* node: subscribed to LinkRenamed event" << bs_end;
@@ -76,10 +69,10 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 
 		if(enumval(listen_to & Event::LinkStatusChanged)) {
 			const auto status_impl = [=](
-				const caf::actor& subn_actor, auto& lid, auto req, auto new_s, auto prev_s
+				caf::actor origin, auto& lid, auto req, auto new_s, auto prev_s
 			) {
 				//bsout() << "*-* node: fired LinkStatusChanged event" << bs_end;
-				handler_impl(self, weak_root, subn_actor, Event::LinkStatusChanged, {
+				handler_impl(self, weak_root, std::move(origin), Event::LinkStatusChanged, {
 					{"link_id", lid},
 					{"request", prop::integer(req)},
 					{"new_status", prop::integer(new_s)},
@@ -99,10 +92,10 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			// deeper subtree leaf status changed
 			res = res.or_else(
 				[=](
-					a_ack, const caf::actor& src, const lid_type& lid,
+					a_ack, caf::actor src, const lid_type& lid,
 					a_lnk_status, Req req, ReqStatus new_s, ReqStatus prev_s
 				) {
-					status_impl(src, lid, req, new_s, prev_s);
+					status_impl(std::move(src), lid, req, new_s, prev_s);
 				}
 			);
 			//bsout() << "*-* node: subscribed to LinkStatusChanged event" << bs_end;
@@ -110,7 +103,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 
 		if(enumval(listen_to & Event::DataModified)) {
 			const auto datamod_impl = [=](
-				const caf::actor& subn_actor, auto& lid, tr_result::box&& tres_box
+				caf::actor origin, auto& lid, tr_result::box&& tres_box
 			) {
 				//bsout() << "*-* node: fired DataModified event" << bs_end;
 				auto params = prop::propdict{{ "link_id", lid }};
@@ -118,7 +111,7 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					params.merge_props(extract_info(std::move(tres)));
 				else
 					params["error"] = to_string(extract_err(std::move(tres)));
-				handler_impl(self, weak_root, subn_actor, Event::DataModified, std::move(params));
+				handler_impl(self, weak_root, std::move(origin), Event::DataModified, std::move(params));
 			};
 
 			// this node leaf data changed
@@ -129,8 +122,8 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			);
 			// deeper subtree leaf status changed
 			res = res.or_else(
-				[=](a_ack, const caf::actor& src, const lid_type& lid, a_data, tr_result::box trbox) {
-					datamod_impl(src, lid, std::move(trbox));
+				[=](a_ack, caf::actor src, const lid_type& lid, a_data, tr_result::box trbox) {
+					datamod_impl(std::move(src), lid, std::move(trbox));
 				}
 			);
 			//bsout() << "*-* node: subscribed to DataModified event" << bs_end;
@@ -140,22 +133,22 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 			res = res.or_else(
 				// insert
 				[=](
-					a_ack, const caf::actor& src, a_node_insert,
+					a_ack, caf::actor src, a_node_insert,
 					const lid_type& lid, std::size_t pos
 				) {
 					//bsout() << "*-* node: fired LinkInserted event" << bs_end;
-					handler_impl(self, weak_root, src, Event::LinkInserted, {
+					handler_impl(self, weak_root, std::move(src), Event::LinkInserted, {
 						{"link_id", lid},
 						{"pos", (prop::integer)pos}
 					});
 				},
 				// move
 				[=](
-					a_ack, const caf::actor& src, a_node_insert,
+					a_ack, caf::actor src, a_node_insert,
 					const lid_type& lid, std::size_t to_idx, std::size_t from_idx
 				) {
 					//bsout() << "*-* node: fired LinkInserted event (move)" << bs_end;
-					handler_impl(self, weak_root, src, Event::LinkInserted, {
+					handler_impl(self, weak_root, std::move(src), Event::LinkInserted, {
 						{"link_id", lid},
 						{"to_idx", (prop::integer)to_idx},
 						{"from_idx", (prop::integer)from_idx}
@@ -168,10 +161,10 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 		if(enumval(listen_to & Event::LinkErased)) {
 			res = res.or_else(
 				[=](
-					a_ack, const caf::actor& src, a_node_erase, lids_v lids
+					a_ack, caf::actor src, a_node_erase, lids_v lids
 				) {
 					//bsout() << "*-* node: fired LinkErased event" << bs_end;
-					handler_impl(self, weak_root, src, Event::LinkErased, {
+					handler_impl(self, weak_root, std::move(src), Event::LinkErased, {
 						{"lids", std::move(lids)}
 					});
 				}

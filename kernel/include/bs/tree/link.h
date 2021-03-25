@@ -214,7 +214,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  Subscribe to link events
 	//
-	using event_handler = std::function< void(link, Event, prop::propdict) >;
+	using event_handler = std::function< void(event) >;
 
 	/// returns ID of suscriber that is required for unsubscribe
 	auto subscribe(event_handler f, Event listen_to = Event::All) const -> std::uint64_t;

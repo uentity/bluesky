@@ -16,6 +16,8 @@
 #include "errors.h"
 #include "inode.h"
 
+#include <caf/actor.hpp>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 // denote possible tree events
 enum class Event : std::uint32_t {
@@ -86,6 +88,15 @@ using link_or_err = result_or_err<link>;
 using link_or_errbox = result_or_errbox<link>;
 using node_or_err = result_or_err<node>;
 using node_or_errbox = result_or_errbox<node>;
+
+struct event {
+	caf::actor origin;
+	prop::propdict params;
+	Event code;
+
+	auto origin_link() const -> link;
+	auto origin_node() const -> node;
+};
 
 NAMESPACE_END(blue_sky::tree)
 

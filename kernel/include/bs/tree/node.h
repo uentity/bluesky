@@ -241,7 +241,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////////
 	//  events handling
 	//
-	using event_handler = std::function< void(node /* root */, node /* subnode */, Event, prop::propdict) >;
+	using event_handler = std::function< void(node /* root */, event) >;
 
 	/// returns ID of suscriber that is required for unsubscribe
 	auto subscribe(event_handler f, Event listen_to = Event::All) const -> std::uint64_t;
