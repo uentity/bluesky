@@ -241,7 +241,7 @@ return {
 	// ignore `a_bye` signal - comes from self
 	[=](a_bye) {},
 
-	[=](a_impl) -> sp_nimpl { return spimpl(); },
+	[=](a_impl) -> sp_engine_impl { return spimpl(); },
 
 	[=](a_clone, a_impl, bool deep) { return impl.clone(this, deep); },
 

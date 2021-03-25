@@ -30,7 +30,7 @@ enum class ReqOpts : std::uint32_t {
 template<typename Engine>
 using engine_actor_type = caf::typed_actor<
 	// obtain engine impl
-	caf::replies_to<a_impl>::with<std::shared_ptr<typename Engine::engine_impl>>,
+	caf::replies_to<a_impl>::with<engine::sp_engine_impl>,
 	// clone engine impl
 	typename caf::replies_to<a_clone, a_impl, bool /* deep */>
 	::template with<std::shared_ptr<typename Engine::engine_impl>>,
