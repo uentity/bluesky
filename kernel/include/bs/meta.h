@@ -56,12 +56,9 @@ template<typename... Args> using a1_t = typename a1<Args...>::type;
 
 /// check that first arg (cvref removed) from variadic pack is T (exact match or inherited from)
 template<typename T, typename A1 = std::add_pointer_t<T>, typename... Args>
-inline constexpr bool a1_is_t = [] {
-	if constexpr(std::is_class_v<T>)
-		return is_base_of_uq<T, A1>;
-	else
-		return std::is_same_v<T, remove_cvref_t<A1>>;
-}();
+inline constexpr bool a1_is_t = std::conditional_t<
+	std::is_class_v<T>, std::is_base_of<T, remove_cvref_t<A1>>, std::is_same<T, remove_cvref_t<A1>>
+>::value;
 
 /// same as above, but check if A1 is convertible to T
 template<typename T, typename A1 = std::add_pointer_t<T>, typename... Args>
