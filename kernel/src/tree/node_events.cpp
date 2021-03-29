@@ -164,9 +164,12 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					a_ack, caf::actor src, a_node_erase, lids_v lids
 				) {
 					//bsout() << "*-* node: fired LinkErased event" << bs_end;
-					handler_impl(self, weak_root, std::move(src), Event::LinkErased, {
-						{"lids", std::move(lids)}
-					});
+					auto context = prop::propdict{};
+					if(!lids.empty()) {
+						context["link_id"] = lids[0];
+						context["lids"] = std::move(lids);
+					}
+					handler_impl(self, weak_root, std::move(src), Event::LinkErased, std::move(context));
 				}
 			);
 			//bsout() << "*-* node: subscribed to LinkErased event" << bs_end;
