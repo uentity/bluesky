@@ -95,9 +95,8 @@ auto radio_subsyst::shutdown() -> void {
 	// force all pending requests to exit very quickly
 	reset_timeouts(1us, 1us);
 	kick_citizens();
-	// [NOTE} need to explicitly reset queue handle, otherwise exit hangs
-	// [TODO] check if this bug present in CAF 0.18
-	queue_ = nullptr;
+
+	stop_queue(false);
 
 	// explicitly kill nill link
 	tree::nil_node::stop();

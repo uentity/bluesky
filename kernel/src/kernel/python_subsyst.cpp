@@ -103,7 +103,11 @@ auto python_subsyst_impl::setup_py_kmod(void* kmod_ptr) -> void {
 
 		// kick all event-based actors (normally wait until all actor handles wired into Python are released)
 		auto _ = py::gil_scoped_release{};
-		KIMPL.get_radio()->kick_citizens();
+		const auto kradio = KIMPL.get_radio();
+		kradio->kick_citizens();
+		// stop queue while Python is still alive to gracefully finish all pending transactions
+		kradio->stop_queue(true);
+
 		std::cout << "~~~ Python subsystem down" << std::endl;
 	}});
 }

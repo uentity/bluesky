@@ -63,6 +63,7 @@ struct BS_HIDDEN_API radio_subsyst {
 	auto queue_actor() -> kqueue_actor_type&;
 	auto enqueue(transaction tr) -> tr_result;
 	auto enqueue(launch_async_t, transaction tr) -> void;
+	auto stop_queue(bool wait_exit) -> void;
 
 	// server actor management
 	auto toggle(bool on) -> error;

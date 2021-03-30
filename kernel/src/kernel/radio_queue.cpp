@@ -27,7 +27,7 @@ auto kqueue_processor(kqueue_actor_type::pointer self) -> kqueue_actor_type::beh
 	});
 
 	return {
-		[=](const transaction& tr) -> tr_result::box {
+		[](const transaction& tr) -> tr_result::box {
 			return pack(tr_eval(tr));
 		}
 	};
@@ -40,7 +40,17 @@ NAMESPACE_END()
 //
 auto radio_subsyst::spawn_queue() -> void {
 	queue_ = actor_sys_->spawn<caf::detached>(kqueue_processor);
-	register_citizen(queue_.address());
+}
+
+auto radio_subsyst::stop_queue(bool wait_exit) -> void {
+	if(!queue_) return;
+	auto self = caf::scoped_actor{system(), false};
+	self->send_exit(queue_, caf::exit_reason::user_shutdown);
+	if(wait_exit)
+		self->wait_for(queue_);
+	// [NOTE} need to explicitly reset queue handle, otherwise exit hangs
+	// [TODO] check if this bug present in CAF 0.18
+	queue_ = nullptr;
 }
 
 auto radio_subsyst::queue_actor() -> kqueue_actor_type& { return queue_; }
