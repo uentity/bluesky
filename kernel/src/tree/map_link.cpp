@@ -121,6 +121,7 @@ auto make_otid_filter(
 	std::vector<std::string> allowed_otids, std::string name, link_or_node src_node, link_or_node dest_node,
 	Event update_on, TreeOpts opts, Flags f
 ) -> map_link {
+	namespace kradio = kernel::radio;
 	std::sort(allowed_otids.begin(), allowed_otids.end());
 	// [NOTE] dest link is ignored
 	return map_link(
@@ -129,14 +130,22 @@ auto make_otid_filter(
 			auto res = worker->make_response_promise<link>();
 			auto src_actor = src.actor();
 
-			worker->request(src_actor, kernel::radio::timeout(), a_lnk_otid{})
-			.then([=](const std::string& otid) mutable {
-				if(std::binary_search(otids.begin(), otids.end(), otid))
-					res.delegate(src_actor, a_clone{}, false);
+			worker->set_error_handler([=](auto* worker, auto& er) mutable {
+				res.deliver(link{});
+				worker->default_error_handler(worker, er);
+			});
+
+			worker->request(src_actor, kradio::timeout(true), a_data{}, true)
+			.then([=](obj_or_errbox maybe_obj) mutable {
+				if(maybe_obj && std::binary_search(otids.begin(), otids.end(), (*maybe_obj)->type_id()))
+					worker->request(src_actor, kradio::timeout(), a_lnk_name{})
+					.then([=, obj = *std::move(maybe_obj)](std::string src_name) mutable {
+						res.deliver(link{ weak_link(std::move(src_name), obj) });
+					});
 				else
 					res.deliver(link{});
 			});
-			return link{};
+			return res;
 		}, std::move(name), std::move(src_node), std::move(dest_node), update_on, opts, f
 	);
 }
