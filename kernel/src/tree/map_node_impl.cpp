@@ -22,16 +22,16 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 -> std::conditional_t<DiscardResult, void, caf::result<node_or_errbox>> {
 	// safely invoke mapper and return output node on success
 	auto invoke_mapper =
-		[mama = papa->spimpl<map_node_impl>(), ev = std::move(ev)](caf::event_based_actor* worker) mutable
-		-> caf::result<node_or_errbox> {
+		[mama = papa->spimpl<map_node_impl>(), mf = mama->mf_, ev = std::move(ev)]
+		(caf::event_based_actor* worker) mutable -> caf::result<node_or_errbox> {
 			auto invoke_res = worker->make_response_promise<node_or_errbox>();
 
 			using res_t = caf::result<void>;
 			worker->become(
-				caf::message_handler{[=, ev = std::move(ev)](a_mlnk_fresh) mutable -> res_t {
+				caf::message_handler{[=, mf = std::move(mf), ev = std::move(ev)](a_mlnk_fresh) mutable -> res_t {
 					auto res = std::optional<res_t>{};
 					if(auto er = error::eval_safe([&] {
-						res = mama->mf_(mama->in_, mama->out_, std::move(ev), worker);
+						res = mf(mama->in_, mama->out_, std::move(ev), worker);
 					})) {
 						invoke_res.deliver(node_or_errbox{tl::unexpect, er.pack()});
 					}

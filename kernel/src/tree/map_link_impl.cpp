@@ -22,23 +22,24 @@ using lmapper_res_t = std::pair< link /* mapping result */, link /* dest */ >;
 // modify worker actor behavior s.t. it invokes link mapper on `a_ack` message
 template<typename F>
 auto make_lmapper_actor(
-	const map_link_impl::sp_map_link_impl& mama, link src_link, event ev, F res_processor
+	map_link_impl::sp_map_link_impl mama, link src_link, event ev, F res_processor
 ) {
 	std::optional<lid_type> dest_lid;
 	if(auto pdest = mama->io_map_.find(src_link.id()); pdest != mama->io_map_.end())
 		dest_lid = pdest->second;
 
 	// make base actor behavior
-	return [=](caf::event_based_actor* self) mutable {
+	return [=, mama = std::move(mama), mf = mama->mf_, ev = std::move(ev), rp = std::move(res_processor)]
+	(caf::event_based_actor* self) mutable {
 		self->become(
 			// invoke mapper & return resulting link (may be lazily evaluated)
-			[=, ev = std::move(ev)](a_apply, const link& dest_link) mutable {
+			[=, mf = std::move(mf), ev = std::move(ev)](a_apply, const link& dest_link) mutable {
 				adbg(self) << "lmapper: map " << to_string(src_link.id()) <<
 					" -> " << to_string(dest_link.id()) << std::endl;
 
 				auto res = std::optional<caf::result<link>>{};
 				if(src_link) {
-					if(error::eval_safe([&] { res = mama->mf_(src_link, dest_link, std::move(ev), self); }))
+					if(error::eval_safe([&] { res = mf(src_link, dest_link, std::move(ev), self); }))
 						res = link{};
 				}
 				else
@@ -47,7 +48,7 @@ auto make_lmapper_actor(
 			},
 
 			// finish exec chain: need separate handler to ensure lazy `res_link` calc finished
-			[=, rp = std::move(res_processor)](const link& dest_link) {
+			[=, rp = std::move(rp)](const link& dest_link) {
 				adbg(self) << "lmapper: request mapping for dest link " <<
 					to_string(dest_link.id()) << " " << dest_link.name() << std::endl;
 
@@ -64,7 +65,7 @@ auto make_lmapper_actor(
 			},
 
 			// entry point to start calc
-			[=](a_ack) -> caf::result<caf::message> {
+			[=, mama = std::move(mama)](a_ack) -> caf::result<caf::message> {
 				if(dest_lid) {
 					auto rp = self->make_response_promise();
 					self->request(mama->out_.actor(), kernel::radio::timeout(), a_node_find{}, *dest_lid)
@@ -85,14 +86,18 @@ auto make_lmapper_actor(
 
 template<typename... Args>
 auto spawn_lmapper_actor(map_link_actor* papa, Args&&... args) {
-	// make actor impl
-	const auto mama = papa->spimpl<map_link_impl>();
-	auto lmapper = make_lmapper_actor(mama, std::forward<Args>(args)...);
+	// check that mapper is valid
+	auto mama = papa->spimpl<map_link_impl>();
+
 	// spawn worker actor
 	if(enumval(mama->opts_ & TreeOpts::DetachedWorkers))
-		return papa->spawn<caf::detached>(std::move(lmapper));
+		return papa->spawn<caf::detached>(
+			make_lmapper_actor(std::move(mama), std::forward<Args>(args)...)
+		);
 	else
-		return papa->spawn(std::move(lmapper));
+		return papa->spawn(
+			make_lmapper_actor(std::move(mama), std::forward<Args>(args)...)
+		);
 }
 
 NAMESPACE_END()
@@ -138,7 +143,7 @@ auto map_link_impl::update(map_link_actor* papa, link src_link, event ev) -> voi
 		}
 	};
 
-	auto lmapper = spawn_lmapper_actor(
+	if(auto lmapper = spawn_lmapper_actor(
 		papa, src_link, std::move(ev),
 		[papa_actor = papa->actor(), s2 = std::move(s2_process_res)]
 		(lmapper_res_t res, caf::event_based_actor* worker) mutable {
@@ -148,15 +153,14 @@ auto map_link_impl::update(map_link_actor* papa, link src_link, event ev) -> voi
 			}};
 			worker->send(papa_actor, a_apply{}, std::move(tr));
 		}
-	);
-
-	// if in Busy state, add to message queue, otherwise start immediately
-	papa->impl.rs_apply(Req::DataNode, [&](link_impl::status_handle& S) {
-		if(S.value == ReqStatus::Busy)
-			S.waiters.push_back(std::move(lmapper));
-		else
-			papa->send(lmapper, a_ack{});
-	});
+	))
+		// if in Busy state, add to message queue, otherwise start immediately
+		papa->impl.rs_apply(Req::DataNode, [&](link_impl::status_handle& S) {
+			if(S.value == ReqStatus::Busy)
+				S.waiters.push_back(std::move(lmapper));
+			else
+				papa->send(lmapper, a_ack{});
+		});
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -190,12 +194,13 @@ auto map_link_impl::refresh(map_link_actor* papa, caf::event_based_actor* rworke
 			};
 
 			// spawn mapper actor & start job
-			auto lmapper = spawn_lmapper_actor(
+			if(auto lmapper = spawn_lmapper_actor(
 				papa, src_link, event{caf::actor_cast<caf::actor>(papa), {}, Event::None},
 				std::move(s2_process_res)
-			);
-			rworker->send(lmapper, a_ack{});
-			mappers.push_back(std::move(lmapper));
+			)) {
+				rworker->send(lmapper, a_ack{});
+				mappers.push_back(std::move(lmapper));
+			}
 		});
 	};
 

@@ -162,6 +162,11 @@ auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> voi
 }
 
 auto map_link_actor::on_exit() -> void {
+	// early destroy mapper
+	if(mimpl().is_link_mapper)
+		static_cast<map_link_impl&>(mimpl()).mf_ = nullptr;
+	else
+		static_cast<map_node_impl&>(mimpl()).mf_ = nullptr;
 	super::on_exit();
 	// explicitly terminate listener
 	send_exit(inp_listener_, caf::exit_reason::user_shutdown);
