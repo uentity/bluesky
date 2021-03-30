@@ -17,6 +17,8 @@
 #include <caf/actor_config.hpp>
 #include <caf/event_based_actor.hpp>
 
+#include <optional>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 
 template<typename Source>
@@ -37,7 +39,8 @@ struct ev_listener_actor : caf::event_based_actor {
 
 	// safe callback wrapped into error::eval_safe()
 	using safe_callback_t = decltype(make_safe_callback(std::declval<callback_t>()));
-	const safe_callback_t f;
+	std::optional<safe_callback_t> f_;
+	const safe_callback_t& f;
 
 	// address of events source actor (engine)
 	const caf::actor_addr origin;
@@ -46,15 +49,14 @@ struct ev_listener_actor : caf::event_based_actor {
 		caf::actor_config& cfg, caf::actor_addr ev_src, callback_t cb,
 		std::function< caf::message_handler(ev_listener_actor*) > make_event_behavior
 	)
-		: super(cfg), f(make_safe_callback(std::move(cb))), origin(std::move(ev_src))
+		: super(cfg), f_(make_safe_callback(std::move(cb))), f(*f_), origin(std::move(ev_src))
 	{
 		// silently drop all other messages not in my character
 		set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
 			return caf::none;
 		});
 
-		// put self into registry (to keep lifetime)
-		KRADIO.system().registry().put(id(), this);
+		// [NOTE] lifetime of actor is kept by group it joins on 'a_hi'
 		// exit after kernel
 		KRADIO.register_citizen(this);
 
@@ -77,6 +79,8 @@ struct ev_listener_actor : caf::event_based_actor {
 	}
 
 	auto on_exit() -> void override {
+		// destroy callback as early as possible
+		f_.reset();
 		KRADIO.release_citizen(this);
 	}
 
