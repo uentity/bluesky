@@ -45,12 +45,12 @@ auto pytr_through_queue(std::function< py::object(Ts...) > tr) {
 		// [NOTE] using request.await to stop messages processing while tr is executed
 		auto res = papa->make_response_promise<tr_result::box>();
 		papa->request(
-			KRADIO.queue_actor(), caf::infinite,
+			KRADIO.queue_actor(), kernel::radio::timeout(true),
 			transaction{[tr = std::move(tr), argstup = std::make_tuple(std::forward<Ts>(args)...)]
 			() mutable {
 				return std::apply(std::move(tr), std::move(argstup));
 			}}
-		).then(
+		).await(
 			[=](tr_result::box tres) mutable { res.deliver(std::move(tres)); },
 			[=](const caf::error& er) mutable { res.deliver(pack(tr_result{ forward_caf_error(er) })); }
 		);

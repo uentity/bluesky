@@ -16,7 +16,7 @@ NAMESPACE_BEGIN(blue_sky::python)
 template<typename TR, typename F, typename R, typename... Args>
 auto result_converter_impl(F&& f, TR if_none_v, identity<R (Args...)> _ = {}) {
 	static_assert(std::is_same_v<R, py::object>, "Python callback must return py::object");
-	return [f = std::forward<F>(f), if_none_v = std::move(if_none_v)](Args&&... args) mutable -> TR {
+	return [f = std::forward<F>(f), if_none_v = std::move(if_none_v)](Args... args) mutable -> TR {
 		auto guard = py::gil_scoped_acquire{};
 		// detect if Python callback returns None
 		auto res = f(std::forward<Args>(args)...);
