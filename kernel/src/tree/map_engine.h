@@ -37,7 +37,7 @@ public:
 		// immediately refresh output node & return it
 		caf::replies_to<a_node_clear>::with<node_or_errbox>,
 		// invoke mapper on given link from given origin node (sent by retranslator)
-		caf::reacts_to<a_ack, a_apply, link /* src */, event>,
+		caf::reacts_to<a_ack, a_apply, lid_type /* src */, event>,
 		// link erased from input (sub)node
 		caf::reacts_to<a_ack, a_node_erase, lid_type /* ID of erased link */, event>
 	>;
@@ -162,7 +162,7 @@ public:
 		caf::reacts_to<a_mlnk_fresh>,
 		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
 		// override update to trigger refresh first
-		caf::reacts_to<a_ack, a_apply, link /* src */, event>,
+		caf::reacts_to<a_ack, a_apply, lid_type /* src */, event>,
 		caf::reacts_to<a_ack, a_node_erase, lid_type /* ID of erased link */, event>
 	>;
 

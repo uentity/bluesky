@@ -27,17 +27,18 @@ NAMESPACE_BEGIN()
 //  helper retranslator that forwards acks from input node to parent `map_link`
 //
 struct iar_state {
-	map_impl_base::map_actor_type parent;
-	node::actor_type input;
+	map_impl_base::map_actor_type papa;
+	node::actor_type input, output;
 };
 
 auto input_ack_retranslator(
-	caf::stateful_actor<iar_state>* self, map_impl_base::map_actor_type parent, node::actor_type input,
+	caf::stateful_actor<iar_state>* self, map_impl_base::map_actor_type papa,
+	node::actor_type input, node::actor_type output,
 	Event update_on, TreeOpts opts
 ) {
 	using namespace allow_enumops;
 
-	self->state = { std::move(parent), std::move(input) };
+	self->state = { std::move(papa), std::move(input), std::move(output) };
 
 	// ignore unexpected messages
 	self->set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
@@ -45,40 +46,35 @@ auto input_ack_retranslator(
 	});
 
 	const auto send_parent = [self, update_on, opts]
-	(Event src_ev, const lid_type& src_id, const caf::actor& origin = {}) {
+	(Event src_ev, const lid_type& src_id, caf::actor origin = {}) {
 		// skip unsibscribed events
 		if(!enumval(update_on & src_ev)) return;
 
-		const auto& [parent, input] = self->state;
-		const auto& src_node = origin ? caf::actor_cast<node::actor_type>(origin) : input;
-		auto raw_src_node = caf::actor_cast<caf::actor>(src_node);
-
-		// on erase event we don't search for source link
-		if(src_ev == Event::LinkErased && (enumval(opts & TreeOpts::Deep) || src_node == input)) {
-			self->send(
-				parent, a_ack(), a_node_erase(), src_id,
-				event{std::move(raw_src_node), {{"link_id", src_id}}, src_ev}
-			);
-			return;
-		}
+		const auto& [papa, input, output] = self->state;
+		if(!origin) origin = caf::actor_cast<caf::actor>(input);
 
 		// find source link (depending on deep flag)
-		auto notify_parent = [=, rsn = std::move(raw_src_node), &parent = self->state.parent]
-		(const link& src_link) mutable {
-			if(src_link)
-				self->send(
-					parent, a_ack(), a_apply(), src_link,
-					event{std::move(rsn), {{"link_id", src_link.id()}}, src_ev}
-				);
+		auto notify_parent = [=, ev = event{ std::move(origin), {{"link_id", src_id}}, src_ev }]
+		() mutable {
+			self->send(self->state.papa, a_ack(), a_apply(), src_id, std::move(ev));
 		};
 
-		if(src_node == input)
-			self->request(src_node, caf::infinite, a_node_find(), src_id).then(std::move(notify_parent));
-		else if(enumval(opts & TreeOpts::Deep))
-			self->request(src_node, caf::infinite, a_node_deep_search(), src_id)
-			.then([notify_parent = std::move(notify_parent)](links_v ls) mutable {
-				if(!ls.empty()) notify_parent(ls.front());
-			});
+		// check if event comes from output node and must be muted
+		if(enumval(opts & TreeOpts::MuteOutputNode)) {
+			// send notification only if `src_id` wasn't found in output node
+			if(enumval(opts & TreeOpts::Deep))
+				self->request(output, caf::infinite, a_node_deep_search(), src_id)
+				.then([notify_parent = std::move(notify_parent)](const links_v& ls) mutable {
+					if(ls.empty()) notify_parent();
+				});
+			else
+				self->request(output, caf::infinite, a_node_find(), src_id)
+				.then([notify_parent = std::move(notify_parent)](const link& lnk) mutable {
+					if(!lnk) notify_parent();
+				});
+		}
+		else
+			notify_parent();
 	};
 
 	// build behavior
@@ -99,8 +95,8 @@ auto input_ack_retranslator(
 	}, node_impl::self_ack_actor_type::behavior_type{
 
 		// ack on insert
-		[=](a_ack, const caf::actor& N, a_node_insert, const lid_type& lid, size_t)
-		{ send_parent(Event::LinkInserted, lid, N); },
+		[=](a_ack, caf::actor N, a_node_insert, const lid_type& lid, size_t)
+		{ send_parent(Event::LinkInserted, lid, std::move(N)); },
 		// ignore moves within same node
 		[=](a_ack, const caf::actor& N, a_node_insert, const lid_type&, size_t, size_t) {},
 		// ack on erase
@@ -121,15 +117,15 @@ auto input_ack_retranslator(
 		return first_then_second(std::move(res), link_impl::deep_ack_actor_type::behavior_type{
 			// leaf rename
 			[=](
-				a_ack, const caf::actor& N, const lid_type& lid,
+				a_ack, caf::actor N, const lid_type& lid,
 				a_lnk_rename, const std::string&, const std::string&
-			) { send_parent(Event::LinkRenamed, lid, N); },
+			) { send_parent(Event::LinkRenamed, lid, std::move(N)); },
 			// leaf status
 			[=](a_ack, caf::actor N, const lid_type& lid, a_lnk_status, Req, ReqStatus, ReqStatus)
-			{ send_parent(Event::LinkStatusChanged, lid, N); },
+			{ send_parent(Event::LinkRenamed, lid, std::move(N)); },
 			// leaf data altered by transaction
 			[=](a_ack, caf::actor N, const lid_type& lid, a_data, const tr_result::box&)
-			{ send_parent(Event::DataModified, lid, N); }
+			{ send_parent(Event::LinkRenamed, lid, std::move(N)); }
 		});
 	else
 		return res;
@@ -160,7 +156,8 @@ auto map_link_actor::reset_input_listener(Event update_on, TreeOpts opts) -> voi
 	if(!simpl.in_) return;
 	inp_listener_ = spawn_in_group(
 		simpl.in_.home(), input_ack_retranslator,
-		caf::actor_cast<map_impl_base::map_actor_type>(this), simpl.in_.actor(), update_on, opts
+		caf::actor_cast<map_impl_base::map_actor_type>(this), simpl.in_.actor(), simpl.out_.actor(),
+		update_on, opts
 	);
 }
 
@@ -200,9 +197,18 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 			return delegate(caf::actor_cast<actor_type>(this), a_data_node(), true);
 		},
 
-		[=](a_ack, a_apply, const link& inp_lnk, event ev) {
+		[=](a_ack, a_apply, const lid_type& src_id, event ev) {
 			adbg(this) << "<- update (casual)" << std::endl;
-			mimpl().update(this, inp_lnk, std::move(ev));
+			if(mimpl().is_link_mapper) {
+				const auto src_node = caf::actor_cast<node::actor_type>(ev.origin);
+				request(src_node, caf::infinite, a_node_find(), src_id)
+				.then([=, ev = std::move(ev)](const link& inp_link) mutable {
+					mimpl().update(this, inp_link, std::move(ev));
+				});
+			}
+			else
+				// node mapper doesn't care about particular source link
+				mimpl().update(this, link{}, std::move(ev));
 		},
 
 		[=](a_ack, a_node_erase, const lid_type& src_id, event ev) {
@@ -236,7 +242,7 @@ auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
 			return refresh_once();
 		},
 
-		[=](a_ack, a_apply, const link&, const event&) {
+		[=](a_ack, a_apply, const lid_type&, const event&) {
 			adbg(this) << "<- update (refresh)" << std::endl;
 			refresh_once();
 		},

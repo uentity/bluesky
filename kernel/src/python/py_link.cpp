@@ -54,7 +54,7 @@ auto adapt(adapted_data_cb&& f) {
 
 template<typename F, typename R, typename... Args>
 auto mapper2queue(F mf, identity<R (Args...)> _) {
-	return [mf = std::move(mf)](Args&&... args, caf::event_based_actor* worker) -> caf::result<R> {
+	return [mf = std::move(mf)](Args... args, caf::event_based_actor* worker) -> caf::result<R> {
 		auto rp = worker->make_response_promise();
 		KRADIO.enqueue(
 			launch_async,
@@ -385,7 +385,7 @@ void py_bind_link(py::module& m) {
 				);
 			}),
 			"mlevel"_a, "mf"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
-			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal,
+			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal | TreeOpts::MuteOutputNode,
 			"flags"_a = Flags::Plain
 		)
 		// normal ctor with tag
@@ -399,7 +399,7 @@ void py_bind_link(py::module& m) {
 				);
 			}),
 			"mlevel"_a, "mf"_a, "tag"_a, "name"_a, "src_node"_a, "dest_node"_a = link_or_node{},
-			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal,
+			"update_on"_a = Event::DataModified, "opts"_a = TreeOpts::Normal | TreeOpts::MuteOutputNode,
 			"flags"_a = Flags::Plain
 		)
 		// from mapper & existing map_link
@@ -426,7 +426,7 @@ void py_bind_link(py::module& m) {
 	m.def(
 		"make_otid_filter", &make_otid_filter, "allowed_otids"_a, "name"_a, "src_node"_a,
 		"dest_node"_a = link_or_node{}, "update_on"_a = Event::DataNodeModified | Event::LinkRenamed,
-		"opts"_a = TreeOpts::Deep, "flags"_a = Flags::Plain
+		"opts"_a = TreeOpts::Deep | TreeOpts::MuteOutputNode, "flags"_a = Flags::Plain
 	);
 
 	///////////////////////////////////////////////////////////////////////////////

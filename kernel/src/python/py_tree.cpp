@@ -121,6 +121,7 @@ void py_bind_tree(py::module& m) {
 		.value("Lazy"           , TreeOpts::Lazy)
 		.value("FollowSymLinks" , TreeOpts::FollowSymLinks)
 		.value("FollowLazyLinks", TreeOpts::FollowLazyLinks)
+		.value("MuteOutputNode" , TreeOpts::MuteOutputNode)
 		.value("HighPriority"   , TreeOpts::HighPriority)
 		.value("DetachedWorkers", TreeOpts::DetachedWorkers)
 	;

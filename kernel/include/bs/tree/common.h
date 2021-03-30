@@ -66,6 +66,7 @@ enum class TreeOpts : std::uint32_t {
 	Lazy = 8,
 	FollowSymLinks = 16,
 	FollowLazyLinks = 32,
+	MuteOutputNode = 64,
 	HighPriority = 256,
 	DetachedWorkers = 512
 };
