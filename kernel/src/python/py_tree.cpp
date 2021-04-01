@@ -124,6 +124,7 @@ void py_bind_tree(py::module& m) {
 		.value("MuteOutputNode" , TreeOpts::MuteOutputNode)
 		.value("HighPriority"   , TreeOpts::HighPriority)
 		.value("DetachedWorkers", TreeOpts::DetachedWorkers)
+		.value("TrackWorkers"   , TreeOpts::TrackWorkers)
 	;
 
 	// bind lists of links & nodes as opaque types

@@ -31,6 +31,10 @@ auto make_lmapper_actor(
 	// make base actor behavior
 	return [=, mama = std::move(mama), mf = mama->mf_, ev = std::move(ev), rp = std::move(res_processor)]
 	(caf::event_based_actor* self) mutable {
+		// register as kernel citizen if required
+		if(enumval(mama->opts_ & TreeOpts::TrackWorkers))
+			self->attach_functor([=] { KRADIO.release_citizen(self); });
+
 		self->become(
 			// invoke mapper & return resulting link (may be lazily evaluated)
 			[=, mf = std::move(mf), ev = std::move(ev)](a_apply, const link& dest_link) mutable {
@@ -86,18 +90,22 @@ auto make_lmapper_actor(
 
 template<typename... Args>
 auto spawn_lmapper_actor(map_link_actor* papa, Args&&... args) {
-	// check that mapper is valid
 	auto mama = papa->spimpl<map_link_impl>();
+	auto res = caf::actor{};
 
-	// spawn worker actor
 	if(enumval(mama->opts_ & TreeOpts::DetachedWorkers))
-		return papa->spawn<caf::detached>(
+		res = papa->spawn<caf::detached>(
 			make_lmapper_actor(std::move(mama), std::forward<Args>(args)...)
 		);
 	else
-		return papa->spawn(
+		res = papa->spawn(
 			make_lmapper_actor(std::move(mama), std::forward<Args>(args)...)
 		);
+
+	// early register as kernel citizen if required
+	if(enumval(mama->opts_ & TreeOpts::TrackWorkers))
+		KRADIO.register_citizen(res.address());
+	return res;
 }
 
 NAMESPACE_END()

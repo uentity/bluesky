@@ -22,8 +22,8 @@ inline const auto nil_otid = blue_sky::defaults::nil_type_name;
 enum class EraseOpts { Normal = 0, Silent = 1 };
 
 enum class ReqOpts : std::uint32_t {
-	WaitIfBusy = 0, ErrorIfBusy = 1, ErrorIfNOK = 2, Detached = 4, DirectInvoke = 8,
-	HasDataCache = 16, Uniform = 32
+	WaitIfBusy = 0, ErrorIfBusy = 1, ErrorIfNOK = 2, DirectInvoke = 4,
+	HasDataCache = 8, Uniform = 16, Detached = 512, TrackWorkers = 1024
 };
 
 /// messages processed by any engine-derived class

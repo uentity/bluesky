@@ -8,6 +8,7 @@
 #pragma once
 
 #include "link_actor.h"
+#include "../kernel/radio_subsyst.h"
 
 #include <bs/detail/enumops.h>
 #include <bs/serialize/tree.h>
@@ -78,6 +79,10 @@ auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts
 	auto worker = [=, f = std::move(f_request), Limpl = LA.spimpl()]
 	(caf::stateful_actor<rstate>* self) mutable -> caf::behavior {
 		using custom_rp_f = typename rtraits::custom_rp_f;
+
+		// release worker from kernel if being tracked
+		if(enumval(opts & ReqOpts::TrackWorkers))
+			self->attach_functor([=] { KRADIO.release_citizen(self); });
 
 		// if we were in busy state, install self as waiter
 		if(prev_rs == ReqStatus::Busy) {
@@ -185,9 +190,13 @@ auto make_request_actor(ReqStatus prev_rs, link_actor& LA, Req req, ReqOpts opts
 	};
 
 	// spawn worker actor
-	return enumval(opts & ReqOpts::Detached) ?
+	auto res = enumval(opts & ReqOpts::Detached) ?
 		LA.spawn<caf::detached>(std::move(worker)) :
 		LA.spawn(std::move(worker));
+	// early register worker if required
+	if(enumval(opts & ReqOpts::TrackWorkers))
+		KRADIO.register_citizen(res->address());
+	return res;
 }
 
 NAMESPACE_END(detail)

@@ -27,8 +27,8 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 			auto invoke_res = worker->make_response_promise<node_or_errbox>();
 
 			using res_t = caf::result<void>;
-			worker->become(
-				caf::message_handler{[=, mf = std::move(mf), ev = std::move(ev)](a_mlnk_fresh) mutable -> res_t {
+			worker->become(caf::message_handler{
+				[=, mf = std::move(mf), ev = std::move(ev)](a_mlnk_fresh) mutable -> res_t {
 					auto res = std::optional<res_t>{};
 					if(auto er = error::eval_safe([&] {
 						res = mf(mama->in_, mama->out_, std::move(ev), worker);
@@ -36,8 +36,8 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 						invoke_res.deliver(node_or_errbox{tl::unexpect, er.pack()});
 					}
 					return res ? std::move(*res) : caf::error();
-				}}.or_else(worker->current_behavior())
-			);
+				}
+			}.or_else(worker->current_behavior()));
 
 			worker->request(caf::actor_cast<caf::actor>(worker), caf::infinite, a_mlnk_fresh{})
 			.then([=]() mutable {
@@ -46,8 +46,10 @@ auto spawn_mapper_job(map_node_impl* mama, map_link_actor* papa, event ev)
 			return invoke_res;
 		};
 
-	const auto opts = enumval(mama->opts_ & TreeOpts::DetachedWorkers) ?
+	auto opts = enumval(mama->opts_ & TreeOpts::DetachedWorkers) ?
 		ReqOpts::Detached : ReqOpts::WaitIfBusy;
+	if(enumval(mama->opts_ & TreeOpts::TrackWorkers))
+		opts |= ReqOpts::TrackWorkers;
 
 	if constexpr(DiscardResult) {
 		// trigger async request by sending `a_ack` message to worker actor
