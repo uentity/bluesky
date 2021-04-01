@@ -149,13 +149,20 @@ auto radio_subsyst::kick_citizens() -> void {
 					alive.push_back(std::move(A));
 				}
 			}
-			citizens_.clear();
 		}
 		// wait until citizen gone
-		std::cout << "~~~ kick out " << alive.size() << " actors" << std::endl;
-		waiter->wait_for(std::move(alive));
-		std::cout << "~~~ kick out finished" << std::endl;
-		return true;
+		if(!alive.empty()) {
+			std::cout << "~~~ kick out " << alive.size() << " alive actors" << std::endl;
+			waiter->wait_for(std::move(alive));
+		}
+		const auto citizens_left = [&] {
+			auto solo = std::lock_guard{guard_};
+			return citizens_.size();
+		}();
+		if(!alive.empty())
+			std::cout << "~~~ kick out finished, citizens left: " << citizens_left << std::endl;
+
+		return !(citizens_left == 0 || alive.empty());
 	};
 	while(kick_out()) {};
 }
