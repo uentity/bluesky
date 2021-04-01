@@ -17,26 +17,29 @@
 #include <cereal/types/string.hpp>
 
 NAMESPACE_BEGIN(blue_sky)
-/*-----------------------------------------------------------------------------
- *  inspector-like tag class for proper dispatching serialization of CAF types
- *  is_inspectable<archive_inspector, CAF type> is always true
- *-----------------------------------------------------------------------------*/
-template<typename Archive>
+
+ /// inspector-like tag class for proper dispatching serialization of builtin CAF types
+template<bool IsLoading>
 struct archive_inspector {
-	using result_type = void;
+	static constexpr bool is_loading = IsLoading;
 
 	template<typename... Ts>
-	auto operator()(Ts&&...) {}
+	auto operator()(Ts&&...) { return true; }
 };
+
+NAMESPACE_BEGIN(detail)
 
 template<typename T>
 struct is_archive_inspector : std::false_type {};
 
-template<typename Archive>
-struct is_archive_inspector< archive_inspector<Archive> > : std::true_type {};
+template<bool IsLoading>
+struct is_archive_inspector<archive_inspector<IsLoading>> : std::true_type {};
 
+NAMESPACE_END(detail)
+
+/// test if inspector is `archive_inspector`
 template<typename T>
-inline constexpr auto is_archive_inspector_v = is_archive_inspector<T>::value;
+inline constexpr bool is_archive_inspector = detail::is_archive_inspector<T>::value;
 
 /// options for using with Tree FS archives
 enum class TFSOpts : std::uint8_t {

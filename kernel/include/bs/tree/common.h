@@ -74,11 +74,13 @@ enum class TreeOpts : std::uint32_t {
 
 /// link's unique ID type
 using lid_type = uuid;
+using lids_v = std::vector<lid_type>;
 
 /// forward declare major types
 class link;
 class link_impl;
 class link_actor;
+using links_v = std::vector<link>;
 
 class node;
 class node_impl;

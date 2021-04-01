@@ -52,9 +52,7 @@ struct ev_listener_actor : caf::event_based_actor {
 		: super(cfg), f_(make_safe_callback(std::move(cb))), f(*f_), origin(std::move(ev_src))
 	{
 		// silently drop all other messages not in my character
-		set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-			return caf::none;
-		});
+		set_default_handler(noop_r<caf::message>());
 
 		// [NOTE] lifetime of actor is kept by group it joins on 'a_hi'
 		// exit after kernel

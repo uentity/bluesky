@@ -8,10 +8,11 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include "errors.h"
 #include "link.h"
 #include "fusion.h"
 #include "node.h"
-#include "errors.h"
+#include "type_caf_id.h"
 #include "../detail/function_view.h"
 #include "../detail/enumops.h"
 

@@ -8,6 +8,7 @@
 #include <bs/defaults.h>
 #include <bs/detail/enumops.h>
 #include <bs/tree/common.h>
+#include <bs/tree/type_caf_id.h>
 
 #include <caf/typed_actor.hpp>
 
@@ -54,3 +55,13 @@ using ev_listener_actor_type = caf::typed_actor<
 NAMESPACE_END(blue_sky::tree)
 
 BS_ALLOW_ENUMOPS(tree::ReqOpts)
+
+CAF_BEGIN_TYPE_ID_BLOCK(bs_private, blue_sky::detail::bs_private_cid_begin)
+
+	CAF_ADD_TYPE_ID(bs_private, (blue_sky::tree::EraseOpts))
+	CAF_ADD_TYPE_ID(bs_private, (blue_sky::tree::ReqOpts))
+	CAF_ADD_TYPE_ID(bs_private, (blue_sky::tree::engine::sp_engine_impl))
+	CAF_ADD_TYPE_ID(bs_private, (std::shared_ptr<blue_sky::tree::link_impl>))
+	CAF_ADD_TYPE_ID(bs_private, (std::shared_ptr<blue_sky::tree::node_impl>))
+
+CAF_END_TYPE_ID_BLOCK(bs_private)

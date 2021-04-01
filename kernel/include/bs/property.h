@@ -285,6 +285,28 @@ constexpr decltype(auto) visit(F&& f, P&& p) {
 BS_API std::string to_string(const property& p);
 BS_API std::ostream& operator <<(std::ostream& os, const property& x);
 
+/// forward declarations for CAF type id block
+class propdict;
+
+/// propbook = map of props with given key type
+template<typename Key> using propbook = std::map<Key, propdict, std::less<>>;
+using propbook_s = propbook<std::string>;
+using propbook_i = propbook<std::ptrdiff_t>;
+
 NAMESPACE_END(blue_sky::prop)
 
 BS_ALLOW_VISIT(blue_sky::prop::property)
+
+/*-----------------------------------------------------------------------------
+ *  CAF type id
+ *-----------------------------------------------------------------------------*/
+#include "atoms.h"
+
+CAF_BEGIN_TYPE_ID_BLOCK(bs_props, blue_sky::detail::bs_props_cid_begin)
+
+	CAF_ADD_TYPE_ID(bs_props, (blue_sky::prop::property))
+	CAF_ADD_TYPE_ID(bs_props, (blue_sky::prop::propdict))
+	CAF_ADD_TYPE_ID(bs_props, (blue_sky::prop::propbook_s))
+	CAF_ADD_TYPE_ID(bs_props, (blue_sky::prop::propbook_i))
+
+CAF_END_TYPE_ID_BLOCK(bs_props)

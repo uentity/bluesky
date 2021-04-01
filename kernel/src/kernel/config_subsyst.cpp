@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 19.11.2018
 /// @brief Kernel config subsystem implementation
@@ -13,11 +12,20 @@
 
 #include "config_subsyst.h"
 #include "radio_subsyst.h"
+#include "../tree/private_common.h"
+
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/propdict.h>
+#include <bs/serialize/tree.h>
+#include "../serialize/tree_impl.h"
+
+#include <cereal/types/optional.hpp>
 
 #include <caf/config_option_adder.hpp>
 #include <caf/parser_state.hpp>
-#include <caf/detail/ini_consumer.hpp>
-#include <caf/detail/parser/read_ini.hpp>
+#include <caf/init_global_meta_objects.hpp>
+#include <caf/detail/config_consumer.hpp>
+#include <caf/detail/parser/read_config.hpp>
 #include <caf/detail/parser/read_string.hpp>
 #include <caf/io/middleman.hpp>
 
@@ -36,36 +44,36 @@ using string_list = config_subsyst::string_list;
 // hidden helper functions
 NAMESPACE_BEGIN()
 
-struct ini_iter {
-	std::istream* ini;
+struct config_iter {
+	std::istream* conf;
 	char ch;
 
-	explicit ini_iter(std::istream* istr) : ini(istr) {
-		ini->get(ch);
+	explicit config_iter(std::istream* istr) : conf(istr) {
+		conf->get(ch);
 	}
 
-	ini_iter() : ini(nullptr), ch('\0') {
+	config_iter() : conf(nullptr), ch('\0') {
 		// nop
 	}
 
-	ini_iter(const ini_iter&) = default;
+	config_iter(const config_iter&) = default;
 
-	ini_iter& operator=(const ini_iter&) = default;
+	config_iter& operator=(const config_iter&) = default;
 
 	inline char operator*() const {
 		return ch;
 	}
 
-	inline ini_iter& operator++() {
-		ini->get(ch);
+	inline config_iter& operator++() {
+		conf->get(ch);
 		return *this;
 	}
 };
 
-struct ini_sentinel { };
+struct config_sentinel {};
 
-bool operator!=(ini_iter iter, ini_sentinel) {
-	return !iter.ini->fail();
+bool operator!=(config_iter iter, config_sentinel) {
+	return !iter.conf->fail();
 }
 
 auto extract_config_file_path(caf::config_option_set& opts, caf::settings& S, string_list& args)
@@ -78,19 +86,58 @@ auto extract_config_file_path(caf::config_option_set& opts, caf::settings& S, st
 	// [TODO] add CAF errors processing
 	if(i == args.end())
 		return "";
-		//return none;
 	if(path.empty()) {
 		args.erase(i);
 		return "";
-		//return make_error(pec::missing_argument, std::string{*i});
 	}
-	if(auto evalue = ptr->parse(path); evalue) {
-		put(S, "config-file", *evalue);
-		ptr->store(*evalue);
-		return caf::get<std::string>(*evalue);
+	config_value val{path};
+	if(auto err = ptr->sync(val); !err) {
+		auto res = caf::get<std::string>(val);
+		put(S, "config-file", std::move(val));
+		return res;
 	}
 	return "";
-	//return std::move(evalue.error());
+}
+
+struct indentation {
+	size_t size;
+};
+
+indentation operator+(indentation x, size_t y) noexcept {
+	return {x.size + y};
+}
+
+std::ostream& operator<<(std::ostream& out, indentation indent) {
+	for(size_t i = 0; i < indent.size; ++i)
+		out.put(' ');
+	return out;
+}
+
+void print(const config_value::dictionary& xs, indentation indent, std::ostream& sout) {
+	for(const auto& kvp : xs) {
+		if(kvp.first == "dump-config")
+			continue;
+		if(auto submap = get_if<config_value::dictionary>(&kvp.second)) {
+			sout << indent << kvp.first << " {\n";
+			print(*submap, indent + 2, sout);
+			sout << indent << "}\n";
+		}
+		else if(auto lst = get_if<config_value::list>(&kvp.second)) {
+			if(lst->empty()) {
+				sout << indent << kvp.first << " = []\n";
+			}
+			else {
+				sout << indent << kvp.first << " = [\n";
+				auto list_indent = indent + 2;
+				for (auto& x : *lst)
+					sout << list_indent << to_string(x) << ",\n";
+				sout << indent << "]\n";
+			}
+		}
+		else {
+			sout << indent << kvp.first << " = " << to_string(kvp.second) << '\n';
+		}
+	}
 }
 
 // separetely store configured timeouts for faster access
@@ -107,12 +154,24 @@ auto reset_timeouts(timespan typical, timespan slow) -> void {
 	long_to.store(slow, std::memory_order_relaxed);
 }
 
-NAMESPACE_END() // eof hidden ns
+NAMESPACE_END()
 
 /*-----------------------------------------------------------------------------
  *  kernel_config_subsyst impl
  *-----------------------------------------------------------------------------*/
-config_subsyst::config_subsyst() {
+config_subsyst::config_subsyst() :
+	// init global meta objects before constructing actor config
+	actor_cfg_{[]() -> caf::actor_system_config {
+		caf::init_global_meta_objects<caf::id_block::bs_atoms>();
+		caf::init_global_meta_objects<caf::id_block::bs>();
+		caf::init_global_meta_objects<caf::id_block::bs_private>();
+		caf::init_global_meta_objects<caf::id_block::bs_props>();
+		caf::init_global_meta_objects<caf::id_block::bs_tree>();
+		caf::core::init_global_meta_objects();
+		caf::io::middleman::init_global_meta_objects();
+		return {};
+	}()}
+{
 	///////////////////////////////////////////////////////////////////////////////
 	//  add config options
 	//
@@ -195,22 +254,25 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 		for(const auto& ini_path : ini2parse) {
 			auto ini = std::ifstream(ini_path);
 			bool status = false;
-			if ((status = ini.good())) {
-				caf::detail::ini_consumer consumer{confopt_, confdata_};
-				caf::parser_state<ini_iter, ini_sentinel> res{ini_iter{&ini}};
-				caf::detail::parser::read_ini(res, consumer);
-				if (res.i != res.e) {
+			if((status = ini.good())) {
+				caf::detail::config_consumer consumer{confopt_, confdata_};
+				caf::parser_state<config_iter, config_sentinel> res{config_iter{&ini}};
+				caf::detail::parser::read_config(res, consumer);
+				if(res.i != res.e) {
 					status = false;
 					bserr() << log::W("*** error in {} [line {} col {}]: {}")
 						<< ini_path.string() << res.line << res.column << to_string(res.code) << log::end;
 				}
 			}
 			bsout() << "{} - {}" << ini_path.string() << (status ? "OK" : "Fail") << log::end;
+
 			// try to read CAF config from the same dir as BS config
 			const auto caf_ini_path = ini_path.parent_path() / "caf.conf";
 			if(( ini = std::ifstream(caf_ini_path) )) {
-				actor_cfg_.parse({}, ini);
-				bsout() << "{} - {}" << caf_ini_path.string() << "CAF" << log::end;
+				const auto er = actor_cfg_.parse({}, ini);
+				bsout() << "CAF: {} - {}" << caf_ini_path.string() << (er ? "Fail" : "OK") << log::end;
+				//if(er)
+				//	bsout() << "{}" << to_string(er) << log::end;
 			}
 		}
 	}
@@ -236,15 +298,7 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 	// Generate INI dump if needed.
 	if(get_or(confdata_, "dump-config", false)) {
 		std::stringstream confdump;
-		confdump << '\n';
-		for (auto& category : confdata_) {
-			if (auto dict = get_if<config_value::dictionary>(&category.second)) {
-				confdump << '[' << category.first << "]\n";
-				for (auto& kvp : *dict)
-					if (kvp.first != "dump-config")
-						confdump << kvp.first << '=' << to_string(kvp.second) << '\n';
-			}
-		}
+		print(confdata_, indentation{0}, confdump);
 		bsout() << confdump.str() << log::end;
 		put(confdata_, "dump-config", false);
 	}
@@ -281,11 +335,11 @@ NAMESPACE_END(blue_sky::kernel::detail)
 
 NAMESPACE_BEGIN(blue_sky::kernel::radio)
 
-auto timeout(bool for_long_task) -> caf::duration {
+auto timeout(bool for_long_task) -> timespan {
 	auto& [normal_to, long_to] = kernel::detail::timeouts();
-	return caf::duration{
-		for_long_task ? long_to.load(std::memory_order_relaxed) : normal_to.load(std::memory_order_relaxed)
-	};
+	return for_long_task ?
+		long_to.load(std::memory_order_relaxed) :
+		normal_to.load(std::memory_order_relaxed);
 }
 
 NAMESPACE_END(blue_sky::kernel::radio)

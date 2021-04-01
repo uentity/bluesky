@@ -80,9 +80,18 @@ return typed_behavior {
 		// ohtherwise eval directly
 		else {
 			auto tres = tr_eval(this, otr, [&] { return mama_.lock(); });
-			tres.value.extract([&](const tr_result::box& rb) {
-				send(home_, a_ack(), a_data(), rb);
-			});
+			// non-async transaction must fill 'message' slot of caf::result
+			visit(
+				[&](auto& mres) {
+					if constexpr(std::is_same_v<meta::remove_cvref_t<decltype(mres)>, caf::message>) {
+						auto notify = caf::behavior{[&](const tr_result::box& rb) {
+							send(home_, a_ack(), a_data(), rb);
+						}};
+						notify(mres);
+					}
+				},
+				tres.get_data()
+			);
 			return tres;
 		}
 	},

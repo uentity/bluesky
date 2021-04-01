@@ -41,9 +41,7 @@ auto input_ack_retranslator(
 	self->state = { std::move(papa), std::move(input), std::move(output) };
 
 	// ignore unexpected messages
-	self->set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-		return caf::none;
-	});
+	self->set_default_handler(noop_r<caf::message>());
 
 	const auto send_parent = [self, update_on, opts]
 	(Event src_ev, const lid_type& src_id, caf::actor origin = {}) {

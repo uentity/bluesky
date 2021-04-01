@@ -79,7 +79,7 @@ engine_actor_base::engine_actor_base(caf::actor_config& cfg, caf::group egrp, sp
 
 	// prevent termination in case some errors happens in group members
 	// for ex. if they receive unexpected messages (translators normally do)
-	set_error_handler([this](caf::error er) {
+	set_error_handler([this](caf::error& er) {
 		switch(static_cast<caf::sec>(er.code())) {
 		case caf::sec::unexpected_message :
 		case caf::sec::request_timeout :
@@ -91,9 +91,7 @@ engine_actor_base::engine_actor_base(caf::actor_config& cfg, caf::group egrp, sp
 	});
 
 	// completely ignore unexpected messages without error backpropagation
-	set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-		return caf::none;
-	});
+	set_default_handler(noop_r<caf::message>());
 }
 
 auto engine_actor_base::goodbye() -> void {

@@ -7,99 +7,128 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include <caf/atom.hpp>
+#include <caf/type_id.hpp>
 
-namespace blue_sky {
+CAF_BEGIN_TYPE_ID_BLOCK(bs_atoms, first_custom_type_id)
 ///////////////////////////////////////////////////////////////////////////////
 //  common
 //
-/// denote that we don't want to wait until invoke result is available
-using launch_async_t = caf::atom_constant<caf::atom("bs lasync")>;
-inline constexpr auto launch_async = launch_async_t{};
-
-/// denote operation that is thread-unsafe and can cause data race
-using unsafe_t = caf::atom_constant<caf::atom("bs unsafe")>;
-inline constexpr auto unsafe = unsafe_t{};
-
-/// denote operation that can take long time
-using long_op_t = caf::atom_constant<caf::atom("bs long op")>;
-inline constexpr auto long_op = long_op_t{};
-
-/// denote some operation that spans to whole subtree
-using deep_t = caf::atom_constant<caf::atom("bs deep")>;
-inline constexpr auto deep = deep_t{};
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_launch_async)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_unsafe)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_long_op)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_deep)
 
 ///////////////////////////////////////////////////////////////////////////////
 //  generic BS API
 //
-// discover neighbourhood
-using a_hi = caf::atom_constant<caf::atom("bs hi")>;
-// used to inform others that I'm quit
-using a_bye = caf::atom_constant<caf::atom("bs bye")>;
-// used as 'acquired` tag
-using a_ack = caf::atom_constant<caf::atom("bs ack")>;
-// used to invoke some processing over an object/actor
-using a_apply = caf::atom_constant<caf::atom("bs apply")>;
-// indicate that operation is lazy (won't start immediately)
-using a_lazy = caf::atom_constant<caf::atom("bs lazy")>;
+	// discover neighbourhood
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_hi)
+	// used to inform others that I'm quit
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_bye)
+	// used as 'acquired` tag
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_ack)
+	// used to invoke some processing over an object/actor
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_apply)
+	// indicate that operation is lazy (won't start immediately)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_lazy)
 
-// get implementation part of link/node/etc...
-using a_impl = caf::atom_constant<caf::atom("bs impl")>;
-// get home group of entity
-using a_home = caf::atom_constant<caf::atom("bs home")>;
-// get home group ID
-using a_home_id = caf::atom_constant<caf::atom("bs home id")>;
-// obtain data (retrive object)
-using a_data = caf::atom_constant<caf::atom("bs data")>;
-// obtain data node (retrive node)
-using a_data_node = caf::atom_constant<caf::atom("bs dnode")>;
-// object save/load from storage
-using a_load = caf::atom_constant<caf::atom("bs load")>;
-using a_save = caf::atom_constant<caf::atom("bs save")>;
-// subscription manage
-using a_subscribe = caf::atom_constant<caf::atom("bs subscrb")>;
-// ask to clone some object
-using a_clone = caf::atom_constant<caf::atom("bs clone")>;
+	// get implementation part of link/node/etc...
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_impl)
+	// get home group of entity
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_home)
+	// get home group ID
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_home_id)
+	// obtain data (retrive object)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_data)
+	// obtain data node (retrive node)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_data_node)
+	// object save/load from storage
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_load)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_save)
+	// subscription manage
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_subscribe)
+	// ask to clone some object
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_clone)
 
 ///////////////////////////////////////////////////////////////////////////////
 //  link API
 //
-using a_lnk_id = caf::atom_constant<caf::atom("tl id")>;
-using a_lnk_name = caf::atom_constant<caf::atom("tl name")>;
-using a_lnk_rename = caf::atom_constant<caf::atom("tl rename")>;
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_lnk_id)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_lnk_name)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_lnk_rename)
 
-using a_lnk_status = caf::atom_constant<caf::atom("tl status")>;
-using a_lnk_oid = caf::atom_constant<caf::atom("tl oid")>;
-using a_lnk_otid = caf::atom_constant<caf::atom("tl otid")>;
-using a_lnk_inode = caf::atom_constant<caf::atom("tl inode")>;
-using a_lnk_flags = caf::atom_constant<caf::atom("tl flags")>;
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_lnk_status)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_lnk_oid)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_lnk_otid)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_lnk_inode)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_lnk_flags)
 
-using a_mlnk_fresh = caf::atom_constant<caf::atom("ml fresh")>;
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_mlnk_fresh)
 
-// async invoke `fusion_link::populate()`
-using a_flnk_data = caf::atom_constant<caf::atom("tfl data")>;
-using a_flnk_populate = caf::atom_constant<caf::atom("tfl dnode")>;
-using a_flnk_bridge = caf::atom_constant<caf::atom("tfl bridge")>;
+	// async invoke `fusion_link::populate()`
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_flnk_data)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_flnk_populate)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_flnk_bridge)
 
 ///////////////////////////////////////////////////////////////////////////////
 //  node API
 //
-using a_node_size = caf::atom_constant<caf::atom("tn size")>;
-using a_node_leafs = caf::atom_constant<caf::atom("tn leafs")>;
-using a_node_keys = caf::atom_constant<caf::atom("tn keys")>;
-using a_node_ikeys = caf::atom_constant<caf::atom("tn ikeys")>;
-using a_node_find = caf::atom_constant<caf::atom("tn find")>;
-using a_node_index = caf::atom_constant<caf::atom("tn index")>;
-using a_node_deep_search = caf::atom_constant<caf::atom("tn deeps")>;
-using a_node_equal_range = caf::atom_constant<caf::atom("tn eqrng")>;
-using a_node_deep_equal_range = caf::atom_constant<caf::atom("tn deqrng")>;
-using a_node_insert = caf::atom_constant<caf::atom("tn insert")>;
-using a_node_erase = caf::atom_constant<caf::atom("tn erase")>;
-using a_node_clear = caf::atom_constant<caf::atom("tn clear")>;
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_size)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_leafs)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_keys)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_ikeys)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_find)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_index)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_deep_search)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_equal_range)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_deep_equal_range)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_insert)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_erase)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_clear)
 
-// query node's actor group ID
-using a_node_disconnect = caf::atom_constant<caf::atom("tn unplug")>;
-using a_node_handle = caf::atom_constant<caf::atom("tn handle")>;
-using a_node_rearrange = caf::atom_constant<caf::atom("tn rearng")>;
+	// query node's actor group ID
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_disconnect)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_handle)
+	CAF_ADD_ATOM(bs_atoms, blue_sky, a_node_rearrange)
+
+CAF_END_TYPE_ID_BLOCK(bs_atoms)
+
+namespace blue_sky {
+
+/// shorter aliases for some generic atoms
+using launch_async_t = a_launch_async;
+inline constexpr auto launch_async = a_launch_async_v;
+
+using unsafe_t = a_unsafe;
+inline constexpr auto unsafe = a_unsafe_v;
+
+using long_op_t = a_long_op;
+inline constexpr auto long_op = a_long_op_v;
+
+using deep_t = a_deep;
+inline constexpr auto deep = a_deep_v;
+
+namespace detail {
+inline constexpr caf::type_id_t bs_subsyst_gap = 50;
+
+/// Misc types in parent 'bs' namespace
+inline constexpr auto bs_cid_begin = bs_subsyst_gap * (caf::id_block::bs_atoms::end/bs_subsyst_gap + 1);
+inline constexpr auto bs_private_cid_begin = bs_cid_begin + bs_subsyst_gap;
+inline constexpr auto bs_cid_end = bs_private_cid_begin + bs_subsyst_gap;
+
+/// Subsystems type id begin/end
+inline constexpr auto bs_props_cid_begin = bs_cid_end;
+inline constexpr auto bs_props_cid_end = bs_props_cid_begin + bs_subsyst_gap;
+
+inline constexpr auto bs_transaction_cid = bs_props_cid_end;
+inline constexpr auto bs_tr_cid_begin = bs_transaction_cid + 1;
+inline constexpr auto bs_tr_cid_end = bs_tr_cid_begin + bs_subsyst_gap;
+
+inline constexpr auto bs_tree_cid_begin = bs_tr_cid_end;
+inline constexpr auto bs_tree_cid_end = bs_tree_cid_begin + bs_subsyst_gap;
+
+} // eof blue_sky::detail
+
+inline constexpr auto first_plugin_type_id = detail::bs_tree_cid_end;
 
 } /* namespace blue_sky */

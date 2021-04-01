@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 22.04.2019
 /// @brief BS tree links bindings

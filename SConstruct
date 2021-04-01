@@ -210,8 +210,14 @@ custom_env.AppendUnique(
 		osp.join("#third_party", "expected", "include"),
 		osp.join("#third_party", "object_ptr")
 	],
-	LIBPATH = [osp.join("#third_party", "actor-framework", "build", "lib")],
-	RPATH = [Dir(osp.join("#third_party", "actor-framework", "build", "lib")).get_abspath()],
+	LIBPATH = [
+		osp.join("#third_party", "actor-framework", "build", "libcaf_core"),
+		osp.join("#third_party", "actor-framework", "build", "libcaf_io")
+	],
+	RPATH = [
+		Dir(osp.join("#third_party", "actor-framework", "build", "libcaf_core")).get_abspath(),
+		Dir(osp.join("#third_party", "actor-framework", "build", "libcaf_io")).get_abspath()
+	],
 	LIBS = ["caf_core", "caf_io"],
 	CPPDEFINES = ["SPDLOG_FMT_EXTERNAL", "FMT_HEADER_ONLY"]
 );

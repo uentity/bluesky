@@ -27,9 +27,7 @@ nil_engine_actor::nil_engine_actor(caf::actor_config& cfg) :
 	set_error_handler(noop);
 	set_exit_handler(noop);
 	// completely ignore unexpected messages without error backpropagation
-	set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-		return caf::none;
-	});
+	set_default_handler(noop_r<caf::message>());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

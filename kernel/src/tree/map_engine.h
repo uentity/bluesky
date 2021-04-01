@@ -12,8 +12,6 @@
 
 #include <unordered_map>
 
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::tree::event)
-
 NAMESPACE_BEGIN(blue_sky::tree)
 class map_link_actor;
 

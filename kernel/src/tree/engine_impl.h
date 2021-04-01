@@ -10,6 +10,7 @@
 
 #include <bs/actor_common.h>
 #include <bs/tree/engine.h>
+#include <bs/tree/type_caf_id.h>
 #include <bs/detail/sharded_mutex.h>
 
 #include <caf/detail/shared_spinlock.hpp>
@@ -104,7 +105,7 @@ public:
 
 	/// make request to engine via tree item handle H
 	template<typename R, typename Handle, typename... Args, typename = if_engine_handle<Handle>>
-	static auto actorf(const Handle& H, caf::duration timeout, Args&&... args) {
+	static auto actorf(const Handle& H, timespan timeout, Args&&... args) {
 		return blue_sky::actorf<R>(
 			Handle::engine_impl::actor(H), timeout, std::forward<Args>(args)...
 		);

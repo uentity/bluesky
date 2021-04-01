@@ -248,10 +248,6 @@ private:
 	static auto make_root_(const link& donor) -> void;
 };
 
-/// handy aliases
-using links_v = std::vector<link>;
-using lids_v = std::vector<lid_type>;
-
 /// checked link cast (without throwing `WrongLinkCast` exception)
 template<typename DestLink>
 auto link_cast(const link& rhs) -> std::optional<DestLink> {

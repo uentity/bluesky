@@ -8,7 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
-#include "common.h"
+#include "setup_common_api.h"
 #include <caf/timestamp.hpp>
 
 #include <iosfwd>
@@ -19,7 +19,7 @@ using timespan = caf::timespan;
 using timestamp = caf::timestamp;
 
 /// denote infinite duration
-inline constexpr auto infinite = timespan::max();
+inline constexpr auto infinite = caf::infinite;
 
 /// get now timestamp from sys clock
 BS_API timestamp make_timestamp();

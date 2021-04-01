@@ -254,7 +254,7 @@ auto forward_caf_error(const caf::error& er, std::string_view msg) -> error {
 		return { er.code(), caf_category::self() };
 	};
 
-	auto ermsg = kernel::radio::system().render(er);
+	auto ermsg = to_string(er);
 	if(!msg.empty()) {
 		ermsg += " |> ";
 		ermsg += msg;

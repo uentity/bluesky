@@ -12,8 +12,21 @@
 #include "serialize_decl.h"
 #include "carray.h"
 
+#include <caf/allowed_unsafe_message_type.hpp>
+#include <caf/inspector_access_type.hpp>
 #include <caf/binary_serializer.hpp>
 #include <caf/binary_deserializer.hpp>
+
+NAMESPACE_BEGIN(blue_sky)
+
+/// test if `T` can be inspected solely by CAF excluding BS `inspect()` overload
+template<typename Archive, typename T>
+inline constexpr bool is_caf_builtin_inspectable = !std::is_same_v<
+	decltype(caf::inspect_access_type<archive_inspector<Archive::is_loading::value>, T>()),
+	caf::inspector_access_type::none
+>;
+
+NAMESPACE_END(blue_sky)
 
 /*-----------------------------------------------------------------------------
  *  overload of `serialize()` for CAF types
@@ -22,10 +35,10 @@ NAMESPACE_BEGIN(cereal)
 
 template<typename Archive, typename T>
 auto serialize(Archive& ar, T& t)
--> std::enable_if_t< caf::detail::is_inspectable<blue_sky::archive_inspector<Archive>, std::decay_t<T>>::value, void > {
+-> std::enable_if_t<blue_sky::is_caf_builtin_inspectable<Archive, T>> {
 	using namespace cereal;
 
-	std::vector<char> buf;
+	caf::byte_buffer buf;
 	if constexpr(Archive::is_saving::value) {
 		auto archvile = caf::binary_serializer{ blue_sky::kernel::radio::system(), buf };
 		inspect(archvile, t);

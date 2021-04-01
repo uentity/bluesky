@@ -217,7 +217,7 @@ BSS_FCN_INL_BEGIN(serialize, tree::map_impl_base)
 		// load out node
 		tree::node out_node;
 		ar(make_nvp( "out", out_node ));
-		if(t.out_ = out_node)
+		if((t.out_ = out_node))
 			t.link_impl::propagate_handle(t.out_);
 	}
 	// dump settings

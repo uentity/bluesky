@@ -22,9 +22,7 @@ auto kqueue_processor(kqueue_actor_type::pointer self) -> kqueue_actor_type::beh
 	// never die on error
 	self->set_error_handler(noop);
 	// completely ignore unexpected messages without error backpropagation
-	self->set_default_handler([](auto*, auto&) -> caf::result<caf::message> {
-		return caf::none;
-	});
+	self->set_default_handler(noop_r<caf::message>());
 
 	return {
 		[](const transaction& tr) -> tr_result::box {

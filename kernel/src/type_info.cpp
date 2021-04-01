@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 28.04.2016
 /// @brief 
@@ -21,8 +20,6 @@ NAMESPACE_BEGIN()
  *  Nil type tag
  *-----------------------------------------------------------------------------*/
 struct nil_ {
-	static constexpr auto bs_disable_assign = true;
-
 	static auto bs_type() -> const type_descriptor& {
 		static const auto nil_td = type_descriptor(
 			defaults::nil_type_name, nullptr, nullptr, nullptr, "Nil type"

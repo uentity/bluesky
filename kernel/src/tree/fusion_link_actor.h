@@ -71,7 +71,7 @@ struct BS_HIDDEN_API fusion_link_actor : public cached_link_actor {
 	// part of behavior overloaded/added from super actor type
 	using typed_behavior_overload = caf::typed_behavior<
 		// link API
-		caf::replies_to<a_data, bool>::with<result_or_errbox<sp_obj>>,
+		caf::replies_to<a_data, bool>::with<obj_or_errbox>,
 		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
 		// Fusion API
 		caf::replies_to<a_flnk_data, prop::propdict, bool>::with<obj_or_errbox>,

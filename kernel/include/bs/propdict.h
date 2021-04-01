@@ -220,11 +220,6 @@ auto extract(const propdict& pdict, std::string_view key, To& target) noexcept {
 	return false;
 }
 
-/// propbook = map of props with given key type
-template<typename Key> using propbook = std::map<Key, propdict, std::less<>>;
-using propbook_s = propbook<std::string>;
-using propbook_i = propbook<std::ptrdiff_t>;
-
 /// traits to check if type is propbook
 template<typename T>
 struct is_propbook : std::false_type {};

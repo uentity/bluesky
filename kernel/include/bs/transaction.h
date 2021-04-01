@@ -235,9 +235,15 @@ constexpr auto tr_eval(caf::event_based_actor* A, const S& sumtr, F&& target_get
 
 NAMESPACE_END(blue_sky)
 
+BS_ALLOW_VISIT(blue_sky::tr_result)
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::obj_transaction)
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::link_transaction)
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(blue_sky::node_transaction)
+
+/*-----------------------------------------------------------------------------
+ *  CAF type id
+ *-----------------------------------------------------------------------------*/
+#include "atoms.h"
 
 NAMESPACE_BEGIN(caf)
 
@@ -253,6 +259,29 @@ constexpr auto to_string(const blue_sky::obj_transaction&) { return "obj_transac
 constexpr auto to_string(const blue_sky::link_transaction&) { return "link_transaction"; }
 constexpr auto to_string(const blue_sky::node_transaction&) { return "node_transaction"; }
 
+// map all transactions to single type ID value
+template<typename R, typename... Ts>
+struct type_id<blue_sky::transaction_t<R, Ts...>> {
+	static constexpr type_id_t value = blue_sky::detail::bs_transaction_cid;
+};
+
+template<>
+struct type_name_by_id<blue_sky::detail::bs_transaction_cid> {
+	static constexpr string_view value = "bs_transaction";
+};
+
+template<typename R, typename... Ts>
+struct type_name<blue_sky::transaction_t<R, Ts...>> {
+	static constexpr string_view value = "bs_transaction";
+};
+
 NAMESPACE_END(caf)
 
-BS_ALLOW_VISIT(blue_sky::tr_result)
+CAF_BEGIN_TYPE_ID_BLOCK(bs_tr, blue_sky::detail::bs_tr_cid_begin)
+
+	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::tr_result::box))
+	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::obj_transaction))
+	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::link_transaction))
+	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::node_transaction))
+
+CAF_END_TYPE_ID_BLOCK(bs_tr)

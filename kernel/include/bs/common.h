@@ -47,8 +47,13 @@ inline constexpr auto noop = [](auto&&...) {};
 using noop_t = decltype(noop);
 
 template<typename R>
-constexpr auto noop_r(R res = {}) {
-	return [res = std::move(res)](auto&&...) mutable -> R { return std::move(res); };
+constexpr auto noop_r() {
+	return [](auto&&...) -> R { return {}; };
+}
+
+template<typename R>
+constexpr auto noop_r(R res) {
+	return [res = std::move(res)](auto&&...) -> R { return res; };
 }
 
 template<typename R> using noop_r_t = decltype( noop_r(std::declval<R>()) );

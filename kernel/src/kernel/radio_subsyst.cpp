@@ -29,6 +29,34 @@
 inline constexpr std::uint16_t def_port = 9339;
 inline constexpr std::uint16_t def_groups_port = 9340;
 
+namespace bs = blue_sky;
+namespace bs_detail = blue_sky::detail;
+
+using radio_station_handle = caf::typed_actor<
+	//caf::replies_to< a_hi >::with< std::vector<tree::lid_type> >
+	caf::replies_to< bs::a_hi >::with< bs::tree::links_v >
+>;
+inline constexpr auto radio_station_cid = bs_detail::bs_private_cid_begin + 30;
+
+NAMESPACE_BEGIN(caf)
+
+template<>
+struct type_id<radio_station_handle> {
+	static constexpr type_id_t value = radio_station_cid;
+};
+
+template<>
+struct type_name_by_id<radio_station_cid> {
+	static constexpr string_view value = "radio_station";
+};
+
+template<>
+struct type_name<radio_station_handle> {
+	static constexpr string_view value = "radio_station";
+};
+
+NAMESPACE_END(caf)
+
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 using namespace kernel::config;
 using namespace std::chrono_literals;
@@ -38,15 +66,10 @@ using namespace std::chrono_literals;
  *-----------------------------------------------------------------------------*/
 NAMESPACE_BEGIN()
 
-using radio_station_handle = caf::typed_actor<
-	//caf::replies_to< a_hi >::with< std::vector<tree::lid_type> >
-	caf::replies_to< a_hi >::with< std::vector<tree::link> >
->;
-
 auto radio_station(radio_station_handle::pointer self)
 -> radio_station_handle::behavior_type { return {
 	[](a_hi) {
-		std::vector<tree::link> publids;
+		tree::links_v publids;
 		for(const auto& L : KRADIO.publinks)
 			publids.push_back(L);
 		//std::vector<tree::lid_type> publids;
@@ -65,7 +88,6 @@ radio_subsyst::radio_subsyst() : get_actor_sys_(&radio_subsyst::always_throw_as_
 {
 	actor_config()
 		.add_actor_type("radio_station", radio_station)
-		.add_message_type<tree::lid_type>("link_id_type")
 	;
 
 	if(auto er = init(); er)
@@ -175,10 +197,10 @@ auto radio_subsyst::toggle(bool on) -> error {
 	if(on) {
 		// open port for remote spawn
 		auto res = mm.open(port, nullptr, true);
-		if(!res) return { actor_sys_->render(res.error()) };
+		if(!res) return { to_string(res.error()) };
 		// publish local groups
 		res = mm.publish_local_groups(g_port, nullptr, true);
-		if(!res) return { actor_sys_->render(res.error()) };
+		if(!res) return { to_string(res.error()) };
 	}
 	else {
 		mm.close(port);
@@ -193,7 +215,6 @@ auto radio_subsyst::toggle(bool on) -> error {
 //
 auto radio_subsyst::start_server() -> void {
 	if(toggle(true)) return;
-	actor_config().add_message_type<tree::link>("link");
 
 	std::cout << "*** started server on port " << get_or(BSCONFIG, "port", def_port) << std::endl
 		<< "type 'quit' to shutdown the server" << std::endl;
@@ -216,7 +237,6 @@ auto radio_subsyst::start_client(const std::string& host) -> error {
 			host << get_or(BSCONFIG, "port", def_port) << bs_end;
 	}
 
-	actor_config().add_message_type<tree::link>("link");
 	auto station = actor_sys_->middleman().remote_spawn<radio_station_handle>(
 		*netnode, "radio_station", caf::make_message(), kernel::radio::timeout(true)
 	);

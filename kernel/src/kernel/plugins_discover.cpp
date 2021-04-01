@@ -119,7 +119,7 @@ auto plugins_subsyst::discover_plugins() -> fname_set {
 	std::deque<fs::path> plugins_paths;
 
 	// 1. Extract list of plugin paths from configs
-	auto conf_paths = caf::get_or<string_list>(config::config(), "path.plugins", {});
+	auto conf_paths = caf::get_or<string_list>(config::config(), "path.plugins", string_list{});
 	for(auto& P : conf_paths)
 		push_unique(plugins_paths, std::move(P));
 
