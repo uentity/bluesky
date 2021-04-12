@@ -175,12 +175,11 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 			return unexpected_err_quiet(Error::EmptyData);
 		},
 
-		[=](a_data_node, bool) -> caf::result<node_or_errbox> {
+		[=](a_data_node, bool wait_if_busy) -> caf::result<node_or_errbox> {
 			adbg(this) << "<- a_data_node (casual)" << std::endl;
-			auto mama = spimpl<map_impl_base>();
-			return request_data_impl(
-				*this, Req::DataNode, ReqOpts::HasDataCache,
-				[mama = std::move(mama)]() -> node_or_errbox { return mama->out_; }
+			return request_data_node(
+				unsafe, *this,
+				ReqOpts::HasDataCache | (wait_if_busy ? ReqOpts::WaitIfBusy : ReqOpts::ErrorIfBusy)
 			);
 		},
 
@@ -233,12 +232,11 @@ auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
 	// invoke refresh once on DataNode request
 	return refresh_behavior_overload{
 		// if output node is filled after deserialization, just switch to casual bhv
-		[=](a_mlnk_fresh) {
-			become(make_casual_behavior().unbox());
+		[=, casual_bhv = make_casual_behavior().unbox()](a_mlnk_fresh) {
+			become(casual_bhv);
 		},
 
-		[=, casual_bhv = make_casual_behavior().unbox()](a_data_node, bool)
-		-> caf::result<node_or_errbox> {
+		[=](a_data_node, bool) -> caf::result<node_or_errbox> {
 			return refresh_once();
 		},
 
