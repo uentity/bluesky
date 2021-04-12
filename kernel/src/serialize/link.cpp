@@ -214,12 +214,9 @@ BSS_FCN_INL_BEGIN(serialize, tree::map_impl_base)
 			ar(make_nvp( "out", tree::node::nil() ));
 	}
 	else {
-		// load out node
-		tree::node out_node;
-		ar(make_nvp( "out", out_node ));
-		if((t.out_ = out_node))
-			t.link_impl::propagate_handle(t.out_);
+		ar(make_nvp( "out", t.out_ ));
 	}
+
 	// dump settings
 	ar(make_nvp("tag", t.tag_));
 	ar(make_nvp("update_on", t.update_on_), make_nvp("opts", t.opts_));
@@ -249,6 +246,7 @@ CEREAL_REGISTER_TYPE_WITH_NAME(tree::map_node_impl, "map_node")
  *  link
  *-----------------------------------------------------------------------------*/
 BSS_FCN_BEGIN(serialize, tree::link)
+	namespace kradio = kernel::radio;
 	// [NOTE] intentionally do net serialize owner, it will be set up when parent node is loaded
 	if constexpr(Archive::is_saving::value) {
 		// for nil link save empty impl pointer
@@ -261,10 +259,11 @@ BSS_FCN_BEGIN(serialize, tree::link)
 			t.start_engine();
 			// if pointee is a node, correct it's handle
 			t.pimpl()->propagate_handle();
-			// for map linkss disable refresh behavior as there's no mapping function anyway
+			// for map links disable refresh behavior as there's no mapping function anyway
 			if(t.type_id() == tree::map_link::type_id_())
-				caf::anon_send<high_prio>(
-					caf::actor_cast<tree::map_link_impl::actor_type>(t.raw_actor()), a_mlnk_fresh{}
+				actorf<bool>(
+					caf::actor_cast<tree::map_link_impl::actor_type>(t.raw_actor()), kradio::timeout(),
+					a_mlnk_fresh{}
 				);
 		}
 		else

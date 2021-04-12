@@ -29,7 +29,7 @@ public:
 	// map link specific behavior
 	using map_actor_type = caf::typed_actor<
 		// tells that outpt node has actual cache & we must switch to normal behavior
-		caf::reacts_to<a_mlnk_fresh>,
+		caf::replies_to<a_mlnk_fresh>::with<bool>,
 		// delay output node refresh till next DataNode request
 		caf::reacts_to<a_lazy, a_node_clear>,
 		// immediately refresh output node & return it
@@ -157,7 +157,7 @@ public:
 	>::behavior_type;
 
 	using refresh_behavior_overload = caf::typed_behavior<
-		caf::reacts_to<a_mlnk_fresh>,
+		caf::replies_to<a_mlnk_fresh>::with<bool>,
 		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
 		// override update to trigger refresh first
 		caf::reacts_to<a_ack, a_apply, lid_type /* src */, event>,

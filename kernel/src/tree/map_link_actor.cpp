@@ -215,7 +215,7 @@ auto map_link_actor::make_casual_behavior() -> typed_behavior {
 			mimpl().erase(this, src_id, std::move(ev));
 		},
 
-		[](a_mlnk_fresh) {}
+		[](a_mlnk_fresh) { return true; }
 
 	}, super::make_typed_behavior());
 }
@@ -234,6 +234,7 @@ auto map_link_actor::make_refresh_behavior() -> refresh_behavior_overload {
 		// if output node is filled after deserialization, just switch to casual bhv
 		[=, casual_bhv = make_casual_behavior().unbox()](a_mlnk_fresh) {
 			become(casual_bhv);
+			return true;
 		},
 
 		[=](a_data_node, bool) -> caf::result<node_or_errbox> {

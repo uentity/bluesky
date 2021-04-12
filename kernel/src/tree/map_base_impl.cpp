@@ -43,7 +43,8 @@ auto map_impl_base::spawn_actor(sp_limpl Limpl) const -> caf::actor {
 
 auto map_impl_base::propagate_handle() -> node_or_err {
 	// if output node doesn't have handle (for ex new node created in ctor) - set it to self
-	if(!out_.handle())
+	// [NOTE] check if `out_` is not nil for deserialization case
+	if(out_ && !out_.handle())
 		super::propagate_handle(out_);
 	return out_;
 }
