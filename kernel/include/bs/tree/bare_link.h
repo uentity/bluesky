@@ -74,8 +74,10 @@ public:
 	/// directly return cached value (if any)
 	auto data() -> sp_obj;
 
-	/// return node extracted from data(unsafe)
+	/// return node extracted from data_node(unsafe)
 	auto data_node() -> node;
+	/// atomically check status & return data_node(unsafe) only if status == OK
+	auto data_node_if_ok() -> node;
 
 	/// if pointee is a node, return node's actor group ID
 	auto data_node_hid() -> std::string;

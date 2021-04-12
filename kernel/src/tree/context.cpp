@@ -75,7 +75,7 @@ static auto concat(Path&& lhs, lid_type rhs) {
 
 // enters data node only if allowed to (don't auto-expand lazy links)
 inline static auto data_node(const link& L) -> node {
-	return L.data_node(unsafe);
+	return L.bare().data_node_if_ok();
 }
 
 // simple `deref_path` impl for vector of lids

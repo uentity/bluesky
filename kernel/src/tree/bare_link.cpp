@@ -9,6 +9,8 @@
 #include "link_impl.h"
 #include "nil_engine.h"
 
+#include <optional>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 
 bare_link::bare_link(sp_limpl impl) : pimpl_(std::move(impl)) {}
@@ -82,6 +84,15 @@ auto bare_link::data() -> sp_obj {
 
 auto bare_link::data_node() -> node {
 	return pimpl_->data_node(unsafe);
+}
+
+auto bare_link::data_node_if_ok() -> node {
+	std::optional<node> res;
+	pimpl_->rs_apply(
+		Req::DataNode, [&](auto&) { res = pimpl_->data_node(unsafe); },
+		ReqReset::IfEq, ReqStatus::OK
+	);
+	return res ? *res : node::nil();
 }
 
 auto bare_link::data_node_hid() -> std::string {
