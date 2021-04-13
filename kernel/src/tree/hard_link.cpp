@@ -138,9 +138,9 @@ auto hard_link_impl::data(unsafe_t) const -> sp_obj { return data_; }
 
 auto hard_link_impl::set_data(sp_obj obj) -> void {
 	if(data_ = std::move(obj); data_) {
-		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::Void, noop_true);
+		rs_reset_quiet(Req::Data, ReqReset::Always, ReqStatus::OK);
 		if(data_->data_node())
-			rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::Void, noop_true);
+			rs_reset_quiet(Req::DataNode, ReqReset::Always, ReqStatus::OK);
 	}
 	inode_ = make_inode(data_, inode_);
 }
@@ -218,9 +218,9 @@ auto weak_link_impl::data(unsafe_t) const -> sp_obj { return data_.lock(); }
 auto weak_link_impl::set_data(const sp_obj& obj) -> void {
 	if(data_ = obj; obj) {
 		// set status silently
-		rs_reset(Req::Data, ReqReset::Always, ReqStatus::OK, ReqStatus::Void, noop_true);
+		rs_reset_quiet(Req::Data, ReqReset::Always, ReqStatus::OK);
 		if(obj->data_node())
-			rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::OK, ReqStatus::Void, noop_true);
+			rs_reset_quiet(Req::DataNode, ReqReset::Always, ReqStatus::OK);
 	}
 	inode_ = make_inode(obj, inode_);
 }

@@ -170,6 +170,13 @@ public:
 		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void
 	) -> ReqStatus;
 
+	// same as above, but without notification
+	inline auto rs_reset_quiet(
+		Req request, ReqReset cond, ReqStatus new_rs, ReqStatus old_rs = ReqStatus::Void
+	) -> ReqStatus {
+		return rs_reset(request, cond, new_rs, old_rs, noop_true);
+	}
+
 	// set proper status after request result was received & release pending waiters
 	// [NOTE] if `broadcast` flag is set, update both statuses at once
 	using req_result = std::variant<obj_or_errbox, node_or_errbox>;
