@@ -130,8 +130,8 @@ public:
 	auto is_nil() const -> bool;
 	operator bool() const { return !is_nil(); }
 
-	/// obtain link to this node conained in owner (parent) node
-	/// [NOTE] only one owner node is allowed (multiple hard links to node are prihibited)
+	/// obtain owning link to this node
+	/// [NOTE] only one owning link to node is allowed (multiple hard links to node are prihibited)
 	auto handle() const -> link;
 
 	/// return node's typed actor handle

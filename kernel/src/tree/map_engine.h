@@ -48,7 +48,8 @@ public:
 	map_impl_base(bool is_link_mapper);
 
 	map_impl_base(
-		bool is_link_mapper, uuid tag, std::string name, link_or_node input, link_or_node output,
+		bool is_link_mapper, uuid tag, std::string name,
+		const link_or_node& input, const link_or_node& output,
 		Event update_on, TreeOpts opts, Flags f
 	);
 

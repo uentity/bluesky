@@ -68,17 +68,33 @@ map_link::map_link(
 ) {}
 
 
+static auto is_empty(const link_or_node& x) {
+	return std::visit([](const auto& v) { return v.is_nil(); }, x);
+}
+
+// construct from existing link + install mapping function
 map_link::map_link(mapper_f mf, const map_link& rhs, link_or_node src_node, link_or_node dest_node) :
 	map_link(
 		std::move(mf), ei::pimpl(rhs).tag_, ei::pimpl(rhs).name_, std::move(src_node),
-		dest_node.index() == 0 || std::get<1>(dest_node).is_nil() ?
-			ei::pimpl(rhs).out_ : std::get<1>(dest_node),
+		[&]() -> link_or_node {
+			if(is_empty(dest_node)) {
+				auto& rhs_out = ei::pimpl(rhs).out_;
+				if(rhs_out.handle() == rhs)
+					// if `rhs` owns it's output node, rebind it to tmp link first
+					return link::make_root(std::string{}, ei::pimpl(rhs).out_);
+				else
+					return rhs_out;
+			}
+			else
+				return std::move(dest_node);
+		}(),
 		ei::pimpl(rhs).update_on_, ei::pimpl(rhs).opts_, ei::pimpl(rhs).flags_
 	)
 {
-	// ensure that dest node is relinked to this new link
-	pimpl()->propagate_handle(ei::pimpl(*this).out_);
-	rs_reset(Req::DataNode, rhs.req_status(Req::DataNode));
+	// copy DataNode status from rhs
+	const auto& self_out = ei::pimpl(*this).out_;
+	if(self_out && self_out == ei::pimpl(rhs).out_)
+		pimpl()->rs_reset_quiet(Req::DataNode, ReqReset::Always, rhs.req_status(Req::DataNode));
 }
 
 map_link::map_link(const link& rhs) : super(rhs, type_id_()) {}

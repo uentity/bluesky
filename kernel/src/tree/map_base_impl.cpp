@@ -15,26 +15,27 @@ map_impl_base::map_impl_base(bool is_link_mapper) :
 {}
 
 map_impl_base::map_impl_base(
-	bool is_link_mapper_, uuid tag, std::string name, link_or_node input, link_or_node output,
+	bool is_link_mapper_, uuid tag, std::string name,
+	const link_or_node& input, const link_or_node& output,
 	Event update_on, TreeOpts opts, Flags f
 ) : super(std::move(name), f | Flags::LazyLoad), tag_(tag), update_on_(update_on), opts_(opts),
 	is_link_mapper(is_link_mapper_)
 {
-	static const auto extract_node = [](node& lhs, auto&& rhs) {
+	static const auto extract_node = [](node& lhs, auto& rhs) {
 		visit(meta::overloaded{
-			[&](link L) { lhs = L ? L.data_node() : node::nil(); },
-			[&](node N) { lhs = N; }
-		}, std::move(rhs));
+			[&](const link& L) { lhs = L ? L.data_node() : node::nil(); },
+			[&](const node& N) { lhs = N; }
+		}, rhs);
 	};
 
-	extract_node(in_, std::move(input));
-	extract_node(out_, std::move(output));
+	extract_node(in_, input);
+	extract_node(out_, output);
 	// ensure we have valid output node
 	if(!out_ || in_ == out_) out_ = node();
 
 	// set initial status values
-	rs_reset(Req::Data, ReqReset::Always, ReqStatus::Error);
-	rs_reset(Req::DataNode, ReqReset::Always, ReqStatus::Void);
+	rs_reset_quiet(Req::Data, ReqReset::Always, ReqStatus::Error);
+	rs_reset_quiet(Req::DataNode, ReqReset::Always, ReqStatus::Void);
 }
 
 auto map_impl_base::spawn_actor(sp_limpl Limpl) const -> caf::actor {
