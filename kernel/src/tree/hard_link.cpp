@@ -12,10 +12,6 @@
 #include <bs/tree/errors.h>
 #include <bs/kernel/types_factory.h>
 
-#include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/propdict.h>
-
 #include "hard_link.h"
 #include "../serialize/tree_impl.h"
 

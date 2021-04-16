@@ -10,10 +10,6 @@
 #include "link_actor.h"
 #include <bs/log.h>
 
-#include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/propdict.h>
-
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 

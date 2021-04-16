@@ -16,9 +16,6 @@
 #include <bs/uuid.h>
 #include <bs/kernel/tools.h>
 
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/tree.h>
-
 #include <optional>
 
 NAMESPACE_BEGIN(blue_sky::tree)

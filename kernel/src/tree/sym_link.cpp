@@ -13,9 +13,6 @@
 #include <bs/kernel/config.h>
 #include <bs/kernel/tools.h>
 
-#include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
-
 #include "link_actor.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)

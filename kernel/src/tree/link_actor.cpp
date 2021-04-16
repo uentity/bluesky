@@ -12,14 +12,9 @@
 #include <bs/kernel/config.h>
 #include <bs/kernel/radio.h>
 
-#include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/propdict.h>
-
 #include "link_actor.h"
 #include "request_impl.h"
 #include "../objbase_actor.h"
-#include "../serialize/tree_impl.h"
 
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"

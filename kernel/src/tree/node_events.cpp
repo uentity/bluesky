@@ -8,12 +8,9 @@
 
 #include "node_actor.h"
 #include "ev_listener_actor.h"
-#include "../serialize/tree_impl.h"
 
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/tree.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 

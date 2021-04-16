@@ -9,8 +9,6 @@
 
 #include <bs/actor_common.h>
 #include <bs/kernel/radio.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/propdict.h>
 
 #include <caf/typed_event_based_actor.hpp>
 

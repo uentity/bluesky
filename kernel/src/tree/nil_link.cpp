@@ -12,9 +12,6 @@
 #include "link_impl.h"
 
 #include <bs/defaults.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/tree.h>
-#include <bs/serialize/propdict.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 ///////////////////////////////////////////////////////////////////////////////

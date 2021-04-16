@@ -11,12 +11,6 @@
 
 #include <bs/log.h>
 #include <bs/tree/tree.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/tree.h>
-#include <bs/serialize/propdict.h>
-
-#include <cereal/types/optional.hpp>
-#include <cereal/types/vector.hpp>
 
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"

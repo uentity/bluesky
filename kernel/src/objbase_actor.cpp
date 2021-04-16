@@ -13,13 +13,12 @@
 #include <bs/defaults.h>
 #include <bs/objbase.h>
 #include <bs/uuid.h>
+#include <bs/type_caf_id.h>
 
 #include <bs/kernel/config.h>
 #include <bs/kernel/radio.h>
 
-#include <bs/serialize/cafbind.h>
 #include <bs/serialize/object_formatter.h>
-#include <bs/serialize/propdict.h>
 
 #include <caf/actor_ostream.hpp>
 

@@ -19,10 +19,6 @@
 #include <bs/tree/fusion.h>
 #include <bs/tree/tree.h>
 
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/array.h>
-#include <bs/serialize/tree.h>
-
 #include <iostream>
 #include <atomic>
 #include <chrono>

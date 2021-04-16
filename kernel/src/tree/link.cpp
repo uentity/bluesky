@@ -15,9 +15,6 @@
 #include <bs/tree/node.h>
 #include <bs/kernel/radio.h>
 
-#include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
-
 NAMESPACE_BEGIN(blue_sky::tree)
 using namespace kernel::radio;
 

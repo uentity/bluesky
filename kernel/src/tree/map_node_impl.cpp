@@ -8,9 +8,6 @@
 #include "map_engine.h"
 #include "request_impl.h"
 
-#include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
-
 #define DEBUG_ACTOR 0
 #include "actor_debug.h"
 

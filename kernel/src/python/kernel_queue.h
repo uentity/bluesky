@@ -6,12 +6,10 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 #pragma once
 
+#include <bs/actor_common.h>
 #include <bs/python/common.h>
 #include <bs/python/result_converter.h>
-#include <bs/actor_common.h>
 #include <bs/detail/function_view.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/propdict.h>
 
 #include "../kernel/radio_subsyst.h"
 

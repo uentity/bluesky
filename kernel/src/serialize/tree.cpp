@@ -14,7 +14,6 @@
 #include <bs/tree/tree.h>
 #include <bs/serialize/serialize.h>
 #include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
 
 #include <fstream>
 

@@ -11,8 +11,6 @@
 #include "../kernel/radio_subsyst.h"
 
 #include <bs/detail/enumops.h>
-#include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
 NAMESPACE_BEGIN(detail)

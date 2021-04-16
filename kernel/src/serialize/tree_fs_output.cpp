@@ -18,7 +18,6 @@
 #include <bs/serialize/object_formatter.h>
 #include <bs/serialize/base_types.h>
 #include <bs/serialize/tree.h>
-#include <bs/serialize/cafbind.h>
 
 #include <cereal/types/vector.hpp>
 #include <fmt/format.h>

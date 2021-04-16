@@ -8,9 +8,6 @@
 #include <bs/meta.h>
 #include <bs/log.h>
 
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/tree.h>
-
 #include "map_engine.h"
 #include "nil_engine.h"
 

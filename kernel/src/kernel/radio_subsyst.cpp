@@ -14,9 +14,7 @@
 #include <bs/log.h>
 #include <bs/kernel/config.h>
 #include <bs/kernel/misc.h>
-
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/tree.h>
+#include <bs/tree/type_caf_id.h>
 
 #include <caf/actor_system_config.hpp>
 #include <caf/typed_event_based_actor.hpp>

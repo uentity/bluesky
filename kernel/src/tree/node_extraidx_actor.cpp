@@ -11,8 +11,6 @@
 #include "node_leafs_storage.h"
 
 #include <bs/kernel/radio.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/tree.h>
 
 #include <caf/typed_event_based_actor.hpp>
 //#include <caf/actor_ostream.hpp>

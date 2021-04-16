@@ -15,9 +15,6 @@
 #include <bs/log.h>
 #include <bs/tree/tree.h>
 #include <bs/detail/tuple_utils.h>
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/tree.h>
-#include "../serialize/tree_impl.h"
 
 NAMESPACE_BEGIN(blue_sky::tree)
 using bs_detail::shared;

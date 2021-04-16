@@ -12,11 +12,9 @@
 #include <bs/actor_common.h>
 #include <bs/objbase.h>
 #include <bs/tree/errors.h>
-#include <bs/serialize/cafbind.h>
 
 #include "../objbase_actor.h"
 
-#include <cereal/types/vector.hpp>
 #include <fmt/format.h>
 
 #include <algorithm>

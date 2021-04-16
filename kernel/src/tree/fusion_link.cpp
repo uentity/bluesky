@@ -12,9 +12,6 @@
 #include <bs/log.h>
 #include <bs/kernel/types_factory.h>
 
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/propdict.h>
-
 #include <memory_resource>
 
 #define FIMPL static_cast<fusion_link_impl&>(*pimpl())
