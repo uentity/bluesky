@@ -280,6 +280,8 @@ NAMESPACE_END(caf)
 CAF_BEGIN_TYPE_ID_BLOCK(bs_tr, blue_sky::detail::bs_tr_cid_begin)
 
 	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::tr_result::box))
+	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::transaction))
+	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::async_transaction))
 	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::obj_transaction))
 	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::link_transaction))
 	CAF_ADD_TYPE_ID(bs_tr, (blue_sky::node_transaction))

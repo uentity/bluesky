@@ -14,13 +14,6 @@
 #include "radio_subsyst.h"
 #include "../tree/private_common.h"
 
-#include <bs/serialize/cafbind.h>
-#include <bs/serialize/propdict.h>
-#include <bs/serialize/tree.h>
-#include "../serialize/tree_impl.h"
-
-#include <cereal/types/optional.hpp>
-
 #include <caf/config_option_adder.hpp>
 #include <caf/parser_state.hpp>
 #include <caf/init_global_meta_objects.hpp>
@@ -159,19 +152,7 @@ NAMESPACE_END()
 /*-----------------------------------------------------------------------------
  *  kernel_config_subsyst impl
  *-----------------------------------------------------------------------------*/
-config_subsyst::config_subsyst() :
-	// init global meta objects before constructing actor config
-	actor_cfg_{[]() -> caf::actor_system_config {
-		caf::init_global_meta_objects<caf::id_block::bs_atoms>();
-		caf::init_global_meta_objects<caf::id_block::bs>();
-		caf::init_global_meta_objects<caf::id_block::bs_private>();
-		caf::init_global_meta_objects<caf::id_block::bs_props>();
-		caf::init_global_meta_objects<caf::id_block::bs_tree>();
-		caf::core::init_global_meta_objects();
-		caf::io::middleman::init_global_meta_objects();
-		return {};
-	}()}
-{
+config_subsyst::config_subsyst() {
 	///////////////////////////////////////////////////////////////////////////////
 	//  add config options
 	//

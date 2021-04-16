@@ -13,6 +13,8 @@
 
 #include <filesystem>
 
+#define KCONFIG ::blue_sky::singleton<::blue_sky::kernel::detail::config_subsyst>::Instance()
+
 NAMESPACE_BEGIN(blue_sky::kernel::detail)
 
 struct BS_HIDDEN_API config_subsyst {

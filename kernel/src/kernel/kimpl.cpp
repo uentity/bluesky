@@ -14,6 +14,15 @@
 #include "kimpl.h"
 #include "radio_subsyst.h"
 #include "config_subsyst.h"
+#include "../tree/private_common.h"
+
+#include <bs/serialize/cafbind.h>
+#include <bs/serialize/propdict.h>
+#include <bs/serialize/tree.h>
+#include "../serialize/tree_impl.h"
+
+#include <caf/init_global_meta_objects.hpp>
+#include <caf/io/middleman.hpp>
 
 #include <fmt/format.h>
 
@@ -54,6 +63,24 @@ auto kimpl::get_radio() -> detail::radio_subsyst* {
 	return radio_ss_.get();
 }
 
+auto kimpl::get_config() -> detail::config_subsyst* {
+	std::call_once(config_up_, [&] {
+		// instantiate global meta objects
+		caf::init_global_meta_objects<caf::id_block::bs_atoms>();
+		caf::init_global_meta_objects<caf::id_block::bs>();
+		caf::init_global_meta_objects<caf::id_block::bs_private>();
+		caf::init_global_meta_objects<caf::id_block::bs_props>();
+		caf::init_global_meta_objects<caf::id_block::bs_tr>();
+		caf::init_global_meta_objects<caf::id_block::bs_tree>();
+		caf::core::init_global_meta_objects();
+		caf::io::middleman::init_global_meta_objects();
+
+		// construct config subsystem
+		config_ss_ = std::make_unique<detail::config_subsyst>();
+	});
+	return config_ss_.get();
+}
+
 auto kimpl::pysupport() -> detail::python_subsyst* {
 	std::call_once(py_up_, [&] {
 		// setup Python support
@@ -75,7 +102,7 @@ auto kimpl::init() -> error {
 		auto finally = scope_guard{ [&]{ if(!init_ok) init_state_ = InitState::NonInitialized; } };
 
 		// configure kernel
-		configure();
+		get_config()->configure();
 		// switch to mt logs
 		logging_subsyst::toggle_async(true);
 		// init kernel radio subsystem
@@ -133,16 +160,16 @@ template<> auto singleton<kernel::kimpl>::Instance() -> kernel::kimpl& {
 }
 
 // access individual subsystems
-template<> auto singleton<config_subsyst>::Instance() -> config_subsyst& {
-	return static_cast<config_subsyst&>(KIMPL);
-}
-
 template<> auto singleton<plugins_subsyst>::Instance() -> plugins_subsyst& {
 	return static_cast<plugins_subsyst&>(KIMPL);
 }
 
 template<> auto singleton<logging_subsyst>::Instance() -> logging_subsyst& {
 	return static_cast<logging_subsyst&>(KIMPL);
+}
+
+template<> auto singleton<config_subsyst>::Instance() -> config_subsyst& {
+	return *KIMPL.get_config();
 }
 
 template<> auto singleton<radio_subsyst>::Instance() -> radio_subsyst& {

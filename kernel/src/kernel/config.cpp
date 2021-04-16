@@ -9,14 +9,15 @@
 
 #include <bs/kernel/config.h>
 #include "kimpl.h"
+#include "config_subsyst.h"
 
 NAMESPACE_BEGIN(blue_sky::kernel::config)
 
 auto configure(
 	std::vector<std::string> args, std::string ini_fname, bool force
 ) -> const caf::settings& {
-	KIMPL.configure(std::move(args), ini_fname, force);
-	return KIMPL.confdata_;
+	KIMPL.get_config()->configure(std::move(args), ini_fname, force);
+	return KIMPL.get_config()->confdata_;
 }
 
 auto is_configured() -> bool {
@@ -24,15 +25,15 @@ auto is_configured() -> bool {
 }
 
 auto config() -> const caf::settings& {
-	return KIMPL.confdata_;
+	return KIMPL.get_config()->confdata_;
 }
 
 auto config_section(std::string_view name) -> caf::config_option_adder {
-	return caf::config_option_adder(KIMPL.confopt_, name);
+	return caf::config_option_adder(KIMPL.get_config()->confopt_, name);
 }
 
 auto actor_config() -> caf::actor_system_config& {
-	return KIMPL.actor_cfg_;
+	return KIMPL.get_config()->actor_cfg_;
 }
 
 NAMESPACE_END(blue_sky::kernel::config)
