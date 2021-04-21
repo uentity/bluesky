@@ -58,7 +58,7 @@ auto node::nil() -> node {
 }
 
 auto node::is_nil() const -> bool {
-	return pimpl_ == nil_node::pimpl();
+	return *this == nil_node::nil_engine();
 }
 
 auto node::reset() -> void {
@@ -67,7 +67,7 @@ auto node::reset() -> void {
 }
 
 auto node::start_engine() -> bool {
-	if(actor_ == nil_node::actor()) {
+	if(nil_node::nil_engine() == raw_actor()) {
 		install_raw_actor(node_impl::spawn_actor(std::static_pointer_cast<node_impl>(pimpl_)));
 		// set myself as owner of my leafs
 		// [NOTE] can only be executed AFTER engine is installed & started

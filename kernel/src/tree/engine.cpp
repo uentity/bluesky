@@ -42,8 +42,12 @@ auto engine::weak_ptr_base::reset() -> void {
 	actor_.reset();
 }
 
+auto engine::weak_ptr_base::operator<(const weak_ptr_base& rhs) const -> bool {
+	return pimpl_.owner_before(rhs.pimpl_);
+}
+
 auto engine::weak_ptr_base::operator==(const weak_ptr_base& rhs) const -> bool {
-	return pimpl_.lock() == rhs.pimpl_.lock();
+	return !(*this < rhs || rhs < *this);
 }
 
 auto engine::weak_ptr_base::operator!=(const weak_ptr_base& rhs) const -> bool {
@@ -51,15 +55,11 @@ auto engine::weak_ptr_base::operator!=(const weak_ptr_base& rhs) const -> bool {
 }
 
 auto engine::weak_ptr_base::operator==(const engine& rhs) const -> bool {
-	return pimpl_.lock() == rhs.pimpl_;
+	return !(pimpl_.owner_before(rhs.pimpl_) || rhs.pimpl_.owner_before(pimpl_));
 }
 
 auto engine::weak_ptr_base::operator!=(const engine& rhs) const -> bool {
 	return !(*this == rhs);
-}
-
-auto engine::weak_ptr_base::operator<(const weak_ptr_base& rhs) const -> bool {
-	return pimpl_.owner_before(rhs.pimpl_);
 }
 
 /*-----------------------------------------------------------------------------
@@ -97,6 +97,10 @@ auto engine::operator==(const engine& rhs) const -> bool {
 
 auto engine::operator!=(const engine& rhs) const -> bool {
 	return !(*this == rhs);
+}
+
+auto engine::operator==(const caf::actor& rhs) const -> bool {
+	return raw_actor() == rhs;
 }
 
 auto engine::operator<(const engine& rhs) const -> bool {

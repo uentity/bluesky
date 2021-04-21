@@ -79,7 +79,7 @@ auto link::make_root_(const link& donor) -> void {
 }
 
 auto link::is_nil() const -> bool {
-	return pimpl_ == nil_link::pimpl();
+	return *this == nil_link::nil_engine();
 }
 
 auto link::reset() -> void {
@@ -93,7 +93,7 @@ auto link::pimpl() const -> link_impl* {
 }
 
 auto link::start_engine() -> bool {
-	if(actor_ == nil_link::actor()) {
+	if(nil_link::nil_engine() == raw_actor()) {
 		install_raw_actor(pimpl()->spawn_actor(std::static_pointer_cast<link_impl>(pimpl_)));
 		// explicitly setup weak link from pimpl to engine
 		pimpl()->reset_super_engine(*this);

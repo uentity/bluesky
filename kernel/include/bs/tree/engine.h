@@ -96,6 +96,7 @@ public:
 	auto operator==(const engine& rhs) const -> bool;
 	auto operator!=(const engine& rhs) const -> bool;
 	auto operator<(const engine& rhs) const -> bool;
+	auto operator==(const caf::actor& rhs) const -> bool;
 
 	/// hash for appropriate containers
 	auto hash() const noexcept -> std::size_t;
