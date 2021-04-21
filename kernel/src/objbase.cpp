@@ -27,12 +27,11 @@ objbase::objbase(std::string custom_oid) {
 }
 
 objbase::objbase(const objbase& obj) :
-	enable_shared_from_this(obj), id_(obj.id_)
+	enable_shared_from_this(obj), id_(obj.id_), inode_(obj.inode_)
 {}
 
 objbase::objbase(objbase&& rhs) :
-	enable_shared_from_this(rhs), id_(std::move(rhs.id_)), inode_(std::move(rhs.inode_)),
-	actor_(std::move(rhs.actor_)), home_(std::move(rhs.home_))
+	id_(std::move(rhs.id_)), inode_(std::move(rhs.inode_))
 {}
 
 auto objbase::operator=(objbase&& rhs) -> objbase& {
@@ -45,8 +44,6 @@ auto objbase::swap(objbase& rhs) -> void {
 
 	swap(id_, rhs.id_);
 	swap(inode_, rhs.inode_);
-	swap(actor_, rhs.actor_);
-	swap(home_, rhs.home_);
 }
 
 auto objbase::operator=(const objbase& rhs) -> objbase& {
@@ -107,7 +104,7 @@ objnode::objnode(tree::node N, std::string custom_oid) :
 {}
 
 objnode::objnode(const objnode& rhs) :
-	objbase(rhs.id_), node_(rhs.node_.clone(true))
+	objbase(rhs), node_(rhs.node_.clone(true))
 {}
 
 auto objnode::operator=(const objnode& rhs) -> objnode& {

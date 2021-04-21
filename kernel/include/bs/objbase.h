@@ -44,7 +44,7 @@ public:
 	/// polymorphic support
 	virtual ~objbase();
 
-	/// will make copy with new unique ID
+	/// copy will have the same ID as source
 	objbase(const objbase&);
 	auto operator=(const objbase& rhs) -> objbase&;
 	/// move is actually `default`, nothing fancy
