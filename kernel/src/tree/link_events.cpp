@@ -9,6 +9,7 @@
 
 #include "link_actor.h"
 #include "ev_listener_actor.h"
+#include "nil_engine.h"
 
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
@@ -20,24 +21,22 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	using namespace allow_enumops;
 	using baby_t = ev_listener_actor<link>;
 
-	// [TODO] refactor later to avoid capturing weak ref to origin link
-	// we can construct `event` object from currect_sender()
 	static const auto handler_impl = [](
-		baby_t* self, auto& weak_root, Event ev, prop::propdict params
+		baby_t* self, Event ev, prop::propdict params
 	) {
-		if(auto r = weak_root.lock())
-			self->f({r.raw_actor(), std::move(params), ev});
+		if(auto A = caf::actor_cast<caf::actor>(self->origin))
+			self->f({std::move(A), std::move(params), ev});
 		else
 			self->quit();
 	};
 
 	// produce event bhavior that calls passed callback with proper params
-	auto make_ev_character = [weak_root = weak_ptr{*this}, src_id = id(), listen_to](baby_t* self) {
+	auto make_ev_character = [src_id = id(), listen_to](baby_t* self) {
 		auto res = caf::message_handler{};
 		if(enumval(listen_to & Event::LinkRenamed))
 			res = res.or_else(
 				[=](a_ack, a_lnk_rename, std::string new_name, std::string old_name) {
-					handler_impl(self, weak_root, Event::LinkRenamed, {
+					handler_impl(self, Event::LinkRenamed, {
 						{"new_name", std::move(new_name)},
 						{"prev_name", std::move(old_name)}
 					});
@@ -47,7 +46,7 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 		if(enumval(listen_to & Event::LinkStatusChanged))
 			res = res.or_else(
 				[=](a_ack, a_lnk_status, Req request, ReqStatus new_v, ReqStatus prev_v) {
-					handler_impl(self, weak_root, Event::LinkStatusChanged, {
+					handler_impl(self, Event::LinkStatusChanged, {
 						{"request", new_v},
 						{"new_status", new_v},
 						{"prev_status", prev_v}
@@ -63,7 +62,7 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 						params = extract_info(std::move(tres));
 					else
 						params["error"] = to_string(extract_err(std::move(tres)));
-					handler_impl(self, weak_root, Event::DataModified, std::move(params));
+					handler_impl(self, Event::DataModified, std::move(params));
 				}
 			);
 
@@ -73,9 +72,8 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					self->quit();
 					// distinguish link's bye signal from kernel kill all
 					if(self->current_sender() == self->origin) {
-						// [NOTE] week_root can possibly be already expired but callback needs to be called
-						auto r = weak_root.lock();
-						self->f({r.raw_actor(), {{"link_id", src_id}}, Event::LinkDeleted});
+						// [NOTE] link can possibly be already expired but callback needs to be called
+						self->f({nullptr, {{"link_id", src_id}}, Event::LinkDeleted});
 					}
 				}
 			);

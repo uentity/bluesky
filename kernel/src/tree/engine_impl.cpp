@@ -33,7 +33,7 @@ namespace kradio = kernel::radio;
  *  event
  *-----------------------------------------------------------------------------*/
 inline static auto origin_is_nil(const caf::actor& origin) {
-	return nil_link::nil_engine() == origin || nil_node::nil_engine() == origin;
+	return !origin || nil_link::nil_engine() == origin || nil_node::nil_engine() == origin;
 }
 
 auto event::origin_link() const -> link {
