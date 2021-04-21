@@ -10,6 +10,7 @@
 #include "engine_actor.h"
 #include "link_impl.h"
 #include "node_impl.h"
+#include "nil_engine.h"
 #include "../kernel/radio_subsyst.h"
 
 #include <bs/kernel/radio.h>
@@ -31,22 +32,32 @@ namespace kradio = kernel::radio;
 /*-----------------------------------------------------------------------------
  *  event
  *-----------------------------------------------------------------------------*/
+inline static auto origin_is_nil(const caf::actor& origin) {
+	return nil_link::nil_engine() == origin || nil_node::nil_engine() == origin;
+}
+
 auto event::origin_link() const -> link {
-	return actorf<engine::sp_engine_impl>(origin, kradio::timeout(), a_impl{})
-	.map([](auto&& eimpl) {
-		if(eimpl->type_id() != node_impl::type_id_())
-			return std::static_pointer_cast<link_impl>(eimpl)->super_engine();
-		else return link{};
-	}).value_or(link{});
+	if(origin_is_nil(origin))
+		return link{};
+	else
+		return actorf<engine::sp_engine_impl>(origin, kradio::timeout(true), a_impl{})
+		.map([](auto&& eimpl) {
+			if(eimpl->type_id() != node_impl::type_id_())
+				return std::static_pointer_cast<link_impl>(eimpl)->super_engine();
+			else return link{};
+		}).value_or(link{});
 }
 
 auto event::origin_node() const -> node {
-	return actorf<engine::sp_engine_impl>(origin, kradio::timeout(), a_impl{})
-	.map([](auto&& eimpl) {
-		if(eimpl->type_id() == node_impl::type_id_())
-			return std::static_pointer_cast<node_impl>(eimpl)->super_engine();
-		else return node::nil();
-	}).value_or(node::nil());
+	if(origin_is_nil(origin))
+		return node::nil();
+	else
+		return actorf<engine::sp_engine_impl>(origin, kradio::timeout(true), a_impl{})
+		.map([](auto&& eimpl) {
+			if(eimpl->type_id() == node_impl::type_id_())
+				return std::static_pointer_cast<node_impl>(eimpl)->super_engine();
+			else return node::nil();
+		}).value_or(node::nil());
 }
 
 /*-----------------------------------------------------------------------------
