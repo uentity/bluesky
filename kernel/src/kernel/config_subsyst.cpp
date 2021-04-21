@@ -252,8 +252,8 @@ auto config_subsyst::configure(string_list args, std::string ini_fname, bool for
 			if(( ini = std::ifstream(caf_ini_path) )) {
 				const auto er = actor_cfg_.parse({}, ini);
 				bsout() << "CAF: {} - {}" << caf_ini_path.string() << (er ? "Fail" : "OK") << log::end;
-				//if(er)
-				//	bsout() << "{}" << to_string(er) << log::end;
+				if(er)
+					bsout() << "{}" << to_string(er) << log::end;
 			}
 		}
 	}

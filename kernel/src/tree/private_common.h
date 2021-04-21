@@ -7,7 +7,7 @@
 
 #include <bs/defaults.h>
 #include <bs/detail/enumops.h>
-#include <bs/tree/common.h>
+#include <bs/tree/engine.h>
 #include <bs/tree/type_caf_id.h>
 
 #include <caf/typed_actor.hpp>

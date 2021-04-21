@@ -113,7 +113,7 @@ std::error_code make_error_code(Error e) {
 				return "Transaction target is empty";
 
 			case Error::Happened:
-				return "Undefined error";
+				return "runtime error";
 
 			default:
 				return {};
