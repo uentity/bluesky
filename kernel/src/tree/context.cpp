@@ -116,7 +116,7 @@ struct BS_HIDDEN_API context::impl {
 	//  ctors
 	//
 	impl(link root) :
-		root_(data_node(root)), root_lnk_(root)
+		root_(root ? root.data_node() : node::nil()), root_lnk_(root)
 	{
 		verify();
 	}
@@ -128,21 +128,21 @@ struct BS_HIDDEN_API context::impl {
 	}
 
 	impl(node root) :
-		root_(std::move(root)), root_lnk_(root_ ? root_.handle() : link{})
+		root_(root), root_lnk_(root_ ? root_.handle() : link{})
 	{
 		verify();
 	}
 
 	auto verify() -> void {
 		if(!root_) {
-			if(root_lnk_) root_ = data_node(root_lnk_);
+			if(root_lnk_) root_ = root_lnk_.data_node();
 			if(!root_) {
 				root_ = node();
 				root_lnk_.reset();
 			}
 		}
 		if(!root_lnk_)
-			root_lnk_ = link::make_root<hard_link>("/", root_);
+			root_lnk_ = link::make_root<hard_link>("", root_);
 	}
 
 	auto reset(node root, link root_handle) {
