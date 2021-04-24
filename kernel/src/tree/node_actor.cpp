@@ -101,7 +101,7 @@ auto do_insert(
 			}))
 				return er;
 			// report success if insertion happened
-			return ir.second ? perfect : quiet_fail;
+			return ir.second;
 		})
 	).await(
 		[=, aw = std::move(aw)](tr_result::box trb) mutable {

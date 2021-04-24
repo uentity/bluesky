@@ -43,7 +43,9 @@ auto node_impl::set_handle(const link& new_handle) -> void {
 	if(const auto old_handle = handle_.lock()) {
 		const auto owner = old_handle.owner();
 		if(owner && (!new_handle || owner != new_handle.owner()))
-			owner.erase(old_handle.id());
+			caf::anon_send(
+				node_impl::actor(owner), a_node_erase(), old_handle.id(), EraseOpts::Normal
+			);
 	}
 
 	if(new_handle)
@@ -58,7 +60,7 @@ auto node_impl::propagate_owner(const node& super, bool deep) -> void {
 	reset_super_engine(super);
 
 	// correct owner of single link & return a node it points to
-	const auto adjust_link = [&](const link& lnk) {
+	const auto adjust_link = [&](const link& lnk) -> decltype(auto) {
 		// change link's owner
 		if(auto prev_owner = lnk.owner(); prev_owner != super) {
 			lnk.pimpl()->reset_owner(super);
@@ -189,7 +191,7 @@ auto node_impl::insert(link L, InsertPolicy pol) -> insert_status<Key::ID> {
 	// then new link name will go here
 	auto Lname = std::optional<std::string>{};
 	if(enumval(pol & 3) > 0) {
-		const auto old_name = Limpl.name_;
+		const auto& old_name = Limpl.name_;
 		auto dup = find<Key::Name, Key::ID>(old_name);
 		if(dup != end<Key::ID>() && dup->id() != Limpl.id_) {
 			// first check if dup names are prohibited
@@ -216,7 +218,7 @@ auto node_impl::insert(link L, InsertPolicy pol) -> insert_status<Key::ID> {
 
 	// 3. postprocess
 	if(res.second) {
-		// remove from prev parent and propagate handle while link's owner still NULL (important!)
+		// remove from prev parent and propagate handle
 		if(super_ != prev_owner) {
 			if(prev_owner)
 				// erase won't touch owner (we set it manually)
@@ -230,7 +232,8 @@ auto node_impl::insert(link L, InsertPolicy pol) -> insert_status<Key::ID> {
 		}
 
 		// rename link if needed
-		if(Lname) Limpl.rename(std::move(*Lname));
+		if(Lname)
+			rename(project<Key::ID, Key::Name>(res.first), std::move(*Lname));
 	}
 	else {
 		// check if we need to deep merge given links
