@@ -185,7 +185,7 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 	const auto remember_link = [&](auto* data_ptr) {
 		if(!lnk2obj_.try_emplace(L.id(), data_ptr).second) return false;
 		// erase adapter on link delete
-		L.subscribe([](const auto& ev) {
+		L.subscribe(launch_async, [](const auto& ev) {
 			const auto& [_, params, __] = ev;
 			const auto* lid = prop::get_if<uuid>(&params, "link_id");
 			if(!lid) return;

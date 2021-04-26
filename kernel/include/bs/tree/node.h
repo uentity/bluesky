@@ -245,6 +245,7 @@ public:
 
 	/// returns ID of suscriber that is required for unsubscribe
 	auto subscribe(event_handler f, Event listen_to = Event::All) const -> std::uint64_t;
+	auto subscribe(launch_async_t, event_handler f, Event listen_to = Event::All) const -> std::uint64_t;
 	/// unsubscribe handlers from self & whole subtree
 	auto unsubscribe(deep_t) const -> void;
 	using engine::unsubscribe;

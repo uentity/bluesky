@@ -13,8 +13,9 @@
 #include <bs/log.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using event_handler = node::event_handler;
 
-auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
+static auto make_listener(const node& self, event_handler f, Event listen_to) {
 	using namespace kernel::radio;
 	using namespace allow_enumops;
 	using baby_t = ev_listener_actor<node>;
@@ -23,20 +24,19 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 		baby_t* self, auto& weak_root, caf::actor origin, Event ev, prop::propdict params
 	) {
 		if(auto r = weak_root.lock()) {
-			if(!origin) origin = r.raw_actor();
+			if(!origin) origin = caf::actor_cast<caf::actor>(r.actor());
 			self->f(std::move(r), {std::move(origin), std::move(params), ev});
 		}
 		else // if root source is dead, quit
 			self->quit();
 	};
 
-	auto make_ev_character = [weak_root = weak_ptr(*this), listen_to](baby_t* self) {
+	auto make_ev_character = [weak_root = node::weak_ptr(self), listen_to](baby_t* self) {
 		auto res = caf::message_handler{};
 		if(enumval(listen_to & Event::LinkRenamed)) {
 			const auto renamed_impl = [=](
 				caf::actor origin, auto& lid, auto& new_name, auto& old_name
 			) {
-				//bsout() << "*-* node: fired LinkRenamed event" << bs_end;
 				handler_impl(self, weak_root, std::move(origin), Event::LinkRenamed, {
 					{"link_id", lid},
 					{"new_name", std::move(new_name)},
@@ -61,7 +61,6 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					renamed_impl(std::move(src), lid, new_name, old_name);
 				}
 			);
-			//bsout() << "*-* node: subscribed to LinkRenamed event" << bs_end;
 		}
 
 		if(enumval(listen_to & Event::LinkStatusChanged)) {
@@ -95,7 +94,6 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					status_impl(std::move(src), lid, req, new_s, prev_s);
 				}
 			);
-			//bsout() << "*-* node: subscribed to LinkStatusChanged event" << bs_end;
 		}
 
 		if(enumval(listen_to & Event::DataModified)) {
@@ -123,7 +121,6 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					datamod_impl(std::move(src), lid, std::move(trbox));
 				}
 			);
-			//bsout() << "*-* node: subscribed to DataModified event" << bs_end;
 		}
 
 		if(enumval(listen_to & Event::LinkInserted)) {
@@ -152,7 +149,6 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					});
 				}
 			);
-			//bsout() << "*-* node: subscribed to LinkInserted event" << bs_end;
 		}
 
 		if(enumval(listen_to & Event::LinkErased)) {
@@ -169,21 +165,34 @@ auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 					handler_impl(self, weak_root, std::move(src), Event::LinkErased, std::move(context));
 				}
 			);
-			//bsout() << "*-* node: subscribed to LinkErased event" << bs_end;
 		}
 
 		return res;
 	};
 
 	// make shiny new subscriber actor and place into parent's room
-	auto baby = system().spawn<baby_t>(raw_actor().address(), std::move(f), std::move(make_ev_character));
+	return system().spawn<baby_t, caf::lazy_init>(
+		self.actor().address(), std::move(f), std::move(make_ev_character)
+	);
+}
+
+auto node::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	// ensure it has started & properly initialized
+	// throw exception otherwise
 	if(auto res = actorf<std::uint64_t>(
-		pimpl()->actor(*this), infinite, a_subscribe(), std::move(baby)
+		pimpl()->actor(*this), infinite, a_subscribe(),
+		make_listener(*this, std::move(f), listen_to)
 	))
 		return *res;
 	else
 		throw res.error();
+}
+
+auto node::subscribe(launch_async_t, event_handler f, Event listen_to) const -> std::uint64_t {
+	auto baby = make_listener(*this, std::move(f), listen_to);
+	auto baby_id = baby.id();
+	caf::anon_send(pimpl()->actor(*this), a_subscribe{}, std::move(baby));
+	return baby_id;
 }
 
 auto node::unsubscribe(deep_t) const -> void {

@@ -15,8 +15,9 @@
 #include <bs/log.h>
 
 NAMESPACE_BEGIN(blue_sky::tree)
+using event_handler = link::event_handler;
 
-auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
+static auto make_listener(const link& self, event_handler f, Event listen_to) {
 	using namespace kernel::radio;
 	using namespace allow_enumops;
 	using baby_t = ev_listener_actor<link>;
@@ -31,7 +32,7 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	};
 
 	// produce event bhavior that calls passed callback with proper params
-	auto make_ev_character = [src_id = id(), listen_to](baby_t* self) {
+	auto make_ev_character = [src_id = self.id(), listen_to](baby_t* self) {
 		auto res = caf::message_handler{};
 		if(enumval(listen_to & Event::LinkRenamed))
 			res = res.or_else(
@@ -82,14 +83,28 @@ auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	};
 
 	// make baby event handler actor
-	auto baby = system().spawn<baby_t>(raw_actor().address(), std::move(f), std::move(make_ev_character));
+	return system().spawn<baby_t, caf::lazy_init>(
+		self.actor().address(), std::move(f), std::move(make_ev_character)
+	);
+}
+
+auto link::subscribe(event_handler f, Event listen_to) const -> std::uint64_t {
 	// ensure it has started & properly initialized
+	// throw exception otherwise
 	if(auto res = actorf<std::uint64_t>(
-		pimpl()->actor(*this), infinite, a_subscribe(), std::move(baby)
+		pimpl()->actor(*this), infinite, a_subscribe(),
+		make_listener(*this, std::move(f), listen_to)
 	))
 		return *res;
 	else
 		throw res.error();
+}
+
+auto link::subscribe(launch_async_t, event_handler f, Event listen_to) const -> std::uint64_t {
+	auto baby = make_listener(*this, std::move(f), listen_to);
+	auto baby_id = baby.id();
+	caf::anon_send(pimpl()->actor(*this), a_subscribe{}, std::move(baby));
+	return baby_id;
 }
 
 auto link::unsubscribe(deep_t) const -> void {
