@@ -190,18 +190,20 @@ auto python_subsyst_impl::adapt(sp_obj source, const tree::link& L) -> py::objec
 			const auto* lid = prop::get_if<uuid>(&params, "link_id");
 			if(!lid) return;
 
-			auto& self = python_subsyst_impl::self();
-			auto cached_L = self.lnk2obj_.find(*lid);
-			if(cached_L == self.lnk2obj_.end()) return;
+			KRADIO.enqueue(launch_async, [lid = *lid] {
+				auto py_guard = py::gil_scoped_acquire();
+				auto& self = python_subsyst_impl::self();
+				auto cached_L = self.lnk2obj_.find(lid);
+				if(cached_L == self.lnk2obj_.end()) return perfect;
 
-			// kill cache entry if ref counter reaches zero
-			if(auto cached_A = self.acache_.find(cached_L->second); cached_A != self.acache_.end()) {
-				if(--cached_A->second.second == 0) {
-					auto py_guard = py::gil_scoped_acquire();
-					self.acache_.erase(cached_A);
+				// kill cache entry if ref counter reaches zero
+				if(auto cached_A = self.acache_.find(cached_L->second); cached_A != self.acache_.end()) {
+					if(--cached_A->second.second == 0)
+						self.acache_.erase(cached_A);
 				}
-			}
-			self.lnk2obj_.erase(cached_L);
+				self.lnk2obj_.erase(cached_L);
+				return perfect;
+			});
 		}, tree::Event::LinkDeleted);
 		return true;
 	};
