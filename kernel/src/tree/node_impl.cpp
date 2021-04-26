@@ -16,19 +16,43 @@
 #include <bs/tree/tree.h>
 #include <bs/detail/tuple_utils.h>
 
+#include <algorithm>
+
 NAMESPACE_BEGIN(blue_sky::tree)
 using bs_detail::shared;
 	
 ENGINE_TYPE_DEF(node_impl, "node")
 
-auto node_impl::clone(node_actor*, bool deep) const -> caf::result<sp_nimpl> {
-	// [TODO] write async version of this
-	// [NOTE] can do this without transactions for each link, because cloned link is not shared
-	auto res = std::make_shared<node_impl>();
-	auto& res_leafs = res->links_.get<Key_tag<Key::AnyOrder>>();
-	for(const auto& leaf : links_.get<Key_tag<Key::AnyOrder>>())
-		res_leafs.insert(res_leafs.end(), leaf.clone(deep));
-	return res;
+auto node_impl::clone(node_actor* papa, bool deep) const -> caf::result<sp_nimpl> {
+	auto res_promise = papa->make_response_promise<sp_nimpl>();
+	auto do_clone = [=](auto&& self, auto work, auto res) mutable {
+		if(work.empty()) {
+			res_promise.deliver(std::move(res));
+			return;
+		}
+
+		auto leaf = work.back();
+		work.pop_back();
+		// [NOTE] use `await` to ensure node is not modified while cloning leafs
+		papa->request(leaf.actor(), kernel::radio::timeout(true), a_clone{}, deep)
+		.await(
+			[=, work = std::move(work)](const link& leaf_clone) mutable {
+				auto& res_leafs = res->links_.template get<Key_tag<Key::AnyOrder>>();
+				res_leafs.insert(res_leafs.end(), leaf_clone);
+				self(self, std::move(work), std::move(res));
+			},
+			// stop process on error & return existing result
+			[=](const caf::error& er) mutable {
+				forward_caf_error(er, "in node_impl::clone()").dump();
+				res_promise.deliver(std::move(res));
+			}
+		);
+	};
+
+	auto work = leafs(Key::AnyOrder);
+	std::reverse(work.begin(), work.end());
+	do_clone(do_clone, std::move(work), std::make_shared<node_impl>());
+	return res_promise;
 }
 
 auto node_impl::handle() const -> link {
