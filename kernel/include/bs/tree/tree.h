@@ -140,6 +140,7 @@ inline auto make_root_link(sp_obj root_obj, std::string name = "/", std::string_
 enum class TreeArchive { Text, Binary, FS };
 using on_serialized_f = std::function<void(link, error)>;
 
+/// [NOTE] filenames are expected to come in UTF-8 encoding
 BS_API auto save_tree(
 	link root, std::string filename,
 	TreeArchive ar = TreeArchive::FS, timespan wait_for = infinite

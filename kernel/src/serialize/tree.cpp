@@ -11,6 +11,7 @@
 #include <bs/atoms.h>
 #include <bs/kernel/radio.h>
 #include <bs/log.h>
+#include <bs/detail/str_utils.h>
 #include <bs/tree/tree.h>
 #include <bs/serialize/serialize.h>
 #include <bs/serialize/tree.h>
@@ -74,7 +75,7 @@ auto save_generic(const link& root, const std::string& filename, TreeArchive ar)
 return error::eval_safe([&] {
 	// open file for writing
 	std::ofstream fs(
-		filename,
+		ustr2str(filename),
 		std::ios::out | std::ios::trunc |
 			(ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode(0))
 	);
@@ -94,7 +95,7 @@ auto load_generic(link& root, const std::string& filename, TreeArchive ar) -> er
 return error::eval_safe([&] {
 	// open file for reading
 	std::ifstream fs(
-		filename,
+		ustr2str(filename),
 		std::ios::in | (ar == TreeArchive::Binary ? std::ios::binary : std::ios::openmode(0))
 	);
 
