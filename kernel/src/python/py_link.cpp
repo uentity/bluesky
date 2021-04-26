@@ -38,13 +38,14 @@ auto adapt(obj_or_err&& source, const link& L) {
 using adapted_data_cb = std::function<void(result_or_err<py::object>, link)>;
 // pipe callback through kernel's queue
 auto adapt(adapted_data_cb&& f) {
-	return [f = std::move(f)](result_or_err<sp_obj> obj, link L) mutable {
+	return [f = std::make_shared<adapted_data_cb>(std::move(f))](result_or_err<sp_obj> obj, link L) mutable {
 		KRADIO.enqueue(
 			launch_async,
 			transaction{[f = std::move(f), obj = std::move(obj), L]() mutable {
 				// capture GIL to call `adapt()`
 				auto guard = py::gil_scoped_acquire();
-				f(adapt(std::move(obj), L), L);
+				(*f)(adapt(std::move(obj), L), L);
+				f.reset();
 				return perfect;
 			}}
 		);
@@ -53,17 +54,18 @@ auto adapt(adapted_data_cb&& f) {
 
 template<typename F, typename R, typename... Args>
 auto mapper2queue(F mf, identity<R (Args...)> _) {
-	return [mf = std::move(mf)](Args... args, caf::event_based_actor* worker) -> caf::result<R> {
+	return [mf = std::make_shared<F>(std::move(mf))](Args... args, caf::event_based_actor* worker)
+	-> caf::result<R> {
 		auto rp = worker->make_response_promise();
 		KRADIO.enqueue(
 			launch_async,
 			[=, argstup = std::make_tuple(std::forward<Args>(args)...)]() mutable -> error {
 				if constexpr(std::is_same_v<R, void>) {
-					std::apply(mf, std::move(argstup));
+					std::apply(*mf, std::move(argstup));
 					rp.deliver( caf::unit );
 				}
 				else
-					rp.deliver( std::apply(mf, std::move(argstup)) );
+					rp.deliver( std::apply(*mf, std::move(argstup)) );
 				return perfect;
 			}
 		);

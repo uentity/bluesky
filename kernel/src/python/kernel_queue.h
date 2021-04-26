@@ -19,10 +19,11 @@ NAMESPACE_BEGIN(blue_sky::python)
 
 template<typename F, typename R, typename... Args, typename... LaunchAsync>
 auto pipe_queue_impl(F f, const identity<R (Args...)> _, LaunchAsync... async_tag) {
-	return [f = std::move(f)](Args&&... args) {
+	return [f = std::make_shared<F>(std::move(f))](Args&&... args) {
 		KRADIO.enqueue(
-			LaunchAsync{}..., [f, argtup = std::make_tuple(std::forward<Args>(args)...)]() mutable {
-				std::apply(f, std::move(argtup));
+			LaunchAsync{}...,
+			[f, argtup = std::make_tuple(std::forward<Args>(args)...)]() mutable {
+				std::apply(*f, std::move(argtup));
 				return perfect;
 			}
 		);
