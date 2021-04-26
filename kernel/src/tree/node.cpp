@@ -86,9 +86,12 @@ auto node::handle() const -> link {
 }
 
 auto node::clone(bool deep) const -> node {
-	return actorf<node>(
-		actor(), kernel::radio::timeout(true), a_clone{}, deep
-	).value_or(node{});
+	return pimpl()->actorf<sp_nimpl>(
+		*this, kernel::radio::timeout(true), a_clone{}, a_impl{}, deep
+	)
+	.map([](auto&& clone_impl) {
+		return node{std::move(clone_impl)};
+	}).value_or(node::nil());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

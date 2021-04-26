@@ -103,9 +103,12 @@ auto link::start_engine() -> bool {
 }
 
 auto link::clone(bool deep) const -> link {
-	return actorf<link>(
-		actor(), kernel::radio::timeout(true), a_clone{}, deep
-	).value_or(link{});
+	return pimpl()->actorf<sp_limpl>(
+		*this, kernel::radio::timeout(true), a_clone{}, a_impl{}, deep
+	)
+	.map([](auto&& clone_impl) {
+		return link{std::move(clone_impl)};
+	}).value_or(link());
 }
 
 auto link::id() const -> lid_type {
