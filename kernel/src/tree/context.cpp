@@ -78,6 +78,15 @@ inline static auto data_node(const link& L) -> node {
 	return L.bare().data_node_if_ok();
 }
 
+inline static auto cached_data_node(const link& L) -> node {
+	auto val = node::nil();
+	L.apply([&](bare_link bl) {
+		val = bl.data_node();
+		return perfect;
+	});
+	return val;
+}
+
 // simple `deref_path` impl for vector of lids
 template<typename PathIterator>
 static auto deref_path(PathIterator from, PathIterator to, const link& root) -> link {
@@ -116,7 +125,7 @@ struct BS_HIDDEN_API context::impl {
 	//  ctors
 	//
 	impl(link root) :
-		root_(root ? root.data_node() : node::nil()), root_lnk_(root)
+		root_(root ? cached_data_node(root) : node::nil()), root_lnk_(root)
 	{
 		verify();
 	}
@@ -135,7 +144,7 @@ struct BS_HIDDEN_API context::impl {
 
 	auto verify() -> void {
 		if(!root_) {
-			if(root_lnk_) root_ = root_lnk_.data_node();
+			if(root_lnk_) root_ = cached_data_node(root_lnk_);
 			if(!root_) {
 				root_ = node();
 				root_lnk_.reset();
