@@ -39,7 +39,12 @@ auto pipe_through_queue(F f, LaunchAsync... async_tag) {
 // run Python transaction (applied to link/object) through queue
 template<typename... Ts>
 auto pytr_through_queue(std::function< py::object(Ts...) > tr) {
-	return [tr = make_result_converter<tr_result>(std::move(tr), perfect)]
+	const auto make_ctr = [&] {
+		return make_result_converter<tr_result>(std::move(tr), perfect);
+	};
+	using F = decltype(make_ctr());
+
+	return [tr = std::make_shared<F>(make_ctr())]
 	(caf::event_based_actor* papa, Ts... args) mutable -> caf::result<tr_result::box> {
 		// [NOTE] using request.await to stop messages processing while tr is executed
 		auto res = papa->make_response_promise<tr_result::box>();
@@ -47,7 +52,9 @@ auto pytr_through_queue(std::function< py::object(Ts...) > tr) {
 			KRADIO.queue_actor(), kernel::radio::timeout(true),
 			transaction{[tr = std::move(tr), argstup = std::make_tuple(std::forward<Ts>(args)...)]
 			() mutable {
-				return std::apply(std::move(tr), std::move(argstup));
+				auto r = std::apply(std::move(*tr), std::move(argstup));
+				tr.reset();
+				return r;
 			}}
 		).await(
 			[=](tr_result::box tres) mutable { res.deliver(std::move(tres)); },
