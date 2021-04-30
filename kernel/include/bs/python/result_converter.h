@@ -1,7 +1,6 @@
-/// @file
 /// @author uentity
 /// @date 12.03.2020
-/// @brief Make a pipe that converts result of given Python callable to specified type
+/// @brief Make a decorator that converts result of given Python callable to specified type
 /// @copyright
 /// This Source Code Form is subject to the terms of the Mozilla Public License,
 /// v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -16,10 +15,13 @@ NAMESPACE_BEGIN(blue_sky::python)
 template<typename TR, typename F, typename R, typename... Args>
 auto result_converter_impl(F&& f, TR if_none_v, identity<R (Args...)> _ = {}) {
 	static_assert(std::is_same_v<R, py::object>, "Python callback must return py::object");
-	return [f = std::forward<F>(f), if_none_v = std::move(if_none_v)](Args... args) mutable -> TR {
+	return [
+		f = std::make_shared<meta::remove_cvref_t<F>>(std::forward<F>(f)),
+		if_none_v = std::move(if_none_v)
+	](Args... args) -> TR {
 		auto guard = py::gil_scoped_acquire{};
 		// detect if Python callback returns None
-		auto res = f(std::forward<Args>(args)...);
+		auto res = (*f)(std::forward<Args>(args)...);
 		return res.is_none() ? std::move(if_none_v) : py::cast<TR>(std::move(res));
 	};
 };
