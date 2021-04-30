@@ -94,10 +94,10 @@ public:
 	virtual auto info() const -> result_or_err<tree::inode> final;
 
 	/// get object's home group
-	virtual auto home() const -> const caf::group& final;
+	virtual auto home() const -> caf::group final;
 
 	/// get objects's home group ID (empty for invalid / not started home)
-	virtual auto home_id() const -> std::string_view final;
+	virtual auto home_id() const -> std::string final;
 
 	/// runs modificator in message queue of this object
 	virtual auto apply(obj_transaction tr) -> tr_result final;
@@ -130,11 +130,9 @@ private:
 	std::weak_ptr<tree::inode> inode_;
 	/// object's internal actor
 	caf::actor actor_;
-	/// internal home group
-	caf::group home_;
+	/// internal home group ID = object *unique* ID
+	uuid hid_;
 	std::once_flag einit_flag_;
-
-	auto reset_home(std::string new_hid, bool silent) -> void;
 };
 // alias
 using sp_obj  = std::shared_ptr<objbase>;

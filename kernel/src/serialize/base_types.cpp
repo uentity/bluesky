@@ -1,4 +1,3 @@
-/// @file
 /// @author uentity
 /// @date 04.06.2018
 /// @brief Implement serialization of base BS types
@@ -23,14 +22,14 @@ BSS_FCN_BEGIN(serialize, blue_sky::objbase)
 	ar(make_nvp("id", t.id_));
 	if constexpr(Archive::is_saving::value) {
 		// emit empty home ID if it matches ID (saved on prev step)
-		auto hid = std::string(t.home_id());
+		auto hid = t.home_id();
 		ar(make_nvp("home_id", hid != t.id_ ? hid : ""));
 	}
 	else {
 		// reed home ID & reset home group
 		std::string hid;
 		ar(make_nvp("home_id", hid));
-		t.reset_home(hid.empty() ? t.id_ : std::move(hid), false);
+		t.hid_ = hid.empty() ? to_uuid(unsafe, t.id_) : to_uuid(unsafe, hid);
 	}
 BSS_FCN_END
 

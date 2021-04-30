@@ -65,8 +65,6 @@ public:
 
 	// actor will join object's home
 	using actor_type = super::actor_type::extend<
-		// reset home group
-		caf::reacts_to<a_home, std::string>,
 		// data altered ack from object
 		caf::reacts_to<a_ack, a_data, tr_result::box>
 	>;
@@ -81,8 +79,6 @@ public:
 		caf::replies_to<a_data_node, bool>::with<node_or_errbox>,
 		// request status change ack
 		caf::reacts_to<a_ack, a_lnk_status, Req, ReqStatus, ReqStatus>,
-		// reset object home group 
-		caf::reacts_to<a_home, std::string>,
 		// data altered ack from object
 		caf::reacts_to<a_ack, a_data, tr_result::box>
 	>;
@@ -94,7 +90,7 @@ public:
 	auto make_behavior() -> behavior_type override;
 
 private:
-	std::string_view obj_hid_;
+	std::string obj_hid_;
 	caf::actor_addr obj_actor_addr_;
 
 	auto monitor_object() -> void;

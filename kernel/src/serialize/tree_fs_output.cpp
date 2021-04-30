@@ -121,7 +121,7 @@ struct tree_fs_output::impl : detail::file_heads_manager<true> {
 		EVAL_SAFE
 			[&] {
 				abs_obj_path = fs::absolute(
-					objects_path_ / prehash_stem(std::string(obj.home_id()) + '.' + obj_fmt)
+					objects_path_ / prehash_stem(obj.home_id() + '.' + obj_fmt)
 				);
 			},
 			// ensure intermediate dirs are created

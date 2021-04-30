@@ -29,8 +29,8 @@ using namespace std::chrono_literals;
 /*-----------------------------------------------------------------------------
  *  objbase_actor
  *-----------------------------------------------------------------------------*/
-objbase_actor::objbase_actor(caf::actor_config& cfg, caf::group home, sp_obj mama) :
-	super(cfg), home_(std::move(home)), mama_(mama)
+objbase_actor::objbase_actor(caf::actor_config& cfg, sp_obj mama) :
+	super(cfg), home_(mama->home()), mama_(mama)
 {
 	// exit after kernel
 	KRADIO.register_citizen(this);
@@ -45,16 +45,6 @@ return typed_behavior {
 
 	// get home group
 	[=](a_home) { return home_; },
-
-	// rebind to new home
-	[=](a_home, const std::string& new_hid) {
-		// leave old home
-		leave(home_);
-		send(home_, a_bye());
-		// enter new one
-		home_ = system().groups().get_local(new_hid);
-		join(home_);
-	},
 
 	// execute transaction
 	[=](a_apply, const obj_transaction& otr) -> caf::result<tr_result::box> {
@@ -210,30 +200,22 @@ objbase::~objbase() {
 		caf::anon_send_exit(actor_, caf::exit_reason::user_shutdown);
 }
 
-auto objbase::reset_home(std::string new_hid, bool silent) -> void {
-	if(new_hid.empty()) new_hid = to_string(gen_uuid());
-	// send home rebind message to old home (not directly to actor to also inform hard_links)
-	if(!silent)
-		checked_send<objbase_actor::home_actor_type, high_prio>(home_, a_home(), new_hid);
-	home_ = system().groups().get_local(new_hid);
-}
-
 auto objbase::raw_actor() -> const caf::actor& {
 	// engine must be initialized only once
 	std::call_once(einit_flag_, [&] {
 		// [NOTE] init may be called after move constructor, hence check if actor is initialized
-		if(!actor_) {
-			if(!home_) reset_home({}, true);
-			actor_ = system().spawn_in_group<objbase_actor>(home_, home_, shared_from_this());
-		}
+		if(!actor_)
+			actor_ = system().spawn_in_group<objbase_actor>(home(), shared_from_this());
 	});
 	return actor_;
 }
 
-auto objbase::home() const -> const caf::group& { return home_; }
+auto objbase::home() const -> caf::group {
+	return system().groups().get_local(home_id());
+}
 
-auto objbase::home_id() const -> std::string_view {
-	return home_ ? home_.get()->identifier() : std::string_view{};
+auto objbase::home_id() const -> std::string {
+	return to_string(hid_);
 }
 
 auto objbase::apply(obj_transaction tr) -> tr_result {

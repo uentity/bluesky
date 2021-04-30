@@ -17,21 +17,19 @@ NAMESPACE_BEGIN(blue_sky)
 /*-----------------------------------------------------------------------------
  *  objbase
  *-----------------------------------------------------------------------------*/
-objbase::objbase(std::string custom_oid) {
-	if(custom_oid.empty()) {
-		id_ = to_string(gen_uuid());
-		reset_home(id_, true);
-	}
-	else
-		id_ = std::move(custom_oid);
+objbase::objbase(std::string custom_oid) :
+	hid_(gen_uuid())
+{
+	id_ = custom_oid.empty() ? to_string(hid_) : std::move(custom_oid);
 }
 
 objbase::objbase(const objbase& obj) :
-	enable_shared_from_this(obj), id_(obj.id_), inode_(obj.inode_)
+	// [NOTE] home ID is always unique as it 1-to-1 relates to actor
+	enable_shared_from_this(obj), id_(obj.id_), inode_(obj.inode_), hid_(gen_uuid())
 {}
 
 objbase::objbase(objbase&& rhs) :
-	id_(std::move(rhs.id_)), inode_(std::move(rhs.inode_))
+	id_(std::move(rhs.id_)), inode_(std::move(rhs.inode_)), hid_(gen_uuid())
 {}
 
 auto objbase::operator=(objbase&& rhs) -> objbase& {

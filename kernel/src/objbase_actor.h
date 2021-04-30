@@ -21,8 +21,6 @@ public:
 	using home_actor_type = caf::typed_actor<
 		// sent to home when owner exists
 		caf::reacts_to<a_bye>,
-		// reset home group
-		caf::reacts_to<a_home, std::string>,
 		// modification ack
 		caf::reacts_to<a_ack, a_data, tr_result::box>
 	>;
@@ -51,7 +49,7 @@ public:
 		return caf::actor_cast<actor_type>(obj.actor());
 	}
 
-	objbase_actor(caf::actor_config& cfg, caf::group home, sp_obj mama);
+	objbase_actor(caf::actor_config& cfg, sp_obj mama);
 
 	auto name() const -> const char* override;
 
