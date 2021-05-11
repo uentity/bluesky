@@ -73,7 +73,10 @@ static auto is_empty(const link_or_node& x) {
 }
 
 // construct from existing link + install mapping function
-map_link::map_link(mapper_f mf, const map_link& rhs, link_or_node src_node, link_or_node dest_node) :
+map_link::map_link(
+	mapper_f mf, const map_link& rhs,
+	link_or_node src_node, link_or_node dest_node, TreeOpts opts
+) :
 	map_link(
 		std::move(mf), ei::pimpl(rhs).tag_, ei::pimpl(rhs).name_, std::move(src_node),
 		[&]() -> link_or_node {
@@ -88,7 +91,7 @@ map_link::map_link(mapper_f mf, const map_link& rhs, link_or_node src_node, link
 			else
 				return std::move(dest_node);
 		}(),
-		ei::pimpl(rhs).update_on_, ei::pimpl(rhs).opts_, ei::pimpl(rhs).flags_
+		ei::pimpl(rhs).update_on_, enumval(opts) ? opts : ei::pimpl(rhs).opts_, ei::pimpl(rhs).flags_
 	)
 {
 	// copy DataNode status from rhs

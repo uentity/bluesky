@@ -49,7 +49,11 @@ public:
 		TreeOpts opts = TreeOpts::Normal | TreeOpts::MuteOutputNode, Flags f = Flags::Plain
 	);
 	/// construct from existing copy of map_link but with another mapping
-	map_link(mapper_f mf, const map_link& rhs, link_or_node src_node, link_or_node dest_node = {});
+	map_link(
+		mapper_f mf, const map_link& rhs,
+		link_or_node src_node, link_or_node dest_node = {},
+		TreeOpts opts = TreeOpts::Normal
+	);
 	/// convert from link
 	map_link(const link& rhs);
 

@@ -410,13 +410,14 @@ void py_bind_link(py::module& m) {
 		// from mapper & existing map_link
 		.def(py::init([](
 				MappingLevel mlevel, py::function py_mf, const map_link& rhs,
-				link_or_node src, link_or_node dst
+				link_or_node src, link_or_node dst, TreeOpts opts
 			) {
 				return make_map_link(
-					mlevel, std::move(py_mf), rhs, std::move(src), std::move(dst)
+					mlevel, std::move(py_mf), rhs, std::move(src), std::move(dst), opts
 				);
 			}),
-			"mlevel"_a, "mf"_a, "rhs"_a, "src_node"_a, "dest_node"_a = link_or_node{}
+			"mlevel"_a, "mf"_a, "rhs"_a, "src_node"_a, "dest_node"_a = link_or_node{},
+			"opts"_a = TreeOpts::Normal
 		)
 		// conversion ctor
 		.def(py::init<const link&>())
