@@ -78,58 +78,54 @@ NAMESPACE_BEGIN(caf)
  * implementation
  *-----------------------------------------------------------------------------*/
 // -------- save
-template<typename Inspector, typename T>
-auto inspect(Inspector& f, T& x)
--> std::enable_if_t<
-	!Inspector::is_loading && blue_sky::enable_bs_inspect<Inspector, T>(),
-	bool
-> {
-	using vostream = boost::interprocess::basic_ovectorstream< std::vector<char> >;
-	std::vector<char> x_data;
-	vostream ss(x_data);
-	cereal::PortableBinaryOutputArchive A(ss);
+template<
+	typename Inspector, typename T,
+	typename = std::enable_if_t<blue_sky::enable_bs_inspect<Inspector, T>()>
+>
+auto inspect(Inspector& f, T& x) -> bool {
+	// ==== save path
+	if constexpr(!Inspector::is_loading) {
+		using vostream = boost::interprocess::basic_ovectorstream< std::vector<char> >;
+		std::vector<char> x_data;
+		vostream ss(x_data);
+		cereal::PortableBinaryOutputArchive A(ss);
 
-	// for BS types run serialization in object's queue
-	if constexpr(std::is_base_of_v<::blue_sky::objbase, T>) {
-		if(x.apply([&]() -> blue_sky::error {
-			A(x);
-			return blue_sky::perfect;
-		}))
-			return false;
+		// for BS types run serialization in object's queue
+		if constexpr(std::is_base_of_v<::blue_sky::objbase, T>) {
+			if(x.apply([&]() -> blue_sky::error {
+				A(x);
+				return blue_sky::perfect;
+			}))
+				return false;
+		}
+		else {
+			try {
+				A(x);
+			}
+			catch(...) {
+				return false;
+			}
+		}
+		return f.apply(ss.vector());
 	}
+	// ==== load path
 	else {
-		try {
-			A(x);
-		}
-		catch(...) {
-			return false;
-		}
+		using vistream = boost::interprocess::basic_ivectorstream< std::vector<char> >;
+		std::vector<char> x_data;
+
+		if(f.apply(x_data)) {
+			try {
+				vistream ss(x_data);
+				cereal::PortableBinaryInputArchive A(ss);
+				A(x);
+				return true;
+			}
+			catch(...) {
+				return false;
+			}
+		};
+		return false;
 	}
-	return f.apply(ss.vector());
-}
-
-// -------- load
-template<typename Inspector, typename T>
-auto inspect(Inspector& f, T& x)
--> std::enable_if_t<
-	Inspector::is_loading && blue_sky::enable_bs_inspect<Inspector, T>(),
-	bool
-> {
-	using vistream = boost::interprocess::basic_ivectorstream< std::vector<char> >;
-	std::vector<char> x_data;
-
-	if(f.apply(x_data)) {
-		try {
-			vistream ss(x_data);
-			cereal::PortableBinaryInputArchive A(ss);
-			A(x);
-			return true;
-		}
-		catch(...) {
-			return false;
-		}
-	};
-	return false;
 }
 
 // temp use unsafe conversions from enum -> underlying type (mute CAF warnings)
