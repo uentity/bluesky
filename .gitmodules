@@ -1,25 +1,25 @@
 [submodule "third_party/spdlog"]
 	path = third_party/spdlog
-	url = https://github.com/gabime/spdlog.git
+	url = git@github.com:gabime/spdlog.git
 [submodule "third_party/pybind11"]
 	path = third_party/pybind11
-	url = https://github.com/uentity/pybind11.git
+	url = git@github.com:uentity/pybind11.git
 	ignore = untracked
-	#url = https://github.com/pybind/pybind11.git
+	#url = git@github.com:pybind/pybind11.git
 [submodule "third_party/actor-framework"]
 	path = third_party/actor-framework
-	url = https://github.com/uentity/actor-framework.git
+	url = git@github.com:uentity/actor-framework.git
 	ignore = untracked
-	#url = https://github.com/actor-framework/actor-framework.git
+	#url = git@github.com:actor-framework/actor-framework.git
 [submodule "third_party/eigen"]
 	path = third_party/eigen
 	url = https://gitlab.com/libeigen/eigen.git
 [submodule "third_party/cereal"]
 	path = third_party/cereal
-	url = https://github.com/uentity/cereal.git
+	url = git@github.com:uentity/cereal.git
 [submodule "third_party/expected"]
 	path = third_party/expected
-	url = https://github.com/TartanLlama/expected.git
+	url = git@github.com:TartanLlama/expected.git
 [submodule "third_party/fmt"]
 	path = third_party/fmt
-	url = https://github.com/fmtlib/fmt.git
+	url = git@github.com:fmtlib/fmt.git
