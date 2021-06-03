@@ -10,7 +10,6 @@
 /// [NOTE] Credits to Simon Brand AKA TartanLlama & Vittorio Romeo
 /// https://github.com/SuperV1234/vittorioromeo.info/blob/master/extra/passing_functions_to_functions/function_view.hpp
 /// [NOTE] `function_view` DO NOT extend lifetime of passed callable
-/// [WARNING] current impl will only work on platforms where function pointer is of same size as void*
 #pragma once
 
 #include "../meta.h"
@@ -90,8 +89,11 @@ public:
 	using stdfn_t = std::function<callable_t>;
 
 private:
-	void* fn_;
-	R (*erased_fn_)(void*, Args...);
+	std::aligned_union_t<sizeof(void*), void*, pointer_t> fn_;
+	R (*erased_fn_)(const void*, Args...);
+
+	auto fn_mem() noexcept -> void* { return &fn_; }
+	auto fn_mem() const noexcept -> const void* { return &fn_; }
 
 	template<typename X> friend class function_view;
 
@@ -103,30 +105,29 @@ private:
 		);
 
 		using Fpure = meta::remove_cvref_t<F>;
-		if constexpr(std::is_pointer_v<Fpure>) {
-			// store function pointer directly in fn_
-			fn_ = (void*)reinterpret_cast<Fpure>(x);
-			erased_fn_ = [](void* fn, Args... xs) -> R {
-				return std::invoke( (Fpure)fn, std::forward<Args>(xs)... );
-			};
-		}
-		else if constexpr(std::is_same_v<Fpure, stdfn_t> || std::is_convertible_v<Fpure, pointer_t>) {
+		if constexpr(
+			std::is_constructible_v<pointer_t, F> || std::is_same_v<Fpure, stdfn_t>
+		) {
 			if constexpr(std::is_same_v<Fpure, stdfn_t>)
 				// extract target function pointer from std::function
-				fn_ = (void*)(*x.template target<pointer_t>());
+				::new (fn_mem()) pointer_t(*x.template target<pointer_t>());
 			else
-				// convert stateless callable (lambda) to function pointer
-				fn_ = (void*)static_cast<pointer_t>(x);
-			erased_fn_ = [](void* fn, Args... xs) -> R {
-				return std::invoke( (pointer_t)fn, std::forward<Args>(xs)... );
+				// convert stateless callable (simple function or stateless lambda) to function pointer
+				::new (fn_mem()) pointer_t(std::forward<F>(x));
+
+			erased_fn_ = [](const void* fn_mem, Args... xs) -> R {
+				pointer_t fn = *reinterpret_cast<const pointer_t*>(fn_mem);
+				return std::invoke(fn, std::forward<Args>(xs)...);
 			};
 		}
 		else {
 			// generic case that can capture anything, but needs `x` to be alive
-			fn_ = (void*)std::addressof(x);
-			erased_fn_ = [](void* fn, Args... xs) -> R {
+			::new (fn_mem()) (const void*)(std::addressof(x));
+			erased_fn_ = [](const void* fn_mem, Args... xs) -> R {
+				using ptr_t = void*;
+				auto fn_ptr = *static_cast<const ptr_t*>(fn_mem);
 				return std::invoke(
-					*reinterpret_cast<std::add_pointer_t<F>>(fn), std::forward<Args>(xs)...
+					*reinterpret_cast<std::add_pointer_t<F>>(fn_ptr), std::forward<Args>(xs)...
 				);
 			};
 		}
@@ -158,9 +159,9 @@ public:
 	// call stored callable with passed args
 	template<typename... Ts>
 	decltype(auto) operator()(Ts&&... xs) const
-		noexcept(noexcept(erased_fn_(fn_, std::forward<Ts>(xs)...)))
+		noexcept(noexcept(erased_fn_(fn_mem(), std::forward<Ts>(xs)...)))
 	{
-		return erased_fn_(fn_, std::forward<Ts>(xs)...);
+		return erased_fn_(fn_mem(), std::forward<Ts>(xs)...);
 	}
 };
 
