@@ -52,9 +52,9 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 	(*counters)[Event::LinkStatusChanged] = 0;
 
 	// setup events processor
-	auto ev_processor_cb = [=](auto who, Event ev, prop::propdict what) -> void {
+	auto ev_processor_cb = [=](event ev) -> void {
 		const auto ev_to_string = [&]() -> std::string_view {
-			switch(ev) {
+			switch(ev.code) {
 			case Event::LinkInserted: return "LinkInserted";
 			case Event::LinkErased: return "LinkErased";
 			case Event::LinkDeleted: return "LinkDeleted";
@@ -64,13 +64,19 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 			};
 		};
 
-		++(*counters)[ev];
-		bsout() << "=> {}.{}: {}" << who.type_id() << ev_to_string() << to_string(what) << bs_end;
+		++(*counters)[ev.code];
+		auto origin_tid = [&] {
+			if(auto L = ev.origin_link())
+				return L.type_id();
+			else
+				return ev.origin_node().type_id();
+		}();
+		bsout() << "=> {}.{}: {}" << origin_tid << ev_to_string() << to_string(ev.params) << bs_end;
 	};
 
 	static const auto adapt2node = [](auto cb) {
-		return [cb = std::move(cb)](auto who, auto /*subnode*/, Event ev, prop::propdict what) {
-			cb(std::move(who), ev, std::move(what));
+		return [cb = std::move(cb)](auto /*subnode*/, event ev) {
+			cb(std::move(ev));
 		};
 	};
 
@@ -89,7 +95,7 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 	// test link rename
 	auto test_rename = [](auto&& tgt, tree::link src) -> int {
 		std::atomic<int> rename_cnt = 0;
-		auto rename_cb = [&](auto who, Event, prop::propdict what) -> void {
+		auto rename_cb = [&](event ev) -> void {
 			++rename_cnt;
 			//bsout() << "=> {}.{}: {}" << who->type_id() << 
 			//	get<std::string>(what, "prev_name") << get<std::string>(what, "new_name") << bs_end;
@@ -125,7 +131,7 @@ BOOST_AUTO_TEST_CASE(test_tree_events) {
 		using T = std::decay_t<decltype(tgt)>;
 
 		std::atomic<int> status_cnt = 0;
-		auto status_cb = [&](auto who, Event, prop::propdict what) {
+		auto status_cb = [&](event ev) {
 			++status_cnt;
 			//bsout() << "=> {}: status {}: {} -> {}" << to_string(who->id()) <<
 			//	get<integer>(what, "request") << get<integer>(what, "prev_status") << 

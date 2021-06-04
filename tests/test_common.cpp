@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(test_common) {
 	auto ts = make_timestamp();
 	BOOST_TEST(to_string(ts - ts) == "0ns");
 	std::cout << "Direct print timestamp: " << to_string(ts) << std::endl;
-	bsout() << "Print timestamp using fmt: {}" << ts << bs_end;
+	//bsout() << "Print timestamp using fmt: {}" << ts << bs_end;
 
 	// test function_view
 	auto fv1 = function_view{adder_fn};
