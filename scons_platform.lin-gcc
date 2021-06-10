@@ -14,7 +14,7 @@ if build_kind == "init" :
 		CPPDEFINES = ['UNIX'],
 		CCFLAGS = [
 			'-std=c++17', '-W', '-Wall', '-Wno-deprecated', '-fvisibility-inlines-hidden',
-			'-pipe', '-Wno-unknown-pragmas', '-Wno-unused-parameter'
+			'-pipe', '-Wno-unknown-pragmas', '-Wno-unused-parameter', '-fno-semantic-interposition'
 		],
 		LINKFLAGS = ['-Wl,--as-needed']
 	);
