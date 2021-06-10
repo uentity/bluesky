@@ -36,7 +36,8 @@ private:
 
 	// map type of params tuple -> typeless creation function
 	using erased_ctor = function_view<void()>;
-	mutable std::unordered_map< std::type_index, erased_ctor > creators_;
+	using ctor_handle = std::pair<erased_ctor, erased_ctor>;
+	mutable std::unordered_map<std::type_index, ctor_handle> creators_;
 
 	// `decay_helper` extends `std::decay` such that pointed type (for pointers) is also decayed
 	template<typename T, typename = void>
@@ -68,13 +69,18 @@ private:
 	// normalized signature of object constructor
 	template<typename... Args>
 	struct normalized_ctor {
-		using type = function_view< bs_type_ctor_result (pass_arg<Args>...) >;
+		using type = function_view<bs_type_ctor_result (erased_ctor&, pass_arg<Args>...)>;
+
+		template<typename F>
+		static auto make() {
+			return type{[](erased_ctor& ec, auto&&... args) {
+				return (reinterpret_cast<F&>(ec))(std::forward<decltype(args)>(args)...);
+			}};
+		}
 	};
 
 	template<typename R, typename... Args>
-	struct normalized_ctor<R (Args...)> {
-		using type = typename normalized_ctor<Args...>::type;
-	};
+	struct normalized_ctor<R (Args...)> : normalized_ctor<Args...> {};
 
 	template<typename... Args> using normalized_ctor_t = typename normalized_ctor<Args...>::type;
 
@@ -145,7 +151,7 @@ public:
 	//
 	template<typename F>
 	auto add_constructor(F&& f) const -> void {
-		using Finfo = blue_sky::detail::deduce_callable<std::remove_reference_t<F>>;
+		using Finfo = deduce_callable<F>;
 		using Fsign = typename Finfo::type;
 		static_assert(
 			std::is_same_v<typename Finfo::result, bs_type_ctor_result>,
@@ -155,10 +161,15 @@ public:
 			std::is_convertible_v<F, std::add_pointer_t<Fsign>>,
 			"Only stateless functor that can be registered as constructor"
 		);
+
 		// store type-erased constructor
-		using Fnorm = normalized_ctor_t<Fsign>;
-		auto creator = Fnorm{f};
-		creators_.insert_or_assign( typeid(Fnorm), std::move(reinterpret_cast<erased_ctor&>(creator)) );
+		using ctor_t = normalized_ctor<Fsign>;
+		auto src_f = function_view{std::forward<F>(f)};
+		auto creator_f = ctor_t::template make<decltype(src_f)>();
+
+		creators_.insert_or_assign(typeid(typename ctor_t::type), ctor_handle{
+			reinterpret_cast<erased_ctor&>(creator_f), reinterpret_cast<erased_ctor&>(src_f)
+		});
 	}
 
 	template<typename T, typename... Args>
@@ -173,8 +184,8 @@ public:
 	auto construct(Args&&... args) const -> shared_ptr_cast {
 		using Fnorm = normalized_ctor_t<Args...>;
 		if(auto creator = creators_.find(typeid(Fnorm)); creator != creators_.end()) {
-			auto* f = reinterpret_cast<Fnorm*>(&creator->second);
-			return (*f)(std::forward<Args>(args)...);
+			auto& [creator_f, src_f] = creator->second;
+			return (reinterpret_cast<Fnorm&>(creator_f))(src_f, std::forward<Args>(args)...);
 		}
 		return {};
 	}
