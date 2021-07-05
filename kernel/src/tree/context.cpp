@@ -21,19 +21,10 @@
 
 NAMESPACE_BEGIN(blue_sky::tree)
 
-auto to_string(const lids_v& path, bool as_absolute) -> std::string {
-	auto res = std::vector<std::string>(as_absolute ? path.size() + 1 : path.size());
-	std::transform(
-		path.begin(), path.end(),
-		as_absolute ? std::next(res.begin()) : res.begin(),
-		[](const auto& Lid) { return to_string(Lid); }
-	);
-	return boost::join(res, "/");
-}
-
 // convert string path to vector of lids
 static auto to_lids_v(unsafe_t, const std::string& path) -> lids_v {
 	auto path_split = std::vector< std::pair<std::string::const_iterator, std::string::const_iterator> >{};
+	boost::split(path_split, path, boost::is_any_of("/"));
 	if(path_split.empty()) return {};
 
 	auto from = path_split.begin();
@@ -288,7 +279,7 @@ struct BS_HIDDEN_API context::impl {
 		auto res = none;
 
 		auto cur_subpath = lids_v{};
-		auto push_subpath = [&](const std::string& next_lid, const node& cur_level) {
+		auto push_subpath = [&](std::string_view next_lid, const node& cur_level) {
 			return to_uuid(next_lid).map([&](auto cur_uuid) {
 				if(auto item = level.find(cur_uuid)) {
 					if(auto item_row = level.index(item.id())) {

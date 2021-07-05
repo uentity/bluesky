@@ -59,7 +59,4 @@ private:
 	std::unique_ptr<impl> pimpl_;
 };
 
-/// utility functions to make human-readable path from `item_tag`
-BS_API auto to_string(const lids_v& path, bool as_absolute = true) -> std::string;
-
 NAMESPACE_END(blue_sky::tree)

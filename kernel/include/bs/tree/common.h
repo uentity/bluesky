@@ -75,6 +75,7 @@ enum class TreeOpts : std::uint32_t {
 /// link's unique ID type
 using lid_type = uuid;
 using lids_v = std::vector<lid_type>;
+BS_API auto to_string(const lids_v& path, bool as_absolute = true) -> std::string;
 
 /// forward declare major types
 class link;

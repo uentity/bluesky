@@ -8,6 +8,7 @@
 /// You can obtain one at https://mozilla.org/MPL/2.0/
 
 #include <bs/tree/tree.h>
+#include <bs/defaults.h>
 #include <bs/objbase.h>
 #include <bs/uuid.h>
 #include <bs/kernel/types_factory.h>
@@ -19,6 +20,7 @@
 #include <boost/algorithm/string.hpp>
 #include <caf/event_based_actor.hpp>
 
+#include <algorithm>
 #include <set>
 
 NAMESPACE_BEGIN(blue_sky::tree)
@@ -129,7 +131,7 @@ void walk_impl(
 	}
 }
 
-inline std::string link2path_unit(const link& l, Key path_unit) {
+std::string link2path_unit(const link& l, Key path_unit) {
 	switch(path_unit) {
 	default:
 	case Key::ID : return to_string(l.id());
@@ -141,14 +143,18 @@ inline std::string link2path_unit(const link& l, Key path_unit) {
 
 NAMESPACE_END()
 
-NAMESPACE_BEGIN(detail)
-
-auto walk_down_tree(const std::string& cur_lid, const node& level, Key path_unit) -> link {
-	if(!level) return {};
-	return level.find(cur_lid, path_unit);
+/*-----------------------------------------------------------------------------
+ *  utilities
+ *-----------------------------------------------------------------------------*/
+auto to_string(const lids_v& path, bool as_absolute) -> std::string {
+	auto res = std::vector<std::string>(as_absolute ? path.size() + 1 : path.size());
+	std::transform(
+		path.begin(), path.end(),
+		as_absolute ? std::next(res.begin()) : res.begin(),
+		[](const auto& Lid) { return to_string(Lid); }
+	);
+	return boost::join(res, "/");
 }
-
-NAMESPACE_END(detail)
 
 /*-----------------------------------------------------------------------------
  *  public API
@@ -164,7 +170,7 @@ auto abspath(link L, Key path_unit) -> std::string {
 		if(parent)
 			res.push_front(link2path_unit(L, path_unit));
 		else {
-			res.emplace_front("");
+			res.emplace_front();
 			break;
 		}
 
@@ -173,7 +179,7 @@ auto abspath(link L, Key path_unit) -> std::string {
 		else
 			parent.reset();
 	}
-	if(res.size() == 1) res.emplace_front("");
+	if(res.size() == 1) res.emplace_front();
 	return boost::join(res, "/");
 }
 
@@ -236,12 +242,12 @@ std::string convert_path(
 ) {
 	std::vector<std::string> res_path;
 	const auto converter = [&res_path, src_path_unit, dst_path_unit](
-		std::string next_level, const node& cur_level
+		std::string_view next_level, const node& cur_level
 	) {
 		link res;
 		if(next_level.empty() || next_level == "." || next_level == "..")
 			res_path.emplace_back(std::move(next_level));
-		else if(auto next = cur_level.find(next_level, src_path_unit)) {
+		else if(auto next = cur_level.find(std::string{next_level}, src_path_unit)) {
 			res = std::move(next);
 			res_path.emplace_back(link2path_unit(res, dst_path_unit));
 		}
