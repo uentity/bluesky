@@ -23,7 +23,7 @@ auto bye_actor(std::uint64_t actor_id) -> bool {
 	const auto ev_actor = system().registry().get(actor_id);
 	// [NOTE] need to do `actor_cast` to resolve `send()` resolution ambiguity
 	const auto A = caf::actor_cast<caf::actor>(ev_actor);
-	caf::anon_send(A, a_bye());
+	caf::anon_send<caf::message_priority::high>(A, a_bye());
 	return static_cast<bool>(A);
 }
 
